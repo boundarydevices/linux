@@ -239,15 +239,17 @@ static void *guest_s2_zalloc_page(void *mc)
 {
 	struct hyp_page *p;
 	void *addr;
+	unsigned long order;
 
 	addr = hyp_alloc_pages(&current_vm->pool, 0);
 	if (addr)
 		return addr;
 
-	addr = pop_hyp_memcache(mc, hyp_phys_to_virt);
+	addr = pop_hyp_memcache(mc, hyp_phys_to_virt, &order);
 	if (!addr)
 		return addr;
 
+	WARN_ON(order);
 	memset(addr, 0, PAGE_SIZE);
 	p = hyp_virt_to_page(addr);
 	memset(p, 0, sizeof(*p));
@@ -2247,7 +2249,7 @@ void drain_hyp_pool(struct pkvm_hyp_vm *vm, struct kvm_hyp_memcache *mc)
 
 	while (addr) {
 		memset(hyp_virt_to_page(addr), 0, sizeof(struct hyp_page));
-		push_hyp_memcache(mc, addr, hyp_virt_to_phys);
+		push_hyp_memcache(mc, addr, hyp_virt_to_phys, 0);
 		WARN_ON(__pkvm_hyp_donate_host(hyp_virt_to_pfn(addr), 1));
 		addr = hyp_alloc_pages(&vm->pool, 0);
 	}
