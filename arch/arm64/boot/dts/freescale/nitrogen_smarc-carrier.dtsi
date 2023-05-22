@@ -279,6 +279,14 @@
 		};
 	};
 
+#ifdef SM_I2C_CSI0
+	csi0_mclk: csi0-mclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <25000000>;
+	};
+#endif
+
 #ifdef SM_PWM_CSI1
 	csi_mclk: csi-mclk {
 		compatible = "pwm-clock";
@@ -361,6 +369,16 @@
 		enable-active-high;
 	};
 
+	reg_csi0: regulator-csi0 {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_SM_GPIO0(GPIO_ACTIVE_HIGH);
+		regulator-max-microvolt = <2800000>;
+		regulator-min-microvolt = <2800000>;
+		regulator-name = "csi0-2v8";
+		startup-delay-us = <20000>;
+	};
+
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
 		compatible = "regulator-fixed";
 		pinctrl-names = "off", "on";
@@ -435,6 +453,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_CAN1);
 	status = "okay";
+	xceiver-supply = <&reg_can2_stby>;
 };
 
 &SM_I2C_GP {
@@ -619,20 +638,25 @@
 
 #ifdef SM_I2C_CSI0
 &SM_I2C_CSI0{
-	camera@3c {
-		DOVDD-supply = <&reg_vref_1v8>;
-		DVDD-supply = <&reg_vref_3v3>;
-		compatible = "pi2ln";
+	camera@36 {
+		avdd-supply = <&reg_csi0>;
+		dovdd-supply = <&reg_vref_3v3>;
+		dvdd-supply = <&reg_vref_3v3>;
+		clocks = <&csi0_mclk>;
+		compatible = "ovti,ov5647";
 		csi_id = <0x00>;
-		powerdown-gpios = GP_SM_GPIO0(GPIO_ACTIVE_HIGH);
-		reg = <0x3c>;
-		reset-gpios = GP_SM_GPIO2(GPIO_ACTIVE_LOW);
+		orientation = <2>;
+		reg = <0x36>;
+		pwdn-gpios = GP_SM_GPIO2(GPIO_ACTIVE_HIGH);
+		rotation = <0>;
 		status = "okay";
 
 		port {
 			pi_2lane_mipi_ep: endpoint {
 				clock-lanes = <0>;
+				clock-noncontinuous;
 				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <297000000>;
 				remote-endpoint = <&mipi1_csi0_ep>;
 			};
 		};
@@ -667,6 +691,7 @@
 #endif
 
 &SM_PCIE {
+	ext_osc = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_PCIE);
 	reset-gpio = GP_SM_PCIE_A_RST(GPIO_ACTIVE_LOW);
