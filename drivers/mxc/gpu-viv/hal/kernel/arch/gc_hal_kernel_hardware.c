@@ -2625,6 +2625,7 @@ gckHARDWARE_InitializeHardware(IN gckHARDWARE Hardware)
         _IsHardwareMatch(Hardware, gcv7000, 0x6202) ||
         _IsHardwareMatch(Hardware, gcv7000, 0x6203) ||
         _IsHardwareMatch(Hardware, gcv7000, 0x6204) ||
+        _IsHardwareMatch(Hardware, gcv7000, 0x6214) ||
         (gckHARDWARE_IsFeatureAvailable(Hardware, gcvFEATURE_TX_DESCRIPTOR) &&
          !gckHARDWARE_IsFeatureAvailable(Hardware, gcvFEATURE_TX_DESC_CACHE_CLOCKGATE_FIX))) {
         if (regPMC == 0) {
