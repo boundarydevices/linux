@@ -706,7 +706,9 @@
 	uart1_pins: uart1-pins {
 		pins {
 			pinmux = <PINMUX_GPIO102__FUNC_UTXD1>,
-				 <PINMUX_GPIO103__FUNC_URXD1>;
+				 <PINMUX_GPIO103__FUNC_URXD1>,
+				 <PINMUX_GPIO100__FUNC_URTS1>,
+				 <PINMUX_GPIO101__FUNC_UCTS1>;
 		};
 	};
 
