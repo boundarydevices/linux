@@ -1496,6 +1496,17 @@ out:
 	return ret;
 }
 
+static int ov5647_link_setup(struct media_entity *entity,
+			   const struct media_pad *local,
+			   const struct media_pad *remote, u32 flags)
+{
+	return 0;
+}
+
+static const struct media_entity_operations ov5647_sd_media_ops = {
+	.link_setup = ov5647_link_setup,
+};
+
 static int ov5647_probe(struct i2c_client *client)
 {
 	struct device_node *np = client->dev.of_node;
@@ -1556,6 +1567,7 @@ static int ov5647_probe(struct i2c_client *client)
 	sd->flags |= V4L2_SUBDEV_FL_HAS_EVENTS;
 
 	sensor->pad.flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.ops = &ov5647_sd_media_ops;
 	sd->entity.function = MEDIA_ENT_F_CAM_SENSOR;
 	ret = media_entity_pads_init(&sd->entity, 1, &sensor->pad);
 	if (ret < 0)
