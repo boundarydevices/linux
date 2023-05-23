@@ -3,7 +3,6 @@
 &mt6360 {
 	interrupt-controller;
 	interrupt-parent = <&pio>;
-	interrupts = <101 IRQ_TYPE_EDGE_FALLING>;
 	interrupt-names = "IRQB";
 
 	charger {

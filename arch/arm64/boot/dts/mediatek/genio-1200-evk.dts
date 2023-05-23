@@ -255,6 +255,7 @@
 		reg = <0x34>;
 		pinctrl-0 = <&mt6360_pins>;
 		pinctrl-names = "default";
+		interrupts = <128 IRQ_TYPE_EDGE_FALLING>;
 
 		tcpc {
 			compatible = "mediatek,mt6360-tcpc";
@@ -860,7 +861,7 @@
 	mt6360_pins: mt6360-pins {
 		pins {
 			pinmux = <PINMUX_GPIO100__FUNC_GPIO100>,
-				 <PINMUX_GPIO101__FUNC_GPIO101>;
+				 <PINMUX_GPIO128__FUNC_GPIO128>;
 			input-enable;
 			bias-pull-up;
 		};

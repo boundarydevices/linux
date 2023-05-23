@@ -381,6 +381,7 @@
 		reg = <0x34>;
 		pinctrl-0 = <&mt6360_pins>;
 		pinctrl-names = "default";
+		interrupts = <101 IRQ_TYPE_EDGE_FALLING>;
 
 		tcpc {
 			compatible = "mediatek,mt6360-tcpc";
