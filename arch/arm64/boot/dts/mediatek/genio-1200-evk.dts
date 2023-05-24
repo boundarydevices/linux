@@ -145,6 +145,21 @@
 		clock-frequency = <20000000>;
 		clock-output-names = "can-clk";
 	};
+
+	fan0: pwm-fan {
+		compatible = "pwm-fan";
+		pinctrl-names = "default";
+		pinctrl-0 = <&fan0_pins_default>;
+		cooling-min-state = <0>;
+		cooling-max-state = <2>;
+		/* Period 40ns */
+		pwms = <&pwm 2 40000>;
+		/* Duty Cycle*/
+		/* min ---- max */
+		/* 20% 50% 100% */
+		cooling-levels = <50 127 255>;
+		status = "disabled";
+	};
 };
 
 &uart0 {
@@ -593,11 +608,6 @@
 			drive-strength = <MTK_DRIVE_8mA>;
 			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
 		};
-
-		pins_insert {
-			pinmux = <PINMUX_GPIO129__FUNC_GPIO129>;
-			bias-pull-up;
-		};
 	};
 
 	mmc1_pins_uhs: mmc1-pins-uhs {
@@ -879,7 +889,14 @@
 
 	pwm_pins: pwm-pins {
 		pins {
-			pinmux = <PINMUX_GPIO107__FUNC_PWM_3>;
+			pinmux = <PINMUX_GPIO105__FUNC_PWM_2>;
+		};
+	};
+
+	fan0_pins_default: fan0-pins-default {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO129__FUNC_GPIO129>;
+			output-high;
 		};
 	};
 
