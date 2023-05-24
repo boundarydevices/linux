@@ -160,6 +160,16 @@
 		cooling-levels = <50 127 255>;
 		status = "disabled";
 	};
+
+	wifi_pwr_fixed_3v3: wifi-pwr-fixed-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "wifi_pwr_fixed_3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pio 135 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
 };
 
 &uart0 {
@@ -817,12 +827,6 @@
 				 <PINMUX_GPIO23__FUNC_CLKREQN_1>,
 				 <PINMUX_GPIO24__FUNC_WAKEN_1>;
 			bias-pull-up;
-		};
-
-		mt7921 {
-			pinmux = <PINMUX_GPIO65__FUNC_GPIO65>,
-				 <PINMUX_GPIO67__FUNC_GPIO67>;
-			output-high;
 		};
 	};
 
