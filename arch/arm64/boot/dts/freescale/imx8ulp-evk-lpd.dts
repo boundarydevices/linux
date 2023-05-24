@@ -19,8 +19,8 @@
 	disp-xfer-mode = <1>;
 };
 
-&resmem {
-	mcu_reserved: mcu@0xa0000000 {
+&{/reserved-memory} {
+	mcu_reserved: mcu@a0000000 {
 		reg = <0 0xa0000000 0 0x2000000>; //reserve 32M for mcu
 		no-map;
 	};

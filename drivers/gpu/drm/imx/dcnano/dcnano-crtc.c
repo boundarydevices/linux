@@ -398,7 +398,7 @@ int dcnano_crtc_set_property(struct drm_crtc *crtc,
 		}
 	}
 
-	dcnano_crtc_dbg(crtc, "set property disp_xfer_mode = %ld (%s)\n", val, val == 1 ? "unblank" : "blank");
+	dcnano_crtc_dbg(crtc, "set property disp_xfer_mode = %llu (%s)\n", val, val == 1 ? "unblank" : "blank");
 
 	return 0;
 }
