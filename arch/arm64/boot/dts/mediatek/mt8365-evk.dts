@@ -21,6 +21,7 @@
 		mmc0 = &mmc0;
 		mmc1 = &mmc1;
 		mmc2 = &mmc2;
+		ethernet0 = &ethernet;
 	};
 
 	memory@40000000 {
