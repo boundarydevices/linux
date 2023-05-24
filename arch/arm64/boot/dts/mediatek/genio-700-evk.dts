@@ -19,6 +19,7 @@
 	aliases {
 		serial0 = &uart0;
 		dsi0 = &dsi0;
+		ethernet0 = &eth;
 	};
 
 	backlight_lcd0: backlight-lcd0 {
