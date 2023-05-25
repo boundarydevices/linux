@@ -88,18 +88,6 @@ static const struct sdio_device_id btmtksdio_table[] = {
 #define MTK_SDIO_BLOCK_SIZE	256
 
 #define BTMTKSDIO_TX_WAIT_VND_EVT	1
-#define BTMTKSDIO_TX_WAIT_EEPROM_READ_BDADDR	2
-
-/* MT7668 EFUSE registers
- * 0x384: bt mac address [ 7: 0]
- * 0x385: bt mac address [15: 8]
- * 0x386: bt mac address [23:16]
- * 0x387: bt mac address [31:24]
- * 0x388: bt mac address [39:32]
- * 0x389: bt mac address [47:40]
- */
-#define MT7668_EFUSE_BT_MAC_REG0	0xe1 /* bytes 0x384-0x387 for BT_MAC */
-#define MT7668_EFUSE_BT_MAC_REG1	0xe2 /* bytes 0x388-0x389 for BT_MAC */
 
 enum {
 	MTK_WMT_PATCH_DWNLD = 0x1,
@@ -108,7 +96,6 @@ enum {
 	MTK_WMT_HIF = 0x4,
 	MTK_WMT_FUNC_CTRL = 0x6,
 	MTK_WMT_RST = 0x7,
-	MTK_WMT_EFUSE_READ = 0xd,
 	MTK_WMT_SEMAPHORE = 0x17,
 };
 
@@ -134,11 +121,6 @@ struct mtk_wmt_hdr {
 	u8	flag;
 } __packed;
 
-struct mtk_efuse_reg {
-	__le16 reg;
-	u8 val[4];
-} __packed;
-
 struct mtk_hci_wmt_cmd {
 	struct mtk_wmt_hdr hdr;
 	u8 data[256];
@@ -152,18 +134,6 @@ struct btmtk_hci_wmt_evt {
 struct btmtk_hci_wmt_evt_funcc {
 	struct btmtk_hci_wmt_evt hwhdr;
 	__be16 status;
-} __packed;
-
-#define EFUSE_CMD_MAX_REG 4
-struct btmtk_hci_wmt_cmd_efuser {
-	u8 num_regs;
-	__le16 regs[EFUSE_CMD_MAX_REG];
-} __packed;
-
-struct btmtk_hci_wmt_evt_efuser {
-	struct btmtk_hci_wmt_evt hwhdr;
-	u8 num_regs;
-	struct mtk_efuse_reg regs[EFUSE_CMD_MAX_REG];
 } __packed;
 
 struct btmtk_tci_sleep {
@@ -194,7 +164,6 @@ struct btmtksdio_dev {
 	struct sk_buff *evt_skb;
 
 	const struct btmtksdio_data *data;
-	bdaddr_t efuse_bdaddr;
 };
 
 static int mtk_hci_wmt_sync(struct hci_dev *hdev,
@@ -202,7 +171,6 @@ static int mtk_hci_wmt_sync(struct hci_dev *hdev,
 {
 	struct btmtksdio_dev *bdev = hci_get_drvdata(hdev);
 	struct btmtk_hci_wmt_evt_funcc *wmt_evt_funcc;
-	struct btmtk_hci_wmt_evt_efuser *wmt_evt_efuser;
 	u32 hlen, status = BTMTK_WMT_INVALID;
 	struct btmtk_hci_wmt_evt *wmt_evt;
 	struct mtk_hci_wmt_cmd wc;
@@ -275,30 +243,6 @@ static int mtk_hci_wmt_sync(struct hci_dev *hdev,
 			status = BTMTK_WMT_ON_PROGRESS;
 		else
 			status = BTMTK_WMT_ON_UNDONE;
-		break;
-	case MTK_WMT_EFUSE_READ:
-		wmt_evt_efuser = (struct btmtk_hci_wmt_evt_efuser *)wmt_evt;
-		if (test_and_clear_bit(BTMTKSDIO_TX_WAIT_EEPROM_READ_BDADDR,
-				       &bdev->tx_state)) {
-			bdev->efuse_bdaddr.b[5] =
-				wmt_evt_efuser->regs[0].val[0];
-			bdev->efuse_bdaddr.b[4] =
-				wmt_evt_efuser->regs[0].val[1];
-			bdev->efuse_bdaddr.b[3] =
-				wmt_evt_efuser->regs[0].val[2];
-			bdev->efuse_bdaddr.b[2] =
-				wmt_evt_efuser->regs[0].val[3];
-			bdev->efuse_bdaddr.b[1] =
-				wmt_evt_efuser->regs[1].val[0];
-			bdev->efuse_bdaddr.b[0] =
-				wmt_evt_efuser->regs[1].val[1];
-
-			/* Barrier to sync with other CPUs */
-			smp_mb__after_atomic();
-			wake_up_bit(&bdev->tx_state,
-				    BTMTKSDIO_TX_WAIT_EEPROM_READ_BDADDR);
-		}
-
 		break;
 	}
 
@@ -826,53 +770,6 @@ free_fw:
 	return err;
 }
 
-static int btmtksdio_set_bdaddr(struct hci_dev *hdev, const bdaddr_t *bdaddr);
-
-static int mtk_setup_bdaddr_efuse(struct hci_dev *hdev)
-{
-	struct btmtksdio_dev *bdev = hci_get_drvdata(hdev);
-	struct btmtk_hci_wmt_params wmt_params;
-	int err;
-
-	struct btmtk_hci_wmt_cmd_efuser read_bdaddr = {
-		.num_regs = 2,
-		.regs = { MT7668_EFUSE_BT_MAC_REG0, MT7668_EFUSE_BT_MAC_REG1 },
-	};
-
-	wmt_params.op = MTK_WMT_EFUSE_READ;
-	wmt_params.flag = 0x02;
-	wmt_params.dlen = sizeof(read_bdaddr);
-	wmt_params.data = &read_bdaddr;
-	wmt_params.status = NULL;
-
-	set_bit(BTMTKSDIO_TX_WAIT_EEPROM_READ_BDADDR, &bdev->tx_state);
-
-	err = mtk_hci_wmt_sync(hdev, &wmt_params);
-	if (err < 0) {
-		bt_dev_err(hdev, "Failed to read bdaddr from e-fuse (%d)", err);
-		return err;
-	}
-
-	err = wait_on_bit_timeout(&bdev->tx_state,
-				  BTMTKSDIO_TX_WAIT_EEPROM_READ_BDADDR,
-				  TASK_INTERRUPTIBLE, HCI_INIT_TIMEOUT);
-
-	if (err == -EINTR) {
-		bt_dev_err(hdev, "Execution of wmt command interrupted");
-		clear_bit(BTMTKSDIO_TX_WAIT_EEPROM_READ_BDADDR,
-			  &bdev->tx_state);
-		return err;
-	}
-
-	err = btmtksdio_set_bdaddr(hdev, &(bdev->efuse_bdaddr));
-	if (err < 0) {
-		bt_dev_err(hdev, "Failed to set bdaddr (%d)", err);
-		return err;
-	}
-
-	return 0;
-}
-
 static int btmtksdio_setup(struct hci_dev *hdev)
 {
 	struct btmtksdio_dev *bdev = hci_get_drvdata(hdev);
@@ -939,11 +836,6 @@ ignore_setup_fw:
 		bt_dev_err(hdev, "Failed to send wmt func ctrl (%d)", err);
 		return err;
 	}
-
-	/* Setup the bdaddr from built-in E-fuse */
-	err = mtk_setup_bdaddr_efuse(hdev);
-	if (err < 0)
-		return err;
 
 ignore_func_on:
 	/* Apply the low power environment setup */
