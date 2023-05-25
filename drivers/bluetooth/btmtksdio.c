@@ -622,9 +622,6 @@ static int btmtksdio_close(struct hci_dev *hdev)
 	u32 status;
 	int err;
 
-	pm_runtime_put_noidle(bdev->dev);
-	pm_runtime_disable(bdev->dev);
-
 	sdio_claim_host(bdev->func);
 
 	/* Disable interrupt */
@@ -904,6 +901,9 @@ static int btmtksdio_shutdown(struct hci_dev *hdev)
 		bt_dev_err(hdev, "Failed to send wmt func ctrl (%d)", err);
 		return err;
 	}
+
+	pm_runtime_put_noidle(bdev->dev);
+	pm_runtime_disable(bdev->dev);
 
 	return 0;
 }
