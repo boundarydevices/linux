@@ -39,6 +39,15 @@
 #define devctx_err(p_devctx, fmt, va_args...) \
 	miscdev_err((&(p_devctx)->miscdev), fmt, ##va_args)
 
+#define MAX_RECV_SIZE 31
+#define MAX_RECV_SIZE_BYTES (MAX_RECV_SIZE * sizeof(u32))
+#define MAX_MESSAGE_SIZE 31
+#define MAX_MESSAGE_SIZE_BYTES (MAX_MESSAGE_SIZE * sizeof(u32))
+#define ELE_SUCCESS_IND			0xD6
+#define ELE_FAILURE_IND			0x29
+
+#define ELE_MSG_DATA_NUM		10
+
 #define MSG_TAG(x)			(((x) & 0xff000000) >> 24)
 #define MSG_COMMAND(x)			(((x) & 0x00ff0000) >> 16)
 #define MSG_SIZE(x)			(((x) & 0x0000ff00) >> 8)
