@@ -58,9 +58,6 @@
 
 #define MTKBTSDIO_AUTOSUSPEND_DELAY	8000
 
-#define BT_MTK_QUIRK_BLE 1
-#define BT_MTK_QUIRK_NO_SET_DEFAULT_PHY 2
-
 static bool enable_autosuspend;
 
 struct btmtksdio_data {
@@ -68,7 +65,6 @@ struct btmtksdio_data {
 	u8 mac_reg0;
 	u8 mac_reg1;
 	u8 mac_offset;
-	u8 quirks;
 };
 
 static const struct btmtksdio_data mt7663_data = {
@@ -82,7 +78,6 @@ static const struct btmtksdio_data mt7668_data = {
 	.fwname = FIRMWARE_MT7668,
 	.mac_reg0 = MT7668_EFUSE_BT_MAC_REG0,
 	.mac_reg1 = MT7668_EFUSE_BT_MAC_REG1,
-	.quirks = BT_MTK_QUIRK_BLE | BT_MTK_QUIRK_NO_SET_DEFAULT_PHY,
 };
 
 static const struct sdio_device_id btmtksdio_table[] = {
@@ -220,8 +215,6 @@ struct btmtksdio_dev {
 
 	const struct btmtksdio_data *data;
 	bdaddr_t efuse_bdaddr;
-
-	bool local_commands_quirk;
 };
 
 static int mtk_hci_wmt_sync(struct hci_dev *hdev,
@@ -433,22 +426,6 @@ static int btmtksdio_recv_event(struct hci_dev *hdev, struct sk_buff *skb)
 	err = hci_recv_frame(hdev, skb);
 	if (err < 0)
 		goto err_free_skb;
-
-	if (bdev->local_commands_quirk) {
-		/* The firmware claims it doesn't support BLE whereas it does */
-		if (bdev->data->quirks & BT_MTK_QUIRK_BLE) {
-			bt_dev_info(hdev, "Enable BLE workaround\n");
-			hdev->commands[25] = 0xff;
-			hdev->commands[26] = 0xff;
-			hdev->commands[27] = 0xff;
-		}
-		/* The firmware fails to execute this command */
-		if (bdev->data->quirks & BT_MTK_QUIRK_NO_SET_DEFAULT_PHY) {
-			bt_dev_info(hdev, "Disable HCI_OP_LE_SET_DEFAULT_PHY\n");
-			hdev->commands[35] &= ~0x20;
-		}
-		bdev->local_commands_quirk = 0;
-	}
 
 	if (hdr->evt == HCI_EV_VENDOR) {
 		if (test_and_clear_bit(BTMTKSDIO_TX_WAIT_VND_EVT,
@@ -1065,7 +1042,6 @@ static int btmtksdio_shutdown(struct hci_dev *hdev)
 static int btmtksdio_send_frame(struct hci_dev *hdev, struct sk_buff *skb)
 {
 	struct btmtksdio_dev *bdev = hci_get_drvdata(hdev);
-	struct hci_command_hdr *hdr = (void *)skb->data;
 
 	switch (hci_skb_pkt_type(skb)) {
 	case HCI_COMMAND_PKT:
@@ -1083,15 +1059,6 @@ static int btmtksdio_send_frame(struct hci_dev *hdev, struct sk_buff *skb)
 	default:
 		return -EILSEQ;
 	}
-
-	/*
-	 * We are requesting the firmware to expose its capabilities.
-	 * Some firmware don't set them correctly. This allows to handle the
-	 * the reply and to fix the capabilities before the framework tries
-	 * to use it.
-	 */
-	if (__le16_to_cpu(hdr->opcode) == HCI_OP_READ_LOCAL_COMMANDS)
-		bdev->local_commands_quirk = 1;
 
 	skb_queue_tail(&bdev->txq, skb);
 
