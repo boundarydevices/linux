@@ -10,6 +10,7 @@
 #include <linux/dev_printk.h>
 #include <linux/errno.h>
 #include <linux/export.h>
+#include <linux/firmware/imx/ele_fw_api.h>
 #include <linux/firmware/imx/ele_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
 #include <linux/genalloc.h>
@@ -47,18 +48,21 @@ struct imx_info {
 	/* platform specific flag to enable/disable the Sentinel True RNG */
 	bool enable_ele_trng;
 	bool reserved_dma_ranges;
+	bool init_fw;
 };
 
 static const struct imx_info imx8ulp_info = {
 	.socdev = true,
 	.enable_ele_trng = false,
 	.reserved_dma_ranges = true,
+	.init_fw = false,
 };
 
 static const struct imx_info imx93_info = {
 	.socdev = false,
 	.enable_ele_trng = true,
 	.reserved_dma_ranges = true,
+	.init_fw = true,
 };
 
 static const struct of_device_id ele_mu_match[] = {
@@ -1040,6 +1044,13 @@ static int ele_mu_probe(struct platform_device *pdev)
 			goto exit;
 		}
 		priv->flags |= RESERVED_DMA_POOL;
+	}
+
+	if (info && info->init_fw) {
+		/* start initializing ele fw */
+		ret = ele_init_fw();
+		if (ret)
+			dev_err(dev, "Failed to initialize ele fw.\n");
 	}
 
 	if (info && info->socdev) {

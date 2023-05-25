@@ -79,3 +79,34 @@ exit:
 	dmam_free_coherent(priv->dev, len, buf, dst_dma);
 	return ret;
 }
+
+int ele_init_fw(void)
+{
+	struct ele_mu_priv *priv;
+	int ret;
+	unsigned int tag, command, size, ver, status;
+
+	ret = get_ele_mu_priv(&priv);
+	if (ret)
+		return ret;
+
+	ret = plat_fill_cmd_msg_hdr((struct mu_hdr *)&priv->tx_msg.header, ELE_INIT_FW_REQ, 4);
+	if (ret)
+		return ret;
+
+	ret = imx_ele_msg_send_rcv(priv);
+	if (ret < 0)
+		return ret;
+
+	tag = MSG_TAG(priv->rx_msg.header);
+	command = MSG_COMMAND(priv->rx_msg.header);
+	size = MSG_SIZE(priv->rx_msg.header);
+	ver = MSG_VER(priv->rx_msg.header);
+	status = RES_STATUS(priv->rx_msg.data[0]);
+
+	if (tag == 0xe1 && command == ELE_INIT_FW_REQ && size == 0x02 &&
+	    ver == 0x06 && status == 0xd6)
+		return 0;
+
+	return -EINVAL;
+}
