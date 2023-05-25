@@ -34,50 +34,20 @@
 #define FIRMWARE_MT7663		"mediatek/mt7663pr2h.bin"
 #define FIRMWARE_MT7668		"mediatek/mt7668pr2h.bin"
 
-/* MT7668 EFUSE registers
- * 0x384: bt mac address [ 7: 0]
- * 0x385: bt mac address [15: 8]
- * 0x386: bt mac address [23:16]
- * 0x387: bt mac address [31:24]
- * 0x388: bt mac address [39:32]
- * 0x389: bt mac address [47:40]
- */
-#define MT7668_EFUSE_BT_MAC_REG0	0xe1 /* bytes 0x384-0x387 for BT_MAC */
-#define MT7668_EFUSE_BT_MAC_REG1	0xe2 /* bytes 0x388-0x389 for BT_MAC */
-
-/* MT7663 EFUSE registers
- * 0x131: bt mac address [ 7: 0]
- * 0x132: bt mac address [15: 8]
- * 0x133: bt mac address [23:16]
- * 0x134: bt mac address [31:24]
- * 0x135: bt mac address [39:32]
- * 0x136: bt mac address [47:40]
- */
-#define MT7663_EFUSE_BT_MAC_REG0	0x4c /* bytes 0x131-0x134 for BT_MAC */
-#define MT7663_EFUSE_BT_MAC_REG1	0x4d /* bytes 0x135-0x136 for BT_MAC */
-
 #define MTKBTSDIO_AUTOSUSPEND_DELAY	8000
 
 static bool enable_autosuspend;
 
 struct btmtksdio_data {
 	const char *fwname;
-	u8 mac_reg0;
-	u8 mac_reg1;
-	u8 mac_offset;
 };
 
 static const struct btmtksdio_data mt7663_data = {
 	.fwname = FIRMWARE_MT7663,
-	.mac_reg0 = MT7663_EFUSE_BT_MAC_REG0,
-	.mac_reg1 = MT7663_EFUSE_BT_MAC_REG1,
-	.mac_offset = 1,
 };
 
 static const struct btmtksdio_data mt7668_data = {
 	.fwname = FIRMWARE_MT7668,
-	.mac_reg0 = MT7668_EFUSE_BT_MAC_REG0,
-	.mac_reg1 = MT7668_EFUSE_BT_MAC_REG1,
 };
 
 static const struct sdio_device_id btmtksdio_table[] = {
@@ -119,6 +89,17 @@ static const struct sdio_device_id btmtksdio_table[] = {
 
 #define BTMTKSDIO_TX_WAIT_VND_EVT	1
 #define BTMTKSDIO_TX_WAIT_EEPROM_READ_BDADDR	2
+
+/* MT7668 EFUSE registers
+ * 0x384: bt mac address [ 7: 0]
+ * 0x385: bt mac address [15: 8]
+ * 0x386: bt mac address [23:16]
+ * 0x387: bt mac address [31:24]
+ * 0x388: bt mac address [39:32]
+ * 0x389: bt mac address [47:40]
+ */
+#define MT7668_EFUSE_BT_MAC_REG0	0xe1 /* bytes 0x384-0x387 for BT_MAC */
+#define MT7668_EFUSE_BT_MAC_REG1	0xe2 /* bytes 0x388-0x389 for BT_MAC */
 
 enum {
 	MTK_WMT_PATCH_DWNLD = 0x1,
@@ -227,7 +208,6 @@ static int mtk_hci_wmt_sync(struct hci_dev *hdev,
 	struct mtk_hci_wmt_cmd wc;
 	struct mtk_wmt_hdr *hdr;
 	int err;
-	int i;
 
 	hlen = sizeof(*hdr) + wmt_params->dlen;
 	if (hlen > 255)
@@ -300,14 +280,18 @@ static int mtk_hci_wmt_sync(struct hci_dev *hdev,
 		wmt_evt_efuser = (struct btmtk_hci_wmt_evt_efuser *)wmt_evt;
 		if (test_and_clear_bit(BTMTKSDIO_TX_WAIT_EEPROM_READ_BDADDR,
 				       &bdev->tx_state)) {
-			for (i = 0; i < 6; i++) {
-				int byte = (bdev->data->mac_offset + i) % 4;
-				int reg = (bdev->data->mac_offset + i) / 4;
-
-				bdev->efuse_bdaddr.b[5 - i] =
-					wmt_evt_efuser->regs[reg].val[byte];
-
-			}
+			bdev->efuse_bdaddr.b[5] =
+				wmt_evt_efuser->regs[0].val[0];
+			bdev->efuse_bdaddr.b[4] =
+				wmt_evt_efuser->regs[0].val[1];
+			bdev->efuse_bdaddr.b[3] =
+				wmt_evt_efuser->regs[0].val[2];
+			bdev->efuse_bdaddr.b[2] =
+				wmt_evt_efuser->regs[0].val[3];
+			bdev->efuse_bdaddr.b[1] =
+				wmt_evt_efuser->regs[1].val[0];
+			bdev->efuse_bdaddr.b[0] =
+				wmt_evt_efuser->regs[1].val[1];
 
 			/* Barrier to sync with other CPUs */
 			smp_mb__after_atomic();
@@ -852,7 +836,7 @@ static int mtk_setup_bdaddr_efuse(struct hci_dev *hdev)
 
 	struct btmtk_hci_wmt_cmd_efuser read_bdaddr = {
 		.num_regs = 2,
-		.regs = { bdev->data->mac_reg0, bdev->data->mac_reg1 },
+		.regs = { MT7668_EFUSE_BT_MAC_REG0, MT7668_EFUSE_BT_MAC_REG1 },
 	};
 
 	wmt_params.op = MTK_WMT_EFUSE_READ;
