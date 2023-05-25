@@ -94,9 +94,6 @@ static const struct sdio_device_id btmtksdio_table[] = {
 };
 MODULE_DEVICE_TABLE(sdio, btmtksdio_table);
 
-/* Vendor-specific HCI commands */
-#define HCI_VS_WRITE_BD_ADDR			0xfc1a
-
 #define MTK_REG_CHLPCR		0x4	/* W1S */
 #define C_INT_EN_SET		BIT(0)
 #define C_INT_EN_CLR		BIT(1)
@@ -1103,19 +1100,6 @@ static int btmtksdio_send_frame(struct hci_dev *hdev, struct sk_buff *skb)
 	return 0;
 }
 
-static int btmtksdio_set_bdaddr(struct hci_dev *hdev, const bdaddr_t *bdaddr)
-{
-	struct sk_buff *skb;
-
-	skb = __hci_cmd_sync(hdev, HCI_VS_WRITE_BD_ADDR, sizeof(bdaddr), bdaddr,
-						 HCI_INIT_TIMEOUT);
-	if (IS_ERR(skb))
-		return PTR_ERR(skb);
-	kfree_skb(skb);
-
-	return 0;
-}
-
 static int btmtksdio_probe(struct sdio_func *func,
 			   const struct sdio_device_id *id)
 {
@@ -1149,13 +1133,12 @@ static int btmtksdio_probe(struct sdio_func *func,
 	hdev->bus = HCI_SDIO;
 	hci_set_drvdata(hdev, bdev);
 
-	hdev->open       = btmtksdio_open;
-	hdev->close      = btmtksdio_close;
-	hdev->flush      = btmtksdio_flush;
-	hdev->setup      = btmtksdio_setup;
-	hdev->shutdown   = btmtksdio_shutdown;
-	hdev->send       = btmtksdio_send_frame;
-	hdev->set_bdaddr = btmtksdio_set_bdaddr;
+	hdev->open     = btmtksdio_open;
+	hdev->close    = btmtksdio_close;
+	hdev->flush    = btmtksdio_flush;
+	hdev->setup    = btmtksdio_setup;
+	hdev->shutdown = btmtksdio_shutdown;
+	hdev->send     = btmtksdio_send_frame;
 	SET_HCIDEV_DEV(hdev, &func->dev);
 
 	hdev->manufacturer = 70;
