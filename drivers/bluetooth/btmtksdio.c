@@ -697,12 +697,6 @@ static int btmtksdio_close(struct hci_dev *hdev)
 
 	pm_runtime_put_noidle(bdev->dev);
 	pm_runtime_disable(bdev->dev);
-	if (!enable_autosuspend)
-		pm_runtime_allow(bdev->dev);
-	err = pm_runtime_set_suspended(bdev->dev);
-	if (err)
-		bt_dev_err(bdev->hdev, "Failed to set runtime suspended: %d",
-			   err);
 
 	sdio_claim_host(bdev->func);
 
@@ -1217,13 +1211,8 @@ out:
 	return err;
 }
 
-static const struct dev_pm_ops btmtksdio_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
-	SET_RUNTIME_PM_OPS(btmtksdio_runtime_suspend,
-			   btmtksdio_runtime_resume, NULL)
-};
-
+static UNIVERSAL_DEV_PM_OPS(btmtksdio_pm_ops, btmtksdio_runtime_suspend,
+			    btmtksdio_runtime_resume, NULL);
 #define BTMTKSDIO_PM_OPS (&btmtksdio_pm_ops)
 #else	/* CONFIG_PM */
 #define BTMTKSDIO_PM_OPS NULL
