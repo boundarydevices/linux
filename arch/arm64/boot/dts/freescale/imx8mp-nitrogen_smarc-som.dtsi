@@ -826,6 +826,14 @@
 	vmmc-supply = <&reg_wlan_vmmc>;
 	vqmmc-1-8-v;
 	vqmmc-supply = <&reg_vref_1v8>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	wifi@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+		laird,regdomain = "US";
+	};
 };
 
 &vpu_g1 {
