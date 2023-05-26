@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Copyright 2021-2022 NXP
+ * Copyright 2021-2023 NXP
  */
 
 #ifndef ELE_MU_H
@@ -72,10 +72,10 @@ struct ele_imem_buf {
 	u32 size;
 };
 
-struct ele_obuf_desc {
-	u8 *out_ptr;
-	u8 *out_usr_ptr;
-	u32 out_size;
+struct ele_buf_desc {
+	u8 *shared_buf_ptr;
+	u8 *usr_buf_ptr;
+	u32 size;
 	struct list_head link;
 };
 
@@ -103,6 +103,7 @@ struct ele_mu_device_ctx {
 	struct semaphore fops_lock;
 
 	u32 pending_hdr;
+	struct list_head pending_in;
 	struct list_head pending_out;
 
 	struct ele_shared_mem secure_mem;
