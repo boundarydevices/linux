@@ -181,6 +181,10 @@
 	};
 };
 
+&pcie {
+	ext_osc = <0>;
+};
+
 &pcie_phy {
 	ext_osc = <0>;
 };
