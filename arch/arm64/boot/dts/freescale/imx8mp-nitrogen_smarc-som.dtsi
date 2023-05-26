@@ -735,7 +735,6 @@
 &pcie_phy {
 	clocks = <&pcie0_refclk>;
 	clock-names = "ref";
-	status = "okay";
 };
 
 &sai3 {
