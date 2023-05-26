@@ -812,7 +812,6 @@
 	bus-width = <4>;
 	fsl,sdio-async-interrupt-enabled;
 	keep-power-in-suspend;
-	no-sd-uhs-sdr104;
 	non-removable;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc3>;
