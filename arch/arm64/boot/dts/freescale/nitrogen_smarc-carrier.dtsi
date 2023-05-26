@@ -698,6 +698,13 @@
 	status = "okay";
 };
 
+#ifdef SM_PCIE_PHY
+&SM_PCIE_PHY {
+	ext_osc = <1>;
+	status = "okay";
+};
+#endif
+
 #ifdef SM_PWM_CSI1
 &SM_PWM_CSI1 {
 	pinctrl-names = "default";
