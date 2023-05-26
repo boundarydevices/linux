@@ -404,7 +404,7 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 							 struct ele_mu_device_ctx,
 							 miscdev);
 	u32 data_size = 0, size_to_copy = 0;
-	struct ele_obuf_desc *b_desc;
+	struct ele_buf_desc *b_desc;
 	int err;
 
 	devctx_dbg(dev_ctx, "read to buf %p(%ld), ppos=%lld\n", buf, size,
@@ -444,13 +444,13 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 	 */
 	while (!list_empty(&dev_ctx->pending_out)) {
 		b_desc = list_first_entry_or_null(&dev_ctx->pending_out,
-						  struct ele_obuf_desc,
+						  struct ele_buf_desc,
 						  link);
-		if (b_desc->out_usr_ptr && b_desc->out_ptr) {
+		if (b_desc->usr_buf_ptr && b_desc->shared_buf_ptr) {
 			devctx_dbg(dev_ctx, "Copy output data to user\n");
-			err = (int)copy_to_user(b_desc->out_usr_ptr,
-						b_desc->out_ptr,
-						b_desc->out_size);
+			err = (int)copy_to_user(b_desc->usr_buf_ptr,
+						b_desc->shared_buf_ptr,
+						b_desc->size);
 			if (err) {
 				devctx_err(dev_ctx,
 					   "Failed to copy output data to user\n");
@@ -458,6 +458,10 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 				goto exit;
 			}
 		}
+
+		if (b_desc->shared_buf_ptr)
+			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+
 		__list_del_entry(&b_desc->link);
 		devm_kfree(dev_ctx->dev, b_desc);
 	}
@@ -481,6 +485,29 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 	dev_ctx->pending_hdr = 0;
 
 exit:
+	/*
+	 * Clean the used Shared Memory space,
+	 * whether its Input Data copied from user buffers, or
+	 * Data received from FW.
+	 */
+	while (!list_empty(&dev_ctx->pending_in) ||
+	       !list_empty(&dev_ctx->pending_out)) {
+		if (!list_empty(&dev_ctx->pending_in))
+			b_desc = list_first_entry_or_null(&dev_ctx->pending_in,
+							  struct ele_buf_desc,
+							  link);
+		else
+			b_desc = list_first_entry_or_null(&dev_ctx->pending_out,
+							  struct ele_buf_desc,
+							  link);
+
+		if (b_desc->shared_buf_ptr)
+			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+
+		__list_del_entry(&b_desc->link);
+		devm_kfree(dev_ctx->dev, b_desc);
+	}
+
 	up(&dev_ctx->fops_lock);
 	return err;
 }
@@ -541,7 +568,7 @@ exit:
 static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 					    unsigned long arg)
 {
-	struct ele_obuf_desc *out_buf_desc;
+	struct ele_buf_desc *b_desc;
 	struct ele_mu_ioctl_setup_iobuf io = {0};
 	struct ele_shared_mem *shared_mem;
 	int err = -EINVAL;
@@ -601,7 +628,9 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 		goto exit;
 	}
 
-	if (io.flags & SECO_MU_IO_FLAGS_IS_INPUT) {
+	memset(shared_mem->ptr + pos, 0, io.length);
+	if ((io.flags & SECO_MU_IO_FLAGS_IS_INPUT) ||
+	    (io.flags & SECO_MU_IO_FLAGS_IS_IN_OUT)) {
 		/*
 		 * buffer is input:
 		 * copy data from user space to this allocated buffer.
@@ -614,45 +643,38 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 			err = -EFAULT;
 			goto exit;
 		}
-	} else {
-		if (io.flags & SECO_MU_IO_FLAGS_IS_IN_OUT) {
-		/*
-		 * buffer is input and output both:
-		 * flush the memory "shared_mem->ptr + pos" with
-		 * size io.length.
-		 */
-			err = (int)copy_from_user(shared_mem->ptr + pos, io.user_buf,
-						  io.length);
-			if (err) {
-				devctx_err(dev_ctx,
-					   "Failed copy data to shared memory\n");
-				err = -EFAULT;
-				goto exit;
-			}
-		}
-
-		/*
-		 * buffer is output:
-		 * add an entry in the "pending buffers" list so data
-		 * can be copied to user space when receiving SECO
-		 * response.
-		 */
-		out_buf_desc = devm_kmalloc(dev_ctx->dev, sizeof(*out_buf_desc),
-					    GFP_KERNEL);
-		if (!out_buf_desc) {
-			err = -ENOMEM;
-			devctx_err(dev_ctx,
-				   "Failed allocating mem for pending buffer\n"
-				   );
-			goto exit;
-		}
-
-		out_buf_desc->out_ptr = shared_mem->ptr + pos;
-		out_buf_desc->out_usr_ptr = io.user_buf;
-		out_buf_desc->out_size = io.length;
-		list_add_tail(&out_buf_desc->link, &dev_ctx->pending_out);
 	}
 
+	b_desc = devm_kmalloc(dev_ctx->dev, sizeof(*b_desc), GFP_KERNEL);
+	if (!b_desc) {
+		err = -ENOMEM;
+		devctx_err(dev_ctx,
+			   "Failed allocating mem for pending buffer\n"
+			   );
+		goto exit;
+	}
+
+	b_desc->shared_buf_ptr = shared_mem->ptr + pos;
+	b_desc->usr_buf_ptr = io.user_buf;
+	b_desc->size = io.length;
+
+	if (io.flags & SECO_MU_IO_FLAGS_IS_INPUT) {
+		/*
+		 * buffer is input:
+		 * add an entry in the "pending input buffers" list so
+		 * that copied data can be cleaned from shared memory
+		 * later.
+		 */
+		list_add_tail(&b_desc->link, &dev_ctx->pending_in);
+	} else {
+		/*
+		 * buffer is output:
+		 * add an entry in the "pending out buffers" list so data
+		 * can be copied to user space when receiving ELE
+		 * response.
+		 */
+		list_add_tail(&b_desc->link, &dev_ctx->pending_out);
+	}
 copy:
 	/* Provide the EdgeLock Enclave address to user space only if success. */
 	err = (int)copy_to_user((u8 *)arg, &io,
@@ -734,7 +756,7 @@ static int ele_mu_fops_close(struct inode *nd, struct file *fp)
 	struct ele_mu_device_ctx *dev_ctx = container_of(fp->private_data,
 					struct ele_mu_device_ctx, miscdev);
 	struct ele_mu_priv *priv = dev_ctx->priv;
-	struct ele_obuf_desc *out_buf_desc;
+	struct ele_buf_desc *b_desc;
 
 	/* Avoid race if closed at the same time */
 	if (down_trylock(&dev_ctx->fops_lock))
@@ -773,12 +795,22 @@ static int ele_mu_fops_close(struct inode *nd, struct file *fp)
 	dev_ctx->non_secure_mem.size = 0;
 	dev_ctx->non_secure_mem.pos = 0;
 
-	while (!list_empty(&dev_ctx->pending_out)) {
-		out_buf_desc = list_first_entry_or_null(&dev_ctx->pending_out,
-						struct ele_obuf_desc,
-						link);
-		__list_del_entry(&out_buf_desc->link);
-		devm_kfree(dev_ctx->dev, out_buf_desc);
+	while (!list_empty(&dev_ctx->pending_in) ||
+	       !list_empty(&dev_ctx->pending_out)) {
+		if (!list_empty(&dev_ctx->pending_in))
+			b_desc = list_first_entry_or_null(&dev_ctx->pending_in,
+							  struct ele_buf_desc,
+							  link);
+		else
+			b_desc = list_first_entry_or_null(&dev_ctx->pending_out,
+							  struct ele_buf_desc,
+							  link);
+
+		if (b_desc->shared_buf_ptr)
+			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+
+		__list_del_entry(&b_desc->link);
+		devm_kfree(dev_ctx->dev, b_desc);
 	}
 
 	dev_ctx->status = MU_FREE;
@@ -999,6 +1031,7 @@ static int ele_mu_probe(struct platform_device *pdev)
 		init_waitqueue_head(&dev_ctx->wq);
 
 		INIT_LIST_HEAD(&dev_ctx->pending_out);
+		INIT_LIST_HEAD(&dev_ctx->pending_in);
 		sema_init(&dev_ctx->fops_lock, 1);
 
 		devname = devm_kasprintf(dev, GFP_KERNEL, "ele_mu%d_ch%d",
