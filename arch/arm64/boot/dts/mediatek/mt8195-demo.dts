@@ -753,8 +753,7 @@
 		pins {
 			pinmux = <PINMUX_GPIO8__FUNC_SDA0>,
 				 <PINMUX_GPIO9__FUNC_SCL0>;
-			bias-pull-up;
-			mediatek,rsel = <MTK_PULL_SET_RSEL_111>;
+			bias-pull-up = <MTK_PULL_SET_RSEL_111>;
 			mediatek,drive-strength-adv = <7>;
 		};
 	};
@@ -763,8 +762,7 @@
 		pins {
 			pinmux = <PINMUX_GPIO10__FUNC_SDA1>,
 				 <PINMUX_GPIO11__FUNC_SCL1>;
-			bias-pull-up;
-			mediatek,rsel = <MTK_PULL_SET_RSEL_111>;
+			bias-pull-up = <MTK_PULL_SET_RSEL_111>;
 			mediatek,drive-strength-adv = <7>;
 		};
 	};
@@ -773,8 +771,7 @@
 		pins {
 			pinmux = <PINMUX_GPIO12__FUNC_SDA2>,
 				 <PINMUX_GPIO13__FUNC_SCL2>;
-			bias-pull-up;
-			mediatek,rsel = <MTK_PULL_SET_RSEL_111>;
+			bias-pull-up = <MTK_PULL_SET_RSEL_111>;
 			mediatek,drive-strength-adv = <7>;
 		};
 	};
@@ -784,7 +781,6 @@
 			pinmux = <PINMUX_GPIO25__FUNC_SDA6>,
 				 <PINMUX_GPIO26__FUNC_SCL6>;
 			bias-pull-up;
-			mediatek,rsel = <MTK_PULL_SET_RSEL_111>;
 		};
 	};
 
