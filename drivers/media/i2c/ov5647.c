@@ -631,13 +631,13 @@ static int ov5647_write(struct v4l2_subdev *sd, u16 reg, u8 val)
 	if (ret == 3) {
 		ret = 0;
 	} else {
-		dev_dbg(&client->dev, "%s: i2c write error, reg: %x, %d\n",
-				__func__, reg, ret);
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+				__func__, reg);
 		if (ret >= 0)
 			ret = -EINVAL;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int ov5647_read(struct v4l2_subdev *sd, u16 reg, u8 *val)
