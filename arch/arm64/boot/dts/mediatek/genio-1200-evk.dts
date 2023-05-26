@@ -653,8 +653,6 @@
 				 <PINMUX_GPIO75__FUNC_AUD_DAT_MISO2>,
 				 <PINMUX_GPIO61__FUNC_DMIC1_CLK>,
 				 <PINMUX_GPIO62__FUNC_DMIC1_DAT>,
-				 <PINMUX_GPIO17__FUNC_DMIC4_CLK>,
-				 <PINMUX_GPIO16__FUNC_DMIC4_DAT>,
 				 <PINMUX_GPIO65__FUNC_PCM_DO>,
 				 <PINMUX_GPIO66__FUNC_PCM_CLK>,
 				 <PINMUX_GPIO67__FUNC_PCM_DI>,
@@ -1040,8 +1038,6 @@
 	#sound-dai-cells = <0>;
 	memory-region = <&snd_dma_mem_reserved>;
 	mediatek,dmic-iir-on;
-	mediatek,dmic-clk-mono;
-	mediatek,dmic-clk-index = <0 3 2 1>;
 	status = "okay";
 };
 
