@@ -723,13 +723,10 @@
 		 <&clk IMX8MP_CLK_HSIO_AXI>,
 		 <&clk IMX8MP_CLK_PCIE_ROOT>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
-	ext_osc = <0>;
 };
 
 &pcie_phy {
 	clk_mode = <3>;
-	ext_osc = <1>;
-	status = "okay";
 };
 
 &sai3 {
@@ -1019,6 +1016,7 @@
 
 /* J2H */
 #define SM_PCIE				pcie
+#define SM_PCIE_PHY			pcie_phy
 #define GP_SM_PCIE_A_RST(a)		<&gpio4 21 a>
 #define PD_SM_PCIE_A_RST(a)		MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21 a
 #define GP_SM_PCIE_WAKE(a)		<&gpio4 28 a>
