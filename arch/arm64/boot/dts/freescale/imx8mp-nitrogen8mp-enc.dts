@@ -181,12 +181,8 @@
 	};
 };
 
-&pcie {
-	ext_osc = <0>;
-};
-
 &pcie_phy {
-	ext_osc = <0>;
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
 };
 
 &pwm4 {
