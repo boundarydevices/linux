@@ -700,6 +700,7 @@
 #ifdef SM_PCIE_PHY
 &SM_PCIE_PHY {
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+	status = "okay";
 };
 #endif
 
