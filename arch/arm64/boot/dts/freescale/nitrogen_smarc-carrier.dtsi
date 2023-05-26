@@ -691,12 +691,17 @@
 #endif
 
 &SM_PCIE {
-	ext_osc = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_PCIE);
 	reset-gpio = GP_SM_PCIE_A_RST(GPIO_ACTIVE_LOW);
 	status = "okay";
 };
+
+#ifdef SM_PCIE_PHY
+&SM_PCIE_PHY {
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+};
+#endif
 
 #ifdef SM_PWM_CSI1
 &SM_PWM_CSI1 {
