@@ -5,6 +5,7 @@
 
 /dts-v1/;
 
+#include <dt-bindings/phy/phy-imx8-pcie.h>
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp.dtsi"
 
@@ -572,6 +573,12 @@
 		};
 	};
 
+	pcie0_refclk: pcie0-refclk {
+		compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <100000000>;
+	};
+
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
@@ -1125,7 +1132,6 @@
 		 <&clk IMX8MP_CLK_HSIO_AXI>,
 		 <&clk IMX8MP_CLK_PCIE_ROOT>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
-	ext_osc = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
 	reset-gpio = GP_PCIE_RESET;
@@ -1133,7 +1139,9 @@
 };
 
 &pcie_phy {
-	clk_mode = <3>;
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+	clocks = <&pcie0_refclk>;
+	clock-names = "ref";
 	status = "okay";
 };
 
