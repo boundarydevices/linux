@@ -27,6 +27,7 @@
 
 struct mtk_disp_gamma_data {
 	bool has_dither;
+	bool has_gamma;
 };
 
 /*
@@ -79,7 +80,8 @@ void mtk_gamma_set(struct device *dev, struct drm_crtc_state *state)
 {
 	struct mtk_disp_gamma *gamma = dev_get_drvdata(dev);
 
-	mtk_gamma_set_common(gamma->regs, state);
+	if (gamma->data && gamma->data->has_gamma)
+		mtk_gamma_set_common(gamma->regs, state);
 }
 
 void mtk_gamma_config(struct device *dev, unsigned int w,
@@ -176,12 +178,20 @@ static int mtk_disp_gamma_remove(struct platform_device *pdev)
 
 static const struct mtk_disp_gamma_data mt8173_gamma_driver_data = {
 	.has_dither = true,
+	.has_gamma = true,
+};
+
+static const struct mtk_disp_gamma_data mt8183_gamma_driver_data = {
+	.has_dither = false,
+	.has_gamma = true,
 };
 
 static const struct of_device_id mtk_disp_gamma_driver_dt_match[] = {
 	{ .compatible = "mediatek,mt8173-disp-gamma",
 	  .data = &mt8173_gamma_driver_data},
-	{ .compatible = "mediatek,mt8183-disp-gamma"},
+	{ .compatible = "mediatek,mt8183-disp-gamma",
+	  .data = &mt8183_gamma_driver_data},
+	{ .compatible = "mediatek,mt8195-disp-gamma",},
 	{},
 };
 MODULE_DEVICE_TABLE(of, mtk_disp_gamma_driver_dt_match);
