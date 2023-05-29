@@ -936,7 +936,6 @@
 &mt6359_vcn33_2_bt_ldo_reg {
 	regulator-min-microvolt = <3300000>;
 	regulator-max-microvolt = <3300000>;
-	regulator-always-on;
 };
 
 /* DEBUG: to remove */
