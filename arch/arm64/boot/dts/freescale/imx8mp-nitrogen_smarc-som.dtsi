@@ -615,8 +615,9 @@
 		reset-gpios = GP_I2C6C_MCP23018_RESET;
 
 		mcp_pullups: pinmux {
-			pins =  "gpio0", "gpio1", "gpio2", "gpio3",
-				"gpio4", "gpio5", "gpio6", "gpio7",
+			/* gpio1 & gpio4 have external pullup */
+			pins =  "gpio0", "gpio2", "gpio3",
+				"gpio5", "gpio6", "gpio7",
 				"gpio8", "gpio9", "gpio10", "gpio11",
 				"gpio12", "gpio13", "gpio14", "gpio15";
 			bias-pull-up;
@@ -1090,13 +1091,13 @@
 
 #define GP_SM_GPIO0(a)			<&mcp23018 0 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO0(a)
-#define GP_SM_GPIO1(a)			<&mcp23018 1 (a | GPIO_PULL_UP)>
+#define GP_SM_GPIO1(a)			<&mcp23018 1 (a)>
 #define PD_SM_GPIO1(a)
 #define GP_SM_GPIO2(a)			<&mcp23018 2 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO2(a)
 #define GP_SM_GPIO3(a)			<&mcp23018 3 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO3(a)
-#define GP_SM_GPIO4(a)			<&mcp23018 4 (a | GPIO_PULL_UP)>
+#define GP_SM_GPIO4(a)			<&mcp23018 4 (a)>
 #define PD_SM_GPIO4(a)
 #define GP_SM_GPIO5(a)			<&mcp23018 5 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO5(a)
