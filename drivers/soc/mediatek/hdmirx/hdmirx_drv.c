@@ -1949,19 +1949,8 @@ hdmirx_probe(struct platform_device *pdev)
 			myhdmi->rx_irq, ret);
 		return ret;
 	}
-	ret = devm_request_irq(myhdmi->dev,
-		myhdmi->rx_phy_irq,
-		hdmi_rx_phy_irq,
-		IRQF_TRIGGER_HIGH,
-		dev_name(myhdmi->dev),
-		myhdmi);
-	if (ret < 0) {
-		RX_DEF_LOG("[RX]Fail hdmi rx phy irq %d: %d\n",
-			myhdmi->rx_phy_irq, ret);
-		return ret;
-	}
 
-	RX_DEF_LOG("[rx]%s done\n", __func__);
+	RX_DEF_LOG("[rx]%s done.\n", __func__);
 
 	return 0;
 }
