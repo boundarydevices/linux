@@ -247,6 +247,7 @@
 / {
 	aliases {
 		fb_hdmi = &SM_FB_HDMI;
+		rtc0 = &rv3028;
 		usb_mux = &usb_mux;
 	};
 
@@ -507,7 +508,7 @@
 };
 
 &i2c_gp_a {
-	rtc@52 {
+	rv3028: rtc@52 {
 		backup-switchover-dsm;
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
