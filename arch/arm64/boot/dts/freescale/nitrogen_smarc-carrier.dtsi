@@ -352,18 +352,18 @@
 #endif
 	};
 
-	reg_can1_stby: regulator-can1-stby {
+	reg_can0_stby: regulator-can0-stby {
 		compatible = "regulator-fixed";
-		regulator-name = "can1-stby";
+		regulator-name = "can0-stby";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		gpio = GP_SM_GPIO1(GPIO_ACTIVE_HIGH);
 		enable-active-high;
 	};
 
-	reg_can2_stby: regulator-can2-stby {
+	reg_can1_stby: regulator-can1-stby {
 		compatible = "regulator-fixed";
-		regulator-name = "can2-stby";
+		regulator-name = "can1-stby";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		gpio = GP_SM_GPIO4(GPIO_ACTIVE_HIGH);
@@ -447,14 +447,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_CAN0);
 	status = "okay";
-	xceiver-supply = <&reg_can1_stby>;
+	xceiver-supply = <&reg_can0_stby>;
 };
 
 &SM_CAN1 {
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_CAN1);
 	status = "okay";
-	xceiver-supply = <&reg_can2_stby>;
+	xceiver-supply = <&reg_can1_stby>;
 };
 
 &SM_I2C_GP {
