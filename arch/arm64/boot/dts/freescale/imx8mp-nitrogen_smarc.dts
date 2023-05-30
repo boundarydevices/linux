@@ -11,4 +11,9 @@
 / {
 	model = "Boundary i.MX8MPlus nitrogen8mp smarc board";
 	compatible = "boundary,imx8mp-nitrogen-smarc", "fsl,imx8mp";
+
+	aliases {
+		rtc1 = &snvs_rtc;
+	};
+
 };
