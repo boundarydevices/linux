@@ -4,7 +4,7 @@
  * Author: Chris Chen <chris-qj.chen@mediatek.com>
  */
 /dts-v1/;
-#include "mt8188.dtsi"
+#include "mt8370.dtsi"
 #include "mt6359.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
@@ -13,8 +13,8 @@
 #include <dt-bindings/usb/pd.h>
 
 / {
-	model = "MediaTek Genio-700 EVK";
-	compatible = "mediatek,mt8390-evk", "mediatek,mt8188";
+	model = "MediaTek Genio-510 EVK";
+	compatible = "mediatek,mt8370-evk", "mediatek,mt8188";
 
 	aliases {
 		serial0 = &uart0;
