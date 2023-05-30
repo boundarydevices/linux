@@ -1045,8 +1045,7 @@
 		};
 
 		gamma0: gamma@14012000 {
-			compatible = "mediatek,mt8365-disp-gamma",
-				     "mediatek,mt8183-disp-gamma";
+			compatible = "mediatek,mt8195-disp-gamma";
 			reg = <0 0x14012000 0 0x1000>;
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_LOW>;
 			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
