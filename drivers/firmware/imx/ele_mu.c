@@ -132,7 +132,6 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 			priv->rx_msg = *(struct ele_api_msg *)msg;
 			complete(&priv->done);
 			spin_unlock(&priv->lock);
-			mutex_unlock(&priv->mu_cmd_lock);
 			return;
 		}
 	} else {
@@ -161,11 +160,9 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 	dev_ctx->pending_hdr = dev_ctx->temp_resp[0];
 	wake_up_interruptible(&dev_ctx->wq);
 
-	if (is_response) {
+	if (is_response)
 		priv->waiting_rsp_dev = NULL;
-		/* Allow user to send new command */
-		mutex_unlock(&priv->mu_cmd_lock);
-	}
+
 }
 
 static void ele_ping_handler(struct work_struct *work)
@@ -344,8 +341,8 @@ static ssize_t ele_mu_fops_write(struct file *fp, const char __user *buf,
 	/* Check the message is valid according to tags */
 	if (header.tag == ele_mu_priv->cmd_tag) {
 		/*
-		 * unlocked in ele_mu_receive_work_handler when the
-		 * response to this command is received.
+		 * unlocked in ele_mu_fops_read when the
+		 * response to this command is read.
 		 */
 		mutex_lock(&ele_mu_priv->mu_cmd_lock);
 		ele_mu_priv->waiting_rsp_dev = dev_ctx;
@@ -369,6 +366,7 @@ static ssize_t ele_mu_fops_write(struct file *fp, const char __user *buf,
 	 */
 	nb_words = header.size;
 	if (nb_words * sizeof(u32) != size) {
+		err = -EINVAL;
 		devctx_err(dev_ctx, "User buffer too small\n");
 		goto exit;
 	}
@@ -389,6 +387,8 @@ unlock:
 	mutex_unlock(&ele_mu_priv->mu_lock);
 
 exit:
+	if (err < 0)
+		mutex_unlock(&ele_mu_priv->mu_cmd_lock);
 	up(&dev_ctx->fops_lock);
 	return err;
 }
@@ -403,9 +403,11 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 	struct ele_mu_device_ctx *dev_ctx = container_of(fp->private_data,
 							 struct ele_mu_device_ctx,
 							 miscdev);
+	struct ele_mu_priv *ele_mu_priv = dev_ctx->priv;
 	u32 data_size = 0, size_to_copy = 0;
 	struct ele_buf_desc *b_desc;
 	int err;
+	struct mu_hdr header;
 
 	devctx_dbg(dev_ctx, "read to buf %p(%ld), ppos=%lld\n", buf, size,
 		   ((ppos) ? *ppos : 0));
@@ -466,6 +468,8 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 		devm_kfree(dev_ctx->dev, b_desc);
 	}
 
+	header = *((struct mu_hdr *) (&dev_ctx->temp_resp[0]));
+
 	/* Copy data from the buffer */
 	print_hex_dump_debug("to user ", DUMP_PREFIX_OFFSET, 4, 4,
 			     dev_ctx->temp_resp, size_to_copy, false);
@@ -507,6 +511,8 @@ exit:
 		__list_del_entry(&b_desc->link);
 		devm_kfree(dev_ctx->dev, b_desc);
 	}
+	if (header.tag == ele_mu_priv->rsp_tag)
+		mutex_unlock(&ele_mu_priv->mu_cmd_lock);
 
 	up(&dev_ctx->fops_lock);
 	return err;
