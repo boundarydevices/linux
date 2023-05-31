@@ -5606,9 +5606,6 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 		fb_data->vneg_regulator = NULL;
 	}
 
-	if (device_create_file(info->dev, &fb_attrs[0]))
-		dev_err(&pdev->dev, "Unable to create file from fb_attrs\n");
-
 	fb_data->cur_update = NULL;
 
 	mutex_init(&fb_data->queue_mutex);
@@ -5726,6 +5723,9 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 			"register_framebuffer failed with error %d\n", ret);
 		goto out_lutmap;
 	}
+
+	if (device_create_file(info->dev, &fb_attrs[0]))
+		dev_err(&pdev->dev, "Unable to create file from fb_attrs\n");
 
 	g_fb_data = fb_data;
 
