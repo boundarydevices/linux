@@ -811,7 +811,7 @@ static enum pkvm_page_state host_get_page_state(kvm_pte_t pte, u64 addr)
 	enum pkvm_page_state state = 0;
 	enum kvm_pgtable_prot prot;
 
-	if (!addr_is_allowed_memory(addr))
+	if (is_memory && !addr_is_allowed_memory(addr))
 		return PKVM_NOPAGE;
 
 	if (is_memory && hyp_phys_to_page(addr)->flags & MODULE_OWNED_PAGE)
@@ -1031,7 +1031,7 @@ static int hyp_ack_share(u64 addr, const struct pkvm_mem_transition *tx,
 	phys_addr_t phys = hyp_virt_to_phys((void *)addr);
 	enum kvm_pgtable_prot prot = default_hyp_prot(phys);
 
-	if (perms != prot)
+	if (!addr_is_memory(phys) || perms != prot)
 		return -EPERM;
 
 	if (__hyp_ack_skip_pgtable_check(tx))
@@ -1126,7 +1126,7 @@ static int guest_ack_share(u64 addr, const struct pkvm_mem_transition *tx,
 {
 	u64 size = tx->nr_pages * PAGE_SIZE;
 
-	if (perms != KVM_PGTABLE_PROT_RWX)
+	if (!addr_is_memory(tx->completer.guest.phys) || perms != KVM_PGTABLE_PROT_RWX)
 		return -EPERM;
 
 	return __guest_check_page_state_range(tx->completer.guest.hyp_vcpu,
@@ -1136,6 +1136,9 @@ static int guest_ack_share(u64 addr, const struct pkvm_mem_transition *tx,
 static int guest_ack_donation(u64 addr, const struct pkvm_mem_transition *tx)
 {
 	u64 size = tx->nr_pages * PAGE_SIZE;
+
+	if (!addr_is_memory(tx->completer.guest.phys))
+		return -EPERM;
 
 	return __guest_check_page_state_range(tx->completer.guest.hyp_vcpu,
 					      addr, size, PKVM_NOPAGE);
