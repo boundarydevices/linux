@@ -527,7 +527,7 @@ static int mtk_drm_find_comp_in_ddp_conn_path(struct device *dev,
 			ret |= BIT(routes[i].crtc_id);
 
 	if (ret == 0)
-		DRM_INFO("Failed to find comp in ddp connector table\n");
+		DRM_DEBUG_DRIVER("comp not found in this ddp conn path. Might in other path\n");
 
 	return ret;
 }
@@ -589,7 +589,7 @@ unsigned int mtk_drm_find_possible_crtc_by_comp(struct drm_device *drm,
 		}
 	}
 	if (ret == 0)
-		DRM_INFO("Failed to find comp in ddp table\n");
+		DRM_DEBUG("This comp is not reachable by any crtc. Check if it is needed\n");
 
 	return ret;
 }

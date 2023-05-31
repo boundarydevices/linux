@@ -471,7 +471,7 @@ static int ovl_adaptor_comp_get_id(struct device *dev, struct device_node *node,
 		    comp_matches[i].alias_id == alias_id)
 			return i;
 
-	dev_warn(dev, "Failed to get id. type: %d, alias: %d\n", type, alias_id);
+	dev_warn(dev, "type: %d, alias: %d might not be part of ovl adaptor\n", type, alias_id);
 	return -EINVAL;
 }
 
