@@ -392,6 +392,15 @@
 		enable-active-high;
 	};
 
+	reg_vref_sdio: regulator-vref-sdio {
+		clocks = <&rv3028>;
+		compatible = "regulator-fixed-clock";
+		regulator-always-on;
+		regulator-name = "vref-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
 #ifdef SM_I2S0
 	sound-wm8962 {
 		audio-codec = <&wm8962>;
@@ -510,6 +519,7 @@
 &i2c_gp_a {
 	rv3028: rtc@52 {
 		backup-switchover-dsm;
+		#clock-cells = <0>;
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
 		interrupts-extended = GP_SM_GPIO12(IRQ_TYPE_LEVEL_LOW);
@@ -743,7 +753,7 @@
 	pinctrl-2 = pinctrl_ref2(SM_SDIO, 200mhz);
 #endif
 	status = "okay";
-	vmmc-supply = <&reg_vref_3v3>;
+	vmmc-supply = <&reg_vref_sdio>;
 };
 
 &SM_SER0 {
