@@ -229,15 +229,6 @@
 		>;
 	};
 
-	pinctrl_i2c4_ads7924: i2c4_ads7924grp {
-		fsl,pins = <
-#define GPIRQ_ADC_INTR		<&gpio4 22 IRQ_TYPE_LEVEL_LOW>
-			MX8MMN(IOMUXC_SAI2_RXC_GPIO4_IO22, 0x1c0)
-#define GP_ADC_RESET		<&gpio4 3 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI1_RXD1_GPIO4_IO3, 0x100)
-		>;
-	};
-
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
 #define GP_PCIE0_RESET		<&gpio4 2 GPIO_ACTIVE_LOW>
@@ -962,17 +953,9 @@
 	sda-gpios = GP_I2C4_SDA;
 	status = "okay";
 
-	ads7924_adc@48 {
-		compatible = "ti,ads7924";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_ads7924>;
-		reg = <0x48>;
-		vref-supply = <&reg_vref_3v3>;
-		reset-gpios = GP_ADC_RESET;
-		interrupts-extended = GPIRQ_ADC_INTR;
-		adc-irq-mode = /bits/ 8 <0x00>; /* IRQ for alarms */
-		adc-mode = /bits/ 8 <0x30>; /* 3b Auto Scan w/ Sleep */
-		adc-sleep-ms = <320>;
+	max11600@64 {
+		compatible = "maxim,max11600";
+		reg = <0x64>;
 	};
 
 	wm8960: codec@1a {
