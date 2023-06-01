@@ -41,6 +41,7 @@ struct lcdif_soc {
 	struct reset_control *clk_enable;
 	atomic_t rpm_suspended;
 
+	int	clk_enabled;
 	struct clk *clk_pix;
 	struct clk *clk_disp_axi;
 	struct clk *clk_disp_apb;
@@ -125,6 +126,7 @@ static int lcdif_enable_clocks(struct lcdif_soc *lcdif)
 	if (ret)
 		goto disable_disp_apb;
 
+	lcdif->clk_enabled = 1;
 	return 0;
 
 disable_disp_apb:
@@ -137,8 +139,11 @@ disable_disp_axi:
 	return ret;
 }
 
-static void lcdif_disable_clocks(struct lcdif_soc *lcdif)
+static int lcdif_disable_clocks(struct lcdif_soc *lcdif)
 {
+	if (!lcdif->clk_enabled)
+		return 0;
+	lcdif->clk_enabled = 0;
 	clk_disable_unprepare(lcdif->clk_pix);
 
 	if (lcdif->clk_disp_axi)
@@ -146,6 +151,7 @@ static void lcdif_disable_clocks(struct lcdif_soc *lcdif)
 
 	if (lcdif->clk_disp_apb)
 		clk_disable_unprepare(lcdif->clk_disp_apb);
+	return 1;
 }
 
 int lcdif_vblank_irq_get(struct lcdif_soc *lcdif)
@@ -436,6 +442,7 @@ void lcdif_set_mode(struct lcdif_soc *lcdif, struct videomode *vmode,
 	u32 vdctrl0, vdctrl1, vdctrl2, vdctrl3, vdctrl4, htotal;
 	struct clk *clk_pix_parent = lcdif->clk_pix;
 	int pll_parent = 0;
+	int was_enabled;
 
 	if (lcdif->clk_video_pll) {
 		while (1) {
@@ -448,6 +455,7 @@ void lcdif_set_mode(struct lcdif_soc *lcdif, struct videomode *vmode,
 			}
 		}
 	}
+	pr_debug("%s: pll_parent=%d %s\n", __func__, pll_parent, of_id ? "1" : "NULL");
 
 	if (unlikely(!of_id))
 		return;
@@ -458,14 +466,32 @@ void lcdif_set_mode(struct lcdif_soc *lcdif, struct videomode *vmode,
 	writel(CTRL1_FIFO_CLEAR, lcdif->base + LCDIF_CTRL1 + REG_CLR);
 
 	/* set pixel clock rate */
-	clk_disable_unprepare(lcdif->clk_pix);
+	was_enabled = lcdif_disable_clocks(lcdif);
 	if (pll_parent) {
-		clk_set_rate(lcdif->clk_video_pll, vmode->pixelclock);
-		pr_debug("%s: pll %ld %ld\n", __func__, vmode->pixelclock, clk_get_rate(lcdif->clk_video_pll));
+		u32 video_pll;
+
+		video_pll = vmode->pixelclock;
+		/* Video pll must be from 580MHz to 2000 MHz */
+		if (video_pll < 580000000) {
+			int n = (580000000 + video_pll - 1) / video_pll;
+			int bit;
+
+			do {
+				bit = __ffs(n);
+				if ((n >> bit) <= 7)
+					break;
+				n += (1 << bit);
+			} while (1);
+			video_pll *= n;
+			pr_debug("%s: %d = %ld * %d\n", __func__, video_pll, vmode->pixelclock, n);
+		}
+		clk_set_rate(lcdif->clk_video_pll, video_pll);
+		pr_debug("%s: pll %d %ld\n", __func__, video_pll, clk_get_rate(lcdif->clk_video_pll));
 	}
 	clk_set_rate(lcdif->clk_pix, vmode->pixelclock);
 	pr_debug("%s: %ld %ld\n", __func__, vmode->pixelclock, clk_get_rate(lcdif->clk_pix));
-	clk_prepare_enable(lcdif->clk_pix);
+	if (was_enabled)
+		lcdif_enable_clocks(lcdif);
 
 	/* config display timings */
 	writel(TRANSFER_COUNT_SET_VCOUNT(vmode->vactive) |
