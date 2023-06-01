@@ -279,6 +279,40 @@ void audsys_unregister_multi_gate(struct clk *clk)
 	kfree(gate);
 }
 
+static void mt8188_audsys_clk_unregister(void *data)
+{
+	struct mtk_base_afe *afe = data;
+	struct mt8188_afe_private *afe_priv = afe->platform_priv;
+	struct clk *clk;
+	struct clk_lookup *cl;
+	int i;
+
+	if (!afe_priv)
+		return;
+
+	for (i = 0; i < CLK_AUD_NR_CLK; i++) {
+		cl = afe_priv->lookup[i];
+		if (!cl)
+			continue;
+
+		clk = cl->clk;
+		clk_unregister_gate(clk);
+
+		clkdev_drop(cl);
+	}
+
+	for (i = 0; i < CLK_AUD_NR_MULTI_GATE; i++) {
+		cl = afe_priv->lookup[i + CLK_AUD_AFE_MULTI_GATE_START];
+		if (!cl)
+			continue;
+
+		clk = cl->clk;
+		audsys_unregister_multi_gate(clk);
+
+		clkdev_drop(cl);
+	}
+}
+
 int mt8188_audsys_clk_register(struct mtk_base_afe *afe)
 {
 	struct mt8188_afe_private *afe_priv = afe->platform_priv;
@@ -347,38 +381,5 @@ int mt8188_audsys_clk_register(struct mtk_base_afe *afe)
 		afe_priv->lookup[i + CLK_AUD_AFE_MULTI_GATE_START] = cl;
 	}
 
-	return 0;
-}
-
-void mt8188_audsys_clk_unregister(struct mtk_base_afe *afe)
-{
-	struct mt8188_afe_private *afe_priv = afe->platform_priv;
-	struct clk *clk;
-	struct clk_lookup *cl;
-	int i;
-
-	if (!afe_priv)
-		return;
-
-	for (i = 0; i < CLK_AUD_NR_CLK; i++) {
-		cl = afe_priv->lookup[i];
-		if (!cl)
-			continue;
-
-		clk = cl->clk;
-		clk_unregister_gate(clk);
-
-		clkdev_drop(cl);
-	}
-
-	for (i = 0; i < CLK_AUD_NR_MULTI_GATE; i++) {
-		cl = afe_priv->lookup[i + CLK_AUD_AFE_MULTI_GATE_START];
-		if (!cl)
-			continue;
-
-		clk = cl->clk;
-		audsys_unregister_multi_gate(clk);
-
-		clkdev_drop(cl);
-	}
+	return devm_add_action_or_reset(afe->dev, mt8188_audsys_clk_unregister, afe);
 }
