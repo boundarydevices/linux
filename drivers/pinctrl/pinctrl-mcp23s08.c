@@ -456,6 +456,8 @@ static int mcp23s08_irq_set_type(struct irq_data *data, unsigned int type)
 	struct mcp23s08 *mcp = gpiochip_get_data(gc);
 	unsigned int pos = data->hwirq;
 
+	mcp->irq_rise &= ~BIT(pos);
+	mcp->irq_fall &= ~BIT(pos);
 	if ((type & IRQ_TYPE_EDGE_BOTH) == IRQ_TYPE_EDGE_BOTH) {
 		mcp_set_bit(mcp, MCP_INTCON, pos, false);
 		mcp->irq_rise |= BIT(pos);
@@ -463,10 +465,8 @@ static int mcp23s08_irq_set_type(struct irq_data *data, unsigned int type)
 	} else if (type & IRQ_TYPE_EDGE_RISING) {
 		mcp_set_bit(mcp, MCP_INTCON, pos, false);
 		mcp->irq_rise |= BIT(pos);
-		mcp->irq_fall &= ~BIT(pos);
 	} else if (type & IRQ_TYPE_EDGE_FALLING) {
 		mcp_set_bit(mcp, MCP_INTCON, pos, false);
-		mcp->irq_rise &= ~BIT(pos);
 		mcp->irq_fall |= BIT(pos);
 	} else if (type & IRQ_TYPE_LEVEL_HIGH) {
 		mcp_set_bit(mcp, MCP_INTCON, pos, true);
@@ -474,8 +474,10 @@ static int mcp23s08_irq_set_type(struct irq_data *data, unsigned int type)
 	} else if (type & IRQ_TYPE_LEVEL_LOW) {
 		mcp_set_bit(mcp, MCP_INTCON, pos, true);
 		mcp_set_bit(mcp, MCP_DEFVAL, pos, true);
-	} else
-		return -EINVAL;
+	} else {
+		mcp_set_bit(mcp, MCP_GPINTEN, pos, false);
+		mcp_set_bit(mcp, MCP_INTCON, pos, false);
+	}
 
 	return 0;
 }
