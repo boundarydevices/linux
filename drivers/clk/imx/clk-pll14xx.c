@@ -66,6 +66,7 @@ static const struct imx_pll14xx_rate_table imx_pll1443x_tbl[] = {
 	PLL_1443X_RATE(1039500000U, 173, 2, 1, 16384),
 	PLL_1443X_RATE(756000000U, 378, 3, 2, 0),	/* (24M * 378 / 3) >> 2 = 756M */
 	PLL_1443X_RATE(717000000U, 239, 2, 2, 0),	/* (24M * 239 / 2) >> 2 = 717M */
+	PLL_1443X_RATE(699040000U, 233, 2, 2, 874),	/* (24M * (233 + 874/65536) / 2) >> 2 = 699.04M */
 	PLL_1443X_RATE(650000000U, 325, 3, 2, 0),	/* (24M * 325 / 3) >> 2 = 650M */
 	PLL_1443X_RATE(594000000U, 198, 2, 2, 0),	/* (24M * 198 / 2) >> 2 = 594M */
 	PLL_1443X_RATE(519750000U, 173, 2, 2, 16384),	/* (24M * (173 + 16384/65536) / 2) >> 2 = 519.75M */
@@ -380,9 +381,10 @@ static int clk_pll14xx_prepare(struct clk_hw *hw)
 	writel_relaxed(val, pll->base + GNRL_CTL);
 
 	ret = clk_pll14xx_wait_lock(pll);
-	if (ret)
+	if (ret) {
+		pr_err("%s: %x(%d) %s\n", __func__, val, ret, clk_hw_get_name(hw));
 		return ret;
-
+	}
 	val &= ~BYPASS_MASK;
 	writel_relaxed(val, pll->base + GNRL_CTL);
 
