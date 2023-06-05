@@ -7481,6 +7481,15 @@ int stmmac_resume(struct device *dev)
 	mutex_unlock(&priv->lock);
 	rtnl_unlock();
 
+	/* stmmac_hw_setup will do DMA initialization and SW reset
+	 * which let MAC lost the hardware setting lead to MAC can't work.
+	 * so call phylink_mac_change(priv->phylink, false) and
+	 * phylink_mac_change(priv->phylink, true) to
+	 * initialize the configuration of mac.
+	 */
+	phylink_mac_change(priv->phylink, false);
+	phylink_mac_change(priv->phylink, true);
+
 	netif_device_attach(ndev);
 
 	return 0;
