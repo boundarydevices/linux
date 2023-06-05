@@ -945,6 +945,7 @@ static int btmtksdio_mtk_reg_write(struct hci_dev *hdev, u32 reg, u32 val, u32 m
 	return err;
 }
 
+#ifdef BTMTKSDIO_SCO_SETTING
 static int btmtksdio_get_data_path_id(struct hci_dev *hdev, __u8 *data_path_id)
 {
 	/* uses 1 as data path id for all the usecases */
@@ -1000,6 +1001,7 @@ error:
 	*ven_data = NULL;
 	return err;
 }
+#endif
 
 static int btmtksdio_sco_setting(struct hci_dev *hdev)
 {
@@ -1037,8 +1039,8 @@ static int btmtksdio_sco_setting(struct hci_dev *hdev)
 	if (err < 0)
 		return err;
 
-	hdev->get_data_path_id = btmtksdio_get_data_path_id;
-	hdev->get_codec_config_data = btmtksdio_get_codec_config_data;
+	//hdev->get_data_path_id = btmtksdio_get_data_path_id;
+	//hdev->get_codec_config_data = btmtksdio_get_codec_config_data;
 
 	return err;
 }
