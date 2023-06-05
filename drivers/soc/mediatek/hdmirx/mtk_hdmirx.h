@@ -1763,6 +1763,7 @@ struct MTK_HDMI {
 	atomic_t aud_dev_cnt;
 	enum HDMIRX_NOTIFY_T video_notify;
 	enum HDMIRX_NOTIFY_T audio_notify;
+	enum HDMIRX_NOTIFY_T hdmi_plugin;
 
 	/* callback function */
 	struct device *ap_dev;

@@ -528,6 +528,7 @@ hdmi2_rx_var_init(struct MTK_HDMI *myhdmi)
 
 	myhdmi->video_notify = 0;
 	myhdmi->audio_notify = 0;
+	myhdmi->hdmi_plugin = 0;
 
 	memset(&myhdmi->aud_caps, 0, sizeof(struct AUDIO_CAPS));
 	memset(&myhdmi->aud_s, 0, sizeof(struct AUDIO_INFO));

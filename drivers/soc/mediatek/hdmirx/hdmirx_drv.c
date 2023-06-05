@@ -1006,6 +1006,10 @@ hdmi_rx_power_off(struct MTK_HDMI *myhdmi)
 	}
 
 	myhdmi->power_on = 0;
+
+	hdmirx_state_callback(myhdmi, HDMI_RX_TIMING_UNLOCK);
+	hdmirx_state_callback(myhdmi, HDMI_RX_AUD_UNLOCK);
+	hdmirx_state_callback(myhdmi, HDMI_RX_PWR_5V_CHANGE);
 }
 
 void
@@ -1105,7 +1109,8 @@ hdmirx_state_callback(struct MTK_HDMI *myhdmi,
 	switch (notify) {
 	case HDMI_RX_PWR_5V_CHANGE:
 		if ((myhdmi->portswitch == HDMI_SWITCH_1) &&
-			((myhdmi->p5v_status & 0x1) == 0x1)) {
+			((myhdmi->p5v_status & 0x1) == 0x1) &&
+			(myhdmi->power_on == 1)) {
 			temp = 1;
 		} else {
 			temp = 0;
@@ -1128,16 +1133,24 @@ hdmirx_state_callback(struct MTK_HDMI *myhdmi,
 		notify_uevent(&myhdmi->switch_data,
 			HDMI_RX_PWR_5V_CHANGE);
 		if (temp == 1) {
-			notify_uevent(&myhdmi->switch_data,
-				HDMI_RX_PLUG_IN);
+			if (myhdmi->hdmi_plugin != HDMI_RX_PLUG_IN) {
+				notify_uevent(&myhdmi->switch_data,
+					HDMI_RX_PLUG_IN);
+				myhdmi->hdmi_plugin = HDMI_RX_PLUG_IN;
+			} else
+				RX_DEF_LOG("[RX]ignore HDMI_RX_PLUG_IN\n");
 			#if HDMIRX_YOCTO
 			ret = regulator_set_voltage(myhdmi->reg_vcore, 750000, INT_MAX);
 			if (ret)
 				RX_DEF_LOG("[RX] set vcore 750000 err\n");
 			#endif
 		} else {
-			notify_uevent(&myhdmi->switch_data,
-				HDMI_RX_PLUG_OUT);
+			if (myhdmi->hdmi_plugin != HDMI_RX_PLUG_OUT) {
+				notify_uevent(&myhdmi->switch_data,
+					HDMI_RX_PLUG_OUT);
+				myhdmi->hdmi_plugin = HDMI_RX_PLUG_OUT;
+			} else
+				RX_DEF_LOG("[RX]ignore HDMI_RX_PLUG_OUT\n");
 			#if HDMIRX_YOCTO
 			ret = regulator_set_voltage(myhdmi->reg_vcore, 550000, INT_MAX);
 			if (ret)
@@ -1520,7 +1533,10 @@ static long hdmirx_ioctl(struct file *filp,
 
 	switch (cmd) {
 	case MTK_HDMIRX_DEV_INFO:
-		io_get_dev_info(myhdmi, &dev_info);
+		if (myhdmi->power_on == 0)
+			memset(&dev_info, 0, sizeof(struct HDMIRX_DEV_INFO));
+		else
+			io_get_dev_info(myhdmi, &dev_info);
 		if (copy_to_user((void __user *)arg, &dev_info,
 			sizeof(struct HDMIRX_DEV_INFO))) {
 			RX_DEF_LOG("[RX] failed: %d\n", __LINE__);
@@ -1529,7 +1545,10 @@ static long hdmirx_ioctl(struct file *filp,
 		break;
 
 	case MTK_HDMIRX_VID_INFO:
-		io_get_vid_info(myhdmi, &vid_para);
+		if (myhdmi->power_on == 0)
+			memset(&vid_para, 0, sizeof(struct HDMIRX_VID_PARA));
+		else
+			io_get_vid_info(myhdmi, &vid_para);
 		if (copy_to_user((void __user *)arg, &vid_para,
 			sizeof(struct HDMIRX_VID_PARA))) {
 			RX_DEF_LOG("[RX] failed: %d\n", __LINE__);
@@ -1538,7 +1557,10 @@ static long hdmirx_ioctl(struct file *filp,
 		break;
 
 	case MTK_HDMIRX_AUD_INFO:
-		io_get_aud_info(myhdmi, &aud_info);
+		if (myhdmi->power_on == 0)
+			memset(&aud_info, 0, sizeof(struct HDMIRX_AUD_INFO));
+		else
+			io_get_aud_info(myhdmi, &aud_info);
 		if (copy_to_user((void __user *)arg, &aud_info,
 			sizeof(struct HDMIRX_AUD_INFO))) {
 			RX_DEF_LOG("[RX] failed: %d\n", __LINE__);
@@ -1553,12 +1575,17 @@ static long hdmirx_ioctl(struct file *filp,
 			aud2_enable(myhdmi, TRUE);
 		} else {
 			RX_DEF_LOG("[RX] disable\n");
+			if (myhdmi->power_on)
+				aud2_enable(myhdmi, FALSE);
 			hdmi_rx_power_off(myhdmi);
-			aud2_enable(myhdmi, FALSE);
 		}
 		break;
 
 	case MTK_HDMIRX_SWITCH:
+		if (myhdmi->power_on == 0) {
+			RX_DEF_LOG("[rx]MTK_HDMIRX_SWITCH failed\n");
+			break;
+		}
 		RX_DEF_LOG("[RX] port from %d to %d\n",
 			myhdmi->portswitch, (u8)arg);
 		if (myhdmi->portswitch != (u8)arg) {
@@ -1576,7 +1603,10 @@ static long hdmirx_ioctl(struct file *filp,
 		break;
 
 	case MTK_HDMIRX_PKT:
-		io_get_hdr10_info(myhdmi, &hdr10_info);
+		if (myhdmi->power_on == 0)
+			memset(&hdr10_info, 0, sizeof(struct hdr10InfoPkt));
+		else
+			io_get_hdr10_info(myhdmi, &hdr10_info);
 		if (copy_to_user((void __user *)arg, &hdr10_info,
 			sizeof(struct hdr10InfoPkt))) {
 			RX_DEF_LOG("[RX] failed: %d\n", __LINE__);
