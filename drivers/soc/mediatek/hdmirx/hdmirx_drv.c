@@ -1113,6 +1113,7 @@ hdmirx_state_callback(struct MTK_HDMI *myhdmi,
 				notify_uevent(&myhdmi->switch_data,
 					HDMI_RX_TIMING_UNLOCK);
 				myhdmi->video_notify = HDMI_RX_TIMING_UNLOCK;
+				notify_vid_capture_device(myhdmi, HDMI_RX_TIMING_UNLOCK);
 			}
 			if (myhdmi->audio_notify != HDMI_RX_AUD_UNLOCK) {
 				notify_uevent(&myhdmi->switch_data,
