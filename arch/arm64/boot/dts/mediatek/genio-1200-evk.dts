@@ -112,7 +112,16 @@
 		pinctrl-0 = <&edp_panel_12v_en_pins>;
 	};
 
-	backlight_lcd0: backlight_lcd0 {
+	backlight_lcd0: backlight-lcd0 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm0 0 500000>;
+		enable-gpios = <&pio 47 GPIO_ACTIVE_HIGH>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+	};
+
+	backlight_lcd1: backlight-lcd1 {
 		compatible = "pwm-backlight";
 		pwms = <&disp_pwm1 0 500000>;
 		enable-gpios = <&pio 46 GPIO_ACTIVE_HIGH>;
@@ -461,14 +470,14 @@
 	#size-cells = <0>;
 	poweron-in-hs-mode = <0>;
 	dsi_panel@0 {
-		compatible = "startek,kd070fhfid015";
+		compatible = "startek,kd070fhfid078";
 		status = "okay";
 		reg = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&panel_pins_default>;
+		backlight = <&backlight_lcd0>;
 		reset-gpios = <&pio 108 GPIO_ACTIVE_HIGH>;
 		dcdc-gpios = <&pio 48 GPIO_ACTIVE_HIGH>;
-		enable-gpios = <&pio 47 GPIO_ACTIVE_HIGH>;
 		iovcc-supply = <&mt6360_ldo2>;
 		pp3300-supply = <&mt6360_ldo1>;
 		port {
