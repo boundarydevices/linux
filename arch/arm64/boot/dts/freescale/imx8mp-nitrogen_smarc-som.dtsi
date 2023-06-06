@@ -677,12 +677,12 @@
 	port@0 {
 		reg = <0>;
 
-		mipi1_csi0_ep: endpoint {
-			remote-endpoint = <&pi_2lane_mipi_ep>;
-			data-lanes = <2>;
+		mipi_csi0_ep: endpoint {
 			csis-hs-settle = <13>;
 			csis-clk-settle = <2>;
 			csis-wclk;
+			data-lanes = <2>;
+			remote-endpoint = <&mipi_sensor0_ep>;
 		};
 	};
 };
@@ -696,11 +696,11 @@
 		reg = <1>;
 
 		mipi_csi1_ep: endpoint {
+			csis-hs-settle = <13>;
 			csis-clk-settle = <2>;
-			csis-hs-settle = <16>;
 			csis-wclk;
-			data-lanes = <4>;
-			remote-endpoint = <&os08a20_mipi_ep>;
+			data-lanes = <2>;
+			remote-endpoint = <&mipi_sensor1_ep>;
 		};
 	};
 };
@@ -876,7 +876,7 @@
 #define SM_I2C_CSI1			i2c6b
 #define SM_PWM_CSI1			pwm3
 #define GP_SM_CSI1_MCK(a)		<&gpio5 3 a>
-#define PD_SM_CSI1_MCK(a)		MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03
+#define PD_SM_CSI1_MCK(a)		MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03 a
 #define PD_SM_CSI1_MCK_PWM(a)		MX8MP_IOMUXC_SPDIF_TX__PWM3_OUT a
 
 /* J2C */

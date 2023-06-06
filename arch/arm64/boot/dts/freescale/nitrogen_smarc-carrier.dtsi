@@ -40,6 +40,7 @@
 			PD_SM_ENET1_SDP(PAD_PULLDN)
 			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
 			PD_SM_GPIO12(PAD_PULLDN)
+			PD_SM_CSI1_MCK(PAD_PULLDN)
 		PINS_END
 	};
 
@@ -165,14 +166,6 @@
 		PINS_END
 	};
 
-#ifdef SM_PWM_CSI1
-	pinctrl(SM_PWM_CSI1) {
-		PINS_START
-			PD_SM_CSI1_MCK_PWM(PAD_PULLDN)
-		PINS_END
-	};
-#endif
-
 	pinctrl(SM_SDIO) {
 		PINS_START
 			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_50M)
@@ -284,17 +277,7 @@
 	csi0_mclk: csi0-mclk {
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
-		clock-frequency = <25000000>;
-	};
-#endif
-
-#ifdef SM_PWM_CSI1
-	csi_mclk: csi-mclk {
-		compatible = "pwm-clock";
-		#clock-cells = <0>;
-		clock-frequency = <20000000>;
-		clock-output-names = "csi_mclk";
-		pwms = <&SM_PWM_CSI1 0 50>; /* 1 / 50 ns = 20 MHz */
+		clock-frequency = <24000000>;
 	};
 #endif
 
@@ -368,16 +351,6 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = GP_SM_GPIO4(GPIO_ACTIVE_HIGH);
 		enable-active-high;
-	};
-
-	reg_csi0: regulator-csi0 {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		gpio = GP_SM_GPIO0(GPIO_ACTIVE_HIGH);
-		regulator-max-microvolt = <2800000>;
-		regulator-min-microvolt = <2800000>;
-		regulator-name = "csi0-2v8";
-		startup-delay-us = <20000>;
 	};
 
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
@@ -649,26 +622,22 @@
 
 #ifdef SM_I2C_CSI0
 &SM_I2C_CSI0{
-	camera@36 {
-		avdd-supply = <&reg_csi0>;
-		dovdd-supply = <&reg_vref_3v3>;
-		dvdd-supply = <&reg_vref_3v3>;
+	camera@10 {
+		compatible = "sony,imx219";
+		reg = <0x10>;
 		clocks = <&csi0_mclk>;
-		compatible = "ovti,ov5647";
-		csi_id = <0x00>;
-		orientation = <2>;
-		reg = <0x36>;
-		pwdn-gpios = GP_SM_GPIO2(GPIO_ACTIVE_HIGH);
-		rotation = <0>;
+		csi_id = <0>;
+		pwn-gpios = GP_SM_GPIO2(GPIO_ACTIVE_HIGH);
+		rst-gpios = GP_SM_GPIO0(GPIO_ACTIVE_LOW);
 		status = "okay";
 
 		port {
-			pi_2lane_mipi_ep: endpoint {
+			mipi_sensor0_ep: endpoint {
+				remote-endpoint = <&mipi_csi0_ep>;
+				data-lanes = <1 2>;
 				clock-lanes = <0>;
 				clock-noncontinuous;
-				data-lanes = <1 2>;
-				link-frequencies = /bits/ 64 <297000000>;
-				remote-endpoint = <&mipi1_csi0_ep>;
+				link-frequencies = /bits/ 64 <456000000>;
 			};
 		};
 	};
@@ -677,24 +646,22 @@
 
 #ifdef SM_I2C_CSI1
 &SM_I2C_CSI1 {
-	camera@36 {
-		clocks = <&csi_mclk>;
-		clock-names = "csi_mclk";
-		compatible = "ovti,os08a20";
-		csi_id = <0x01>;
-		reg = <0x36>;
-		reset-gpios = GP_SM_GPIO3(GPIO_ACTIVE_LOW);
+	camera@10 {
+		compatible = "sony,imx219";
+		reg = <0x10>;
+		clocks = <&csi0_mclk>;
+		csi_id = <1>;
+		pwn-gpios = GP_SM_GPIO3(GPIO_ACTIVE_HIGH);
+		rst-gpios = GP_SM_CSI1_MCK(GPIO_ACTIVE_LOW);
 		status = "okay";
 
 		port {
-			os08a20_mipi_ep: endpoint {
-				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
-				link-frequencies = /bits/ 64 <750000000>;
-				max-lane-frequency = /bits/ 64 <750000000>;
-				max-pixel-frequency = /bits/ 64 <266000000>;
-				max-data-rate = /bits/ 64 <0>;
+			mipi_sensor1_ep: endpoint {
 				remote-endpoint = <&mipi_csi1_ep>;
+				data-lanes = <1 2>;
+				clock-lanes = <0>;
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <456000000>;
 			};
 		};
 	};
@@ -712,14 +679,6 @@
 #ifdef SM_PCIE_PHY
 &SM_PCIE_PHY {
 	ext_osc = <1>;
-	status = "okay";
-};
-#endif
-
-#ifdef SM_PWM_CSI1
-&SM_PWM_CSI1 {
-	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_PWM_CSI1);
 	status = "okay";
 };
 #endif
