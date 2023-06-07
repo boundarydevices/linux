@@ -132,15 +132,6 @@ struct mtk_cam_dev {
 	void __iomem *regs;
 	void __iomem *regs_img0;
 	void __iomem *regs_tg;
-	/*
-	 * FIXME: camsys_cam_cgpdn, camsys_camtg_cgpd,
-	 * camsys_camsv should be replaced by 'clk_bulk_data *clks'
-	 * in mtk_camsv_hw.c and then definitions removed from
-	 * mtk_cam_dev.
-	 */
-	struct clk *camsys_cam_cgpdn;
-	struct clk *camsys_camtg_cgpdn;
-	struct clk *camsys_camsv;
 	unsigned int num_clks;
 	struct clk_bulk_data *clks;
 	struct device *larb_ipu;
