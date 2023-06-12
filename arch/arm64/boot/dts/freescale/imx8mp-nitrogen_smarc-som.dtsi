@@ -142,7 +142,7 @@
 			MX8MP_IOMUXC_UART1_TXD__UART1_DCE_TX	0x140
 			MX8MP_IOMUXC_UART3_RXD__UART1_DCE_CTS	0x140
 			MX8MP_IOMUXC_UART3_TXD__UART1_DCE_RTS	0x140
-#define GP_BT_ENABLE	<&gpio3 3 GPIO_ACTIVE_HIGH>
+#define GP_BT_REG_ON	<&gpio3 3 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_NAND_CE2_B__GPIO3_IO03	0x100
 		>;
 	};
@@ -759,7 +759,7 @@
 
 	bluetooth {
 		compatible = "cypress,cyw4373a0-bt";
-		enable-gpios = GP_BT_ENABLE;
+		shutdown-gpios = GP_BT_REG_ON;
 		max-speed = <3000000>;
 	};
 };
