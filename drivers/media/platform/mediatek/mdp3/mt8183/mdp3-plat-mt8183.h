@@ -256,8 +256,8 @@ static const struct mdp_format mt8183_formats[] = {
 		.depth		= { 12 },
 		.row_depth	= { 8 },
 		.num_planes	= 1,
-		.walign		= 1,
-		.halign		= 1,
+		.walign		= 4,
+		.halign		= 4,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_YVU420,
@@ -265,8 +265,8 @@ static const struct mdp_format mt8183_formats[] = {
 		.depth		= { 12 },
 		.row_depth	= { 8 },
 		.num_planes	= 1,
-		.walign		= 1,
-		.halign		= 1,
+		.walign		= 4,
+		.halign		= 4,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_NV12,
@@ -274,8 +274,8 @@ static const struct mdp_format mt8183_formats[] = {
 		.depth		= { 12 },
 		.row_depth	= { 8 },
 		.num_planes	= 1,
-		.walign		= 1,
-		.halign		= 1,
+		.walign		= 4,
+		.halign		= 4,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_NV21,
@@ -283,8 +283,8 @@ static const struct mdp_format mt8183_formats[] = {
 		.depth		= { 12 },
 		.row_depth	= { 8 },
 		.num_planes	= 1,
-		.walign		= 1,
-		.halign		= 1,
+		.walign		= 4,
+		.halign		= 4,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_NV16,
@@ -340,8 +340,8 @@ static const struct mdp_format mt8183_formats[] = {
 		.depth		= { 8, 4 },
 		.row_depth	= { 8, 8 },
 		.num_planes	= 2,
-		.walign		= 1,
-		.halign		= 1,
+		.walign		= 4,
+		.halign		= 4,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_NV21M,
@@ -349,8 +349,8 @@ static const struct mdp_format mt8183_formats[] = {
 		.depth		= { 8, 4 },
 		.row_depth	= { 8, 8 },
 		.num_planes	= 2,
-		.walign		= 1,
-		.halign		= 1,
+		.walign		= 4,
+		.halign		= 4,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_NV16M,
@@ -374,8 +374,8 @@ static const struct mdp_format mt8183_formats[] = {
 		.depth		= { 8, 2, 2 },
 		.row_depth	= { 8, 4, 4 },
 		.num_planes	= 3,
-		.walign		= 1,
-		.halign		= 1,
+		.walign		= 4,
+		.halign		= 4,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_YVU420M,
@@ -383,8 +383,8 @@ static const struct mdp_format mt8183_formats[] = {
 		.depth		= { 8, 2, 2 },
 		.row_depth	= { 8, 4, 4 },
 		.num_planes	= 3,
-		.walign		= 1,
-		.halign		= 1,
+		.walign		= 4,
+		.halign		= 4,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}
 };
