@@ -1135,7 +1135,7 @@ exit:
 	/* if execution control reaches here, ele-mu probe fail.
 	 * hence doing the cleanup
 	 */
-	if (priv->flags & RESERVED_DMA_POOL) {
+	if (priv && (priv->flags & RESERVED_DMA_POOL)) {
 		of_reserved_mem_device_release(dev);
 		priv->flags &= (~RESERVED_DMA_POOL);
 	}
