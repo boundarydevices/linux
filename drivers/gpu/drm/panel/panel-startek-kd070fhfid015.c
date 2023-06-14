@@ -186,9 +186,9 @@ static int stk_panel_unprepare(struct drm_panel *panel)
 	stk_panel_off(stk);
 	regulator_disable(stk->iovcc_supply);
 	regulator_disable(stk->pp3300_supply);
-	gpiod_set_value(stk->enable_gpio, 1);
+	gpiod_set_value(stk->enable_gpio, 0);
 	gpiod_set_value(stk->reset_gpio, 0);
-	gpiod_set_value(stk->dcdc_en_gpio, 1);
+	gpiod_set_value(stk->dcdc_en_gpio, 0);
 
 	stk->prepared = false;
 
