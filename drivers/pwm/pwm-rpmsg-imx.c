@@ -300,7 +300,7 @@ static struct rpmsg_driver pwm_rpmsg_driver = {
 	.callback	= pwm_rpmsg_cb,
 };
 
-static void pwm_rpchip_get_state(struct pwm_chip *chip,
+static int pwm_rpchip_get_state(struct pwm_chip *chip,
 				  struct pwm_device *pwm,
 				  struct pwm_state *state)
 {
@@ -318,6 +318,8 @@ static void pwm_rpchip_get_state(struct pwm_chip *chip,
 	ret = pwm_rpsmg_get(&pwm_rpmsg, state);
 
 	mutex_unlock(&pwm_rpmsg.lock);
+
+	return 0;
 }
 
 static int pwm_rpchip_apply(struct pwm_chip *chip,
