@@ -126,4 +126,6 @@ void mtk_mmsys_vpp_rsz_merge_config(struct device *dev, u32 id, bool enable);
 
 void mtk_mmsys_vpp_rsz_dcm_config(struct device *dev, bool enable);
 
+void mtk_mmsys_vpp_split_out_config(struct device *dev, struct cmdq_pkt *cmdq_pkt);
+
 #endif /* __MTK_MMSYS_H */

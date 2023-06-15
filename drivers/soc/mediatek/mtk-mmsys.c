@@ -153,6 +153,7 @@ static const struct mtk_mmsys_driver_data mt8195_vppsys0_driver_data = {
 static const struct mtk_mmsys_driver_data mt8195_vppsys1_driver_data = {
 	.clk_driver = "clk-mt8195-vpp1",
 	.is_vppsys = true,
+	.need_gce = true,
 };
 
 static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
@@ -187,7 +188,6 @@ static void mtk_mmsys_update_bits(struct mtk_mmsys *mmsys, u32 offset, u32 mask,
 		return;
 	}
 #endif
-
 	tmp = readl_relaxed(mmsys->regs + offset);
 	tmp = (tmp & ~mask) | val;
 	writel_relaxed(tmp, mmsys->regs + offset);
@@ -372,6 +372,18 @@ void mtk_mmsys_vpp_rsz_dcm_config(struct device *dev, bool enable)
 			      ((enable) ? client : 0), NULL);
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_vpp_rsz_dcm_config);
+
+void mtk_mmsys_vpp_split_out_config(struct device *dev, struct cmdq_pkt *cmdq_pkt)
+{
+	/* 1:SVPP2_SRC_SEL, 0:RSZ_MERGE_IN_SEL */
+	mtk_mmsys_update_bits(dev_get_drvdata(dev),
+			      MT8195_VPP_SPLIT_OUT0_SOUT_SEL, 0xFFFFFFFF,
+			      0x1, cmdq_pkt);
+	mtk_mmsys_update_bits(dev_get_drvdata(dev),
+			      MT8195_VPP_SPLIT_OUT1_SOUT_SEL, 0xFFFFFFFF,
+			      0x1, cmdq_pkt);
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_vpp_split_out_config);
 
 static int mtk_mmsys_reset_update(struct reset_controller_dev *rcdev, unsigned long id,
 				  bool assert)
