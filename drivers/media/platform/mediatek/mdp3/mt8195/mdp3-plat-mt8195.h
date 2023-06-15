@@ -45,6 +45,8 @@ static const struct mdp_pipe_info mt8195_pipe_info[] = {
 };
 
 static const u32 mt8195_mutex_idx[MDP_MAX_COMP_COUNT] = {
+	[MDP_COMP_SPLIT] = MUTEX_MOD_IDX_MDP_SPLIT,
+	[MDP_COMP_SPLIT2] = MUTEX_MOD_IDX_MDP_SPLIT,
 	[MDP_COMP_RDMA0] = MUTEX_MOD_IDX_MDP_RDMA0,
 	[MDP_COMP_RDMA1] = MUTEX_MOD_IDX_MDP_RDMA1,
 	[MDP_COMP_RDMA2] = MUTEX_MOD_IDX_MDP_RDMA2,
@@ -91,6 +93,10 @@ static const u32 mt8195_mutex_idx[MDP_MAX_COMP_COUNT] = {
 };
 
 static const struct of_device_id mt8195_sub_comp_dt_ids[] = {
+	{
+		.compatible = "mediatek,mt8195-mdp3-split",
+		.data = (void *)MDP_COMP_TYPE_SPLIT,
+	},
 	{}
 };
 

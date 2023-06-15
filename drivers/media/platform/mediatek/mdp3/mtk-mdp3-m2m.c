@@ -66,6 +66,7 @@ static void mdp_m2m_device_run(void *priv)
 	struct img_ipi_frameparam param = {};
 	struct mdp_cmdq_param task = {};
 	enum vb2_buffer_state vb_state = VB2_BUF_STATE_ERROR;
+	enum mdp_cmdq_user u_id = MDP_CMDQ_USER_M2M;
 	int ret;
 
 	if (mdp_m2m_ctx_is_state_set(ctx, MDP_M2M_CTX_ERROR)) {
@@ -81,11 +82,11 @@ static void mdp_m2m_device_run(void *priv)
 
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
 	src_vb = v4l2_m2m_next_src_buf(ctx->m2m_ctx);
-	mdp_set_src_config(&param.inputs[0], frame, &src_vb->vb2_buf);
+	mdp_set_src_config(&param.inputs[0], frame, &src_vb->vb2_buf, frame->usage);
 
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	dst_vb = v4l2_m2m_next_dst_buf(ctx->m2m_ctx);
-	mdp_set_dst_config(&param.outputs[0], frame, &dst_vb->vb2_buf);
+	mdp_set_dst_config(&param.outputs[0], frame, &dst_vb->vb2_buf, frame->usage);
 
 	if (mdp_check_pp_enable(ctx->mdp_dev, frame))
 		param.type = MDP_STREAM_TYPE_DUAL_BITBLT;
@@ -103,15 +104,16 @@ static void mdp_m2m_device_run(void *priv)
 	task.cmdq_cb = NULL;
 	task.cb_data = NULL;
 	task.mdp_ctx = ctx;
+	task.user = u_id;
 
-	if (atomic_read(&ctx->mdp_dev->job_count)) {
+	if (atomic_read(&ctx->mdp_dev->job_count[u_id])) {
 		ret = wait_event_timeout(ctx->mdp_dev->callback_wq,
-					 !atomic_read(&ctx->mdp_dev->job_count),
+					 !atomic_read(&ctx->mdp_dev->job_count[u_id]),
 					 2 * HZ);
 		if (ret == 0) {
 			dev_err(&ctx->mdp_dev->pdev->dev,
-				"%d jobs not yet done\n",
-				atomic_read(&ctx->mdp_dev->job_count));
+				"%d M2M jobs not yet done\n",
+				atomic_read(&ctx->mdp_dev->job_count[u_id]));
 			goto worker_end;
 		}
 	}

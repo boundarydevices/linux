@@ -14,6 +14,12 @@
 
 struct platform_device *mdp_get_plat_device(struct platform_device *pdev);
 
+enum mdp_cmdq_user {
+	MDP_CMDQ_USER_M2M = 0,
+	MDP_CMDQ_USER_CAP,
+	MDP_CMDQ_USER_MAX,
+};
+
 struct mdp_cmdq_param {
 	struct img_config *config;
 	struct img_ipi_frameparam *param;
@@ -22,6 +28,7 @@ struct mdp_cmdq_param {
 	void (*cmdq_cb)(struct cmdq_cb_data data);
 	void *cb_data;
 	void *mdp_ctx;
+	enum mdp_cmdq_user user;
 };
 
 struct mdp_cmdq_cmd {
@@ -35,6 +42,8 @@ struct mdp_cmdq_cmd {
 	struct mdp_comp *comps;
 	void *mdp_ctx;
 	u8 num_comps;
+	enum mdp_cmdq_user user;
+	u8 pp_used;
 };
 
 struct mdp_dev;

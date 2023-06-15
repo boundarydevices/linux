@@ -74,6 +74,29 @@ struct mdp_rdma_data_8195 {
 	struct mdp_rdma_subfrm_8195 subfrms[IMG_MAX_SUBFRAMES_8195];
 } __packed;
 
+struct mdp_split_subfrm_8195 {
+	u32 split_enable;
+	u32 split_cfg_2;
+	u32 split_cfg_3;
+	u32 split_cfg_6;
+	u32 split_cfg_7;
+	u32 split_cfg_8;
+	u32 split_cfg_9;
+	u32 split_cfg_16;
+	u32 split_cfg_17;
+	u32 split_cfg_37;
+	u32 split_cfg_38;
+} __packed;
+
+struct mdp_split_data_8195 {
+	u32 split_cfg_0;
+	u32 split_cfg_4;
+	u32 split_cfg_12;
+	u32 split_cfg_36;
+	u32 split_cfg_40;
+	struct mdp_split_subfrm_8195 subfrms[IMG_MAX_SUBFRAMES_8195];
+} __packed;
+
 struct mdp_fg_subfrm_8195 {
 	u32 info_0;
 	u32 info_1;
@@ -258,6 +281,7 @@ struct img_compparam_8195 {
 	u32 num_subfrms;
 	union {
 		struct mdp_rdma_data_8195 rdma;
+		struct mdp_split_data_8195 split;
 		struct mdp_fg_data_8195 fg;
 		struct mdp_hdr_data_8195 hdr;
 		struct mdp_aal_data_8195 aal;

@@ -15,6 +15,8 @@
 
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-m2m.h"
+#include "mtk-mdp3-capture.h"
+
 #include "mt8183/mdp3-plat-mt8183.h"
 #include "mt8195/mdp3-plat-mt8195.h"
 #include "mt8188/mdp3-plat-mt8188.h"
@@ -348,6 +350,10 @@ static int mdp_probe(struct platform_device *pdev)
 		goto err_unregister_device;
 	}
 
+#if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
+	mdp_cap_init(mdp);
+#endif
+
 success_return:
 	dev_dbg(dev, "mdp-%d registered successfully\n", pdev->id);
 	return 0;
@@ -385,25 +391,32 @@ static int mdp_remove(struct platform_device *pdev)
 	v4l2_device_unregister(&mdp->v4l2_dev);
 
 	dev_dbg(&pdev->dev, "%s driver unloaded\n", pdev->name);
+
+#if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
+	mdp_cap_deinit();
+#endif
+
 	return 0;
 }
 
 static int __maybe_unused mdp_suspend(struct device *dev)
 {
 	struct mdp_dev *mdp = dev_get_drvdata(dev);
-	int ret;
+	int ret, i;
 
 	atomic_set(&mdp->suspended, 1);
 
-	if (atomic_read(&mdp->job_count)) {
-		ret = wait_event_timeout(mdp->callback_wq,
-					 !atomic_read(&mdp->job_count),
-					 2 * HZ);
-		if (ret == 0) {
-			dev_err(dev,
-				"%s:flushed cmdq task incomplete, count=%d\n",
-				__func__, atomic_read(&mdp->job_count));
-			return -EBUSY;
+	for (i = 0; i < MDP_CMDQ_USER_MAX; i++) {
+		if (atomic_read(&mdp->job_count[i])) {
+			ret = wait_event_timeout(mdp->callback_wq,
+						 !atomic_read(&mdp->job_count[i]),
+						 2 * HZ);
+			if (ret == 0) {
+				dev_err(dev,
+					"flushed cmdq task incomplete, user=%d, count=%d\n",
+					i, atomic_read(&mdp->job_count[i]));
+				return -EBUSY;
+			}
 		}
 	}
 

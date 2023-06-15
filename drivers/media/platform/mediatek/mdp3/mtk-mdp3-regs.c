@@ -10,6 +10,7 @@
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-regs.h"
 #include "mtk-mdp3-m2m.h"
+#include "mtk-mdp3-capture.h"
 
 static const struct mdp_format *mdp_find_fmt(const struct mtk_mdp_driver_data *mdp_data,
 					     u32 pixelformat, u32 type)
@@ -382,13 +383,21 @@ static u32 mdp_fmt_get_plane_size(const struct mdp_format *fmt,
 	return 0;
 }
 
-static void mdp_prepare_buffer(struct img_image_buffer *b,
-			       struct mdp_frame *frame, struct vb2_buffer *vb)
+static void mdp_prepare_buffer(struct img_image_buffer *b, struct mdp_frame *frame,
+			       struct vb2_buffer *vb, enum mdp_buffer_usage buf_usage)
 {
 	struct v4l2_pix_format_mplane *pix_mp = &frame->format.fmt.pix_mp;
-	struct mdp_m2m_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
-	struct device *dev = &ctx->mdp_dev->pdev->dev;
+	void *ctx;
+	struct device *dev;
 	unsigned int i;
+
+	if (vb) {
+		ctx = vb2_get_drv_priv(vb->vb2_queue);
+		if (buf_usage == MDP_BUFFER_USAGE_HDMI_RX)
+			dev = &((struct mdp_cap_ctx *)ctx)->mdp_dev->pdev->dev;
+		else
+			dev = &((struct mdp_m2m_ctx *)ctx)->mdp_dev->pdev->dev;
+	}
 
 	b->format.colorformat = frame->mdp_fmt->mdp_color;
 	b->format.ycbcr_prof = frame->ycbcr_prof;
@@ -400,7 +409,8 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 		b->format.plane_fmt[i].size =
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i);
-		b->iova[i] = vb2_dma_contig_plane_dma_addr(vb, i);
+		if (vb)
+			b->iova[i] = vb2_dma_contig_plane_dma_addr(vb, i);
 	}
 	for (; i < MDP_COLOR_GET_PLANE_COUNT(b->format.colorformat); ++i) {
 		u32 stride;
@@ -418,17 +428,18 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 		b->format.plane_fmt[i].size =
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i);
-		b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
+		if (vb)
+			b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
 	}
 	b->usage = frame->usage;
 }
 
-void mdp_set_src_config(struct img_input *in,
-			struct mdp_frame *frame, struct vb2_buffer *vb)
+void mdp_set_src_config(struct img_input *in, struct mdp_frame *frame,
+			struct vb2_buffer *vb, enum mdp_buffer_usage buf_usage)
 {
 	in->buffer.format.width = frame->format.fmt.pix_mp.width;
 	in->buffer.format.height = frame->format.fmt.pix_mp.height;
-	mdp_prepare_buffer(&in->buffer, frame, vb);
+	mdp_prepare_buffer(&in->buffer, frame, vb, buf_usage);
 }
 
 static u32 mdp_to_fixed(u32 *r, struct v4l2_fract *f)
@@ -481,12 +492,12 @@ static void mdp_set_orientation(struct img_output *out,
 		out->flags &= ~IMG_CTRL_FLAG_HFLIP;
 }
 
-void mdp_set_dst_config(struct img_output *out,
-			struct mdp_frame *frame, struct vb2_buffer *vb)
+void mdp_set_dst_config(struct img_output *out, struct mdp_frame *frame,
+			struct vb2_buffer *vb, enum mdp_buffer_usage buf_usage)
 {
 	out->buffer.format.width = frame->compose.width;
 	out->buffer.format.height = frame->compose.height;
-	mdp_prepare_buffer(&out->buffer, frame, vb);
+	mdp_prepare_buffer(&out->buffer, frame, vb, buf_usage);
 	mdp_set_src_crop(&out->crop, &frame->crop);
 	mdp_set_orientation(out, frame->rotation, frame->hflip, frame->vflip);
 }

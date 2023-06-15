@@ -369,10 +369,10 @@ int mdp_check_scaling_ratio(const struct v4l2_rect *crop,
 			    const struct v4l2_rect *compose, s32 rotation,
 	const struct mdp_limit *limit);
 bool mdp_check_pp_enable(struct mdp_dev *mdp, struct mdp_frame *frame);
-void mdp_set_src_config(struct img_input *in,
-			struct mdp_frame *frame, struct vb2_buffer *vb);
-void mdp_set_dst_config(struct img_output *out,
-			struct mdp_frame *frame, struct vb2_buffer *vb);
+void mdp_set_src_config(struct img_input *in, struct mdp_frame *frame,
+			struct vb2_buffer *vb, enum mdp_buffer_usage buf_usage);
+void mdp_set_dst_config(struct img_output *out, struct mdp_frame *frame,
+			struct vb2_buffer *vb, enum mdp_buffer_usage buf_usage);
 int mdp_frameparam_init(struct mdp_dev *mdp, struct mdp_frameparam *param);
 
 #endif  /* __MTK_MDP3_REGS_H__ */

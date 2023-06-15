@@ -9,6 +9,7 @@
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-mem2mem.h>
+#include <linux/soc/mediatek/mtk-hdmirx-intf.h>
 #include <linux/soc/mediatek/mtk-mmsys.h>
 #include <linux/soc/mediatek/mtk-mutex.h>
 #include "mtk-mdp3-comp.h"
@@ -34,6 +35,7 @@ enum mdp_buffer_usage {
 	MDP_BUFFER_USAGE_MDP2,
 	MDP_BUFFER_USAGE_ISP,
 	MDP_BUFFER_USAGE_WPE,
+	MDP_BUFFER_USAGE_HDMI_RX,
 };
 
 struct mdp_platform_config {
@@ -93,6 +95,12 @@ struct mtk_mdp_driver_data {
 	const struct mdp_limit *def_limit;
 };
 
+struct mdp_rx_cap_intf {
+	unsigned int rx_width;
+	unsigned int rx_height;
+	enum hdmirx_intf_cs rx_color_space;
+};
+
 struct mdp_dev {
 	struct platform_device			*pdev;
 	struct device				*mdp_mmsys;
@@ -121,7 +129,13 @@ struct mdp_dev {
 	/* synchronization protect for m2m device operation */
 	struct mutex				m2m_lock;
 	atomic_t				suspended;
-	atomic_t				job_count;
+	atomic_t				job_count[MDP_CMDQ_USER_MAX];
+
+	struct video_device			*cap_vdev;
+	/* It's used in capture device case for HDMI RX */
+	struct mutex				cap_lock;
+	struct mdp_rx_cap_intf			rx_cap_intf;
+	atomic_t				cap_discard;
 };
 
 struct mdp_pipe_info {
