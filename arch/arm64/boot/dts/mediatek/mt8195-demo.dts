@@ -839,9 +839,6 @@
 				 <PINMUX_GPIO92__FUNC_GPIO92>;
 			output-high;
 		};
-		phy_reset_pin {
-			pinmux = <PINMUX_GPIO93__FUNC_GPIO93>;
-		};
 	};
 
 	eth_sleep: eth_sleep {
@@ -866,17 +863,6 @@
 		mdio_pins {
 			pinmux = <PINMUX_GPIO89__FUNC_GPIO89>,
 				 <PINMUX_GPIO90__FUNC_GPIO90>;
-			input-disable;
-			bias-disable;
-		};
-		power_pins {
-			pinmux = <PINMUX_GPIO91__FUNC_GPIO91>,
-				 <PINMUX_GPIO92__FUNC_GPIO92>;
-			input-disable;
-			bias-disable;
-		};
-		phy_reset_pin {
-			pinmux = <PINMUX_GPIO93__FUNC_GPIO93>;
 			input-disable;
 			bias-disable;
 		};
