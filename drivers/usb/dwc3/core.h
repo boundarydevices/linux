@@ -1178,7 +1178,6 @@ struct dwc3 {
 	struct clk		*ref_clk;
 	struct clk		*susp_clk;
 
-	bool			core_inited;
 	struct reset_control	*reset;
 
 	struct usb_phy		*usb2_phy;
@@ -1362,6 +1361,7 @@ struct dwc3 {
 	int			last_fifo_depth;
 	int			num_ep_resized;
 	struct dentry		*debug_root;
+	bool			core_inited;
 };
 
 #define INCRX_BURST_MODE 0
