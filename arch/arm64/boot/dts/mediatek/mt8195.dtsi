@@ -2009,6 +2009,7 @@
 			compatible = "mediatek,mt8195-mdp3-split";
 			reg = <0 0x14f06000 0 0x1000>;
 			mediatek,gce-client-reg = <&gce1 SUBSYS_14f0XXXX 0x6000 0x1000>;
+			mediatek,gce-events = <CMDQ_EVENT_VPP1_STREAM_DONE_0>;
 			clocks = <&vppsys1 CLK_VPP1_VPP_SPLIT>,
 				 <&vppsys1 CLK_VPP1_HDMI_META>,
 				 <&vppsys1 CLK_VPP1_VPP_SPLIT_HDMI>,
@@ -2413,6 +2414,7 @@
 		vppsys1: syscon@14f00000 {
 			compatible = "mediatek,mt8195-vppsys1", "syscon";
 			reg = <0 0x14f00000 0 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_14f0XXXX 0x0000 0x1000>;
 			#clock-cells = <1>;
 		};
 
