@@ -196,6 +196,7 @@
 #define MT8195_MUTEX_MOD_MDP_WROT0             11
 
 /* VPPSYS1 */
+#define MT8195_MUTEX_MOD_MDP_SPLIT             2
 #define MT8195_MUTEX_MOD_MDP_TCC1              3
 #define MT8195_MUTEX_MOD_MDP_RDMA1             4
 #define MT8195_MUTEX_MOD_MDP_RDMA2             5
@@ -299,6 +300,8 @@
 #define MT8195_MUTEX_EOF_DP_INTF1		(MT8195_MUTEX_SOF_DP_INTF1 << 7)
 #define MT8195_MUTEX_EOF_DPI0			(MT8195_MUTEX_SOF_DPI0 << 7)
 #define MT8195_MUTEX_EOF_DPI1			(MT8195_MUTEX_SOF_DPI1 << 7)
+
+#define MUTEX_EOF_SHIFT				7
 
 struct mtk_mutex {
 	u8 id;
@@ -530,6 +533,7 @@ static const unsigned int mt8195_mutex_table_mod[MUTEX_MOD_IDX_MAX] = {
 	[MUTEX_MOD_IDX_MDP_RDMA1] = MT8195_MUTEX_MOD_MDP_RDMA1,
 	[MUTEX_MOD_IDX_MDP_RDMA2] = MT8195_MUTEX_MOD_MDP_RDMA2,
 	[MUTEX_MOD_IDX_MDP_RDMA3] = MT8195_MUTEX_MOD_MDP_RDMA3,
+	[MUTEX_MOD_IDX_MDP_SPLIT] = MT8195_MUTEX_MOD_MDP_SPLIT,
 	[MUTEX_MOD_IDX_MDP_STITCH0] = MT8195_MUTEX_MOD_MDP_STITCH0,
 	[MUTEX_MOD_IDX_MDP_FG0] = MT8195_MUTEX_MOD_MDP_FG0,
 	[MUTEX_MOD_IDX_MDP_FG1] = MT8195_MUTEX_MOD_MDP_FG1,
@@ -1016,6 +1020,9 @@ int mtk_mutex_write_sof(struct mtk_mutex *mutex,
 		dev_err(mtx->dev, "Not supported SOF index : %d", idx);
 		return -EINVAL;
 	}
+
+	if (idx != MUTEX_SOF_IDX_SINGLE_MODE)
+		idx |= (idx << MUTEX_EOF_SHIFT);
 
 	writel_relaxed(idx, mtx->regs +
 		       DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg, mutex->id));
