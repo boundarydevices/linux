@@ -352,13 +352,13 @@
 		service {
 			gpios = LED_SERVICE;
 			retain-state-suspended;
-			linux,default-trigger = "timer";
+			default-state = "on";  /* on at gpio, off at LED assembly */
 		};
 
 		network {
 			gpios = LED_NETWORK;
 			retain-state-suspended;
-			default-state = "on";  /* on at gpio, off at LED assembly */
+			linux,default-trigger = "timer";
 		};
 	};
 
