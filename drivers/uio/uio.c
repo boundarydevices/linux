@@ -799,7 +799,7 @@ static int uio_mmap(struct file *filep, struct vm_area_struct *vma)
 			goto out;
 		}
 
-		vma->vm_flags &= ~VM_MAYWRITE;
+		vm_flags_clear(vma, VM_MAYWRITE);
 	}
 #endif
 
