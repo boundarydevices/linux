@@ -35,6 +35,7 @@
 
 //#define HDMIRX_RPT_EN
 #define HDMIRX_IS_RPT_MODE 0
+#define HDMIRX_RAW_DATA_EDID
 
 #define HDMIRX_DEVNAME "hdmirx"
 
