@@ -150,13 +150,14 @@ static int lynx_pcs_config_giga(struct mdio_device *pcs,
 					  neg_mode);
 }
 
-static int lynx_pcs_config_usxgmii(struct mdio_device *pcs, unsigned int mode,
-				   const unsigned long *advertising)
+static int lynx_pcs_config_usxgmii(struct mdio_device *pcs,
+				   const unsigned long *advertising,
+				   unsigned int neg_mode)
 {
 	struct mii_bus *bus = pcs->bus;
 	int addr = pcs->addr;
 
-	if (!phylink_autoneg_inband(mode)) {
+	if (neg_mode != PHYLINK_PCS_NEG_INBAND_ENABLED) {
 		dev_err(&pcs->dev, "USXGMII only supports in-band AN for now\n");
 		return -EOPNOTSUPP;
 	}
@@ -168,15 +169,11 @@ static int lynx_pcs_config_usxgmii(struct mdio_device *pcs, unsigned int mode,
 				 ADVERTISE_SGMII | ADVERTISE_LPACK);
 }
 
-static int lynx_pcs_config(struct phylink_pcs *pcs, unsigned int mode,
+static int lynx_pcs_config(struct phylink_pcs *pcs, unsigned int neg_mode,
 			   phy_interface_t ifmode,
-			   const unsigned long *advertising,
-			   bool permit)
+			   const unsigned long *advertising, bool permit)
 {
 	struct lynx_pcs *lynx = phylink_pcs_to_lynx(pcs);
-	unsigned int neg_mode;
-
-	neg_mode = phylink_pcs_neg_mode(mode, ifmode, advertising);
 
 	switch (ifmode) {
 	case PHY_INTERFACE_MODE_1000BASEX:
@@ -185,14 +182,15 @@ static int lynx_pcs_config(struct phylink_pcs *pcs, unsigned int mode,
 		return lynx_pcs_config_giga(lynx->mdio, ifmode, advertising,
 					    neg_mode);
 	case PHY_INTERFACE_MODE_2500BASEX:
-		if (phylink_autoneg_inband(mode)) {
+		if (neg_mode == PHYLINK_PCS_NEG_INBAND_ENABLED) {
 			dev_err(&lynx->mdio->dev,
 				"AN not supported on 3.125GHz SerDes lane\n");
 			return -EOPNOTSUPP;
 		}
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
-		return lynx_pcs_config_usxgmii(lynx->mdio, mode, advertising);
+		return lynx_pcs_config_usxgmii(lynx->mdio, advertising,
+					       neg_mode);
 	case PHY_INTERFACE_MODE_10GBASER:
 	case PHY_INTERFACE_MODE_25GBASER:
 		/* Nothing to do here for 10GBASER and 25GBASER */
@@ -211,7 +209,8 @@ static void lynx_pcs_an_restart(struct phylink_pcs *pcs)
 	phylink_mii_c22_pcs_an_restart(lynx->mdio);
 }
 
-static void lynx_pcs_link_up_sgmii(struct mdio_device *pcs, unsigned int mode,
+static void lynx_pcs_link_up_sgmii(struct mdio_device *pcs,
+				   unsigned int neg_mode,
 				   int speed, int duplex)
 {
 	u16 if_mode = 0, sgmii_speed;
@@ -219,7 +218,7 @@ static void lynx_pcs_link_up_sgmii(struct mdio_device *pcs, unsigned int mode,
 	/* The PCS needs to be configured manually only
 	 * when not operating on in-band mode
 	 */
-	if (mode == MLO_AN_INBAND)
+	if (neg_mode != PHYLINK_PCS_NEG_INBAND_ENABLED)
 		return;
 
 	if (duplex == DUPLEX_HALF)
@@ -266,12 +265,12 @@ static void lynx_pcs_link_up_sgmii(struct mdio_device *pcs, unsigned int mode,
  * 2500 Mbps and we do rate adaptation through pause frames.
  */
 static void lynx_pcs_link_up_2500basex(struct mdio_device *pcs,
-				       unsigned int mode,
+				       unsigned int neg_mode,
 				       int speed, int duplex)
 {
 	u16 if_mode = 0;
 
-	if (mode == MLO_AN_INBAND) {
+	if (neg_mode == PHYLINK_PCS_NEG_INBAND_ENABLED) {
 		dev_err(&pcs->dev, "AN not supported for 2500BaseX\n");
 		return;
 	}
@@ -285,7 +284,7 @@ static void lynx_pcs_link_up_2500basex(struct mdio_device *pcs,
 		       if_mode);
 }
 
-static void lynx_pcs_link_up(struct phylink_pcs *pcs, unsigned int mode,
+static void lynx_pcs_link_up(struct phylink_pcs *pcs, unsigned int neg_mode,
 			     phy_interface_t interface,
 			     int speed, int duplex)
 {
@@ -294,10 +293,10 @@ static void lynx_pcs_link_up(struct phylink_pcs *pcs, unsigned int mode,
 	switch (interface) {
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
-		lynx_pcs_link_up_sgmii(lynx->mdio, mode, speed, duplex);
+		lynx_pcs_link_up_sgmii(lynx->mdio, neg_mode, speed, duplex);
 		break;
 	case PHY_INTERFACE_MODE_2500BASEX:
-		lynx_pcs_link_up_2500basex(lynx->mdio, mode, speed, duplex);
+		lynx_pcs_link_up_2500basex(lynx->mdio, neg_mode, speed, duplex);
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
 		/* At the moment, only in-band AN is supported for USXGMII
@@ -327,6 +326,7 @@ static struct phylink_pcs *lynx_pcs_create(struct mdio_device *mdio)
 	mdio_device_get(mdio);
 	lynx->mdio = mdio;
 	lynx->pcs.ops = &lynx_pcs_phylink_ops;
+	lynx->pcs.neg_mode = true;
 	lynx->pcs.poll = true;
 
 	return lynx_to_phylink_pcs(lynx);
