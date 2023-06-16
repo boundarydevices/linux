@@ -13,6 +13,7 @@ extern const u8 test_4_edid[];
 extern const u8 pdYMH1800Edid[];
 extern const u8 vrr30to60[];
 extern const u8 vrr24to60[];
+extern const u8 hdmi20_raw_edid[];
 
 void Linux_Time(unsigned long *prTime);
 bool Linux_DeltaTime(unsigned long *u4OverTime,

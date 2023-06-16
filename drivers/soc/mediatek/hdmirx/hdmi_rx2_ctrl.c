@@ -222,7 +222,7 @@ bool txapi_is_plugin(struct MTK_HDMI *myhdmi)
 u32 txapi_get_tx_port(struct MTK_HDMI *myhdmi)
 {
 #ifndef HDMIRX_RPT_EN
-	return HDMI_PLUG_OUT;
+	return HDMI_STATE_HOT_PLUG_OUT;
 #else
 	if (TXP == NULL) {
 		RX_DEF_LOG("[RX]no %s\n", __func__);
@@ -1221,7 +1221,7 @@ void vEdidUpdataChk(struct MTK_HDMI *myhdmi)
 {
 	u8 bData;
 	u32 u4Count;
-	u8 edid_buf[128];
+	u8 edid_buf[E_BLOCK_SIZE];
 
 	bData = myhdmi->_fgHDMIRxBypassMode;
 	if ((myhdmi->u1TxEdidReady != myhdmi->u1TxEdidReadyOld) ||
@@ -1243,10 +1243,25 @@ void vEdidUpdataChk(struct MTK_HDMI *myhdmi)
 			txapi_hdmi_enable(myhdmi, FALSE);
 
 		if (myhdmi->u1TxEdidReady == HDMI_PLUG_OUT)	{
-			RX_DEF_LOG("[RX] not connect TV, set default EDID\n");
+#ifdef HDMIRX_RAW_DATA_EDID
+			RX_DEF_LOG("[RX] write hdmi2.0 raw EDID\n");
+			memcpy(&edid_buf[0], &hdmi20_raw_edid[0], E_BLOCK_SIZE);
+			hdmi2_edid_chksum(&edid_buf[0]);
+			hdmi2com_write_edid_to_sram(myhdmi, 0,
+				&edid_buf[0]);
+			memcpy(&edid_buf[0], &hdmi20_raw_edid[128], E_BLOCK_SIZE);
+			hdmi2_edid_chksum(&edid_buf[0]);
+			hdmi2com_write_edid_to_sram(myhdmi, 1,
+				&edid_buf[0]);
+#else
+			RX_DEF_LOG("[RX] write default EDID\n");
 			Default_Edid_BL0_BL1_Write(myhdmi);
+#endif
 			//hdmi2_hdcp_set_receiver(myhdmi);
 		} else {
+#ifdef HDMIRX_RAW_DATA_EDID
+			RX_DEF_LOG("[RX] write mixed EDID\n");
+#endif
 			//if (txapi_is_plugin(myhdmi))
 			//	hdmi2_hdcp_set_repeater(myhdmi);
 			//else
