@@ -267,7 +267,7 @@ static int sn_setup_regs(struct panel_sn65dsi83 *sn)
 	sn_i2c_write_byte(sn, SN_CLK_SRC, (i << 1) | 1);
 	sn_i2c_write_byte(sn, SN_CLK_DIV, (sn->dsi_clk_divider - 1) << 3);
 
-	sn_i2c_write_byte(sn, SN_DSI_LANES, ((4 - sn->dsi_lanes) << 3) | 0x20);
+	sn_i2c_write_byte(sn, SN_DSI_LANES, ((4 - sn->dsi_lanes) << 3) | 0x26);
 	sn_i2c_write_byte(sn, SN_DSI_EQ, 0);
 	sn_i2c_write_byte(sn, SN_DSI_CLK, sn->mipi_clk_index);
 	if (sn->vm.flags & DISPLAY_FLAGS_DE_LOW)
