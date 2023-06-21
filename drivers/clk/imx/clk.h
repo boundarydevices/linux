@@ -60,10 +60,10 @@ enum imx_pfdv2_type {
 /* NOTE: Rate table should be kept sorted in descending order. */
 struct imx_pll14xx_rate_table {
 	unsigned int rate;
-	unsigned int pdiv;
-	unsigned int mdiv;
-	unsigned int sdiv;
-	unsigned int kdiv;
+	unsigned short mdiv;
+	signed short kdiv;
+	unsigned char pdiv;
+	unsigned char sdiv;
 };
 
 struct imx_pll14xx_clk {
