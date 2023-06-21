@@ -17,6 +17,15 @@
 		};
 	};
 
+	adc {
+		compatible = "mediatek,mt6360-adc";
+		#io-channel-cells = <1>;
+	};
+
+	led {
+		compatible = "mediatek,mt6360-led";
+	};
+
 	regulator {
 		compatible = "mediatek,mt6360-regulator";
 		LDO_VIN3-supply = <&mt6360_buck2>;
