@@ -6696,7 +6696,7 @@ brcmf_cfg80211_external_auth(struct wiphy *wiphy, struct net_device *dev,
 }
 
 static int
-brcmf_cfg80211_set_bitrate(struct wiphy *wiphy, struct net_device *ndev,
+brcmf_cfg80211_set_bitrate(struct wiphy *wiphy, struct net_device *ndev, unsigned int link_id,
 			   const u8 *addr, const struct cfg80211_bitrate_mask *mask)
 {
 	struct brcmf_if *ifp;
