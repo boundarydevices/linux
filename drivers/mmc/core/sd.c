@@ -1541,12 +1541,14 @@ cont:
 			goto free_card;
 	}
 
+#if 0
 	/* Enable internal SD cache if supported. */
 	if (card->ext_perf.feature_support & SD_EXT_PERF_CACHE) {
 		err = sd_enable_cache(card);
 		if (err)
 			goto free_card;
 	}
+#endif
 
 	if (host->cqe_ops && !host->cqe_enabled) {
 		err = host->cqe_ops->cqe_enable(host, card);
