@@ -866,6 +866,30 @@
 			status = "disabled";
 		};
 
+		apdma: dma-controller@10220780 {
+			compatible = "mediatek,mt6577-uart-dma";
+			reg =   <0 0x10220780 0 0x80>,
+				<0 0x10220800 0 0x80>,
+				<0 0x10220880 0 0x80>,
+				<0 0x10220900 0 0x80>,
+				<0 0x10220980 0 0x80>,
+				<0 0x10220a00 0 0x80>,
+				<0 0x10220a80 0 0x80>,
+				<0 0x10220b00 0 0x80>;
+			interrupts = <GIC_SPI 174 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 175 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 177 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 178 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 179 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 181 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_APDMA_BCLK>;
+			clock-names = "apdma";
+			dma-requests = <8>;
+			#dma-cells = <1>;
+		};
+
 		scp: scp@10500000 {
 			compatible = "mediatek,mt8195-scp", "mediatek,mt8188-scp";
 			reg = <0 0x10500000 0 0x100000>,
@@ -985,6 +1009,8 @@
 			interrupts = <GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&clk26m>, <&infracfg_ao CLK_INFRA_AO_UART0>;
 			clock-names = "baud", "bus";
+			dmas = <&apdma 0 &apdma 1>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 
@@ -994,6 +1020,8 @@
 			interrupts = <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&clk26m>, <&infracfg_ao CLK_INFRA_AO_UART1>;
 			clock-names = "baud", "bus";
+			dmas = <&apdma 2 &apdma 3>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 
@@ -1003,6 +1031,8 @@
 			interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&clk26m>, <&infracfg_ao CLK_INFRA_AO_UART2>;
 			clock-names = "baud", "bus";
+			dmas = <&apdma 4 &apdma 5>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 
