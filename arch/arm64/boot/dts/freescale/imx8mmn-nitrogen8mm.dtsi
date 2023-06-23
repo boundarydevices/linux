@@ -281,6 +281,13 @@
 		>;
 	};
 
+	pinctrl_mipi_et055fh06: mipi-et055fh06grp {
+		fsl,pins = <
+			/* gpio selected by u-boot */
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x100)
+		>;
+	};
+
 	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
 		fsl,pins = <
 #define GP_LCD133_070_RESET		<&gpio1 1 GPIO_ACTIVE_LOW>
@@ -587,6 +594,7 @@
 #include "panel-cs005-0004-03.dtsi"
 #include "panel-dmt050wvnxcmi.dtsi"
 #include "panel-er-tft050.dtsi"
+#include "panel-et055fh06.dtsi"
 #include "panel-lcd133-070.dtsi"
 #include "panel-lcm-jm430.dtsi"
 #include "panel-ls050t1sx12.dtsi"
