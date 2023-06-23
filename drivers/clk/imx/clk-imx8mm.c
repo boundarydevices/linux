@@ -45,11 +45,13 @@ static const struct imx_pll14xx_rate_table imx8mm_audiopll_tbl[] = {
 	PLL_1443X_RATE(361267200U, 361, 3, 3, 17511),
 };
 
+/* fout = (24M * (m + k/65536)/ p) >> s */
 static const struct imx_pll14xx_rate_table imx8mm_videopll_tbl[] = {
-	PLL_1443X_RATE(650000000U, 325, 3, 2, 0),	/* 12M * 325 / 6 = 650M */
-	PLL_1443X_RATE(594000000U, 198, 2, 2, 0),	/* 12M * 198 / 4 = 549M */
-	PLL_1443X_RATE(384000000U, 192, 3, 2, 0),	/* 12M * 192 / 6 = 384M */
-	PLL_1443X_RATE(364000000U, 182, 3, 2, 0),	/* 12M * 182 / 6 = 364M */
+	PLL_1443X_RATE(650000000U, 325, 3, 2, 0),	/* (24M * 325 / 3) >> 2 = 650M */
+	PLL_1443X_RATE(600000000U, 100, 1, 2, 0),       /* (24M * 100 / 1) >> 2 = 600M */
+	PLL_1443X_RATE(594000000U, 198, 2, 2, 0),	/* (24M * 198 / 2) >> 2 = 594M */
+	PLL_1443X_RATE(384000000U, 192, 3, 2, 0),	/* (24M * 192 / 3) >> 2 = 384M */
+	PLL_1443X_RATE(364000000U, 182, 3, 2, 0),	/* (24M * 182 / 3) >> 2 = 364M */
 };
 
 static const struct imx_pll14xx_rate_table imx8mm_drampll_tbl[] = {
