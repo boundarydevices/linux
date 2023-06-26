@@ -16,6 +16,7 @@ description: |
 properties:
   compatible:
     const: mediatek,mt8365-camsv
+    const: mediatek,mt8183-camsv
 
   reg:
     minItems: 1
