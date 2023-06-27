@@ -336,6 +336,31 @@ static struct pkvm_hyp_vm *get_vm_by_handle(pkvm_handle_t handle)
 	return vm_table[idx];
 }
 
+struct pkvm_hyp_vm *get_pkvm_hyp_vm(pkvm_handle_t handle)
+{
+	struct pkvm_hyp_vm *hyp_vm;
+
+	hyp_read_lock(&vm_table_lock);
+
+	hyp_vm = get_vm_by_handle(handle);
+	if (!hyp_vm)
+		goto unlock;
+	if (hyp_vm->is_dying)
+		hyp_vm = NULL;
+	else
+		hyp_page_ref_inc(hyp_virt_to_page(hyp_vm));
+
+unlock:
+	hyp_read_unlock(&vm_table_lock);
+
+	return hyp_vm;
+}
+
+void put_pkvm_hyp_vm(struct pkvm_hyp_vm *hyp_vm)
+{
+	hyp_page_ref_dec(hyp_virt_to_page(hyp_vm));
+}
+
 int __pkvm_reclaim_dying_guest_page(pkvm_handle_t handle, u64 pfn, u64 ipa)
 {
 	struct pkvm_hyp_vm *hyp_vm;
