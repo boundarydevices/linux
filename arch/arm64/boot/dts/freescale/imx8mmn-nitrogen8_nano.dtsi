@@ -554,7 +554,7 @@
 		pinctrl-0 = <&pinctrl_ecspi2_mcp2518fd>;
 		reg = <0>;
 		reset-gpios = GP_MCP2518FD_RESET;
-		spi-max-frequency = <20000000>;
+		spi-max-frequency = <17000000>;
 		xceiver-gpios = GP_CAN_EN;
 	};
 };
