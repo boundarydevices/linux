@@ -39,7 +39,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ecspi2_mcp2518fd>;
 		reg = <0>;
-		spi-max-frequency = <20000000>;
+		spi-max-frequency = <17000000>;
 	};
 };
 
