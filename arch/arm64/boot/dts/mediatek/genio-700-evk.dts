@@ -130,6 +130,26 @@
 		enable-active-high;
 	};
 
+	hub3v3: regulator@4 {
+		compatible = "regulator-fixed";
+		regulator-name = "vhub3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pio 112 0>; /* HUB_3V3_EN */
+		startup-delay-us = <10000>;
+		enable-active-high;
+	};
+
+	onboard_hub: regulator@5 {
+		compatible = "regulator-fixed";
+		regulator-name = "hub_reset";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&pio 7 0>; /* HUB_RESET */
+		vin-supply = <&hub3v3>;
+		enable-active-low;
+	};
+
 	lcm1_tp_avdd: lcm1-tp-avdd {
 		compatible = "regulator-fixed";
 		regulator-name = "lcm1-tp-avdd";
@@ -1173,7 +1193,8 @@
 
 &usb_host1 {
 	status = "okay";
-	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&usb_p1_vbus>;
+	vusb33-supply = <&onboard_hub>;
 };
 
 &ssusb2 {
