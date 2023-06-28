@@ -24,6 +24,29 @@ enum mdp_ipi_result {
 	MDP_IPI_OP_FAIL,
 };
 
+enum mdp_vpu_uid {
+	MDP_VPU_UID_M2M,
+	MDP_VPU_UID_CAP,
+	MDP_VPU_UID_MAX
+};
+
+/* Represents the constructor number of a MDP parallel pipe set */
+enum {
+	MDP_PP_CONS_0,
+	MDP_PP_CONS_1,
+	MDP_PP_CONS_MAX,
+};
+
+/* MDP parallel pipe control */
+enum {
+	MDP_PP_USED_1 = 1,
+	MDP_PP_USED_2 = 2,
+	MDP_PP_USED_3 = 3,
+	MDP_PP_USED_4 = 4,
+};
+
+#define MDP_PP_MAX MDP_PP_USED_4
+
 struct mdp_ipi_init_msg {
 	u32	status;
 	u64	drv_data;
@@ -51,6 +74,9 @@ struct mdp_vpu_dev {
 	void			*config;
 	dma_addr_t		config_addr;
 	size_t			config_size;
+	void			*capture;
+	dma_addr_t		capture_addr;
+	size_t			capture_size;
 	u32			status;
 };
 
@@ -58,6 +84,7 @@ void mdp_vpu_shared_mem_free(struct mdp_vpu_dev *vpu);
 int mdp_vpu_dev_init(struct mdp_vpu_dev *vpu, struct mtk_scp *scp,
 		     struct mutex *lock /* for sync */);
 int mdp_vpu_dev_deinit(struct mdp_vpu_dev *vpu);
-int mdp_vpu_process(struct mdp_vpu_dev *vpu, struct img_ipi_frameparam *param);
+int mdp_vpu_process(struct mdp_vpu_dev *vpu, struct img_ipi_frameparam *param,
+		    enum mdp_vpu_uid id);
 
 #endif  /* __MTK_MDP3_VPU_H__ */

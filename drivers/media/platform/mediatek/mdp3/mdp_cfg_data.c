@@ -1397,7 +1397,7 @@ const struct mtk_mdp_driver_data mt8195_mdp_driver_data = {
 	.pipe_info = mt8195_pipe_info,
 	.pipe_info_len = ARRAY_SIZE(mt8195_pipe_info),
 	.pp_criteria = &mt8195_mdp_pp_criteria,
-	.pp_used = MDP_PP_USED_2,
+	.pp_used = MDP_PP_USED_4,
 };
 
 s32 mdp_cfg_get_id_inner(struct mdp_dev *mdp_dev, enum mtk_mdp_comp_id id)

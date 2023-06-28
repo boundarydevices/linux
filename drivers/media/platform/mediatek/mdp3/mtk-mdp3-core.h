@@ -79,14 +79,6 @@ enum mdp_pipe_id {
 	MDP_PIPE_MAX
 };
 
-/* MDP parallel pipe control */
-enum {
-	MDP_PP_USED_1 = 1,
-	MDP_PP_USED_2 = 2,
-};
-
-#define MDP_PP_MAX MDP_PP_USED_2
-
 struct mtk_mdp_driver_data {
 	const int mdp_plat_id;
 	const resource_size_t mdp_con_res;

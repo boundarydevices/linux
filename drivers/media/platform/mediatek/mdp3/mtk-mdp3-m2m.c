@@ -100,7 +100,7 @@ static void mdp_m2m_device_run(void *priv)
 	if (mdp_check_pp_enable(ctx->mdp_dev, frame))
 		param.type = MDP_STREAM_TYPE_DUAL_BITBLT;
 
-	ret = mdp_vpu_process(&ctx->mdp_dev->vpu, &param);
+	ret = mdp_vpu_process(&ctx->mdp_dev->vpu, &param, MDP_VPU_UID_M2M);
 	if (ret) {
 		dev_err(&ctx->mdp_dev->pdev->dev,
 			"VPU MDP process failed: %d\n", ret);

@@ -71,6 +71,16 @@ static u8 __get_pp_num(enum mdp_stream_type type)
 	}
 }
 
+static u8 __get_pp_ofst(struct img_image_buffer *b)
+{
+	switch (b->usage) {
+	case MDP_BUFFER_USAGE_HDMI_RX:
+		return MDP_PP_CONS_MAX;
+	default:
+		return 0;
+	}
+}
+
 static enum mdp_pipe_id __get_pipe(const struct mdp_dev *mdp_dev,
 				   enum mtk_mdp_comp_id id)
 {
@@ -123,7 +133,7 @@ static struct img_config *__get_config_offset(struct mdp_dev *mdp,
 	void *cfg_c, *cfg_n;
 	long bound = mdp->vpu.config_size;
 
-	if (pp_idx >= mdp->mdp_data->pp_used)
+	if (pp_idx >= MDP_PP_MAX)
 		goto err_param;
 
 	if (CFG_CHECK(MT8183, p_id))
@@ -140,7 +150,7 @@ static struct img_config *__get_config_offset(struct mdp_dev *mdp,
 	else
 		goto err_param;
 
-	if ((long)cfg_n - (long)mdp->vpu.config > bound) {
+	if ((long)cfg_n - (long)param->config > bound) {
 		dev_err(dev, "config offset %ld OOB %ld\n", (long)cfg_n, bound);
 		cfg_c = ERR_PTR(-EFAULT);
 	}
@@ -640,6 +650,8 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	u32 num_comp;
 	s32 event;
 	s32 inner_id = MDP_COMP_NONE;
+	u8 pp_ofst = __get_pp_ofst(&param->param->inputs[0].buffer);
+	u8 pp_s = pp_idx + pp_ofst;
 
 	config = __get_config_offset(mdp, param, pp_idx);
 	if (IS_ERR(config)) {
@@ -666,18 +678,10 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	cmd->user = param->user;
 	cmd->pp_used = __get_pp_num(param->param->type);
 
-	ret = mdp_cmdq_pkt_create(mdp->cmdq_clt[pp_idx], &cmd->pkt, SZ_16K);
+	ret = mdp_cmdq_pkt_create(mdp->cmdq_clt[pp_s], &cmd->pkt, SZ_16K);
 	if (ret)
 		goto err_free_cmd;
 
-	if (CFG_CHECK(MT8183, p_id)) {
-		num_comp = CFG_GET(MT8183, param->config, num_components);
-	} else if (CFG_CHECK(MT8195, p_id)) {
-		num_comp = CFG_GET(MT8195, param->config, num_components);
-	} else {
-		ret = -EINVAL;
-		goto err_destroy_pkt;
-	}
 	comps = kcalloc(num_comp, sizeof(*comps), GFP_KERNEL);
 	if (!comps) {
 		ret = -ENOMEM;
@@ -760,7 +764,7 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 		       sizeof(struct mdp_comp));
 	}
 
-	mdp->cmdq_clt[pp_idx]->client.rx_callback = mdp_handle_cmdq_callback;
+	mdp->cmdq_clt[pp_s]->client.rx_callback = mdp_handle_cmdq_callback;
 	cmd->comps = comps;
 	cmd->num_comps = num_comp;
 
@@ -783,11 +787,12 @@ err_uninit:
 
 int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 {
-	struct mdp_cmdq_cmd *cmd[MDP_PP_MAX] = {NULL};
+	struct mdp_cmdq_cmd *cmd[MDP_VPU_UID_MAX] = {NULL};
 	struct device *dev = &mdp->pdev->dev;
 	enum mdp_cmdq_user u_id = param->user;
 	int i, ret = -ECANCELED;
 	u8 pp_used = __get_pp_num(param->param->type);
+	u8 pp_ofst = __get_pp_ofst(&param->param->inputs[0].buffer);
 
 	/* do not send hdmirx jobs if already disconnected */
 	if (u_id == MDP_CMDQ_USER_CAP)
@@ -818,17 +823,17 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 	}
 
 	for (i = 0; i < pp_used; i++) {
-		dma_sync_single_for_device(mdp->cmdq_clt[i]->chan->mbox->dev,
+		dma_sync_single_for_device(mdp->cmdq_clt[i + pp_ofst]->chan->mbox->dev,
 					   cmd[i]->pkt.pa_base, cmd[i]->pkt.cmd_buf_size,
 					   DMA_TO_DEVICE);
 
-		ret = mbox_send_message(mdp->cmdq_clt[i]->chan, &cmd[i]->pkt);
+		ret = mbox_send_message(mdp->cmdq_clt[i + pp_ofst]->chan, &cmd[i]->pkt);
 		if (ret < 0) {
 			dev_err(dev, "mbox send message fail %d!\n", ret);
 			i = pp_used;
 			goto err_clock_off;
 		}
-		mbox_client_txdone(mdp->cmdq_clt[i]->chan, 0);
+		mbox_client_txdone(mdp->cmdq_clt[i + pp_ofst]->chan, 0);
 	}
 	return 0;
 

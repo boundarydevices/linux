@@ -301,14 +301,14 @@ static void mdp_cap_device_run(void *priv, struct v4l2_cap_buffer *buf)
 		ctx->pp_enable = true;
 	}
 
-	ret = mdp_vpu_process(&ctx->mdp_dev->vpu, &param);
+	ret = mdp_vpu_process(&ctx->mdp_dev->vpu, &param, u_id);
 	if (ret) {
 		dev_err(&ctx->mdp_dev->pdev->dev,
 			"VPU MDP process failed: %d\n", ret);
 		goto worker_end;
 	}
 
-	task.config = ctx->mdp_dev->vpu.config;
+	task.config = ctx->mdp_dev->vpu.capture;
 	task.param = &param;
 	task.composes[0] = &frame->compose;
 	task.cmdq_cb = NULL;
