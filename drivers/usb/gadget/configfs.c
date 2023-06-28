@@ -1639,8 +1639,10 @@ static struct config_group *gadgets_make(
 	gi->composite.gadget_driver.function = kstrdup(name, GFP_KERNEL);
 	gi->composite.name = gi->composite.gadget_driver.function;
 
-	if (!gi->composite.gadget_driver.function)
+	if (!gi->composite.gadget_driver.function) {
+		ret = -ENOMEM;
 		goto out_free_driver_name;
+	}
 
 	return &gi->group;
 
