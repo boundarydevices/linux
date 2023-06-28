@@ -51,7 +51,7 @@ static const struct mtk_mdp_driver_data mt8195_mdp_driver_data = {
 	.format_len = ARRAY_SIZE(mt8195_formats),
 	.def_limit = &mt8195_mdp_def_limit,
 	.pp_criteria = &mt8195_mdp_pp_criteria,
-	.pp_used = MDP_PP_USED_2,
+	.pp_used = MDP_PP_USED_4,
 };
 
 static const struct mtk_mdp_driver_data mt8188_mdp_driver_data = {

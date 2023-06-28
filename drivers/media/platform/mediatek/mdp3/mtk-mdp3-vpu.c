@@ -19,6 +19,7 @@ static inline struct mdp_dev *vpu_to_mdp(struct mdp_vpu_dev *vpu)
 static int mdp_vpu_shared_mem_alloc(struct mdp_vpu_dev *vpu)
 {
 	struct device *dev;
+	int i;
 
 	if (IS_ERR_OR_NULL(vpu))
 		goto err_return;
@@ -39,16 +40,24 @@ static int mdp_vpu_shared_mem_alloc(struct mdp_vpu_dev *vpu)
 			goto err_free_param;
 	}
 
-	if (!vpu->config) {
-		vpu->config = dma_alloc_wc(dev, vpu->config_size,
-					   &vpu->config_addr, GFP_KERNEL);
-		if (!vpu->config)
-			goto err_free_work;
-	}
+	for (i = 0; i < MDP_VPU_UID_MAX; i++)
+		if (!vpu->config[i]) {
+			vpu->config[i] = dma_alloc_wc(dev, vpu->config_size,
+						      &vpu->config_addr[i],
+						      GFP_KERNEL);
+			if (!vpu->config)
+				goto err_free_work;
+		}
 
 	return 0;
 
 err_free_work:
+	while (--i >= 0)
+		if (vpu->config[i]) {
+			dma_free_wc(dev, vpu->config_size, vpu->config[i],
+				    vpu->config_addr[i]);
+			vpu->config[i] = NULL;
+		}
 	dma_free_wc(dev, vpu->work_size, vpu->work, vpu->work_addr);
 	vpu->work = NULL;
 err_free_param:
@@ -61,6 +70,7 @@ err_return:
 void mdp_vpu_shared_mem_free(struct mdp_vpu_dev *vpu)
 {
 	struct device *dev;
+	int i;
 
 	if (IS_ERR_OR_NULL(vpu))
 		return;
@@ -73,8 +83,10 @@ void mdp_vpu_shared_mem_free(struct mdp_vpu_dev *vpu)
 	if (vpu->work && vpu->work_addr)
 		dma_free_wc(dev, vpu->work_size, vpu->work, vpu->work_addr);
 
-	if (vpu->config && vpu->config_addr)
-		dma_free_wc(dev, vpu->config_size, vpu->config, vpu->config_addr);
+	for (i = 0; i < MDP_VPU_UID_MAX; i++)
+		if (vpu->config[i] && vpu->config_addr[i])
+			dma_free_wc(dev, vpu->config_size, vpu->config[i],
+				    vpu->config_addr[i]);
 }
 
 static void mdp_vpu_ipi_handle_init_ack(void *data, unsigned int len,
@@ -197,8 +209,7 @@ int mdp_vpu_dev_init(struct mdp_vpu_dev *vpu, struct mtk_scp *scp,
 		.drv_data = (unsigned long)vpu,
 	};
 	struct mdp_dev *mdp = vpu_to_mdp(vpu);
-	int err;
-	u8 pp_num = mdp->mdp_data->pp_used;
+	int err, i;
 
 	init_completion(&vpu->ipi_acked);
 	vpu->scp = scp;
@@ -212,7 +223,7 @@ int mdp_vpu_dev_init(struct mdp_vpu_dev *vpu, struct mtk_scp *scp,
 	mutex_lock(vpu->lock);
 	vpu->work_size = ALIGN(vpu->work_size, 64);
 	vpu->param_size = ALIGN(sizeof(struct img_ipi_frameparam), 64);
-	vpu->config_size = ALIGN(sizeof(struct img_config) * pp_num, 64);
+	vpu->config_size = ALIGN(sizeof(struct img_config) * MDP_PP_CONS_MAX, 64);
 	err = mdp_vpu_shared_mem_alloc(vpu);
 	mutex_unlock(vpu->lock);
 	if (err) {
@@ -221,10 +232,12 @@ int mdp_vpu_dev_init(struct mdp_vpu_dev *vpu, struct mtk_scp *scp,
 	}
 
 	dev_dbg(&mdp->pdev->dev,
-		"VPU param:%pK pa:%pad sz:%zx, work:%pK pa:%pad sz:%zx, config:%pK pa:%pad sz:%zx",
+		"VPU param:%pK pa:%pad sz:%zx, work:%pK pa:%pad sz:%zx",
 		vpu->param, &vpu->param_addr, vpu->param_size,
-		vpu->work, &vpu->work_addr, vpu->work_size,
-		vpu->config, &vpu->config_addr, vpu->config_size);
+		vpu->work, &vpu->work_addr, vpu->work_size);
+	for (i = 0; i < MDP_VPU_UID_MAX; i++)
+		dev_dbg(&mdp->pdev->dev, "VPU config %d :%pK pa:%pad sz:%zx",
+			i, vpu->config[i], &vpu->config_addr[i], vpu->config_size);
 
 	msg.work_addr = vpu->work_addr;
 	msg.work_size = vpu->work_size;
@@ -258,30 +271,34 @@ int mdp_vpu_dev_deinit(struct mdp_vpu_dev *vpu)
 	return mdp_vpu_sendmsg(vpu, SCP_IPI_MDP_DEINIT, &msg, sizeof(msg));
 }
 
-int mdp_vpu_process(struct mdp_vpu_dev *vpu, struct img_ipi_frameparam *param)
+int mdp_vpu_process(struct mdp_vpu_dev *vpu, struct img_ipi_frameparam *param,
+		    enum mdp_vpu_uid id)
 {
 	struct mdp_dev *mdp = vpu_to_mdp(vpu);
 	struct img_sw_addr addr;
+	int ret;
 
 	mutex_lock(vpu->lock);
 	if (mdp_vpu_shared_mem_alloc(vpu)) {
+		mutex_unlock(vpu->lock);
 		dev_err(&mdp->pdev->dev, "VPU memory alloc fail!");
 		return -ENOMEM;
 	}
 
 	memset(vpu->param, 0, vpu->param_size);
 	memset(vpu->work, 0, vpu->work_size);
-	memset(vpu->config, 0, vpu->config_size);
+	memset(vpu->config[id], 0, vpu->config_size);
 
 	param->self_data.va = (unsigned long)vpu->work;
 	param->self_data.pa = vpu->work_addr;
-	param->config_data.va = (unsigned long)vpu->config;
-	param->config_data.pa = vpu->config_addr;
+	param->config_data.va = (unsigned long)vpu->config[id];
+	param->config_data.pa = vpu->config_addr[id];
 	param->drv_data = (unsigned long)vpu;
 	memcpy(vpu->param, param, sizeof(*param));
 
 	addr.pa = vpu->param_addr;
 	addr.va = (unsigned long)vpu->param;
+	ret = mdp_vpu_sendmsg(vpu, SCP_IPI_MDP_FRAME, &addr, sizeof(addr));
 	mutex_unlock(vpu->lock);
-	return mdp_vpu_sendmsg(vpu, SCP_IPI_MDP_FRAME, &addr, sizeof(addr));
+	return ret;
 }
