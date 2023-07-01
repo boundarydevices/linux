@@ -1311,7 +1311,7 @@ static struct fsl_mxc_camera_platform_data *camera_plat;
 
 static int tc358743_probe(struct i2c_client *adapter,
 				const struct i2c_device_id *device_id);
-static int tc358743_remove(struct i2c_client *client);
+static void tc358743_remove(struct i2c_client *client);
 
 static s32 tc358743_read_reg(u16 reg, u32 *val);
 static s32 tc358743_write_reg(u16 reg, u32 val, int len);
@@ -3260,7 +3260,7 @@ err1:
  * @param client            struct i2c_client *
  * @return  Error code indicating success or failure
  */
-static int tc358743_remove(struct i2c_client *client)
+static void tc358743_remove(struct i2c_client *client)
 {
 	// Stop delayed work
 	cancel_delayed_work_sync(&(det_work));
@@ -3298,8 +3298,6 @@ static int tc358743_remove(struct i2c_client *client)
 		regulator_disable(io_regulator);
 		regulator_put(io_regulator);
 	}
-
-	return 0;
 }
 
 /*!
