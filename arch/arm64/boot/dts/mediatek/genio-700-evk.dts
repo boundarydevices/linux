@@ -1193,8 +1193,8 @@
 
 &usb_host1 {
 	status = "okay";
-	vbus-supply = <&usb_p1_vbus>;
-	vusb33-supply = <&onboard_hub>;
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&onboard_hub>;
 };
 
 &ssusb2 {
