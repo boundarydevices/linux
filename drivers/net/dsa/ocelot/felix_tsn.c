@@ -340,6 +340,7 @@ static int felix_qbu_set(struct net_device *ndev, u8 preemptible)
 {
 	struct dsa_port *dp = dsa_port_from_netdev(ndev);
 	struct ocelot *ocelot = dp->ds->priv;
+	struct felix *felix = ocelot_to_felix(ocelot);
 	struct ocelot_port *ocelot_port;
 	int port = dp->index;
 
@@ -368,6 +369,9 @@ static int felix_qbu_set(struct net_device *ndev, u8 preemptible)
 		       port);
 
 	ocelot_port->preemptable_prios = preemptible;
+
+	if (ocelot_port->taprio && felix->info->tas_guard_bands_update)
+		felix->info->tas_guard_bands_update(ocelot, port);
 
 	mutex_unlock(&ocelot->fwd_domain_lock);
 

@@ -1206,6 +1206,17 @@ static u32 vsc9959_tas_tc_max_sdu(struct tc_taprio_qopt_offload *taprio, int tc)
 	return taprio->max_sdu[tc] + ETH_HLEN + 2 * VLAN_HLEN + ETH_FCS_LEN;
 }
 
+/**
+ * ethtool_mm_frag_size_add_to_min - Translate (standard) additional fragment
+ *	size expressed as multiplier into (absolute) minimum fragment size
+ *	value expressed in octets
+ * @val_add: Value of addFragSize multiplier
+ */
+static inline u32 ethtool_mm_frag_size_add_to_min(u32 val_add)
+{
+	return (ETH_ZLEN + ETH_FCS_LEN) * (1 + val_add) - ETH_FCS_LEN;
+}
+
 /* Update QSYS_PORT_MAX_SDU to make sure the static guard bands added by the
  * switch (see the ALWAYS_GUARD_BAND_SCH_Q comment) are correct at all MTU
  * values (the default value is 1518). Also, for traffic class windows smaller
@@ -1217,9 +1228,10 @@ static void vsc9959_tas_guard_bands_update(struct ocelot *ocelot, int port)
 	struct ocelot_port *ocelot_port = ocelot->ports[port];
 	struct tc_taprio_qopt_offload *taprio;
 	u64 min_gate_len[OCELOT_NUM_TC];
+	u32 val, maxlen, add_frag_size;
+	u64 needed_min_frag_time_ps;
 	int speed, picos_per_byte;
 	u64 needed_bit_time_ps;
-	u32 val, maxlen;
 	u8 tas_speed;
 	int tc;
 
@@ -1259,9 +1271,18 @@ static void vsc9959_tas_guard_bands_update(struct ocelot *ocelot, int port)
 	 */
 	needed_bit_time_ps = (u64)(maxlen + 24) * picos_per_byte;
 
+	/* Preemptible TCs don't need to pass a full MTU, the port will
+	 * automatically emit a HOLD request when a preemptible TC gate closes
+	 */
+	val = ocelot_read_rix(ocelot, QSYS_PREEMPTION_CFG, port);
+	add_frag_size = QSYS_PREEMPTION_CFG_MM_ADD_FRAG_SIZE_X(val);
+	needed_min_frag_time_ps = picos_per_byte *
+		(u64)(24 + 2 * ethtool_mm_frag_size_add_to_min(add_frag_size));
+
 	dev_dbg(ocelot->dev,
-		"port %d: max frame size %d needs %llu ps at speed %d\n",
-		port, maxlen, needed_bit_time_ps, speed);
+		"port %d: max frame size %d needs %llu ps, %llu ps for mPackets at speed %d\n",
+		port, maxlen, needed_bit_time_ps, needed_min_frag_time_ps,
+		speed);
 
 	vsc9959_tas_min_gate_lengths(taprio, min_gate_len);
 
@@ -1273,7 +1294,9 @@ static void vsc9959_tas_guard_bands_update(struct ocelot *ocelot, int port)
 		remaining_gate_len_ps =
 			vsc9959_tas_remaining_gate_len_ps(min_gate_len[tc]);
 
-		if (remaining_gate_len_ps > needed_bit_time_ps) {
+		if ((ocelot_port->preemptable_prios & BIT(tc)) ?
+		    remaining_gate_len_ps > needed_min_frag_time_ps :
+		    remaining_gate_len_ps > needed_bit_time_ps) {
 			/* Setting QMAXSDU_CFG to 0 disables oversized frame
 			 * dropping.
 			 */
