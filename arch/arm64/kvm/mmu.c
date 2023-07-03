@@ -1661,12 +1661,16 @@ static int pkvm_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	struct page *page;
 	gfn_t gfn = fault_ipa >> PAGE_SHIFT;
 	unsigned long hva = gfn_to_hva_memslot_prot(memslot, gfn, NULL);
+	int ret, nr_pages;
 	u64 pfn;
-	int ret;
 
+	nr_pages = hyp_memcache->nr_pages;
 	ret = topup_hyp_memcache(hyp_memcache, kvm_mmu_cache_min_pages(mmu));
 	if (ret)
 		return -ENOMEM;
+
+	nr_pages = hyp_memcache->nr_pages - nr_pages;
+	atomic64_add(nr_pages << PAGE_SHIFT, &kvm->stat.protected_hyp_mem);
 
 	ppage = kmalloc(sizeof(*ppage), GFP_KERNEL_ACCOUNT);
 	if (!ppage)
