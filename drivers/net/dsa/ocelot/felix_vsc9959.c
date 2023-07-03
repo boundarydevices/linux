@@ -1223,7 +1223,7 @@ static void vsc9959_tas_guard_bands_update(struct ocelot *ocelot, int port)
 	u8 tas_speed;
 	int tc;
 
-	lockdep_assert_held(&ocelot->tas_lock);
+	lockdep_assert_held(&ocelot->fwd_domain_lock);
 
 	taprio = ocelot_port->taprio;
 
@@ -1264,8 +1264,6 @@ static void vsc9959_tas_guard_bands_update(struct ocelot *ocelot, int port)
 		port, maxlen, needed_bit_time_ps, speed);
 
 	vsc9959_tas_min_gate_lengths(taprio, min_gate_len);
-
-	mutex_lock(&ocelot->fwd_domain_lock);
 
 	for (tc = 0; tc < OCELOT_NUM_TC; tc++) {
 		u32 requested_max_sdu = vsc9959_tas_tc_max_sdu(taprio, tc);
@@ -1329,8 +1327,6 @@ static void vsc9959_tas_guard_bands_update(struct ocelot *ocelot, int port)
 	ocelot_write_rix(ocelot, maxlen, QSYS_PORT_MAX_SDU, port);
 
 	ocelot->ops->cut_through_fwd(ocelot);
-
-	mutex_unlock(&ocelot->fwd_domain_lock);
 }
 
 static void vsc9959_sched_speed_set(struct ocelot *ocelot, int port,
@@ -1357,7 +1353,7 @@ static void vsc9959_sched_speed_set(struct ocelot *ocelot, int port,
 		break;
 	}
 
-	mutex_lock(&ocelot->tas_lock);
+	mutex_lock(&ocelot->fwd_domain_lock);
 
 	ocelot_rmw_rix(ocelot,
 		       QSYS_TAG_CONFIG_LINK_SPEED(tas_speed),
@@ -1367,7 +1363,7 @@ static void vsc9959_sched_speed_set(struct ocelot *ocelot, int port,
 	if (ocelot_port->taprio)
 		vsc9959_tas_guard_bands_update(ocelot, port);
 
-	mutex_unlock(&ocelot->tas_lock);
+	mutex_unlock(&ocelot->fwd_domain_lock);
 
 #ifdef CONFIG_MSCC_FELIX_SWITCH_TSN
 	felix_cbs_reset(ocelot, port, speed);
@@ -1418,7 +1414,7 @@ static int vsc9959_qos_port_tas_set(struct ocelot *ocelot, int port,
 	int ret, i;
 	u32 val;
 
-	mutex_lock(&ocelot->tas_lock);
+	mutex_lock(&ocelot->fwd_domain_lock);
 
 	if (!taprio->enable) {
 		ocelot_rmw_rix(ocelot, 0, QSYS_TAG_CONFIG_ENABLE,
@@ -1429,7 +1425,7 @@ static int vsc9959_qos_port_tas_set(struct ocelot *ocelot, int port,
 
 		vsc9959_tas_guard_bands_update(ocelot, port);
 
-		mutex_unlock(&ocelot->tas_lock);
+		mutex_unlock(&ocelot->fwd_domain_lock);
 		return 0;
 	}
 
@@ -1506,7 +1502,7 @@ static int vsc9959_qos_port_tas_set(struct ocelot *ocelot, int port,
 	vsc9959_tas_guard_bands_update(ocelot, port);
 
 err:
-	mutex_unlock(&ocelot->tas_lock);
+	mutex_unlock(&ocelot->fwd_domain_lock);
 
 	return ret;
 }
@@ -1519,7 +1515,7 @@ static void vsc9959_tas_clock_adjust(struct ocelot *ocelot)
 	int port;
 	u32 val;
 
-	mutex_lock(&ocelot->tas_lock);
+	mutex_lock(&ocelot->fwd_domain_lock);
 
 	for (port = 0; port < ocelot->num_phys_ports; port++) {
 		ocelot_port = ocelot->ports[port];
@@ -1557,7 +1553,7 @@ static void vsc9959_tas_clock_adjust(struct ocelot *ocelot)
 			       QSYS_TAG_CONFIG_ENABLE,
 			       QSYS_TAG_CONFIG, port);
 	}
-	mutex_unlock(&ocelot->tas_lock);
+	mutex_unlock(&ocelot->fwd_domain_lock);
 }
 
 static int vsc9959_qos_port_cbs_set(struct dsa_switch *ds, int port,
