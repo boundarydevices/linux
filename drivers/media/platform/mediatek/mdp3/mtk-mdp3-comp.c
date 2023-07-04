@@ -1446,15 +1446,82 @@ static int config_hdr_frame(struct mdp_comp_ctx *ctx,
 	phys_addr_t base = ctx->comp->reg_base;
 	u16 subsys_id = ctx->comp->subsys_id;
 	u32 reg = 0;
+	u32 hdr_top_mask = 0x2F0F0001;
+	bool relay = TRUE;
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.top);
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TOP, reg, BIT(29) | BIT(28));
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TOP, reg, hdr_top_mask);
 
 	if (CFG_CHECK(MT8195, p_id))
-		reg = CFG_COMP(MT8195, ctx->param, hdr.relay);
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_RELAY, reg, BIT(0));
+		relay = CFG_COMP(MT8195, ctx->param, hdr.relay);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_RELAY, relay, BIT(0));
 
+	if (relay)
+		goto hdr_relay_done;
+
+	if (cmd->user != MDP_CMDQ_USER_CAP)
+		goto hdr_relay_done;
+
+	/* HDMIRX RGB input do HDR R2Y */
+	reg = CFG_COMP(MT8195, ctx->param, hdr.coef3x3_0);
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_HDR_3x3_COEF_00, reg, BIT(0));
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.b_channel_nr);
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_HDR_B_CHANNEL_NR, reg, BIT(0));
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.a_luma);
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_HDR_A_LUMINANCE, reg, BIT(0));
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.lbox_det_1);
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_HDR_LBOX_DET_1, reg, BIT(0));
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.cursor_ctrl);
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_HDR_CURSOR_COLOR, reg, BIT(0));
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.y2r_09);
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_HDR_Y2R_09, reg, BIT(0) | BIT(1));
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.tone_map_top);
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_TONE_MAP_TOP, reg, BIT(0));
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.hlg_sg);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HLG_SG, reg, MDP_HDR_HLG_SG_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.l_mix_0);
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_HDR_L_MIX_0, reg, BIT(0));
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_00);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_00, reg, MDP_HDR_R2Y_00_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_01);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_01, reg, MDP_HDR_R2Y_01_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_02);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_02, reg, MDP_HDR_R2Y_02_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_03);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_03, reg, MDP_HDR_R2Y_03_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_04);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_04, reg, MDP_HDR_R2Y_04_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_05);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_05, reg, MDP_HDR_R2Y_05_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_06);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_06, reg, MDP_HDR_R2Y_06_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_07);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_07, reg, MDP_HDR_R2Y_07_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_08);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_08, reg, MDP_HDR_R2Y_08_MASK);
+
+	reg = CFG_COMP(MT8195, ctx->param, hdr.r2y_09);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_R2Y_09, reg, MDP_HDR_R2Y_09_MASK);
+
+hdr_relay_done:
 	return 0;
 }
 
@@ -1497,7 +1564,7 @@ static int config_hdr_subfrm(struct mdp_comp_ctx *ctx,
 	/* Enable histogram */
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].hist_addr);
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HIST_ADDR, reg, BIT(9));
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HIST_ADDR, reg, BIT(9) | BIT(8));
 
 	return 0;
 }

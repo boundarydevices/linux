@@ -99,6 +99,7 @@ static int mdp_cap_s_fmt_mplane(struct file *file, void *fh,
 	struct mdp_frame *capture;
 	const struct mdp_format *fmt;
 	struct v4l2_pix_format_mplane *pix_mp = &f->fmt.pix_mp;
+	enum mdp_ycbcr_profile profile;
 
 	fmt = mdp_try_fmt_mplane(ctx->mdp_dev, f, &ctx->curr_param, ctx->id);
 
@@ -111,9 +112,13 @@ static int mdp_cap_s_fmt_mplane(struct file *file, void *fh,
 	_mdp_cap_fill_v4l2_format(pix_mp, fmt);
 	frame->format = *f;
 	frame->mdp_fmt = fmt;
-	frame->ycbcr_prof = mdp_map_ycbcr_prof_mplane(f, fmt->mdp_color);
 	frame->usage = V4L2_TYPE_IS_OUTPUT(f->type) ?
 		MDP_BUFFER_USAGE_HDMI_RX : MDP_BUFFER_USAGE_MDP;
+	if (V4L2_TYPE_IS_OUTPUT(f->type) && MDP_COLOR_IS_RGB(fmt->mdp_color))
+		profile = MDP_YCBCR_PROFILE_RGB;
+	else
+		profile = mdp_map_ycbcr_prof_mplane(f, fmt->mdp_color);
+	frame->ycbcr_prof = profile;
 
 	capture = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	if (V4L2_TYPE_IS_OUTPUT(f->type)) {
