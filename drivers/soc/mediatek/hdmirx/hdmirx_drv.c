@@ -1072,10 +1072,23 @@ void notify_vid_capture_device(struct MTK_HDMI *myhdmi, enum HDMIRX_NOTIFY_T not
 		}
 
 		io_get_vid_info(myhdmi, &vid_para);
-		myhdmi->capture_intf.width = vid_para.hactive;
+		/*
+		 * The input is YUV420, HDMIRX converts YUV420 to YUV444 output,
+		 * since the width of YUV420 video is half of YUV444 video,
+		 * so width * 2.
+		 */
+		if (vid_para.cs == HDMI_CS_YUV420)
+			myhdmi->capture_intf.width = vid_para.hactive * 2;
+		else
+			myhdmi->capture_intf.width = vid_para.hactive;
 		myhdmi->capture_intf.height = vid_para.vactive;
-		myhdmi->capture_intf.color_space = (enum hdmirx_intf_cs)vid_para.cs;
-
+		/* HDMIRX converts YUV420/YUV422 to YUV444 output */
+		if ((vid_para.cs == HDMI_CS_YUV420) ||
+			(vid_para.cs == HDMI_CS_YUV422) ||
+			(vid_para.cs == HDMI_CS_YUV444))
+			myhdmi->capture_intf.color_space = HDMIRX_INTF_CS_YUV444;
+		else
+			myhdmi->capture_intf.color_space = HDMIRX_INTF_CS_RGB;
 		RX_INFO_LOG("[RX] notify capture device to probe with w/h/cs: [%u/%u/%d].\n",
 					 myhdmi->capture_intf.width, myhdmi->capture_intf.height,
 					 myhdmi->capture_intf.color_space);
