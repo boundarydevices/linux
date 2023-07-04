@@ -317,6 +317,9 @@ static void dwmac4_pmt(struct mac_device_info *hw, unsigned long mode)
 		config = readl(ioaddr + GMAC_CONFIG);
 		config |= GMAC_CONFIG_RE;
 		writel(config, ioaddr + GMAC_CONFIG);
+
+		/* Enable PMT interrupt only to avoid system waked by other interrupts */
+		writel(GMAC_INT_PMT_EN, ioaddr + GMAC_INT_EN);
 	}
 	writel(pmt, ioaddr + GMAC_PMT);
 }
