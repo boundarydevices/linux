@@ -30,6 +30,31 @@ int gzvm_gfn_to_hva_memslot(struct gzvm_memslot *memslot, u64 gfn,
 }
 
 /**
+ * gzvm_find_memslot() - Find memslot containing this @gpa
+ * @vm: Pointer to struct gzvm
+ * @gfn: Guest frame number
+ *
+ * Return:
+ * * >=0		- Index of memslot
+ * * -EFAULT		- Not found
+ */
+int gzvm_find_memslot(struct gzvm *vm, u64 gfn)
+{
+	int i;
+
+	for (i = 0; i < GZVM_MAX_MEM_REGION; i++) {
+		if (vm->memslot[i].npages == 0)
+			continue;
+
+		if (gfn >= vm->memslot[i].base_gfn &&
+		    gfn < vm->memslot[i].base_gfn + vm->memslot[i].npages)
+			return i;
+	}
+
+	return -EFAULT;
+}
+
+/**
  * register_memslot_addr_range() - Register memory region to GenieZone
  * @gzvm: Pointer to struct gzvm
  * @memslot: Pointer to struct gzvm_memslot
@@ -60,7 +85,10 @@ register_memslot_addr_range(struct gzvm *gzvm, struct gzvm_memslot *memslot)
 	}
 
 	free_pages_exact(region, buf_size);
-	return 0;
+
+	if (gzvm->mem_alloc_mode == GZVM_DEMAND_PAGING)
+		return 0;
+	return gzvm_vm_populate_mem_region(gzvm, memslot->slot_id);
 }
 
 /**
@@ -349,6 +377,22 @@ static const struct file_operations gzvm_vm_fops = {
 	.unlocked_ioctl = gzvm_vm_ioctl,
 };
 
+static int setup_mem_alloc_mode(struct gzvm *vm)
+{
+	int ret;
+	struct gzvm_enable_cap cap = {0};
+
+	cap.cap = GZVM_CAP_ENABLE_DEMAND_PAGING;
+
+	ret = gzvm_vm_ioctl_enable_cap(vm, &cap, NULL);
+	if (!ret)
+		vm->mem_alloc_mode = GZVM_DEMAND_PAGING;
+	else
+		vm->mem_alloc_mode = GZVM_FULLY_POPULATED;
+
+	return 0;
+}
+
 static struct gzvm *gzvm_create_vm(struct gzvm_driver *drv, unsigned long vm_type)
 {
 	int ret;
@@ -384,6 +428,8 @@ static struct gzvm *gzvm_create_vm(struct gzvm_driver *drv, unsigned long vm_typ
 		kfree(gzvm);
 		return ERR_PTR(ret);
 	}
+
+	setup_mem_alloc_mode(gzvm);
 
 	mutex_lock(&gzvm_list_lock);
 	list_add(&gzvm->vm_list, &gzvm_list);

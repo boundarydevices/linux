@@ -45,6 +45,7 @@ struct gzvm_driver {
  */
 #define NO_ERROR                (0)
 #define ERR_NO_MEMORY           (-5)
+#define ERR_INVALID_ARGS        (-8)
 #define ERR_NOT_SUPPORTED       (-24)
 #define ERR_NOT_IMPLEMENTED     (-27)
 #define ERR_FAULT               (-40)
@@ -58,6 +59,11 @@ struct gzvm_driver {
 #define GZVM_MAX_MEM_REGION	10
 
 #define GZVM_VCPU_RUN_MAP_SIZE		(PAGE_SIZE * 2)
+
+enum gzvm_demand_paging_mode {
+	GZVM_FULLY_POPULATED = 0,
+	GZVM_DEMAND_PAGING = 1,
+};
 
 /**
  * struct mem_region_addr_range: identical to ffa memory constituent
@@ -137,6 +143,7 @@ struct gzvm_pinned_page {
  * @irq_lock: lock for irq injection
  * @pinned_pages: use rb-tree to record pin/unpin page
  * @mem_lock: lock for memory operations
+ * @mem_alloc_mode: memory allocation mode - fully allocated or demand paging
  */
 struct gzvm {
 	struct gzvm_driver *gzvm_drv;
@@ -161,6 +168,7 @@ struct gzvm {
 	struct hlist_head irq_ack_notifier_list;
 	struct srcu_struct irq_srcu;
 	struct mutex irq_lock;
+	u32 mem_alloc_mode;
 
 	struct rb_root pinned_pages;
 	struct mutex mem_lock;
@@ -183,6 +191,8 @@ int gzvm_arch_set_memregion(u16 vm_id, size_t buf_size,
 int gzvm_arch_check_extension(struct gzvm *gzvm, __u64 cap, void __user *argp);
 int gzvm_arch_create_vm(unsigned long vm_type);
 int gzvm_arch_destroy_vm(u16 vm_id);
+int gzvm_arch_map_guest(u16 vm_id, int memslot_id, u64 pfn, u64 gfn,
+			u64 nr_pages);
 int gzvm_vm_ioctl_arch_enable_cap(struct gzvm *gzvm,
 				  struct gzvm_enable_cap *cap,
 				  void __user *argp);
@@ -200,6 +210,10 @@ int gzvm_arch_create_vcpu(u16 vm_id, int vcpuid, void *run);
 int gzvm_arch_vcpu_run(struct gzvm_vcpu *vcpu, __u64 *exit_reason);
 int gzvm_arch_destroy_vcpu(u16 vm_id, int vcpuid);
 int gzvm_arch_inform_exit(u16 vm_id);
+
+int gzvm_find_memslot(struct gzvm *vm, u64 gpa);
+int gzvm_handle_page_fault(struct gzvm_vcpu *vcpu);
+bool gzvm_handle_guest_exception(struct gzvm_vcpu *vcpu);
 
 int gzvm_arch_create_device(u16 vm_id, struct gzvm_create_device *gzvm_dev);
 int gzvm_arch_inject_irq(struct gzvm *gzvm, unsigned int vcpu_idx,
