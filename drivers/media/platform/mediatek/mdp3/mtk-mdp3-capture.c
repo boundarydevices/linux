@@ -618,8 +618,45 @@ static int mdp_cap_streamon(struct file *file, void *priv, enum v4l2_buf_type ty
 	return ret;
 }
 
+static int mdp_cap_enum_framesizes(struct file *file, void *priv,
+				   struct v4l2_frmsizeenum *fsize)
+{
+	struct video_device *vdev = video_devdata(file);
+	struct mdp_dev *mdp = video_get_drvdata(vdev);
+	const struct mdp_limit *limit = mdp->mdp_data->def_limit;
+
+	if (fsize->index)
+		return -EINVAL;
+	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
+	fsize->stepwise.min_width = limit->cap_limit.wmin;
+	fsize->stepwise.max_width = limit->cap_limit.wmax;
+	fsize->stepwise.step_width = 2;
+	fsize->stepwise.min_height = limit->cap_limit.hmin;
+	fsize->stepwise.max_height = limit->cap_limit.hmax;
+	fsize->stepwise.step_height = 2;
+
+	return 0;
+}
+
+static int mdp_cap_enum_frameintervals(struct file *file, void *priv,
+				       struct v4l2_frmivalenum *fival)
+{
+	struct video_device *vdev = video_devdata(file);
+	struct mdp_dev *mdp = video_get_drvdata(vdev);
+
+	if (fival->index != 0)
+		return -EINVAL;
+	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+	fival->discrete.numerator = 1;
+	fival->discrete.denominator = mdp->rx_cap_intf.rx_frame_rate;
+
+	return 0;
+}
+
 static const struct v4l2_ioctl_ops mdp_cap_ioctl_ops = {
 	.vidioc_querycap		= mdp_cap_querycap,
+	.vidioc_enum_framesizes		= mdp_cap_enum_framesizes,
+	.vidioc_enum_frameintervals	= mdp_cap_enum_frameintervals,
 	.vidioc_enum_fmt_vid_cap	= mdp_cap_enum_fmt_mplane,
 	.vidioc_g_fmt_vid_cap_mplane	= mdp_cap_g_fmt_mplane,
 	.vidioc_s_fmt_vid_cap_mplane	= mdp_cap_s_fmt_mplane,
@@ -707,13 +744,14 @@ static int mdp_cap_probe(struct hdmirx_capture_interface *intf)
 	struct mdp_dev *mdp = (struct mdp_dev *)intf->priv;
 	int ret;
 
-	dev_dbg(&mdp->pdev->dev, "w[%u], w[%u], cs[%d]\n",
-		intf->width, intf->height, intf->color_space);
+	dev_dbg(&mdp->pdev->dev, "w[%u], h[%u], fr[%u], cs[%d]\n",
+		intf->width, intf->height, intf->frame_rate, intf->color_space);
 
 	atomic_set(&mdp->cap_discard, 0);
 
 	mdp->rx_cap_intf.rx_width = intf->width;
 	mdp->rx_cap_intf.rx_height = intf->height;
+	mdp->rx_cap_intf.rx_frame_rate = intf->frame_rate;
 	mdp->rx_cap_intf.rx_color_space = intf->color_space;
 
 	ret = mdp_capture_device_register(mdp);

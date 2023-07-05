@@ -106,6 +106,7 @@ struct mdp_mm_subsys {
 struct mdp_rx_cap_intf {
 	unsigned int rx_width;
 	unsigned int rx_height;
+	unsigned int rx_frame_rate;
 	enum hdmirx_intf_cs rx_color_space;
 };
 
