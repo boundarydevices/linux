@@ -619,6 +619,7 @@ static int mediatek_dwmac_common_data(struct platform_device *pdev,
 
 	plat->interface = priv_plat->phy_mode;
 	plat->use_phy_wol = priv_plat->mac_wol ? 0 : 1;
+	plat->sph_disable = 1;
 	plat->riwt_off = 1;
 	plat->maxmtu = ETH_DATA_LEN;
 	plat->addr64 = priv_plat->variant->dma_bit_mask;
