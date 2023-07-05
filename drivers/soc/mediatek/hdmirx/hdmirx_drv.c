@@ -1082,6 +1082,9 @@ void notify_vid_capture_device(struct MTK_HDMI *myhdmi, enum HDMIRX_NOTIFY_T not
 		else
 			myhdmi->capture_intf.width = vid_para.hactive;
 		myhdmi->capture_intf.height = vid_para.vactive;
+
+		myhdmi->capture_intf.frame_rate = vid_para.frame_rate;
+
 		/* HDMIRX converts YUV420/YUV422 to YUV444 output */
 		if ((vid_para.cs == HDMI_CS_YUV420) ||
 			(vid_para.cs == HDMI_CS_YUV422) ||
