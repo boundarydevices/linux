@@ -20,6 +20,7 @@ enum hdmirx_intf_cs {
 struct hdmirx_capture_interface {
 	unsigned int width;
 	unsigned int height;
+	unsigned int frame_rate;	/* Hz */
 	enum hdmirx_intf_cs color_space;
 
 	void *priv;
