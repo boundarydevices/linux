@@ -284,6 +284,7 @@ struct lpuart_port {
 	struct scatterlist	rx_sgl, tx_sgl[2];
 	struct circ_buf		rx_ring;
 	int			rx_dma_rng_buf_len;
+	int			rx_dma_periods;
 	int                     last_residue;
 	unsigned int		dma_tx_nents;
 	wait_queue_head_t	dma_wait;
@@ -1399,10 +1400,11 @@ static inline int lpuart_start_rx_dma(struct lpuart_port *sport)
 		return ret;
 	}
 
+	sport->rx_dma_periods = 2;
 	sport->dma_rx_desc = dmaengine_prep_dma_cyclic(chan,
 				 sg_dma_address(&sport->rx_sgl),
 				 sport->rx_sgl.length,
-				 sport->rx_sgl.length / 2,
+				 sport->rx_sgl.length / sport->rx_dma_periods,
 				 DMA_DEV_TO_MEM,
 				 DMA_PREP_INTERRUPT);
 	if (!sport->dma_rx_desc) {
