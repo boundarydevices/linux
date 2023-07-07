@@ -13,7 +13,7 @@
 #include <dt-bindings/usb/pd.h>
 
 / {
-	model = "MediaTek Genio 1200 EVK-P1V2";
+	model = "MediaTek Genio 1200 EVK-P1V2-EMMC";
 	compatible = "mediatek,mt8395-evk", "mediatek,mt8195";
 
 	aliases {
@@ -217,13 +217,13 @@
 };
 
 &ufshci {
-	status = "okay";
+	status = "disabled";
 	vcc-supply = <&mt6359_vemc_1_ldo_reg>;
 	vccq2-supply = <&mt6359_vufs_ldo_reg>;
 };
 
 &ufsphy {
-	status = "okay";
+	status = "disabled";
 };
 
 &pmic {
