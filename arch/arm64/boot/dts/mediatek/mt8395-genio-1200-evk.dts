@@ -159,6 +159,20 @@
 		enable-active-high;
 		regulator-always-on;
 	};
+
+	amic_codec: amic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <200>;
+	};
+
+	dmic_codec: dmic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <30>;
+	};
 };
 
 &mipi_tx0 {
@@ -201,10 +215,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwm0_default_pins>;
 	status = "okay";
-};
-
-&dmic_codec {
-	wakeup-delay-ms = <200>;
 };
 
 &eth {
@@ -1021,6 +1031,10 @@
 		codec-0 {
 			sound-dai = <&pmic 0>;
 		};
+
+		codec-1 {
+			sound-dai = <&amic_codec>;
+		};
 	};
 
 	dai-link-2 {
@@ -1029,6 +1043,15 @@
 
 		codec-0 {
 			sound-dai = <&pmic 1>;
+		};
+	};
+
+	dai-link-3 {
+		sound-dai = <&afe>;
+		dai-link-name = "DMIC_BE";
+
+		codec-0 {
+			sound-dai = <&dmic_codec>;
 		};
 	};
 };
