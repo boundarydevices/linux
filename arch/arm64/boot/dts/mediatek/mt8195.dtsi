@@ -316,12 +316,6 @@
 		status = "fail";
 	};
 
-	dmic_codec: dmic-codec {
-		compatible = "dmic-codec";
-		num-channels = <2>;
-		wakeup-delay-ms = <50>;
-	};
-
 	sound: mt8195-sound {
 		mediatek,platform = <&afe>;
 		status = "disabled";
