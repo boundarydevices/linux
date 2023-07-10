@@ -271,6 +271,20 @@
 		regulator-max-microvolt = <5000000>;
 		enable-active-high;
 	};
+
+	amic_codec: amic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <200>;
+	};
+
+	dmic_codec: dmic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <30>;
+	};
 };
 
 &uart0 {
@@ -1099,7 +1113,7 @@
 		};
 
 		codec-1 {
-			sound-dai = <&dmic_codec>;
+			sound-dai = <&amic_codec>;
 		};
 	};
 
@@ -1118,6 +1132,15 @@
 
 		codec-0 {
 			sound-dai = <&hdmi0>;
+		};
+	};
+
+	dai-link-4 {
+		sound-dai = <&afe>;
+		dai-link-name = "DMIC_BE";
+
+		codec-0 {
+			sound-dai = <&dmic_codec>;
 		};
 	};
 };
