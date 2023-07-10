@@ -438,13 +438,6 @@
 		       <&cpu4>, <&cpu5>, <&cpu6>, <&cpu7>;
 	};
 
-	dmic_codec: dmic-codec {
-		#sound-dai-cells = <0>;
-		compatible = "dmic-codec";
-		num-channels = <2>;
-		wakeup-delay-ms = <50>;
-	};
-
 	pmu-a55 {
 		compatible = "arm,cortex-a55-pmu";
 		interrupt-parent = <&gic>;
