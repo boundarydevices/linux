@@ -62,6 +62,8 @@
 
 /* Lane a Tx Reset Control Register */
 #define LYNX_28G_LNaTRSTCTL(lane)		(0x800 + (lane) * 0x100 + 0x20)
+#define LYNX_28G_LNaTRSTCTL_DIS			BIT(24)
+#define LYNX_28G_LNaTRSTCTL_STP_REQ		BIT(26)
 #define LYNX_28G_LNaTRSTCTL_HLT_REQ		BIT(27)
 #define LYNX_28G_LNaTRSTCTL_RST_DONE		BIT(30)
 #define LYNX_28G_LNaTRSTCTL_RST_REQ		BIT(31)
@@ -81,6 +83,8 @@
 
 /* Lane a Rx Reset Control Register */
 #define LYNX_28G_LNaRRSTCTL(lane)		(0x800 + (lane) * 0x100 + 0x40)
+#define LYNX_28G_LNaRRSTCTL_DIS			BIT(24)
+#define LYNX_28G_LNaRRSTCTL_STP_REQ		BIT(26)
 #define LYNX_28G_LNaRRSTCTL_HLT_REQ		BIT(27)
 #define LYNX_28G_LNaRRSTCTL_RST_DONE		BIT(30)
 #define LYNX_28G_LNaRRSTCTL_RST_REQ		BIT(31)
@@ -423,13 +427,11 @@ static void lynx_28g_lane_set_25gbaser(struct lynx_28g_lane *lane)
 	iowrite32(0x00008001, priv->base + LYNX_28G_LNaTTLCR0(lane->id));
 }
 
-static int lynx_28g_power_off(struct phy *phy)
+/* Halting puts the lane in a mode in which it can be reconfigured */
+static int lynx_28g_lane_halt(struct phy *phy)
 {
 	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
 	u32 trstctl, rrstctl;
-
-	if (!lane->powered_up)
-		return 0;
 
 	/* Issue a halt request */
 	lynx_28g_lane_rmw(lane, LNaTRSTCTL, LYNX_28G_LNaTRSTCTL_HLT_REQ,
@@ -444,18 +446,13 @@ static int lynx_28g_power_off(struct phy *phy)
 	} while ((trstctl & LYNX_28G_LNaTRSTCTL_HLT_REQ) ||
 		 (rrstctl & LYNX_28G_LNaRRSTCTL_HLT_REQ));
 
-	lane->powered_up = false;
-
 	return 0;
 }
 
-static int lynx_28g_power_on(struct phy *phy)
+static int lynx_28g_lane_reset(struct phy *phy)
 {
 	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
 	u32 trstctl, rrstctl;
-
-	if (lane->powered_up)
-		return 0;
 
 	/* Issue a reset request on the lane */
 	lynx_28g_lane_rmw(lane, LNaTRSTCTL, LYNX_28G_LNaTRSTCTL_RST_REQ,
@@ -469,6 +466,54 @@ static int lynx_28g_power_on(struct phy *phy)
 		rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
 	} while (!(trstctl & LYNX_28G_LNaTRSTCTL_RST_DONE) ||
 		 !(rrstctl & LYNX_28G_LNaRRSTCTL_RST_DONE));
+
+	return 0;
+}
+
+static int lynx_28g_power_off(struct phy *phy)
+{
+	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
+	u32 trstctl, rrstctl;
+
+	if (!lane->powered_up)
+		return 0;
+
+	/* Issue a stop request */
+	lynx_28g_lane_rmw(lane, LNaTRSTCTL, LYNX_28G_LNaTRSTCTL_STP_REQ,
+			  LYNX_28G_LNaTRSTCTL_STP_REQ);
+	lynx_28g_lane_rmw(lane, LNaRRSTCTL, LYNX_28G_LNaRRSTCTL_STP_REQ,
+			  LYNX_28G_LNaRRSTCTL_STP_REQ);
+
+	/* Wait until the stop process is complete */
+	do {
+		trstctl = lynx_28g_lane_read(lane, LNaTRSTCTL);
+		rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
+	} while ((trstctl & LYNX_28G_LNaTRSTCTL_STP_REQ) ||
+		 (rrstctl & LYNX_28G_LNaRRSTCTL_STP_REQ));
+
+	/* Power down the RX and TX portions of the lane */
+	lynx_28g_lane_rmw(lane, LNaRRSTCTL, LYNX_28G_LNaRRSTCTL_DIS,
+			  LYNX_28G_LNaRRSTCTL_DIS);
+	lynx_28g_lane_rmw(lane, LNaTRSTCTL, LYNX_28G_LNaTRSTCTL_DIS,
+			  LYNX_28G_LNaTRSTCTL_DIS);
+
+	lane->powered_up = false;
+
+	return 0;
+}
+
+static int lynx_28g_power_on(struct phy *phy)
+{
+	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
+
+	if (lane->powered_up)
+		return 0;
+
+	/* Power up the RX and TX portions of the lane */
+	lynx_28g_lane_rmw(lane, LNaRRSTCTL, 0, LYNX_28G_LNaRRSTCTL_DIS);
+	lynx_28g_lane_rmw(lane, LNaTRSTCTL, 0, LYNX_28G_LNaTRSTCTL_DIS);
+
+	lynx_28g_lane_reset(phy);
 
 	lane->powered_up = true;
 
@@ -495,7 +540,7 @@ static int lynx_28g_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 	 * the reconfiguration is being done.
 	 */
 	if (powered_up)
-		lynx_28g_power_off(phy);
+		lynx_28g_lane_halt(phy);
 
 	switch (submode) {
 	case PHY_INTERFACE_MODE_SGMII:
@@ -516,9 +561,9 @@ static int lynx_28g_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 	lane->interface = submode;
 
 out:
-	/* Power up the lane if necessary */
+	/* Reset the lane if necessary */
 	if (powered_up)
-		lynx_28g_power_on(phy);
+		lynx_28g_lane_reset(phy);
 
 	return err;
 }
