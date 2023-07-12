@@ -3042,6 +3042,7 @@ static int phy_probe(struct device *dev)
 		phydev->is_internal = true;
 
 	phydev->suspended = true;
+	phydev->master_slave_set = MASTER_SLAVE_CFG_UNKNOWN;
 
 	/* Deassert the reset signal */
 	phy_device_reset(phydev, 0);
