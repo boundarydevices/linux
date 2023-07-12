@@ -613,21 +613,20 @@ static void mdp_auto_release_work(struct work_struct *work)
 	cmd = container_of(work, struct mdp_cmdq_cmd, auto_release_work);
 	mdp = cmd->mdp;
 
-	pipe_id = __get_pipe(mdp, cmd->comps[0].public_id);
-	mutex = __get_mutex(mdp, &mdp->mdp_data->pipe_info[pipe_id]);
-	mtk_mutex_unprepare(mutex);
-	mdp_comp_clocks_off(&mdp->pdev->dev, cmd->comps,
-			    cmd->num_comps);
-
 	if (cmd->user != MDP_CMDQ_USER_CAP) {
+		pipe_id = __get_pipe(mdp, cmd->comps[0].public_id);
+		mutex = __get_mutex(mdp, &mdp->mdp_data->pipe_info[pipe_id]);
+		mtk_mutex_unprepare(mutex);
+		mdp_comp_clocks_off(&mdp->pdev->dev, cmd->comps,
+				    cmd->num_comps);
+
 		if (atomic_dec_and_test(&mdp->job_count[cmd->user]))
 			mdp_m2m_job_finish(cmd->mdp_ctx);
 	} else {
 #if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
-		if (atomic_read(&mdp->cap_discard))
-			return;
-		else if (__atomic_dec_and_mod(&mdp->job_count[cmd->user], cmd->pp_used))
-			mdp_cap_job_finish(cmd->mdp_ctx);
+		if (__atomic_dec_and_mod(&mdp->job_count[cmd->user], cmd->pp_used))
+			if (!atomic_read(&mdp->cap_discard))
+				mdp_cap_job_finish(cmd->mdp_ctx);
 #endif
 	}
 
@@ -641,8 +640,10 @@ static void mdp_auto_release_work(struct work_struct *work)
 	wake_up(&mdp->callback_wq);
 
 	mdp_cmdq_pkt_destroy(&cmd->pkt);
-	kfree(cmd->comps);
-	cmd->comps = NULL;
+	if (cmd->user != MDP_CMDQ_USER_CAP) {
+		kfree(cmd->comps);
+		cmd->comps = NULL;
+	}
 	kfree(cmd);
 	cmd = NULL;
 }
@@ -708,6 +709,7 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	s32 inner_id = MDP_COMP_NONE;
 	u8 pp_ofst = __get_pp_ofst(&param->param->inputs[0].buffer);
 	u8 pp_s = pp_idx + pp_ofst;
+	struct mdp_cap_ctx *cap_ctx = param->mdp_ctx;
 
 	config = __get_config_offset(mdp, param, pp_idx);
 	if (IS_ERR(config)) {
@@ -773,10 +775,13 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 
 	pipe_id = __get_pipe(mdp, path->comps[0].comp->public_id);
 	mutex = __get_mutex(mdp, &mdp->mdp_data->pipe_info[pipe_id]);
-	ret = mtk_mutex_prepare(mutex);
-	if (ret) {
-		dev_err(dev, "Fail to enable mutex %d clk\n", pp_idx);
-		goto err_free_path;
+	if (cmd->user == MDP_CMDQ_USER_M2M ||
+	    cap_ctx->cap_status != CAP_STATUS_START) {
+		ret = mtk_mutex_prepare(mutex);
+		if (ret) {
+			dev_err(dev, "Fail to enable mutex %d clk\n", pp_idx);
+			goto err_free_path;
+		}
 	}
 
 	for (index = 0; index < num_comp; index++) {
@@ -792,7 +797,8 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 		ctx = &path->comps[index];
 		if (get_comp_public_id(path->mdp_dev, inner_id) == MDP_COMP_SPLIT) {
 			event = ctx->comp->gce_event[MDP_GCE_EVENT_SOF] + mutex->id;
-			if (!(((struct mdp_cap_ctx *)param->mdp_ctx)->bfirstframedone))
+			if (cmd->user == MDP_CMDQ_USER_CAP &&
+			    cap_ctx->cap_status != CAP_STATUS_START)
 				MM_REG_SET_EVENT(cmd, event);
 
 			/* Capture case: split0 need wait stream_done event */
@@ -827,6 +833,13 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	cmd->comps = comps;
 	cmd->num_comps = num_comp;
 
+	if (cmd->user == MDP_CMDQ_USER_CAP &&
+	    cap_ctx->cap_status != CAP_STATUS_START) {
+		cap_ctx->num_comps = num_comp;
+		cap_ctx->comps[pp_idx] = comps;
+		cap_ctx->mutex[pp_idx] = mutex;
+	}
+
 	kfree(path);
 	return cmd;
 
@@ -848,16 +861,11 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 {
 	struct mdp_cmdq_cmd *cmd[MDP_VPU_UID_MAX] = {NULL};
 	struct device *dev = &mdp->pdev->dev;
+	struct mdp_cap_ctx *cap_ctx = param->mdp_ctx;
 	enum mdp_cmdq_user u_id = param->user;
 	int i, ret = -ECANCELED;
 	u8 pp_used = __get_pp_num(param->param->type);
 	u8 pp_ofst = __get_pp_ofst(&param->param->inputs[0].buffer);
-
-	/* do not send hdmirx jobs if already disconnected */
-	if (u_id == MDP_CMDQ_USER_CAP)
-		if (atomic_read(&mdp->cap_discard))
-			if (atomic_read(&mdp->job_count[u_id]))
-				goto err_cancel_job;
 
 	if (u_id == MDP_CMDQ_USER_CAP)
 		atomic_add(pp_used, &mdp->job_count[u_id]);
@@ -875,10 +883,14 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 		}
 	}
 
-	for (i = 0; i < pp_used; i++) {
-		ret = mdp_comp_clocks_on(&mdp->pdev->dev, cmd[i]->comps, cmd[i]->num_comps);
-		if (ret)
-			goto err_clock_off;
+	if (u_id == MDP_CMDQ_USER_M2M ||
+	    cap_ctx->cap_status != CAP_STATUS_START) {
+		for (i = 0; i < pp_used; i++) {
+			ret = mdp_comp_clocks_on(&mdp->pdev->dev,
+						 cmd[i]->comps, cmd[i]->num_comps);
+			if (ret)
+				goto err_clock_off;
+		}
 	}
 
 	for (i = 0; i < pp_used; i++) {

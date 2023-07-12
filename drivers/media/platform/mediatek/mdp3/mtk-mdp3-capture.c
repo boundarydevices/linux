@@ -5,7 +5,6 @@
  */
 
 #include <linux/clk.h>
-#include <linux/kthread.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
@@ -241,7 +240,7 @@ static void mdp_cap_process_done(void *priv, int vb_state)
 	if (!dst_vbuf)/* add to avoid null pointer deference when stop streaming. */
 		return;
 
-	ctx->curr_param.frame_no = ctx->frame_count[MDP_CAP_SRC];
+	ctx->curr_param.frame_no = ctx->frame_count[MDP_CAP_DST];
 	dst_vbuf->sequence = ctx->frame_count[MDP_CAP_DST]++;
 	dst_vbuf->vb2_buf.timestamp = ktime_get_ns();
 
@@ -391,21 +390,38 @@ static void mdp_cap_handler(struct mdp_cap_ctx *ctx)
 {
 	struct v4l2_cap_buffer *buf, *tmp;
 
-	if (!list_empty(&ctx->vb_queue)) { /* check queue list not empty */
-		list_for_each_entry_safe(buf, tmp, &ctx->vb_queue, list) {
-			if (atomic_read(&ctx->mdp_dev->cap_discard)) {
-				mdp_cap_all_buf_remove(ctx);
-			} else {
-				/* remove buffer from vb_queue */
-				mdp_cap_buf_remove_vb(ctx);
+	if (list_empty(&ctx->vb_queue))
+		return;
 
-				/* enqueue buffer to ec_queue*/
-				mdp_cap_buf_queue_ec(ctx, buf);
+	list_for_each_entry_safe(buf, tmp, &ctx->vb_queue, list)
+		if (!atomic_read(&ctx->mdp_dev->cap_discard)) {
+			mdp_cap_buf_remove_vb(ctx);
+			mdp_cap_buf_queue_ec(ctx, buf);
 
-				mdp_cap_device_run(ctx, buf);
-				ctx->bfirstframedone = TRUE;
-			}
+			mdp_cap_device_run(ctx, buf);
+			ctx->cap_status = CAP_STATUS_START;
 		}
+}
+
+static void mdp_cap_wait_done_and_disable(struct mdp_cap_ctx *ctx)
+{
+	u8 pp_used = (ctx->pp_enable) ? MDP_PP_USED_2 : MDP_PP_USED_1;
+	int i, ret;
+
+	ret = wait_event_timeout(ctx->mdp_dev->callback_wq,
+				 !atomic_read(&ctx->mdp_dev->job_count[MDP_CMDQ_USER_CAP]),
+				 2 * HZ);
+	if (ret == 0)
+		dev_err(&ctx->mdp_dev->pdev->dev,
+			"flushed cap_dev cmdq task incomplete, count=%d\n",
+			atomic_read(&ctx->mdp_dev->job_count[MDP_CMDQ_USER_CAP]));
+
+	for (i = 0; i < pp_used; i++) {
+		mtk_mutex_unprepare(ctx->mutex[i]);
+		mdp_comp_clocks_off(&ctx->mdp_dev->pdev->dev, ctx->comps[i],
+				    ctx->num_comps);
+		kfree(ctx->comps[i]);
+		ctx->comps[i] = NULL;
 	}
 }
 
@@ -447,7 +463,6 @@ static int mdp_cap_start_streaming(struct vb2_queue *q, unsigned int count)
 		mdp_cap_ctx_set_state(ctx, MDP_VPU_INIT);
 	}
 
-	ctx->bstreamon = TRUE;
 	mdp_cap_handler(ctx);
 
 	return 0;
@@ -458,7 +473,10 @@ static void mdp_cap_stop_streaming(struct vb2_queue *q)
 	struct mdp_cap_ctx *ctx = vb2_get_drv_priv(q);
 	struct vb2_v4l2_buffer *vb;
 
-	ctx->bstreamon = FALSE;
+	ctx->cap_status = CAP_STATUS_STOP;
+	atomic_set(&ctx->mdp_dev->cap_discard, 1);
+
+	mdp_cap_wait_done_and_disable(ctx);
 	mdp_cap_all_buf_remove(ctx);
 }
 
@@ -476,7 +494,7 @@ static void mdp_cap_buf_queue(struct vb2_buffer *vb)
 		list_add_tail(&buf->list, &ctx->vb_queue);
 	spin_unlock_irqrestore(&ctx->slock, flags);
 
-	if (ctx->bstreamon)
+	if (ctx->cap_status == CAP_STATUS_START)
 		mdp_cap_handler(ctx);
 }
 
@@ -635,6 +653,8 @@ static int mdp_cap_streamon(struct file *file, void *priv, enum v4l2_buf_type ty
 	struct mdp_cap_ctx *ctx = fh_to_ctx(priv);
 	int ret;
 
+	atomic_set(&ctx->mdp_dev->cap_discard, 0);
+
 	ret = vb2_streamon(vdev->queue, type);
 	return ret;
 }
@@ -787,26 +807,23 @@ static void mdp_cap_disconnect(struct hdmirx_capture_interface *intf)
 	struct mdp_dev *mdp = (struct mdp_dev *)intf->priv;
 	enum mdp_cmdq_user u_id = MDP_CMDQ_USER_CAP;
 	int ret;
+	struct vb2_queue *cap_queue;
+	struct mdp_cap_ctx *ctx;
 
 	if (!mdp->cap_vdev) {
 		dev_err(&mdp->pdev->dev, "already disconnected! ignore it.\n");
 		return;
 	}
 
+	cap_queue = mdp->cap_vdev->queue;
+	if (cap_queue)
+		ctx = container_of(cap_queue, struct mdp_cap_ctx, cap_q);
+
 	/* stop all capture device jobs */
 	atomic_set(&mdp->cap_discard, 1);
-	if (atomic_read(&mdp->job_count[u_id])) {
-		ret = wait_event_timeout(mdp->callback_wq,
-					 !atomic_read(&mdp->job_count[u_id]),
-					 2 * HZ);
-		if (ret == 0) {
-			dev_err(&mdp->pdev->dev,
-				"flushed cap_dev cmdq task incomplete, count=%d\n",
-				atomic_read(&mdp->job_count[u_id]));
-			/* Fail to wait task, force to reset the count for the next instance */
-			atomic_set(&mdp->job_count[u_id], 0);
-		}
-	}
+	if (atomic_read(&mdp->job_count[u_id]))
+		mdp_cap_wait_done_and_disable(ctx);
+
 	mdp_capture_device_unregister(mdp);
 }
 
