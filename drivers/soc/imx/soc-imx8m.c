@@ -35,6 +35,7 @@
 #define OCOTP_UID_HIGH			0x420
 
 #define IMX8MP_OCOTP_UID_OFFSET		0x10
+#define IMX8MP_OCOTP_UID_HIGH		0xE00
 
 #define IMX93_OCOTP_UID_OFFSET		0x80c0
 
@@ -128,6 +129,12 @@ static void __init imx8mm_soc_uid(void)
 	soc_uid = readl_relaxed(ocotp_base + OCOTP_UID_HIGH + offset);
 	soc_uid <<= 32;
 	soc_uid |= readl_relaxed(ocotp_base + OCOTP_UID_LOW + offset);
+
+	if (offset) {
+		soc_uid_h = readl_relaxed(ocotp_base + IMX8MP_OCOTP_UID_HIGH + 0x10);
+		soc_uid_h <<= 32;
+		soc_uid_h |= readl_relaxed(ocotp_base + IMX8MP_OCOTP_UID_HIGH);
+	}
 
 	iounmap(ocotp_base);
 	of_node_put(np);
@@ -228,12 +235,18 @@ static const struct imx8_soc_data imx93_soc_data = {
 	.soc_revision = imx93_soc_revision,
 };
 
+static const struct imx8_soc_data imx91p_soc_data = {
+	.name = "i.MX91P",
+	.soc_revision = imx93_soc_revision,
+};
+
 static __maybe_unused const struct of_device_id imx8_soc_match[] = {
 	{ .compatible = "fsl,imx8mq", .data = &imx8mq_soc_data, },
 	{ .compatible = "fsl,imx8mm", .data = &imx8mm_soc_data, },
 	{ .compatible = "fsl,imx8mn", .data = &imx8mn_soc_data, },
 	{ .compatible = "fsl,imx8mp", .data = &imx8mp_soc_data, },
 	{ .compatible = "fsl,imx93", .data = &imx93_soc_data, },
+	{ .compatible = "fsl,imx91p", .data = &imx91p_soc_data, },
 	{ }
 };
 
