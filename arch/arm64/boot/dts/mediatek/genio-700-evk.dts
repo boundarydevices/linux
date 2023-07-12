@@ -1208,6 +1208,7 @@
 	connector {
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
 		type = "micro";
+		id-gpios = <&pio 89 GPIO_ACTIVE_HIGH>;
 		vbus-supply = <&usb_p2_vbus>;
 	};
 };
