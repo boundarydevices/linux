@@ -8,6 +8,7 @@
 #define __MTK_MDP3_CAP_H__
 
 #include <linux/soc/mediatek/mtk-hdmirx-intf.h>
+#include <linux/soc/mediatek/mtk-mutex.h>
 #include <media/v4l2-ctrls.h>
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-vpu.h"
@@ -19,6 +20,11 @@ enum {
 	MDP_CAP_SRC = 0,
 	MDP_CAP_DST = 1,
 	MDP_CAP_MAX,
+};
+
+enum cap_status {
+	CAP_STATUS_STOP,
+	CAP_STATUS_START,
 };
 
 struct mdp_cap_ctx {
@@ -39,8 +45,11 @@ struct mdp_cap_ctx {
 	/* synchronization protect for mdp cap */
 	struct mutex			ctx_lock;
 	bool				pp_enable;
-	bool				bfirstframedone;
-	bool				bstreamon;
+	enum cap_status			cap_status;
+
+	u8				num_comps;
+	struct mdp_comp			*comps[MDP_VPU_UID_MAX];
+	struct mtk_mutex		*mutex[MDP_VPU_UID_MAX];
 };
 
 struct v4l2_cap_buffer {
