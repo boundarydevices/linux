@@ -539,6 +539,10 @@ F: drivers/dma/imx-sdma.c
 F: include/linux/platform_data/dma-imx-sdma.h
 F: include/linux/dma/imx-dma.h
 
+drivers/tee/crypto
+M: Pankaj Gupta <pankaj.gupta@nxp.com>
+F: drivers/tee/crypto/*
+
 dts/imx6
 M: Dong Aisheng <aisheng.dong@nxp.com>
 F: arch/arm/boot/dts/imx*
