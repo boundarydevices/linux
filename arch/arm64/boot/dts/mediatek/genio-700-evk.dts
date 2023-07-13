@@ -1030,6 +1030,14 @@
 	vqmmc-supply = <&mt6359_vsim1_ldo_reg>;
 };
 
+&mt6359_vpa_buck_reg {
+	regulator-max-microvolt = <3100000>;
+};
+
+&mt6359_vsim1_ldo_reg {
+	regulator-enable-ramp-delay = <480>;
+};
+
 &wifi_pwrseq {
 	status = "okay";
 	pinctrl-names = "default";
