@@ -192,7 +192,7 @@ static int fsb_s400_fuse_read(void *priv, unsigned int offset, void *val,
 			read_nwords_via_fsb(regs, &buf[bank * 8], bank * 8, 8);
 	}
 
-	memcpy(val, (u8 *)(buf + offset), bytes);
+	memcpy(val, (u8 *)(buf) + offset, bytes);
 
 ret:
 	kfree(buf);
