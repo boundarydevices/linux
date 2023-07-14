@@ -1293,8 +1293,8 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			imx93_uid: soc-uid@6 {
-				reg = <0x30 0x10>;
+			imx93_uid: soc-uid@c0 {
+				reg = <0xc0 0x10>;
 			};
 
 			imx93_soc: imx93-soc {
