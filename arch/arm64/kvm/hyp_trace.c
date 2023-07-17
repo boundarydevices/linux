@@ -12,6 +12,7 @@
 #include <asm/kvm_host.h>
 #include <asm/kvm_hyptrace.h>
 #include <asm/kvm_hypevents_defs.h>
+#include <asm/kvm_pkvm.h>
 
 #include "hyp_constants.h"
 #include "hyp_trace.h"
@@ -67,31 +68,6 @@ static inline bool hyp_trace_buffer_used(struct hyp_trace_buffer *hyp_buffer)
 {
 	return hyp_buffer->nr_readers || hyp_buffer->tracing_on ||
 		!ring_buffer_empty(hyp_buffer->trace_buffer);
-}
-
-static int
-bpage_backing_alloc(struct hyp_buffer_pages_backing *bpage_backing, size_t size)
-{
-	size_t backing_size;
-	void *start;
-
-	backing_size = PAGE_ALIGN(STRUCT_HYP_BUFFER_PAGE_SIZE * NR_PAGES(size) *
-				  num_possible_cpus());
-
-	start = alloc_pages_exact(backing_size, GFP_KERNEL_ACCOUNT);
-	if (!start)
-		return -ENOMEM;
-
-	bpage_backing->start = (unsigned long)start;
-	bpage_backing->size = backing_size;
-
-	return 0;
-}
-
-static void
-bpage_backing_free(struct hyp_buffer_pages_backing *bpage_backing)
-{
-	free_pages_exact((void *)bpage_backing->start, bpage_backing->size);
 }
 
 static int set_ht_printk_on(char *str)
@@ -358,15 +334,12 @@ static int hyp_trace_buffer_load(struct hyp_trace_buffer *hyp_buffer, size_t siz
 	if (ret)
 		goto err_free_desc;
 
-	ret = bpage_backing_alloc(&desc->backing, size);
+	ret = hyp_trace_load_pages(desc);
 	if (ret)
 		goto err_free_pages;
 
-	ret = hyp_trace_load_pages(desc);
-	if (ret)
-		goto err_free_backing;
-
-	ret = kvm_call_hyp_nvhe(__pkvm_load_tracing, (unsigned long)desc, desc_size);
+	ret = kvm_call_refill_hyp_nvhe(__pkvm_load_tracing, (unsigned long)desc,
+				       desc_size);
 	if (ret)
 		goto err_teardown_pages;
 
@@ -388,8 +361,6 @@ err_teardown_tracing:
 	kvm_call_hyp_nvhe(__pkvm_teardown_tracing);
 err_teardown_pages:
 	hyp_trace_teardown_pages(desc, INT_MAX);
-err_free_backing:
-	bpage_backing_free(&desc->backing);
 err_free_pages:
 	hyp_trace_free_pages(desc);
 err_free_desc:
@@ -414,7 +385,6 @@ static void hyp_trace_buffer_teardown(struct hyp_trace_buffer *hyp_buffer)
 
 	ring_buffer_free(hyp_buffer->trace_buffer);
 	hyp_trace_teardown_pages(desc, INT_MAX);
-	bpage_backing_free(&desc->backing);
 	hyp_trace_free_pages(desc);
 	free_pages_exact(desc, desc_size);
 	hyp_buffer->trace_buffer = NULL;
