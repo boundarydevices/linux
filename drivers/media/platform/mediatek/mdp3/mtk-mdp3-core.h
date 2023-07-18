@@ -143,6 +143,7 @@ struct mdp_dev {
 	struct mutex				cap_lock;
 	struct mdp_rx_cap_intf			rx_cap_intf;
 	atomic_t				cap_discard;
+	s32					cap_open_count;
 };
 
 struct mdp_pipe_info {

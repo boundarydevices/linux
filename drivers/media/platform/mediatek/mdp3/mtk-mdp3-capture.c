@@ -522,13 +522,19 @@ static int mdp_cap_open(struct file *file)
 	struct v4l2_format default_format = {};
 	const struct mdp_limit *limit = mdp->mdp_data->def_limit;
 
-	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
-	if (!ctx)
-		return -ENOMEM;
+	if (mutex_lock_interruptible(&mdp->cap_lock))
+		return -ERESTARTSYS;
 
-	if (mutex_lock_interruptible(&mdp->cap_lock)) {
-		ret = -ERESTARTSYS;
-		goto err_free_ctx;
+	if (mdp->cap_open_count > 0) {
+		dev_err(dev, "Failed to open, the capture device is in use.\n");
+		mutex_unlock(&mdp->cap_lock);
+		return -EBUSY;
+	}
+
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx) {
+		mutex_unlock(&mdp->cap_lock);
+		return -ENOMEM;
 	}
 
 	ctx->id = ida_alloc(&mdp->mdp_ida, GFP_KERNEL);
@@ -548,9 +554,10 @@ static int mdp_cap_open(struct file *file)
 	ret = mdp_frameparam_init(mdp, &ctx->curr_param);
 	if (ret) {
 		dev_err(dev, "Failed to initialize mdp parameter\n");
-		goto err_release_m2m_ctx;
+		goto err_release_handler;
 	}
 
+	mdp->cap_open_count++;
 	mutex_unlock(&mdp->cap_lock);
 
 	/* Default format */
@@ -584,10 +591,11 @@ static int mdp_cap_open(struct file *file)
 
 	return 0;
 
-err_release_m2m_ctx:
-	mutex_unlock(&mdp->cap_lock);
-err_free_ctx:
+err_release_handler:
+	v4l2_fh_del(&ctx->fh);
+	v4l2_fh_exit(&ctx->fh);
 	kfree(ctx);
+	mutex_unlock(&mdp->cap_lock);
 
 	return ret;
 }
@@ -606,6 +614,8 @@ static int mdp_cap_release(struct file *file)
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 	ida_free(&mdp->mdp_ida, ctx->id);
+	if (--mdp->cap_open_count < 0)
+		mdp->cap_open_count = 0;
 	mutex_unlock(&mdp->cap_lock);
 
 	kfree(ctx);
