@@ -259,6 +259,8 @@ static int hd3ss3220_probe(struct i2c_client *client)
 
 	dev_info(&client->dev, "probed revision=0x%x\n", ret);
 
+	device_disable_async_suspend(&client->dev);
+
 	return 0;
 err_unreg_port:
 	typec_unregister_port(hd3ss3220->port);
