@@ -388,7 +388,7 @@ static void mdp_prepare_buffer(struct img_image_buffer *b, struct mdp_frame *fra
 {
 	struct v4l2_pix_format_mplane *pix_mp = &frame->format.fmt.pix_mp;
 	void *ctx;
-	struct device *dev;
+	struct device *dev = NULL;
 	unsigned int i;
 
 	if (vb) {
@@ -416,8 +416,9 @@ static void mdp_prepare_buffer(struct img_image_buffer *b, struct mdp_frame *fra
 		u32 stride;
 
 		if ((i < 1) || (i >= IMG_MAX_PLANES)) {
-			dev_err(dev, "Invalid plane index[%d]! mdp colorformat[%lx]!\n",
-				i, b->format.colorformat);
+			if (dev)
+				dev_err(dev, "Invalid plane index[%d]! mdp colorformat[%lx]!\n",
+					i, b->format.colorformat);
 			break;
 		}
 
