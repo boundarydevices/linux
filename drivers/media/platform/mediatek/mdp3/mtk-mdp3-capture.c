@@ -240,6 +240,7 @@ static void mdp_cap_process_done(void *priv, int vb_state)
 
 	ctx->curr_param.frame_no = ctx->frame_count[MDP_CAP_SRC];
 	dst_vbuf->sequence = ctx->frame_count[MDP_CAP_DST]++;
+	dst_vbuf->vb2_buf.timestamp = ktime_get_ns();
 
 	vb2_buffer_done(&dst_vbuf->vb2_buf, vb_state);
 }
@@ -495,7 +496,7 @@ static int mdp_cap_queue_init(void *priv)
 	ctx->cap_q.mem_ops = &vb2_dma_contig_memops;
 	ctx->cap_q.drv_priv = ctx;
 	ctx->cap_q.buf_struct_size = sizeof(struct v4l2_cap_buffer);
-	ctx->cap_q.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
+	ctx->cap_q.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 	ctx->cap_q.dev = &ctx->mdp_dev->pdev->dev;
 	ctx->cap_q.lock = &ctx->ctx_lock;
 	ctx->cap_q.min_buffers_needed = MIN_BUF_NEED;
