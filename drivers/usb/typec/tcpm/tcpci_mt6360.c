@@ -196,7 +196,8 @@ static int mt6360_tcpc_probe(struct platform_device *pdev)
 
 	mti->tcpci = tcpci_register_port(&pdev->dev, &mti->tdata);
 	if (IS_ERR(mti->tcpci)) {
-		dev_err(&pdev->dev, "Failed to register tcpci port\n");
+		if (PTR_ERR(mti->tcpci) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Failed to register tcpci port\n");
 		return PTR_ERR(mti->tcpci);
 	}
 
