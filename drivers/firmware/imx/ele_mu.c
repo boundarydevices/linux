@@ -189,7 +189,7 @@ static int imx_soc_device_register(struct platform_device *pdev)
 	u32 v[4];
 	int err;
 
-	err = read_common_fuse(OTP_UNIQ_ID, v);
+	err = read_common_fuse(OTP_UNIQ_ID, v, true);
 	if (err)
 		return err;
 
