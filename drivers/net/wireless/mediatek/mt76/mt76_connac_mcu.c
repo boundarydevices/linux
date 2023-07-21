@@ -1432,11 +1432,10 @@ EXPORT_SYMBOL_GPL(mt76_connac_mcu_uni_set_chctx);
 int mt76_connac_mcu_uni_add_bss(struct mt76_phy *phy,
 				struct ieee80211_vif *vif,
 				struct mt76_wcid *wcid,
-				bool enable,
-				struct ieee80211_chanctx_conf *ctx)
+				bool enable)
 {
 	struct mt76_vif *mvif = (struct mt76_vif *)vif->drv_priv;
-	struct cfg80211_chan_def *chandef = ctx ? &ctx->def : &phy->chandef;
+	struct cfg80211_chan_def *chandef = &phy->chandef;
 	enum nl80211_band band = chandef->chan->band;
 	struct mt76_dev *mdev = phy->dev;
 	struct {
@@ -1553,7 +1552,7 @@ int mt76_connac_mcu_uni_add_bss(struct mt76_phy *phy,
 			return err;
 	}
 
-	return mt76_connac_mcu_uni_set_chctx(phy, mvif, ctx);
+	return mt76_connac_mcu_uni_set_chctx(phy, mvif, NULL);
 }
 EXPORT_SYMBOL_GPL(mt76_connac_mcu_uni_add_bss);
 
