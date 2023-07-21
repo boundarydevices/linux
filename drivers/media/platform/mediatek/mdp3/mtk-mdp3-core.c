@@ -351,9 +351,8 @@ static int mdp_probe(struct platform_device *pdev)
 		goto err_unregister_device;
 	}
 
-#if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
-	mdp_cap_init(mdp);
-#endif
+	if (mdp->comp[MDP_COMP_SPLIT])
+		mdp_cap_init(mdp);
 
 success_return:
 	dev_dbg(dev, "mdp-%d registered successfully\n", pdev->id);
@@ -389,13 +388,12 @@ static int mdp_remove(struct platform_device *pdev)
 {
 	struct mdp_dev *mdp = platform_get_drvdata(pdev);
 
+	if (mdp->comp[MDP_COMP_SPLIT])
+		mdp_cap_deinit();
+
 	v4l2_device_unregister(&mdp->v4l2_dev);
 
 	dev_dbg(&pdev->dev, "%s driver unloaded\n", pdev->name);
-
-#if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
-	mdp_cap_deinit();
-#endif
 
 	return 0;
 }

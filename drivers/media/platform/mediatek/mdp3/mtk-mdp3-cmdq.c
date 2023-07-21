@@ -623,11 +623,9 @@ static void mdp_auto_release_work(struct work_struct *work)
 		if (atomic_dec_and_test(&mdp->job_count[cmd->user]))
 			mdp_m2m_job_finish(cmd->mdp_ctx);
 	} else {
-#if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
 		if (__atomic_dec_and_mod(&mdp->job_count[cmd->user], cmd->pp_used))
 			if (!atomic_read(&mdp->cap_discard))
 				mdp_cap_job_finish(cmd->mdp_ctx);
-#endif
 	}
 
 	if (cmd->user_cmdq_cb) {

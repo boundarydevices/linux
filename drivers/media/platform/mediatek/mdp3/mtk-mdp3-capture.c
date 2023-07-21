@@ -847,6 +847,11 @@ int mdp_cap_init(struct mdp_dev *mdp)
 
 	/* find mtk-hdmirx node */
 	node = of_find_compatible_node(NULL, NULL, "mediatek,mt8195-hdmirx");
+	if (!node) {
+		dev_dbg(&mdp->pdev->dev, "find hdmirx node failed\n");
+		return -ENODEV;
+	}
+
 	hdmirx_pdev = of_find_device_by_node(node);
 	of_node_put(node);
 	if (WARN_ON(!hdmirx_pdev)) {
