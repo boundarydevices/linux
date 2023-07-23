@@ -600,12 +600,24 @@ static int lynx_28g_init(struct phy *phy)
 	return 0;
 }
 
+static int lynx_28g_check_cdr_lock(struct phy *phy, bool *cdr_locked)
+{
+	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
+	u32 rrstctl;
+
+	rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
+	*cdr_locked = !!(rrstctl & LYNX_28G_LNaRRSTCTL_CDR_LOCK);
+
+	return 0;
+}
+
 static const struct phy_ops lynx_28g_ops = {
 	.init		= lynx_28g_init,
 	.power_on	= lynx_28g_power_on,
 	.power_off	= lynx_28g_power_off,
 	.set_mode	= lynx_28g_set_mode,
 	.validate	= lynx_28g_validate,
+	.check_cdr_lock	= lynx_28g_check_cdr_lock,
 	.owner		= THIS_MODULE,
 };
 

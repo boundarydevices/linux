@@ -122,6 +122,19 @@ struct phy_ops {
 			    union phy_configure_opts *opts);
 	int	(*reset)(struct phy *phy);
 	int	(*calibrate)(struct phy *phy);
+
+	/**
+	 * @check_cdr_lock:
+	 *
+	 * Optional.
+	 *
+	 * Check that the CDR (Clock and Data Recovery) logic has locked onto
+	 * bit transitions in the RX stream.
+	 *
+	 * Returns: 0 if the operation was successful, negative error code
+	 * otherwise.
+	 */
+	int	(*check_cdr_lock)(struct phy *phy, bool *cdr_locked);
 	void	(*release)(struct phy *phy);
 	struct module *owner;
 };
@@ -236,6 +249,7 @@ int phy_set_speed(struct phy *phy, int speed);
 int phy_configure(struct phy *phy, union phy_configure_opts *opts);
 int phy_validate(struct phy *phy, enum phy_mode mode, int submode,
 		 union phy_configure_opts *opts);
+int phy_check_cdr_lock(struct phy *phy, bool *cdr_locked);
 
 static inline enum phy_mode phy_get_mode(struct phy *phy)
 {
@@ -406,6 +420,14 @@ static inline int phy_configure(struct phy *phy,
 
 static inline int phy_validate(struct phy *phy, enum phy_mode mode, int submode,
 			       union phy_configure_opts *opts)
+{
+	if (!phy)
+		return 0;
+
+	return -ENOSYS;
+}
+
+static inline int phy_check_cdr_lock(struct phy *phy, bool *cdr_locked)
 {
 	if (!phy)
 		return 0;
