@@ -306,6 +306,9 @@ int mdp_vpu_process(struct mdp_vpu_dev *vpu, struct img_ipi_frameparam *param,
 	memset(vpu->work, 0, vpu->work_size);
 	memset(cfg, 0, cfg_sz);
 
+	param->index |= (1 << id);
+	if (mdp->cap_open_count && !atomic_read(&mdp->cap_discard))
+		param->index |= (1 << MDP_VPU_UID_CAP);
 	param->self_data.va = (unsigned long)vpu->work;
 	param->self_data.pa = vpu->work_addr;
 	param->config_data.va = (unsigned long)cfg;
