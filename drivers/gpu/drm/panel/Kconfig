@@ -180,6 +180,18 @@ config DRM_PANEL_INNOLUX_P079ZCA
 	  24 bit RGB per pixel. It provides a MIPI DSI interface to
 	  the host and has a built-in LED backlight.
 
+config DRM_PANEL_KOE_TX18D204VM0BAA
+	bool "KOE TX18D204VM0BAA LVDS Panel"
+	depends on OF
+	depends on DRM_ITE_IT6122
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for KOE TX18D204VM0BAA
+	  LVDS Panel. The panel has a 1920x1080 resolution and uses
+	  24 bit RGB per pixel. Currently the support is bundled with ITE_IT6122
+	  MIPI to LVDS bridge.
+
 config DRM_PANEL_JDI_LT070ME05000
 	tristate "JDI LT070ME05000 WUXGA DSI panel"
 	depends on OF

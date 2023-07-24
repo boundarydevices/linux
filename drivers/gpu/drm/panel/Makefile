@@ -73,3 +73,4 @@ obj-$(CONFIG_DRM_PANEL_URT_UMO_9465MD_T) += panel-urt-umo-9465md-t.o
 obj-$(CONFIG_DRM_PANEL_AVD_TT70WS_CN_134_A) += panel-avd-tt70ws-cn-134-a.o
 obj-$(CONFIG_DRM_PANEL_STARTEK_KD070FHFID015) += panel-startek-kd070fhfid015.o
 obj-$(CONFIG_DRM_PANEL_STARTEK_KD070FHFID078) += panel-startek-kd070fhfid078.o
+obj-$(CONFIG_DRM_PANEL_KOE_TX18D204VM0BAA) += panel-koe-tx18d204vm0baa.o
