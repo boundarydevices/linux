@@ -319,6 +319,17 @@ config DRM_TI_TPD12S015
 	  Texas Instruments TPD12S015 HDMI level shifter and ESD protection
 	  driver.
 
+config DRM_ITE_IT6122
+	bool "ITE IT6122 Bridge"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Support for ITE IT6122 MIPI to LVDS bridge driver.
+	  IT6122 supports MIPI DSI packed pixel stream 24-bit RGB888,
+	  loosely packed pixel stream 18-bit RGB666 and packed pixel stream 18-bit RGB666 mode,
+	  and provides I2C interface for firmware setting.
+
 source "drivers/gpu/drm/bridge/analogix/Kconfig"
 
 source "drivers/gpu/drm/bridge/adv7511/Kconfig"
