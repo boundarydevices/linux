@@ -99,6 +99,7 @@ struct img_ipi_frameparam {
 	struct img_addr subfrm_data;
 	struct img_sw_addr config_data;
 	struct img_sw_addr self_data;
+	u32 vpu_user;
 } __packed;
 
 struct img_sw_buffer {
