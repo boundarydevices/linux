@@ -9010,7 +9010,8 @@ again:
 	se = &p->se;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
-	if (prev->sched_class != &fair_sched_class)
+	if (prev->sched_class != &fair_sched_class ||
+	    rq->curr != rq->donor)
 		goto simple;
 
 	__put_prev_set_next_dl_server(rq, prev, p);
