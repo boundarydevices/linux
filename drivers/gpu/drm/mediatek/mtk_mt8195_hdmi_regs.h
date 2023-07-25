@@ -13,7 +13,7 @@
 #define AIF_PKT02 (31, 0)
 #define AIF_PKT03 (23, 0)
 
-#define AIP_CTRL BIT(10)
+#define AIP_CTRL 0x400
 #define AIP_CTS_SVAL 0x408
 #define AIP_DOWNSAMPLE_CTRL 0x41C
 #define AIP_I2S_CHST0 0x414
@@ -83,8 +83,8 @@
 #define C_SD0 (0x0)
 #define C_SD1 BIT(4)
 #define C_SD2 BIT(9)
-#define C_SD3 GENMASK(14, 12)
-#define C_SD4 BIT(19)
+#define C_SD3 GENMASK(13, 12)
+#define C_SD4 BIT(18)
 #define C_SD5 (0x5 << 20)
 #define C_SD6 GENMASK(26, 25)
 #define C_SD7 GENMASK(30, 28)

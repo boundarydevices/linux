@@ -457,7 +457,7 @@ static void mtk_hdmi_hw_ncts_enable(struct mtk_hdmi *hdmi, bool enable)
 
 	data = mtk_hdmi_read(hdmi, AIP_CTRL);
 
-	if (enable)
+	if (enable == false)
 		data |= CTS_SW_SEL;
 	else
 		data &= ~CTS_SW_SEL;
@@ -980,7 +980,13 @@ static void mtk_hdmi_aud_set_input(struct mtk_hdmi *hdmi)
 	mtk_hdmi_mask(hdmi, AIP_TXCTRL, 0, DSD_MUTE_DATA | LAYOUT1);
 
 	if (hdmi->aud_param.aud_input_type == HDMI_AUD_INPUT_I2S) {
-		if (hdmi->aud_param.aud_codec == HDMI_AUDIO_CODING_TYPE_DSD) {
+		if ((hdmi->aud_param.codec_params.cea.coding_type == HDMI_AUDIO_CODING_TYPE_DTS_HD)
+			|| (hdmi->aud_param.codec_params.cea.coding_type
+			== HDMI_AUDIO_CODING_TYPE_MLP)) {
+			mtk_hdmi_i2s_data_fmt(hdmi,
+				hdmi->aud_param.aud_i2s_fmt);
+			mtk_hdmi_hbr_config(hdmi, true);
+		} else if (hdmi->aud_param.aud_codec == HDMI_AUDIO_CODING_TYPE_DSD) {
 			mtk_hdmi_audio_dsd_config(
 				hdmi, hdmi->aud_param.codec_params.channels,
 				0);
