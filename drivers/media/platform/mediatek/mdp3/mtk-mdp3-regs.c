@@ -12,7 +12,7 @@
 #include "mtk-mdp3-m2m.h"
 #include "mtk-mdp3-capture.h"
 
-static const struct mdp_format *mdp_find_fmt(const struct mtk_mdp_driver_data *mdp_data,
+const struct mdp_format *mdp_find_fmt(const struct mtk_mdp_driver_data *mdp_data,
 					     u32 pixelformat, u32 type)
 {
 	u32 i, flag;

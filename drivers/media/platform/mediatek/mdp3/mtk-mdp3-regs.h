@@ -357,6 +357,8 @@ struct mdp_frameparam {
 
 struct mdp_dev;
 
+const struct mdp_format *mdp_find_fmt(const struct mtk_mdp_driver_data *mdp_data,
+					     u32 pixelformat, u32 type);
 int mdp_enum_fmt_mplane(struct mdp_dev *mdp, struct v4l2_fmtdesc *f);
 const struct mdp_format *mdp_try_fmt_mplane(struct mdp_dev *mdp,
 					    struct v4l2_format *f,

@@ -665,9 +665,15 @@ static int mdp_cap_enum_framesizes(struct file *file, void *priv,
 	struct video_device *vdev = video_devdata(file);
 	struct mdp_dev *mdp = video_get_drvdata(vdev);
 	const struct mdp_limit *limit = mdp->mdp_data->def_limit;
+	const struct mdp_format *fmt;
 
-	if (fsize->index)
+	if (fsize->index != 0)
 		return -EINVAL;
+
+	fmt = mdp_find_fmt(mdp->mdp_data, fsize->pixel_format, V4L2_BUF_TYPE_VIDEO_CAPTURE);
+	if (!fmt)
+		return -EINVAL;
+
 	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
 	fsize->stepwise.min_width = limit->cap_limit.wmin;
 	fsize->stepwise.max_width = limit->cap_limit.wmax;
@@ -684,12 +690,71 @@ static int mdp_cap_enum_frameintervals(struct file *file, void *priv,
 {
 	struct video_device *vdev = video_devdata(file);
 	struct mdp_dev *mdp = video_get_drvdata(vdev);
+	const struct mdp_limit *limit = mdp->mdp_data->def_limit;
+	const struct mdp_format *fmt;
 
 	if (fival->index != 0)
 		return -EINVAL;
+
+	fmt = mdp_find_fmt(mdp->mdp_data, fival->pixel_format, V4L2_BUF_TYPE_VIDEO_CAPTURE);
+	if (!fmt)
+		return -EINVAL;
+
+	if (fival->width < limit->cap_limit.wmin ||
+	    fival->width > limit->cap_limit.wmax ||
+	    fival->height < limit->cap_limit.hmin ||
+	    fival->height > limit->cap_limit.hmax)
+		return -EINVAL;
+
 	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
 	fival->discrete.numerator = 1;
 	fival->discrete.denominator = mdp->rx_cap_intf.rx_frame_rate;
+
+	return 0;
+}
+
+
+static int mdp_cap_enum_input(struct file *file, void *fh, struct v4l2_input *input)
+{
+	if (input->index > 0)
+		return -EINVAL;
+	strncpy(input->name, "mdp-capture", sizeof(input->name) - 1);
+	input->type = V4L2_INPUT_TYPE_CAMERA;
+	return 0;
+}
+
+static int mdp_cap_g_input(struct file *file, void *fh, unsigned int *input)
+{
+	*input = 0;
+	return 0;
+}
+
+static int mdp_cap_s_input(struct file *file, void *fh, unsigned int input)
+{
+	return input == 0 ? 0 : -EINVAL;
+}
+
+static int mdp_cap_get_param(struct file *file, void *fh,
+			     struct v4l2_streamparm *parm)
+{
+	struct video_device *vdev = video_devdata(file);
+	struct mdp_dev *mdp = video_get_drvdata(vdev);
+
+	parm->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
+	parm->parm.capture.timeperframe.numerator = 1;
+	parm->parm.capture.timeperframe.denominator = mdp->rx_cap_intf.rx_frame_rate;
+
+	return 0;
+}
+static int mdp_cap_set_param(struct file *file, void *fh,
+			     struct v4l2_streamparm *parm)
+{
+	struct video_device *vdev = video_devdata(file);
+	struct mdp_dev *mdp = video_get_drvdata(vdev);
+
+	parm->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
+	parm->parm.capture.timeperframe.numerator = 1;
+	parm->parm.capture.timeperframe.denominator = mdp->rx_cap_intf.rx_frame_rate;
 
 	return 0;
 }
@@ -710,6 +775,11 @@ static const struct v4l2_ioctl_ops mdp_cap_ioctl_ops = {
 	.vidioc_create_bufs		= vb2_ioctl_create_bufs,
 	.vidioc_streamon		= mdp_cap_streamon,
 	.vidioc_streamoff		= vb2_ioctl_streamoff,
+	.vidioc_enum_input		= mdp_cap_enum_input,
+	.vidioc_g_input			= mdp_cap_g_input,
+	.vidioc_s_input			= mdp_cap_s_input,
+	.vidioc_g_parm			= mdp_cap_get_param,
+	.vidioc_s_parm			= mdp_cap_set_param,
 	.vidioc_subscribe_event		= v4l2_ctrl_subscribe_event,
 	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
 };
