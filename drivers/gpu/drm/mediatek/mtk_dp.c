@@ -2394,8 +2394,10 @@ static struct edid *mtk_dp_get_edid(struct drm_bridge *bridge,
 	if (mtk_dp_plug_state(mtk_dp))
 		new_edid = drm_get_edid(connector, &mtk_dp->aux.ddc);
 
-	if (new_edid)
+	if (new_edid) {
 		audio_caps->sad_count = drm_edid_to_sad(new_edid, &sads);
+		kfree(sads);
+	}
 
 	if (!enabled)
 		drm_bridge_chain_post_disable(bridge);
