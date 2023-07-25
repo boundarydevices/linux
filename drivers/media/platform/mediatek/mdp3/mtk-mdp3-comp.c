@@ -848,10 +848,6 @@ static int init_split(struct mdp_comp_ctx *ctx, struct mdp_cmdq_cmd *cmd)
 
 	/* Reset engine */
 	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_RESET, 0x1, VPP_SPLIT_RESET_MASK);
-	MM_REG_POLL(cmd, subsys_id, base, VPP_SPLIT_MON_16, 0x0, 0xFFFF);
-	MM_REG_POLL(cmd, subsys_id, base, VPP_SPLIT_MON_17, 0x0, 0xFFFF);
-	MM_REG_POLL(cmd, subsys_id, base, VPP_SPLIT_MON_18, 0x0, 0xFFFF);
-	MM_REG_POLL(cmd, subsys_id, base, VPP_SPLIT_MON_19, 0x0, 0xFFFF);
 	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_RESET, 0x0, VPP_SPLIT_RESET_MASK);
 
 	mtk_mmsys_vpp_split_out_config(ctx->comp->mdp_dev->mdp_mmsys2, &cmd->pkt);
