@@ -5063,6 +5063,7 @@ void brcmf_sdio_remove(struct brcmf_sdio *bus)
 		/* Stop watchdog task */
 		if (bus->watchdog_tsk) {
 			send_sig(SIGTERM, bus->watchdog_tsk, 1);
+			kthread_stop(bus->watchdog_tsk);
 			bus->watchdog_tsk = NULL;
 		}
 
