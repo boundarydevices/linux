@@ -40,22 +40,13 @@ static void wake_up_ctx(struct mtk_vcodec_ctx *ctx)
 static irqreturn_t mtk_vcodec_dec_irq_handler(int irq, void *priv)
 {
 	struct mtk_vcodec_dev *dev = priv;
-	struct mtk_vcodec_ctx *ctx = NULL;
+	struct mtk_vcodec_ctx *ctx;
 	u32 cg_status = 0;
 	unsigned int dec_done_status = 0;
-	void __iomem *vdec_misc_addr = NULL;
-
-	if (!dev)
-		return -EINVAL;
+	void __iomem *vdec_misc_addr = dev->reg_base[VDEC_MISC] +
+					VDEC_IRQ_CFG_REG;
 
 	ctx = mtk_vcodec_get_curr_ctx(dev);
-	if (!ctx)
-		return -EINVAL;
-
-	vdec_misc_addr = dev->reg_base[VDEC_MISC] +
-						VDEC_IRQ_CFG_REG;
-	if (!vdec_misc_addr)
-		return -EINVAL;
 
 	/* check if HW active or not */
 	cg_status = readl(dev->reg_base[0]);
@@ -88,19 +79,11 @@ static irqreturn_t mtk_vcodec_dec_irq_handler(int irq, void *priv)
 
 static int fops_vcodec_open(struct file *file)
 {
-	struct mtk_vcodec_dev *dev = NULL;
+	struct mtk_vcodec_dev *dev = video_drvdata(file);
 	struct mtk_vcodec_ctx *ctx = NULL;
 	struct mtk_video_dec_buf *mtk_buf = NULL;
 	int ret = 0;
 	struct vb2_queue *src_vq;
-
-	if (!file)
-		return -EINVAL;
-
-	dev = video_drvdata(file);
-
-	if  (!dev)
-		return -ENODEV;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
@@ -188,24 +171,8 @@ err_ctrls_setup:
 
 static int fops_vcodec_release(struct file *file)
 {
-	struct mtk_vcodec_dev *dev = NULL;
-	struct mtk_vcodec_ctx *ctx = NULL;
-
-	if (!file)
-		return -EINVAL;
-
-	dev = video_drvdata(file);
-
-	if  (!dev)
-		return -ENODEV;
-
-	if (!file->private_data)
-		return -EINVAL;
-
-	ctx = fh_to_ctx(file->private_data);
-
-	if (!ctx)
-		return -EINVAL;
+	struct mtk_vcodec_dev *dev = video_drvdata(file);
+	struct mtk_vcodec_ctx *ctx = fh_to_ctx(file->private_data);
 
 	mtk_v4l2_debug(0, "[%d] decoder", ctx->id);
 	mutex_lock(&dev->dev_mutex);
@@ -243,15 +210,12 @@ static const struct v4l2_file_operations mtk_vcodec_fops = {
 
 static int mtk_vcodec_probe(struct platform_device *pdev)
 {
-	struct mtk_vcodec_dev *dev = NULL;
-	struct video_device *vfd_dec = NULL;
-	struct resource *res = NULL;
+	struct mtk_vcodec_dev *dev;
+	struct video_device *vfd_dec;
+	struct resource *res;
 	phandle rproc_phandle;
 	enum mtk_vcodec_fw_type fw_type;
 	int i, ret;
-
-	if (!pdev)
-		return -ENODEV;
 
 	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
 	if (!dev)
@@ -396,14 +360,7 @@ MODULE_DEVICE_TABLE(of, mtk_vcodec_match);
 
 static int mtk_vcodec_dec_remove(struct platform_device *pdev)
 {
-	struct mtk_vcodec_dev *dev = NULL;
-
-	if (!pdev)
-		return -ENODEV;
-
-	dev = platform_get_drvdata(pdev);
-	if (!dev)
-		return -ENODEV;
+	struct mtk_vcodec_dev *dev = platform_get_drvdata(pdev);
 
 	flush_workqueue(dev->decode_workqueue);
 	destroy_workqueue(dev->decode_workqueue);
