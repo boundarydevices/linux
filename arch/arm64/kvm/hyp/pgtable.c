@@ -821,7 +821,8 @@ static bool stage2_try_break_pte(const struct kvm_pgtable_visit_ctx *ctx,
 	return true;
 }
 
-static void stage2_make_pte(const struct kvm_pgtable_visit_ctx *ctx, kvm_pte_t new)
+static void stage2_make_pte(const struct kvm_pgtable_visit_ctx *ctx,
+			    kvm_pte_t new)
 {
 	struct kvm_pgtable_mm_ops *mm_ops = ctx->mm_ops;
 	struct kvm_pgtable_pte_ops *pte_ops = ctx->pte_ops;
@@ -1034,6 +1035,40 @@ static int stage2_map_walk_leaf(const struct kvm_pgtable_visit_ctx *ctx,
 	 */
 	new = kvm_init_table_pte(childp, mm_ops);
 	stage2_make_pte(ctx, new);
+	return 0;
+}
+
+static int stage2_coalesce_walk_table_post(const struct kvm_pgtable_visit_ctx *ctx,
+					   struct stage2_map_data *data)
+{
+	struct kvm_pgtable_mm_ops *mm_ops = ctx->mm_ops;
+	kvm_pte_t *childp = kvm_pte_follow(*ctx->ptep, mm_ops);
+
+	/*
+	 * Decrement the refcount only on the set ownership path to avoid a
+	 * loop situation when the following happens:
+	 *  1. We take a host stage2 fault and we create a small mapping which
+	 *  has default attributes (is not refcounted).
+	 *  2. On the way back we execute the post handler and we zap the
+	 *  table that holds our mapping.
+	 */
+	if (kvm_phys_is_valid(data->phys) ||
+	    !kvm_level_supports_block_mapping(ctx->level))
+		return 0;
+
+	/*
+	 * Free a page that is not referenced anymore and drop the reference
+	 * of the page table page.
+	 */
+	if (mm_ops->page_count(childp) == 1) {
+		u64 size = kvm_granule_size(ctx->level);
+		u64 addr = ALIGN_DOWN(ctx->addr, size);
+
+		kvm_clear_pte(ctx->ptep);
+		kvm_tlb_flush_vmid_range(data->mmu, addr, size);
+		mm_ops->put_page(ctx->ptep);
+		mm_ops->put_page(childp);
+	}
 
 	return 0;
 }
@@ -1057,6 +1092,8 @@ static int stage2_map_walker(const struct kvm_pgtable_visit_ctx *ctx,
 		return stage2_map_walk_table_pre(ctx, data);
 	case KVM_PGTABLE_WALK_LEAF:
 		return stage2_map_walk_leaf(ctx, data);
+	case KVM_PGTABLE_WALK_TABLE_POST:
+		return stage2_coalesce_walk_table_post(ctx, data);
 	default:
 		return -EINVAL;
 	}
@@ -1112,7 +1149,8 @@ int kvm_pgtable_stage2_annotate(struct kvm_pgtable *pgt, u64 addr, u64 size,
 	struct kvm_pgtable_walker walker = {
 		.cb		= stage2_map_walker,
 		.flags		= KVM_PGTABLE_WALK_TABLE_PRE |
-				  KVM_PGTABLE_WALK_LEAF,
+				  KVM_PGTABLE_WALK_LEAF |
+				  KVM_PGTABLE_WALK_TABLE_POST,
 		.arg		= &map_data,
 	};
 
@@ -1155,7 +1193,10 @@ static int stage2_unmap_walker(const struct kvm_pgtable_visit_ctx *ctx,
 	 * block entry and rely on the remaining portions being faulted
 	 * back lazily.
 	 */
-	stage2_unmap_put_pte(ctx, mmu, mm_ops);
+	if (pte_ops->pte_is_counted_cb(ctx->old, ctx->level))
+		stage2_unmap_put_pte(ctx, mmu, mm_ops);
+	else
+		stage2_unmap_clear_pte(ctx, mmu);
 
 	if (need_flush && mm_ops->dcache_clean_inval_poc)
 		mm_ops->dcache_clean_inval_poc(kvm_pte_follow(ctx->old, mm_ops),
