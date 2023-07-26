@@ -441,6 +441,10 @@ static int pca954x_probe(struct i2c_client *client,
 	if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_BYTE))
 		return -ENODEV;
 
+	gpio = devm_gpiod_get_optional(dev, "a0", (client->addr & 1)? GPIOD_OUT_HIGH : GPIOD_OUT_LOW);
+	if (IS_ERR(gpio))
+		return PTR_ERR(gpio);
+
 	muxc = i2c_mux_alloc(adap, dev, PCA954X_MAX_NCHANS, sizeof(*data), 0,
 			     pca954x_select_chan, pca954x_deselect_mux);
 	if (!muxc)
