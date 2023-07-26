@@ -597,35 +597,30 @@ static void mdp_cmdq_pkt_destroy(struct cmdq_pkt *pkt)
 	pkt->va_base = NULL;
 }
 
-static bool __atomic_dec_and_mod(atomic_t *c, u8 mod)
+static void mdp_cmdq_release_work(struct mdp_dev *mdp, struct mdp_cmdq_cmd *cmd)
 {
-	atomic_dec(c);
-	return (!(atomic_read(c) % mod));
-}
-
-static void mdp_auto_release_work(struct work_struct *work)
-{
-	struct mdp_cmdq_cmd *cmd;
-	struct mdp_dev *mdp;
 	struct mtk_mutex *mutex;
 	enum mdp_pipe_id pipe_id;
+	atomic_t *job;
 
-	cmd = container_of(work, struct mdp_cmdq_cmd, auto_release_work);
-	mdp = cmd->mdp;
+	if (!mdp || !cmd)
+		return;
 
-	if (cmd->user != MDP_CMDQ_USER_CAP) {
+	if (cmd->user == MDP_CMDQ_USER_M2M) {
 		pipe_id = __get_pipe(mdp, cmd->comps[0].public_id);
 		mutex = __get_mutex(mdp, &mdp->mdp_data->pipe_info[pipe_id]);
 		mtk_mutex_unprepare(mutex);
 		mdp_comp_clocks_off(&mdp->pdev->dev, cmd->comps,
 				    cmd->num_comps);
+	}
 
-		if (atomic_dec_and_test(&mdp->job_count[cmd->user]))
+	job = &mdp->job_count[cmd->user];
+	atomic_dec(job);
+	if (!(atomic_read(job) % cmd->pp_used)) {
+		if (cmd->user == MDP_CMDQ_USER_M2M)
 			mdp_m2m_job_finish(cmd->mdp_ctx);
-	} else {
-		if (__atomic_dec_and_mod(&mdp->job_count[cmd->user], cmd->pp_used))
-			if (!atomic_read(&mdp->cap_discard))
-				mdp_cap_job_finish(cmd->mdp_ctx);
+		else if (!atomic_read(&mdp->cap_discard))
+			mdp_cap_job_finish(cmd->mdp_ctx);
 	}
 
 	if (cmd->user_cmdq_cb) {
@@ -638,7 +633,7 @@ static void mdp_auto_release_work(struct work_struct *work)
 	wake_up(&mdp->callback_wq);
 
 	mdp_cmdq_pkt_destroy(&cmd->pkt);
-	if (cmd->user != MDP_CMDQ_USER_CAP) {
+	if (cmd->user == MDP_CMDQ_USER_M2M) {
 		kfree(cmd->comps);
 		cmd->comps = NULL;
 	}
@@ -646,13 +641,22 @@ static void mdp_auto_release_work(struct work_struct *work)
 	cmd = NULL;
 }
 
+static void mdp_auto_release_work(struct work_struct *work)
+{
+	struct mdp_cmdq_cmd *cmd;
+	struct mdp_dev *mdp;
+
+	cmd = container_of(work, struct mdp_cmdq_cmd, auto_release_work);
+	mdp = cmd->mdp;
+
+	mdp_cmdq_release_work(mdp, cmd);
+}
+
 static void mdp_handle_cmdq_callback(struct mbox_client *cl, void *mssg)
 {
 	struct mdp_cmdq_cmd *cmd;
 	struct cmdq_cb_data *data;
 	struct mdp_dev *mdp;
-	struct device *dev;
-	enum mdp_pipe_id pipe_id;
 
 	if (!mssg) {
 		pr_info("%s:no callback data\n", __func__);
@@ -663,28 +667,16 @@ static void mdp_handle_cmdq_callback(struct mbox_client *cl, void *mssg)
 	cmd = container_of(data->pkt, struct mdp_cmdq_cmd, pkt);
 	cmd->data = data;
 	mdp = cmd->mdp;
-	dev = &mdp->pdev->dev;
 
 	INIT_WORK(&cmd->auto_release_work, mdp_auto_release_work);
-	if (!queue_work(mdp->clock_wq, &cmd->auto_release_work)) {
-		struct mtk_mutex *mutex;
+	if (!queue_work(mdp->clock_wq, &cmd->auto_release_work))
+		goto err_release_work;
 
-		dev_err(dev, "%s:queue_work fail!\n", __func__);
-		pipe_id = __get_pipe(mdp, cmd->comps[0].public_id);
-		mutex = __get_mutex(mdp, &mdp->mdp_data->pipe_info[pipe_id]);
-		mtk_mutex_unprepare(mutex);
-		mdp_comp_clocks_off(&mdp->pdev->dev, cmd->comps,
-				    cmd->num_comps);
+	return;
 
-		if (atomic_dec_and_test(&mdp->job_count[cmd->user]))
-			wake_up(&mdp->callback_wq);
-
-		mdp_cmdq_pkt_destroy(&cmd->pkt);
-		kfree(cmd->comps);
-		cmd->comps = NULL;
-		kfree(cmd);
-		cmd = NULL;
-	}
+err_release_work:
+	dev_err(&mdp->pdev->dev, "%s:queue_work fail!\n");
+	mdp_cmdq_release_work(mdp, cmd);
 }
 
 static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
