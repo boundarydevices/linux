@@ -40,6 +40,7 @@ struct imx_fsb_s400_hw {
 	unsigned int fsb_otp_shadow;
 	const struct bank_2_reg fsb_bank_reg[MAPPING_SIZE];
 	bool oscca_fuse_read;
+	bool reverse_mac_address;
 };
 
 struct imx_fsb_s400_fuse {
@@ -207,13 +208,32 @@ static int fsb_s400_fuse_read(void *priv, unsigned int offset, void *val,
 		}
 	}
 
-	memcpy(val, (u8 *)(buf + offset), bytes);
+	memcpy(val, (u8 *)(buf) + offset, bytes);
 
 ret:
 	kfree(buf);
 	mutex_unlock(&fuse->lock);
 
 	return err;
+}
+
+static int fsb_s400_fuse_post_process(void *priv, const char *id, unsigned int offset,
+				      void *data, size_t bytes)
+{
+	struct imx_fsb_s400_fuse *fuse = priv;
+
+	/* Deal with some post processing of nvmem cell data */
+	if (id && !strcmp(id, "mac-address")) {
+		if (fuse->hw->reverse_mac_address) {
+			u8 *buf = data;
+			int i;
+
+			for (i = 0; i < bytes / 2; i++)
+				swap(buf[i], buf[bytes - i - 1]);
+		}
+	}
+
+	return 0;
 }
 
 static int imx_fsb_s400_fuse_probe(struct platform_device *pdev)
@@ -238,6 +258,7 @@ static int imx_fsb_s400_fuse_probe(struct platform_device *pdev)
 	fuse->config.owner = THIS_MODULE;
 	fuse->config.size = 2048; /* 64 Banks */
 	fuse->config.reg_read = fsb_s400_fuse_read;
+	fuse->config.cell_post_process = fsb_s400_fuse_post_process;
 	fuse->config.priv = fuse;
 	mutex_init(&fuse->lock);
 	fuse->hw = of_device_get_match_data(&pdev->dev);
@@ -299,12 +320,14 @@ static const struct imx_fsb_s400_hw imx8ulp_fsb_s400_hw = {
 		[21] = { 46, 200 },
 	},
 	.oscca_fuse_read = false,
+	.reverse_mac_address = false,
 };
 
 static const struct imx_fsb_s400_hw imx93_fsb_s400_hw = {
 	.soc = IMX93,
 	.fsb_otp_shadow = 0x8000,
 	.oscca_fuse_read = true,
+	.reverse_mac_address = true,
 };
 
 static const struct of_device_id imx_fsb_s400_fuse_match[] = {

@@ -1135,6 +1135,8 @@
 				assigned-clock-rates = <100000000>, <250000000>;
 				intf_mode = <&wakeupmix_gpr 0x28>;
 				clk_csr = <0>;
+				nvmem-cells = <&eth_mac2>;
+				nvmem-cell-names = "mac-address";
 				status = "disabled";
 			};
 
@@ -1293,8 +1295,16 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			imx93_uid: soc-uid@6 {
-				reg = <0x30 0x10>;
+			imx93_uid: soc-uid@c0 {
+				reg = <0xc0 0x10>;
+			};
+
+			eth_mac1: mac-address@4ec {
+				reg = <0x4ec 0x6>;
+			};
+
+			eth_mac2: mac-address@4f2 {
+				reg = <0x4f2 0x6>;
 			};
 
 			imx93_soc: imx93-soc {
