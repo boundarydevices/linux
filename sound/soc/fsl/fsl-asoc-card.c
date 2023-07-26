@@ -894,11 +894,9 @@ static ssize_t headphone_show(struct device *dev,
 	int hp_status;
 
 	/* Check if headphone is plugged in */
-	hp_status = gpio_get_value_cansleep(priv->hp_jack.gpio.gpio);
-
-	if (priv->hp_jack.gpio.invert)
-		hp_status ^= 1;
+	hp_status = gpiod_get_value(priv->hp_jack.gpio.desc);
 	strcpy(buf, hp_status ? "Headphone\n" : "Speaker\n");
+
 	return strlen(buf);
 }
 
@@ -909,12 +907,10 @@ static ssize_t micphone_show(struct device *dev,
 	struct fsl_asoc_card_priv *priv = snd_soc_card_get_drvdata(card);
 	int mic_status;
 
-	/* Check if headphone is plugged in */
-	mic_status = gpio_get_value_cansleep(priv->mic_jack.gpio.gpio);
-
-	if (priv->mic_jack.gpio.invert)
-		mic_status ^= 1;
+	/* Check if microphone is plugged in */
+	mic_status = gpiod_get_value(priv->mic_jack.gpio.desc);
 	strcpy(buf, mic_status ? "Mic Jack\n" : "Main MIC\n");
+
 	return strlen(buf);
 }
 static DEVICE_ATTR_RO(headphone);
