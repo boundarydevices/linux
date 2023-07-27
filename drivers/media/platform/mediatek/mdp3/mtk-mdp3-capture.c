@@ -426,7 +426,7 @@ static int mdp_cap_start_streaming(struct vb2_queue *q, unsigned int count)
 	struct mdp_frame *capture;
 	struct vb2_queue *vq;
 	int ret;
-	bool out_streaming, cap_streaming;
+	bool cap_streaming;
 
 	if (V4L2_TYPE_IS_CAPTURE(q->type))
 		ctx->frame_count[MDP_CAP_DST] = 0;
@@ -436,7 +436,7 @@ static int mdp_cap_start_streaming(struct vb2_queue *q, unsigned int count)
 	cap_streaming = vb2_is_streaming(vq);
 
 	/* Check to see if scaling ratio is within supported range */
-	if (V4L2_TYPE_IS_CAPTURE(q->type) && out_streaming) {
+	if (V4L2_TYPE_IS_CAPTURE(q->type)) {
 		ret = mdp_check_scaling_ratio(&capture->crop.c,
 					      &capture->compose,
 					      capture->rotation,
@@ -873,7 +873,7 @@ static void mdp_cap_disconnect(struct hdmirx_capture_interface *intf)
 	enum mdp_cmdq_user u_id = MDP_CMDQ_USER_CAP;
 	int ret;
 	struct vb2_queue *cap_queue;
-	struct mdp_cap_ctx *ctx;
+	struct mdp_cap_ctx *ctx = NULL;
 
 	if (!mdp->cap_vdev) {
 		dev_err(&mdp->pdev->dev, "already disconnected! ignore it.\n");
