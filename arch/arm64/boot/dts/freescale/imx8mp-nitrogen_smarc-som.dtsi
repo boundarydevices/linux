@@ -212,7 +212,6 @@
 			MX8MP_IOMUXC_NAND_DATA05__USDHC3_DATA1	0x150
 			MX8MP_IOMUXC_NAND_DATA06__USDHC3_DATA2	0x150
 			MX8MP_IOMUXC_NAND_DATA07__USDHC3_DATA3	0x150
-			MX8MP_IOMUXC_GPIO1_IO00__ANAMIX_REF_CLK_32K	0x03
 		>;
 	};
 
@@ -284,7 +283,11 @@
 	};
 
 	reg_wlan_vmmc: regulator-wlan-vmmc {
-		compatible = "regulator-fixed";
+		assigned-clocks = <&clk IMX8MP_CLK_CLKOUT1_SEL>, <&clk IMX8MP_CLK_CLKOUT1>;
+		assigned-clock-parents = <&clk IMX8MP_CLK_32K>;
+		assigned-clock-rates = <0>, <32768>;
+		clocks = <&clk IMX8MP_CLK_CLKOUT1>;
+		compatible = "regulator-fixed-clock";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_wlan_vmmc>;
 		regulator-name = "reg_wlan_vmmc";
@@ -385,9 +388,7 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			at803x,hib-disabled;
 			eee-broken-1000t;
-#if 0	/* TEMP, until next som run which swaps gpio3/4 */
 			interrupts-extended = GPIRQ_EQOS_PHY;
-#endif
 #if 0
 			reset-gpios = GP_EQOS_RESET;
 #endif
@@ -559,6 +560,7 @@
 	status = "okay";
 
 	i2cmux9546@70 {
+		a0-gpios = <&mcp23018 12 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c6_pca9546>;
 		compatible = "nxp,pca9546";
@@ -584,7 +586,6 @@
 		};
 
 		i2c6c: i2c6@2 {
-			/* GPIO expander I2C*/
 			clock-frequency = <100000>;
 			reg = <2>;
 			#address-cells = <1>;
@@ -598,9 +599,7 @@
 			#size-cells = <0>;
 		};
 	};
-};
 
-&i2c6c {
 	mcp23018: gpio@20 {
 		compatible = "microchip,mcp23018";
 		gpio-controller;
@@ -921,10 +920,8 @@
 #define PD_SM_SDIO_VSELECT_SDIO(a)	MX8MP_IOMUXC_GPIO1_IO04__USDHC2_VSELECT a
 
 /* todo SM_CLKOUT2, need to add to imx8mp clk driver */
-#if 0
 #define GP_SM_GPIO13(a)			<&gpio1 0 a>
 #define PD_SM_GPIO13(a)			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00 a
-#endif
 #define PAD_SDIO_CLK_50M		0x190
 #define PAD_SDIO_50M			0x1d0
 #define PAD_SDIO_CLK_100M		0x194
@@ -1084,8 +1081,6 @@
 #define PD_SM_CARRIER_STANDBY(a)	MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06 a
 #define GP_SM_CARRIER_PWR_ON(a)		<&gpio1 10 a>
 #define PD_SM_CARRIER_PWR_ON(a)		MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10 a
-#define GP_SM_FORCE_RECOV(a)		<&gpio4 18 a>
-#define PD_SM_FORCE_RECOV(a)		MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18 a
 #define GP_SM_BAT_LOW(a)		<&mcp23018 15 (a | GPIO_PULL_UP)>
 #define PD_SM_BAT_LOW(a)
 
@@ -1111,8 +1106,8 @@
 #define PD_SM_GPIO9(a)
 #define GP_SM_GPIO10(a)			<&mcp23018 11 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO10(a)
-#define GP_SM_GPIO11(a)			<&mcp23018 12 (a | GPIO_PULL_UP)>
-#define PD_SM_GPIO11(a)
+#define GP_SM_GPIO11(a)			<&gpio4 18 a>
+#define PD_SM_GPIO11(a)			MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18 a
 #define GP_SM_RESET_OUT(a)		<&mcp23018 13 (a | GPIO_PULL_UP)>
 #define PD_SM_RESET_OUT(a)
 #define GP_SM_POWER_BTN(a)
