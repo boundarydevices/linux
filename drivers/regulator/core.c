@@ -2661,10 +2661,18 @@ static int _regulator_do_enable(struct regulator_dev *rdev)
 	}
 
 	if (rdev->ena_pin) {
-		if (!rdev->ena_gpio_state) {
-			ret = regulator_ena_gpio_ctrl(rdev, true);
+		if (rdev->desc->ops->enable) {
+			ret = rdev->desc->ops->enable(rdev);
 			if (ret < 0)
 				return ret;
+		}
+		if (!rdev->ena_gpio_state) {
+			ret = regulator_ena_gpio_ctrl(rdev, true);
+			if (ret < 0) {
+				if (rdev->desc->ops->disable)
+					rdev->desc->ops->disable(rdev);
+				return ret;
+			}
 			rdev->ena_gpio_state = 1;
 		}
 	} else if (rdev->desc->ops->enable) {
@@ -2885,6 +2893,8 @@ static int _regulator_do_disable(struct regulator_dev *rdev)
 			ret = regulator_ena_gpio_ctrl(rdev, false);
 			if (ret < 0)
 				return ret;
+			if (rdev->desc->ops->disable)
+				rdev->desc->ops->disable(rdev);
 			rdev->ena_gpio_state = 0;
 		}
 
