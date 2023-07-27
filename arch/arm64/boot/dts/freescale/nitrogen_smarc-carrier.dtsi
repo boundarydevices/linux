@@ -27,7 +27,9 @@
 	pinctrl2(gpio, keys) {
 		PINS_START
 			PD_SM_CHARGER_PRESENT(PAD_PULLUPIRQ)
+#ifdef PD_SM_FORCE_RECOV
 			PD_SM_FORCE_RECOV(PAD_PULLUPIRQ)
+#endif
 			PD_SM_LID(PAD_PULLUPIRQ)
 			PD_SM_CARRIER_PWR_ON(PAD_PULLUPIRQ)
 			PD_SM_SLEEP(PAD_PULLUPIRQ)
@@ -292,11 +294,13 @@
 			linux,code = <KEY_0>;
 		};
 
+#ifdef GP_SM_FORCE_RECOV
 		force-recovery {
 			label = "force recovery";
 			gpios = GP_SM_FORCE_RECOV(GPIO_ACTIVE_LOW);
 			linux,code = <KEY_1>;
 		};
+#endif
 
 		lid-open {
 			label = "lid open";
