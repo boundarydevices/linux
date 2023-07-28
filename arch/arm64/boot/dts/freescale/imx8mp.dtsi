@@ -2213,7 +2213,7 @@
 			};
 
 			audio_blk_ctrl: audio-blk-ctrl@30e20000 {
-				compatible = "fsl,imx8mp-audio-blk-ctrl-legacy", "syscon";
+				compatible = "fsl,imx8mp-audio-blk-ctrl", "syscon";
 				reg = <0x30e20000 0x50C>;
 				power-domains = <&audiomix_pd>;
 
