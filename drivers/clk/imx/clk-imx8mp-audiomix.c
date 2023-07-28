@@ -87,6 +87,8 @@ static const struct clk_parent_data clk_imx8mp_audiomix_pll_bypass_sels[] = {
 	{ .fw_name = "sai_pll_ref_sel", .name = "sai_pll_ref_sel" },
 };
 
+static int shared_count_pdm;
+
 #define CLK_GATE(gname, cname)						\
 	{								\
 		gname"_cg",						\
@@ -94,6 +96,14 @@ static const struct clk_parent_data clk_imx8mp_audiomix_pll_bypass_sels[] = {
 		{ .fw_name = "ahb", .name = "ahb" }, NULL, 1,		\
 		CLKEN0 + 4 * !!(IMX8MP_CLK_AUDIOMIX_##cname / 32),	\
 		1, IMX8MP_CLK_AUDIOMIX_##cname % 32			\
+	}
+
+#define CLK_GATE_SHARED(gname, cname, pname, reg, width, shift, shcount)\
+	{								\
+		gname,							\
+		IMX8MP_CLK_AUDIOMIX_##cname,				\
+		pname,							\
+		reg, width, shift, shcount				\
 	}
 
 #define CLK_SAIn(n)							\
@@ -161,7 +171,6 @@ struct clk_imx8mp_audiomix_sel {
 
 static struct clk_imx8mp_audiomix_sel sels[] = {
 	CLK_GATE("asrc", ASRC_IPG),
-	CLK_GATE("pdm", PDM_IPG),
 	CLK_GATE("earc", EARC_IPG),
 	CLK_GATE("ocrama", OCRAMA_IPG),
 	CLK_GATE("aud2htx", AUD2HTX_IPG),
@@ -182,6 +191,21 @@ static struct clk_imx8mp_audiomix_sel sels[] = {
 	CLK_SAIn(5),
 	CLK_SAIn(6),
 	CLK_SAIn(7)
+};
+
+struct clk_imx8mp_audiomix_shared_gate {
+	const char			*name;
+	int				clkid;
+	const char			*parents;
+	u16				reg;
+	u8				width;
+	u8				shift;
+	int				*shcount;
+};
+
+static struct clk_imx8mp_audiomix_shared_gate pdms[] = {
+	CLK_GATE_SHARED("pdm_ipg_clk", PDM_IPG, "audio_ahb_root", 0, 1, 25, &shared_count_pdm),
+	CLK_GATE_SHARED("pdm_root_clk", PDM_ROOT, "pdm_sel", 0, 1, 25, &shared_count_pdm),
 };
 
 struct pm_safekeep_info {
@@ -362,12 +386,12 @@ static int clk_imx8mp_audiomix_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(sels); i++) {
 		if (sels[i].num_parents == 1) {
 			hw = devm_clk_hw_register_gate_parent_data(dev,
-				sels[i].name, &sels[i].parent, 0,
+				sels[i].name, &sels[i].parent, CLK_SET_RATE_PARENT,
 				base + sels[i].reg, sels[i].shift, 0, NULL);
 		} else {
 			hw = devm_clk_hw_register_mux_parent_data_table(dev,
 				sels[i].name, sels[i].parents,
-				sels[i].num_parents, 0,
+				sels[i].num_parents, CLK_SET_RATE_PARENT,
 				base + sels[i].reg,
 				sels[i].shift, sels[i].width,
 				0, NULL, NULL);
@@ -377,6 +401,18 @@ static int clk_imx8mp_audiomix_probe(struct platform_device *pdev)
 			return PTR_ERR(hw);
 
 		priv->hws[sels[i].clkid] = hw;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(pdms); i++) {
+		hw = imx_dev_clk_hw_gate_shared(dev, pdms[i].name,
+						pdms[i].parents,
+						base + pdms[i].reg,
+						pdms[i].shift,
+						pdms[i].shcount);
+		if (IS_ERR(hw))
+			return PTR_ERR(hw);
+
+		priv->hws[pdms[i].clkid] = hw;
 	}
 
 	/* SAI PLL */
