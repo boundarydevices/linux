@@ -7,10 +7,12 @@
 
 #include <linux/clk-provider.h>
 #include <linux/device.h>
+#include <linux/io.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 
 #include <dt-bindings/clock/imx8mp-clock.h>
 
@@ -177,13 +179,64 @@ static struct clk_imx8mp_audiomix_sel sels[] = {
 	CLK_SAIn(7)
 };
 
+struct pm_safekeep_info {
+	uint32_t *regs_values;
+	uint32_t *regs_offsets;
+	uint32_t regs_num;
+};
+
+struct imx_blk_ctrl_drvdata {
+	void __iomem *base;
+	struct reset_hw *rst_hws;
+	struct pm_safekeep_info pm_info;
+
+	spinlock_t *lock;
+};
+
+struct imx_blk_ctrl_dev_data {
+	u32 pm_runtime_saved_regs_num;
+	u32 pm_runtime_saved_regs[];
+};
+
+static int imx_blk_ctrl_init_runtime_pm_safekeeping(struct device *dev)
+{
+	const struct imx_blk_ctrl_dev_data *dev_data = of_device_get_match_data(dev);
+	struct imx_blk_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
+	struct pm_safekeep_info *pm_info = &drvdata->pm_info;
+	u32 regs_num = dev_data->pm_runtime_saved_regs_num;
+	const u32 *regs_offsets = dev_data->pm_runtime_saved_regs;
+
+	if (!dev_data->pm_runtime_saved_regs_num)
+		return 0;
+
+	pm_info->regs_values = devm_kzalloc(dev,
+					    sizeof(u32) * regs_num,
+					    GFP_KERNEL);
+	if (WARN_ON(IS_ERR(pm_info->regs_values)))
+		return PTR_ERR(pm_info->regs_values);
+
+	pm_info->regs_offsets = kmemdup(regs_offsets,
+					regs_num * sizeof(u32), GFP_KERNEL);
+	if (WARN_ON(IS_ERR(pm_info->regs_offsets)))
+		return PTR_ERR(pm_info->regs_offsets);
+
+	pm_info->regs_num = regs_num;
+
+	return 0;
+}
+
 static int clk_imx8mp_audiomix_probe(struct platform_device *pdev)
 {
+	struct imx_blk_ctrl_drvdata *drvdata;
 	struct clk_hw_onecell_data *priv;
 	struct device *dev = &pdev->dev;
 	void __iomem *base;
 	struct clk_hw *hw;
-	int i;
+	int i, ret;
+
+	drvdata = devm_kzalloc(dev, sizeof(*drvdata), GFP_KERNEL);
+	if (!drvdata)
+		return -ENOMEM;
 
 	priv = devm_kzalloc(dev,
 			    struct_size(priv, hws, IMX8MP_CLK_AUDIOMIX_END),
@@ -196,6 +249,17 @@ static int clk_imx8mp_audiomix_probe(struct platform_device *pdev)
 	base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(base))
 		return PTR_ERR(base);
+
+	drvdata->base = base;
+	drvdata->lock = &imx_ccm_lock;
+	dev_set_drvdata(dev, drvdata);
+
+	ret = imx_blk_ctrl_init_runtime_pm_safekeeping(dev);
+	if (ret)
+		return ret;
+	pm_runtime_get_noresume(dev);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
 
 	for (i = 0; i < ARRAY_SIZE(sels); i++) {
 		if (sels[i].num_parents == 1) {
@@ -252,12 +316,106 @@ static int clk_imx8mp_audiomix_probe(struct platform_device *pdev)
 	if (IS_ERR(hw))
 		return PTR_ERR(hw);
 
-	return devm_of_clk_add_hw_provider(&pdev->dev, of_clk_hw_onecell_get,
-					   priv);
+	ret = devm_of_clk_add_hw_provider(&pdev->dev, of_clk_hw_onecell_get, priv);
+	if (ret)
+		return ret;
+
+	pm_runtime_put(dev);
+
+	return 0;
 }
 
+static void imx_blk_ctrl_read_write(struct device *dev, bool write)
+{
+	struct imx_blk_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
+	struct pm_safekeep_info *pm_info = &drvdata->pm_info;
+	void __iomem *base = drvdata->base;
+	unsigned long flags;
+	int i;
+
+	if (!pm_info->regs_num)
+		return;
+
+	spin_lock_irqsave(drvdata->lock, flags);
+
+	for (i = 0; i < pm_info->regs_num; i++) {
+		u32 offset = pm_info->regs_offsets[i];
+
+		if (write)
+			writel(pm_info->regs_values[i], base + offset);
+		else
+			pm_info->regs_values[i] = readl(base + offset);
+	}
+
+	spin_unlock_irqrestore(drvdata->lock, flags);
+
+}
+
+static int imx_blk_ctrl_runtime_suspend(struct device *dev)
+{
+	imx_blk_ctrl_read_write(dev, false);
+
+	return 0;
+}
+
+static int imx_blk_ctrl_runtime_resume(struct device *dev)
+{
+	imx_blk_ctrl_read_write(dev, true);
+
+	return 0;
+}
+
+static const struct dev_pm_ops imx_audiomix_pm_ops = {
+	SET_RUNTIME_PM_OPS(imx_blk_ctrl_runtime_suspend,
+			   imx_blk_ctrl_runtime_resume, NULL)
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+			   pm_runtime_force_resume)
+};
+
+#define	IMX_AUDIO_BLK_CTRL_CLKEN0		0x0
+#define	IMX_AUDIO_BLK_CTRL_CLKEN1		0x4
+#define	IMX_AUDIO_BLK_CTRL_EARC			0x200
+#define	IMX_AUDIO_BLK_CTRL_SAI1_MCLK_SEL	0x300
+#define	IMX_AUDIO_BLK_CTRL_SAI2_MCLK_SEL	0x304
+#define	IMX_AUDIO_BLK_CTRL_SAI3_MCLK_SEL	0x308
+#define	IMX_AUDIO_BLK_CTRL_SAI5_MCLK_SEL	0x30C
+#define	IMX_AUDIO_BLK_CTRL_SAI6_MCLK_SEL	0x310
+#define	IMX_AUDIO_BLK_CTRL_SAI7_MCLK_SEL	0x314
+#define	IMX_AUDIO_BLK_CTRL_PDM_CLK		0x318
+#define	IMX_AUDIO_BLK_CTRL_SAI_PLL_GNRL_CTL	0x400
+#define	IMX_AUDIO_BLK_CTRL_SAI_PLL_FDIVL_CTL0	0x404
+#define	IMX_AUDIO_BLK_CTRL_SAI_PLL_FDIVL_CTL1	0x408
+#define	IMX_AUDIO_BLK_CTRL_SAI_PLL_SSCG_CTL	0x40C
+#define	IMX_AUDIO_BLK_CTRL_SAI_PLL_MNIT_CTL	0x410
+#define	IMX_AUDIO_BLK_CTRL_IPG_LP_CTRL		0x504
+
+#define IMX_MEDIA_BLK_CTRL_SFT_RSTN		0x0
+#define IMX_MEDIA_BLK_CTRL_CLK_EN		0x4
+
+const struct imx_blk_ctrl_dev_data imx8mp_audiomix_dev_data = {
+	.pm_runtime_saved_regs_num = 16,
+	.pm_runtime_saved_regs = {
+		IMX_AUDIO_BLK_CTRL_CLKEN0,
+		IMX_AUDIO_BLK_CTRL_CLKEN1,
+		IMX_AUDIO_BLK_CTRL_EARC,
+		IMX_AUDIO_BLK_CTRL_SAI1_MCLK_SEL,
+		IMX_AUDIO_BLK_CTRL_SAI2_MCLK_SEL,
+		IMX_AUDIO_BLK_CTRL_SAI3_MCLK_SEL,
+		IMX_AUDIO_BLK_CTRL_SAI5_MCLK_SEL,
+		IMX_AUDIO_BLK_CTRL_SAI6_MCLK_SEL,
+		IMX_AUDIO_BLK_CTRL_SAI7_MCLK_SEL,
+		IMX_AUDIO_BLK_CTRL_PDM_CLK,
+		IMX_AUDIO_BLK_CTRL_SAI_PLL_GNRL_CTL,
+		IMX_AUDIO_BLK_CTRL_SAI_PLL_FDIVL_CTL0,
+		IMX_AUDIO_BLK_CTRL_SAI_PLL_FDIVL_CTL1,
+		IMX_AUDIO_BLK_CTRL_SAI_PLL_SSCG_CTL,
+		IMX_AUDIO_BLK_CTRL_SAI_PLL_MNIT_CTL,
+		IMX_AUDIO_BLK_CTRL_IPG_LP_CTRL
+	},
+};
+
 static const struct of_device_id clk_imx8mp_audiomix_of_match[] = {
-	{ .compatible = "fsl,imx8mp-audio-blk-ctrl" },
+	{ .compatible = "fsl,imx8mp-audio-blk-ctrl", .data = &imx8mp_audiomix_dev_data, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, clk_imx8mp_audiomix_of_match);
@@ -267,6 +425,7 @@ static struct platform_driver clk_imx8mp_audiomix_driver = {
 	.driver = {
 		.name = "imx8mp-audio-blk-ctrl",
 		.of_match_table = clk_imx8mp_audiomix_of_match,
+		.pm = &imx_audiomix_pm_ops,
 	},
 };
 
