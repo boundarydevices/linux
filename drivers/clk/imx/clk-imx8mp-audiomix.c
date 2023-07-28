@@ -13,10 +13,15 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/reset-controller.h>
 
 #include <dt-bindings/clock/imx8mp-clock.h>
 
 #include "clk.h"
+
+#define IMX8MP_AUDIO_BLK_CTRL_EARC_RESET	0
+#define IMX8MP_AUDIO_BLK_CTRL_EARC_PHY_RESET	1
+#define IMX8MP_AUDIO_BLK_CTRL_RESET_NUM		2
 
 #define CLKEN0			0x000
 #define CLKEN1			0x004
@@ -185,8 +190,16 @@ struct pm_safekeep_info {
 	uint32_t regs_num;
 };
 
+struct reset_hw {
+	u32 offset;
+	u32 shift;
+	u32 mask;
+	unsigned long asserted;
+};
+
 struct imx_blk_ctrl_drvdata {
 	void __iomem *base;
+	struct reset_controller_dev rcdev;
 	struct reset_hw *rst_hws;
 	struct pm_safekeep_info pm_info;
 
@@ -223,6 +236,91 @@ static int imx_blk_ctrl_init_runtime_pm_safekeeping(struct device *dev)
 	pm_info->regs_num = regs_num;
 
 	return 0;
+}
+
+static int imx_blk_ctrl_reset_set(struct reset_controller_dev *rcdev,
+				  unsigned long id, bool assert)
+{
+	struct imx_blk_ctrl_drvdata *drvdata = container_of(rcdev,
+			struct imx_blk_ctrl_drvdata, rcdev);
+	unsigned int offset = drvdata->rst_hws[id].offset;
+	unsigned int shift = drvdata->rst_hws[id].shift;
+	unsigned int mask = drvdata->rst_hws[id].mask;
+	void __iomem *reg_addr = drvdata->base + offset;
+	unsigned long flags;
+	u32 reg;
+
+	if (!assert && !test_bit(1, &drvdata->rst_hws[id].asserted))
+		return -ENODEV;
+
+	if (assert && !test_and_set_bit(1, &drvdata->rst_hws[id].asserted))
+		pm_runtime_get_sync(rcdev->dev);
+
+	spin_lock_irqsave(drvdata->lock, flags);
+
+	reg = readl(reg_addr);
+	if (assert)
+		writel(reg & ~(mask << shift), reg_addr);
+	else
+		writel(reg | (mask << shift), reg_addr);
+
+	spin_unlock_irqrestore(drvdata->lock, flags);
+
+	if (!assert && test_and_clear_bit(1, &drvdata->rst_hws[id].asserted))
+		pm_runtime_put_sync(rcdev->dev);
+
+	return 0;
+}
+
+static int imx_blk_ctrl_reset_reset(struct reset_controller_dev *rcdev,
+					   unsigned long id)
+{
+	imx_blk_ctrl_reset_set(rcdev, id, true);
+	return imx_blk_ctrl_reset_set(rcdev, id, false);
+}
+
+static int imx_blk_ctrl_reset_assert(struct reset_controller_dev *rcdev,
+					   unsigned long id)
+{
+	return imx_blk_ctrl_reset_set(rcdev, id, true);
+}
+
+static int imx_blk_ctrl_reset_deassert(struct reset_controller_dev *rcdev,
+					     unsigned long id)
+{
+	return imx_blk_ctrl_reset_set(rcdev, id, false);
+}
+
+static const struct reset_control_ops imx_blk_ctrl_reset_ops = {
+	.reset		= imx_blk_ctrl_reset_reset,
+	.assert		= imx_blk_ctrl_reset_assert,
+	.deassert	= imx_blk_ctrl_reset_deassert,
+};
+
+static int imx_blk_ctrl_register_reset_controller(struct device *dev)
+{
+	struct imx_blk_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
+	struct reset_hw *hws;
+
+	drvdata->rcdev.owner     = THIS_MODULE;
+	drvdata->rcdev.nr_resets = IMX8MP_AUDIO_BLK_CTRL_RESET_NUM;
+	drvdata->rcdev.ops       = &imx_blk_ctrl_reset_ops;
+	drvdata->rcdev.of_node   = dev->of_node;
+	drvdata->rcdev.dev	 = dev;
+
+	drvdata->rst_hws = devm_kzalloc(dev, sizeof(*hws) * IMX8MP_AUDIO_BLK_CTRL_RESET_NUM,
+					GFP_KERNEL);
+	hws = drvdata->rst_hws;
+
+	hws[IMX8MP_AUDIO_BLK_CTRL_EARC_RESET].offset = 0x200;
+	hws[IMX8MP_AUDIO_BLK_CTRL_EARC_RESET].shift = 0x0;
+	hws[IMX8MP_AUDIO_BLK_CTRL_EARC_RESET].mask = 0x1;
+
+	hws[IMX8MP_AUDIO_BLK_CTRL_EARC_PHY_RESET].offset = 0x200;
+	hws[IMX8MP_AUDIO_BLK_CTRL_EARC_PHY_RESET].shift = 0x1;
+	hws[IMX8MP_AUDIO_BLK_CTRL_EARC_PHY_RESET].mask = 0x1;
+
+	return devm_reset_controller_register(dev, &drvdata->rcdev);
 }
 
 static int clk_imx8mp_audiomix_probe(struct platform_device *pdev)
@@ -317,6 +415,10 @@ static int clk_imx8mp_audiomix_probe(struct platform_device *pdev)
 		return PTR_ERR(hw);
 
 	ret = devm_of_clk_add_hw_provider(&pdev->dev, of_clk_hw_onecell_get, priv);
+	if (ret)
+		return ret;
+
+	ret = imx_blk_ctrl_register_reset_controller(dev);
 	if (ret)
 		return ret;
 
