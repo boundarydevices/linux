@@ -2383,7 +2383,7 @@ static struct edid *mtk_dp_get_edid(struct drm_bridge *bridge,
 	bool enabled = mtk_dp->enabled;
 	struct edid *new_edid = NULL;
 	struct mtk_dp_audio_cfg *audio_caps = &mtk_dp->info.audio_cur_cfg;
-	struct cea_sad *sads;
+	struct cea_sad *sads = NULL;
 
 	if (!enabled)
 		drm_bridge_chain_pre_enable(bridge);
