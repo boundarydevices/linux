@@ -208,7 +208,7 @@ w_regs_fail:
 
 void IT6122_ShowPParam(struct it6122_data *it_pdata)
 {
-	u8 u8PRec_FIFOStg;
+	u8 u8PRec_FIFOStg = 0;
 	u8 data = 0;
 	u8 data1 = 0;
 	u32 g_u16PHFP = 0, g_u16PHSW = 0, g_u16PHBP = 0;
