@@ -46,6 +46,8 @@ static struct hyp_trace_buffer {
 	int				nr_readers;
 	struct mutex			lock;
 	struct hyp_trace_clock		clock;
+	struct ht_iterator		*printk_iter;
+	bool				printk_on;
 } hyp_trace_buffer = {
 	.lock		= __MUTEX_INITIALIZER(hyp_trace_buffer.lock),
 };
@@ -91,6 +93,15 @@ bpage_backing_free(struct hyp_buffer_pages_backing *bpage_backing)
 {
 	free_pages_exact((void *)bpage_backing->start, bpage_backing->size);
 }
+
+static int set_ht_printk_on(char *str)
+{
+	if ((strcmp(str, "=0") != 0 && strcmp(str, "=off") != 0))
+		hyp_trace_buffer.printk_on = true;
+
+	return 1;
+}
+__setup("hyp_trace_printk", set_ht_printk_on);
 
 static void __hyp_clock_work(struct work_struct *work)
 {
@@ -582,16 +593,17 @@ static int ht_print_trace_fmt(struct ht_iterator *iter)
 
 static struct ring_buffer_event *__ht_next_pipe_event(struct ht_iterator *iter)
 {
+	struct trace_buffer *trace_buffer = iter->hyp_buffer->trace_buffer;
 	struct ring_buffer_event *evt = NULL;
 	int cpu = iter->cpu;
 
 	if (cpu != RING_BUFFER_ALL_CPUS) {
-		if (ring_buffer_empty_cpu(iter->trace_buffer, cpu))
+		if (ring_buffer_empty_cpu(trace_buffer, cpu))
 			return NULL;
 
 		iter->ent_cpu = cpu;
 
-		return ring_buffer_peek(iter->trace_buffer, cpu, &iter->ts,
+		return ring_buffer_peek(trace_buffer, cpu, &iter->ts,
 					&iter->lost_events);
 	}
 
@@ -601,10 +613,10 @@ static struct ring_buffer_event *__ht_next_pipe_event(struct ht_iterator *iter)
 		unsigned long lost_events;
 		u64 ts;
 
-		if (ring_buffer_empty_cpu(iter->trace_buffer, cpu))
+		if (ring_buffer_empty_cpu(trace_buffer, cpu))
 			continue;
 
-		_evt = ring_buffer_peek(iter->trace_buffer, cpu, &ts,
+		_evt = ring_buffer_peek(trace_buffer, cpu, &ts,
 					&lost_events);
 		if (!_evt)
 			continue;
@@ -640,6 +652,7 @@ hyp_trace_pipe_read(struct file *file, char __user *ubuf,
 		    size_t cnt, loff_t *ppos)
 {
 	struct ht_iterator *iter = (struct ht_iterator *)file->private_data;
+	struct trace_buffer *trace_buffer = iter->hyp_buffer->trace_buffer;
 	int ret;
 
 copy_to_user:
@@ -649,7 +662,7 @@ copy_to_user:
 
 	trace_seq_init(&iter->seq);
 
-	ret = ring_buffer_wait(iter->trace_buffer, iter->cpu, 0, NULL, NULL);
+	ret = ring_buffer_wait(trace_buffer, iter->cpu, 0, NULL, NULL);
 	if (ret < 0)
 		return ret;
 
@@ -661,12 +674,13 @@ copy_to_user:
 			break;
 		}
 
-		ring_buffer_consume(iter->trace_buffer, iter->ent_cpu, NULL,
-				    NULL);
+		ring_buffer_consume(trace_buffer, iter->ent_cpu, NULL, NULL);
 	}
 
 	goto copy_to_user;
 }
+
+static void hyp_trace_buffer_printk(struct hyp_trace_buffer *hyp_buffer);
 
 static void __poll_writer(struct work_struct *work)
 {
@@ -675,20 +689,21 @@ static void __poll_writer(struct work_struct *work)
 
 	iter = container_of(dwork, struct ht_iterator, poll_work);
 
-	ring_buffer_poll_writer(iter->trace_buffer, iter->cpu);
+	ring_buffer_poll_writer(iter->hyp_buffer->trace_buffer, iter->cpu);
+
+	hyp_trace_buffer_printk(iter->hyp_buffer);
 
 	schedule_delayed_work((struct delayed_work *)work,
 			      msecs_to_jiffies(RB_POLL_MS));
 }
 
-static int hyp_trace_pipe_open(struct inode *inode, struct file *file)
+static struct ht_iterator *
+ht_iterator_create(struct hyp_trace_buffer *hyp_buffer, int cpu)
 {
-	struct hyp_trace_buffer *hyp_buffer = &hyp_trace_buffer;
-	int cpu = (s64)inode->i_private;
 	struct ht_iterator *iter = NULL;
 	int ret;
 
-	mutex_lock(&hyp_buffer->lock);
+	WARN_ON(!mutex_is_locked(&hyp_buffer->lock));
 
 	if (hyp_buffer->nr_readers == INT_MAX) {
 		ret = -EBUSY;
@@ -704,10 +719,9 @@ static int hyp_trace_pipe_open(struct inode *inode, struct file *file)
 		ret = -ENOMEM;
 		goto unlock;
 	}
-	iter->trace_buffer = hyp_buffer->trace_buffer;
+	iter->hyp_buffer = hyp_buffer;
 	iter->cpu = cpu;
 	trace_seq_init(&iter->seq);
-	file->private_data = iter;
 
 	ret = ring_buffer_poll_writer(hyp_buffer->trace_buffer, cpu);
 	if (ret)
@@ -722,11 +736,24 @@ unlock:
 	if (ret) {
 		hyp_trace_buffer_teardown(hyp_buffer);
 		kfree(iter);
+		iter = NULL;
 	}
+
+	return iter;
+}
+
+static int hyp_trace_pipe_open(struct inode *inode, struct file *file)
+{
+	struct hyp_trace_buffer *hyp_buffer = &hyp_trace_buffer;
+	int cpu = (s64)inode->i_private;
+
+	mutex_lock(&hyp_buffer->lock);
+
+	file->private_data = ht_iterator_create(hyp_buffer, cpu);
 
 	mutex_unlock(&hyp_buffer->lock);
 
-	return ret;
+	return file->private_data ? 0 : -EINVAL;
 }
 
 static int hyp_trace_pipe_release(struct inode *inode, struct file *file)
@@ -767,15 +794,16 @@ hyp_trace_raw_read(struct file *file, char __user *ubuf,
 		goto read;
 
 again:
-	ret = ring_buffer_read_page(iter->trace_buffer,
+	ret = ring_buffer_read_page(iter->hyp_buffer->trace_buffer,
 				    (struct buffer_data_read_page *)iter->spare,
 				    cnt, iter->cpu, 0);
 	if (ret < 0) {
-		if (!ring_buffer_empty_cpu(iter->trace_buffer, iter->cpu))
+		if (!ring_buffer_empty_cpu(iter->hyp_buffer->trace_buffer,
+					   iter->cpu))
 			return 0;
 
-		ret = ring_buffer_wait(iter->trace_buffer, iter->cpu, 0, NULL,
-				       NULL);
+		ret = ring_buffer_wait(iter->hyp_buffer->trace_buffer,
+				       iter->cpu, 0, NULL, NULL);
 		if (ret < 0)
 			return ret;
 
@@ -809,7 +837,8 @@ static int hyp_trace_raw_open(struct inode *inode, struct file *file)
 		return ret;
 
 	iter = file->private_data;
-	iter->spare = ring_buffer_alloc_read_page(iter->trace_buffer, iter->cpu);
+	iter->spare = ring_buffer_alloc_read_page(iter->hyp_buffer->trace_buffer,
+						  iter->cpu);
 	if (IS_ERR(iter->spare)) {
 		ret = PTR_ERR(iter->spare);
 		iter->spare = NULL;
@@ -823,7 +852,8 @@ static int hyp_trace_raw_release(struct inode *inode, struct file *file)
 {
 	struct ht_iterator *iter = file->private_data;
 
-	ring_buffer_free_read_page(iter->trace_buffer, iter->cpu, iter->spare);
+	ring_buffer_free_read_page(iter->hyp_buffer->trace_buffer, iter->cpu,
+				   iter->spare);
 
 	return hyp_trace_pipe_release(inode, file);
 }
@@ -914,6 +944,49 @@ static void hyp_trace_init_testing_tracefs(struct dentry *root)
 static void hyp_trace_init_testing_tracefs(struct dentry *root) { }
 #endif
 
+static int hyp_trace_buffer_printk_init(struct hyp_trace_buffer *hyp_buffer)
+{
+	int ret = 0;
+
+	mutex_lock(&hyp_buffer->lock);
+
+	if (hyp_buffer->printk_iter)
+		goto unlock;
+
+	hyp_buffer->printk_iter = ht_iterator_create(hyp_buffer,
+						     RING_BUFFER_ALL_CPUS);
+	if (!hyp_buffer->printk_iter)
+		ret = -EINVAL;
+unlock:
+	mutex_unlock(&hyp_buffer->lock);
+
+	return ret;
+}
+
+static void hyp_trace_buffer_printk(struct hyp_trace_buffer *hyp_buffer)
+{
+	struct ht_iterator *ht_iter = hyp_buffer->printk_iter;
+
+	if (!hyp_trace_buffer.printk_on)
+		return;
+
+	trace_seq_init(&ht_iter->seq);
+	while (ht_next_pipe_event(ht_iter)) {
+		ht_print_trace_fmt(ht_iter);
+
+		/* Nothing has been written in the seq_buf */
+		if (!ht_iter->seq.seq.len)
+			return;
+
+		ht_iter->seq.buffer[ht_iter->seq.seq.len] = '\0';
+		printk("%s", ht_iter->seq.buffer);
+
+		ht_iter->seq.seq.len = 0;
+		ring_buffer_consume(hyp_buffer->trace_buffer, ht_iter->ent_cpu,
+				    NULL, NULL);
+	}
+}
+
 int hyp_trace_init_tracefs(void)
 {
 	struct dentry *root, *per_cpu_root;
@@ -974,6 +1047,10 @@ int hyp_trace_init_tracefs(void)
 
 	hyp_trace_init_event_tracefs(root);
 	hyp_trace_init_testing_tracefs(root);
+
+	if (hyp_trace_buffer.printk_on &&
+	    hyp_trace_buffer_printk_init(&hyp_trace_buffer))
+		pr_warn("Failed to init ht_printk");
 
 	if (hyp_trace_init_event_early()) {
 		err = hyp_trace_start();
