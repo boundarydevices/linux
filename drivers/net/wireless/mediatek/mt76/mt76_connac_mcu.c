@@ -746,7 +746,7 @@ mt76_connac_mcu_sta_he_tlv(struct sk_buff *skb, struct ieee80211_sta *sta)
 	he->pkt_ext = 2;
 }
 
-static void
+void
 mt76_connac_mcu_sta_he_tlv_v2(struct sk_buff *skb, struct ieee80211_sta *sta)
 {
 	struct ieee80211_sta_he_cap *he_cap = &sta->deflink.he_cap;
@@ -778,6 +778,7 @@ mt76_connac_mcu_sta_he_tlv_v2(struct sk_buff *skb, struct ieee80211_sta *sta)
 
 	he->pkt_ext = IEEE80211_HE_PHY_CAP9_NOMINAL_PKT_PADDING_16US;
 }
+EXPORT_SYMBOL_GPL(mt76_connac_mcu_sta_he_tlv_v2);
 
 static u8
 mt76_connac_get_phy_mode_v2(struct mt76_phy *mphy, struct ieee80211_vif *vif,
@@ -1973,9 +1974,9 @@ mt76_connac_mcu_build_sku(struct mt76_dev *dev, s8 *sku,
 	}
 }
 
-static s8 mt76_connac_get_ch_power(struct mt76_phy *phy,
-				   struct ieee80211_channel *chan,
-				   s8 target_power)
+s8 mt76_connac_get_ch_power(struct mt76_phy *phy,
+			    struct ieee80211_channel *chan,
+			    s8 target_power)
 {
 	struct mt76_dev *dev = phy->dev;
 	struct ieee80211_supported_band *sband;
@@ -2012,6 +2013,7 @@ static s8 mt76_connac_get_ch_power(struct mt76_phy *phy,
 
 	return target_power;
 }
+EXPORT_SYMBOL_GPL(mt76_connac_get_ch_power);
 
 static int
 mt76_connac_mcu_rate_txpower_band(struct mt76_phy *phy,
@@ -2343,7 +2345,7 @@ mt76_connac_mcu_set_arp_filter(struct mt76_dev *dev, struct ieee80211_vif *vif,
 				 sizeof(req), true);
 }
 
-static int
+int
 mt76_connac_mcu_set_gtk_rekey(struct mt76_dev *dev, struct ieee80211_vif *vif,
 			      bool suspend)
 {
@@ -2368,8 +2370,9 @@ mt76_connac_mcu_set_gtk_rekey(struct mt76_dev *dev, struct ieee80211_vif *vif,
 	return mt76_mcu_send_msg(dev, MCU_UNI_CMD(OFFLOAD), &req,
 				 sizeof(req), true);
 }
+EXPORT_SYMBOL_GPL(mt76_connac_mcu_set_gtk_rekey);
 
-static int
+int
 mt76_connac_mcu_set_suspend_mode(struct mt76_dev *dev,
 				 struct ieee80211_vif *vif,
 				 bool enable, u8 mdtim,
@@ -2398,6 +2401,7 @@ mt76_connac_mcu_set_suspend_mode(struct mt76_dev *dev,
 	return mt76_mcu_send_msg(dev, MCU_UNI_CMD(SUSPEND), &req,
 				 sizeof(req), true);
 }
+EXPORT_SYMBOL_GPL(mt76_connac_mcu_set_suspend_mode);
 
 static int
 mt76_connac_mcu_set_wow_pattern(struct mt76_dev *dev,
@@ -2433,7 +2437,7 @@ mt76_connac_mcu_set_wow_pattern(struct mt76_dev *dev,
 	return mt76_mcu_skb_send_msg(dev, skb, MCU_UNI_CMD(SUSPEND), true);
 }
 
-static int
+int
 mt76_connac_mcu_set_wow_ctrl(struct mt76_phy *phy, struct ieee80211_vif *vif,
 			     bool suspend, struct cfg80211_wowlan *wowlan)
 {
@@ -2485,6 +2489,7 @@ mt76_connac_mcu_set_wow_ctrl(struct mt76_phy *phy, struct ieee80211_vif *vif,
 	return mt76_mcu_send_msg(dev, MCU_UNI_CMD(SUSPEND), &req,
 				 sizeof(req), true);
 }
+EXPORT_SYMBOL_GPL(mt76_connac_mcu_set_wow_ctrl);
 
 int mt76_connac_mcu_set_hif_suspend(struct mt76_dev *dev, bool suspend)
 {
