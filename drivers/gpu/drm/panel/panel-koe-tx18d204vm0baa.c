@@ -86,12 +86,6 @@ static int koe_panel_unprepare_power(struct drm_panel *panel)
 
 	pr_debug("[Kernel/LCM] %s enter\n", __func__);
 
-	gpiod_set_value(koe->bl_en, GPIO_OUT_ZERO);
-	mdelay(5);
-
-	gpiod_set_value(koe->pwr_en, GPIO_OUT_ZERO);
-	mdelay(5);
-
 	if (koe->it6122_attached) {
 		pr_debug("wayT-- check if power off it6122(%d)\n", it6122_bridge_enabled());
 		if (it6122_bridge_enabled()) {
@@ -102,6 +96,12 @@ static int koe_panel_unprepare_power(struct drm_panel *panel)
 			}
 		}
 	}
+	mdelay(5);
+
+	gpiod_set_value(koe->bl_en, GPIO_OUT_ZERO);
+	mdelay(5);
+
+	gpiod_set_value(koe->pwr_en, GPIO_OUT_ZERO);
 	mdelay(5);
 
 	koe->prepared_power = false;
@@ -134,6 +134,12 @@ static int koe_panel_prepare_power(struct drm_panel *panel)
 
 	mdelay(100);
 
+	gpiod_set_value(koe->pwr_en, GPIO_OUT_ONE);
+	mdelay(5);
+
+	gpiod_set_value(koe->bl_en, GPIO_OUT_ONE);
+	mdelay(5);
+
 	if (koe->it6122_attached) {
 		pr_debug("wayT-- check if power on it6122(%d)\n", it6122_bridge_enabled());
 		if (it6122_bridge_enabled()) {
@@ -144,12 +150,6 @@ static int koe_panel_prepare_power(struct drm_panel *panel)
 			}
 		}
 	}
-	mdelay(5);
-
-	gpiod_set_value(koe->pwr_en, GPIO_OUT_ONE);
-	mdelay(5);
-
-	gpiod_set_value(koe->bl_en, GPIO_OUT_ONE);
 	mdelay(5);
 
 	koe->prepared_power = true;
