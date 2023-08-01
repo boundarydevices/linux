@@ -44,6 +44,8 @@ static struct clk_bulk_data imx8m_aux_clks[] = {
 	{ .id = "sai3_mclk2" },
 	{ .id = "sai3_mclk3" },
 	{ .id = "sdma3_root" },
+	{ .id = "pdm_ipg_clk"},
+	{ .id = "pdm_ipg_clk_app"},
 };
 
 /* DAP registers */
