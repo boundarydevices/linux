@@ -356,7 +356,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-dom0.dtb imx8qxp-mek-root.dtb \
 dtb-$(CONFIG_ARCH_MXC) += imx93-14x14-evk.dtb \
 			  imx93-14x14-evk-tja1103.dtb imx93-14x14-evk-rm67199.dtb \
 			  imx93-14x14-evk-mqs.dtb imx93-14x14-evk-aud-hat.dtb \
-			  imx93-14x14-evk-lvds-it6263.dtb imx93-14x14-evk-sja1105.dtb
+			  imx93-14x14-evk-lvds-it6263.dtb imx93-14x14-evk-sja1105.dtb \
+			  imx93-14x14-evk-flexspi-m2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx93-11x11-evk.dtb \
 			  imx93-11x11-evk-inmate.dtb imx93-11x11-evk-root.dtb imx93-11x11-evk-flexio-i2c.dtb \
 			  imx93-11x11-evk-lpspi.dtb imx93-11x11-evk-lpspi-slave.dtb \
@@ -374,15 +375,25 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-9x9-qsb.dtb \
 			  imx93-9x9-qsb-mt9m114.dtb \
 			  imx93-9x9-qsb-i3c.dtb \
 			  imx93-9x9-qsb-lpspi.dtb imx93-9x9-qsb-lpspi-slave.dtb \
-			  imx93-9x9-qsb-ld.dtb imx93-9x9-qsb-aud-hat.dtb
+			  imx93-9x9-qsb-ld.dtb imx93-9x9-qsb-aud-hat.dtb \
+			  imx93-9x9-qsb-rpmsg.dtb imx93-9x9-qsb-rpmsg-lpv.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx91p-9x9-qsb.dtb imx91p-9x9-qsb-aud-hat.dtb \
 			  imx91p-9x9-qsb-mt9m114.dtb \
 			  imx91p-9x9-qsb-flexspi-m2.dtb \
+			  imx91p-9x9-qsb-spi-nand-m2.dtb \
 			  imx91p-9x9-qsb-i3c.dtb \
 			  imx91p-9x9-qsb-lpspi.dtb \
-			  imx91p-9x9-qsb-lpspi-slave.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx91p-11x11-evk.dtb imx91p-11x11-evk-mt9m114.dtb
+			  imx91p-9x9-qsb-lpspi-slave.dtb \
+			  imx91p-9x9-qsb-ld.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx91p-11x11-evk.dtb imx91p-11x11-evk-mt9m114.dtb \
+			  imx91p-11x11-evk-mqs.dtb imx91p-11x11-evk-aud-hat.dtb \
+			  imx91p-11x11-evk-ontat-wvga-panel.dtb \
+			  imx91p-11x11-evk-flexspi-m2.dtb \
+			  imx91p-11x11-evk-ld.dtb \
+			  imx91p-11x11-evk-i3c.dtb \
+			  imx91p-11x11-evk-lpspi.dtb \
+			  imx91p-11x11-evk-lpspi-slave.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-venice-gw72xx-0x-imx219.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-venice-gw72xx-0x-rs232-rts.dtb
