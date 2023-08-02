@@ -21,6 +21,7 @@ This repository contains kernel source trees for the following:
 * [Nitrogen8M Nano][nitrogen8mn]
 * [Nitrogen8M Nano SOM][nitrogen8mn-som]
 * [Nitrogen8M Plus SOM][nitrogen8mp-som]
+* [Nitrogen8M Plus SMARC][nitrogen8mp-smarc]
 
 Latest kernel releases:
 
@@ -88,6 +89,7 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [nitrogen8mn]:https://boundarydevices.com/wiki/nitrogen8m-nano-sbc "Nitrogen8M Nano product page"
 [nitrogen8mn-som]:https://boundarydevices.com/wiki/nitrogen8m-nano-som "Nitrogen8M Nano SOM product page"
 [nitrogen8mp-som]:https://boundarydevices.com/wiki/nitrogen8m-plus-som "Nitrogen8M Plus SOM product page"
+[nitrogen8mp-smarc]:https://boundarydevices.com/product/nitrogen8m-plus-smarc "Nitrogen8M Plus SMARC product page"
 [latest-jellybean]:https://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.3_1.0.0-ga "Boundary Jellybean kernel tree"
 [latest-kitkat]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.1-ga "Boundary KitKat kernel tree"
 [latest-lollipop]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.1.1_2.1.0-ga "Boundary Lollipop kernel tree"
