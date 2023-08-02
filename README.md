@@ -69,6 +69,8 @@ The latest 5.10.x kernel is in branch [boundary-imx\_5.10.x\_2.0.0][latest-5.10.
 
 The latest 5.15.x kernel is in branch [boundary-imx\_5.15.y][latest-5.15.x]
 
+The latest 6.1.x kernel is in branch [boundary-imx\_6.1.y][latest-6.1.x]
+
 These branches are based on Freescale releases of the same name (minus the 'boundary').
 
 
@@ -111,3 +113,4 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [latest-5.4.x]:https://github.com/boundarydevices/linux/tree/boundary-imx_5.4.x_2.3.0 "Boundary 5.4.x-2.3.0 kernel tree"
 [latest-5.10.x]:https://github.com/boundarydevices/linux/tree/boundary-imx_5.10.x_2.0.0 "Boundary 5.10.x-2.0.0 kernel tree"
 [latest-5.15.x]:https://github.com/boundarydevices/linux/tree/boundary-imx_5.15.y "Boundary 5.15.y kernel tree"
+[latest-6.1.x]:https://github.com/boundarydevices/linux/tree/boundary-imx_6.1.y "Boundary 6.1.y kernel tree"
