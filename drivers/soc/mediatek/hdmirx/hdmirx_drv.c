@@ -91,10 +91,11 @@ static ssize_t name_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(name);
 
+#define HDMIRX_BUF_SIZE 512
 #define HDMIRX_ATTR_SPRINTF(fmt, arg...)  \
 do { \
 	if (buf_offset < (sizeof(pbuf) - 1)) { \
-		temp_len = sprintf(pbuf + buf_offset, fmt, ##arg); \
+		temp_len = snprintf(pbuf + buf_offset, HDMIRX_BUF_SIZE - buf_offset, fmt, ##arg); \
 		if (temp_len > 0) \
 			buf_offset += temp_len; \
 		pbuf[buf_offset] = 0; \
@@ -107,7 +108,7 @@ static ssize_t status_show(struct device *dev,
 	struct MTK_HDMI *myhdmi;
 	u32 temp_len = 0;
 	u32 buf_offset = 0;
-	char pbuf[512];
+	char pbuf[HDMIRX_BUF_SIZE];
 	int ret;
 
 	struct notify_device *sdev = (struct notify_device *)
@@ -119,7 +120,7 @@ static ssize_t status_show(struct device *dev,
 			return ret;
 	}
 
-	memset(pbuf, 0, 512);
+	memset(pbuf, 0, HDMIRX_BUF_SIZE);
 
 	myhdmi = (struct MTK_HDMI *)sdev->myhdmi;
 	if ((myhdmi->p5v_status & 0x1) == 0x1)
@@ -1549,9 +1550,8 @@ static long hdmirx_ioctl(struct file *filp,
 
 	switch (cmd) {
 	case MTK_HDMIRX_DEV_INFO:
-		if (myhdmi->power_on == 0)
-			memset(&dev_info, 0, sizeof(struct HDMIRX_DEV_INFO));
-		else
+		memset(&dev_info, 0, sizeof(struct HDMIRX_DEV_INFO));
+		if (myhdmi->power_on != 0)
 			io_get_dev_info(myhdmi, &dev_info);
 		if (copy_to_user((void __user *)arg, &dev_info,
 			sizeof(struct HDMIRX_DEV_INFO))) {
@@ -1561,9 +1561,8 @@ static long hdmirx_ioctl(struct file *filp,
 		break;
 
 	case MTK_HDMIRX_VID_INFO:
-		if (myhdmi->power_on == 0)
-			memset(&vid_para, 0, sizeof(struct HDMIRX_VID_PARA));
-		else
+		memset(&vid_para, 0, sizeof(struct HDMIRX_VID_PARA));
+		if (myhdmi->power_on != 0)
 			io_get_vid_info(myhdmi, &vid_para);
 		if (copy_to_user((void __user *)arg, &vid_para,
 			sizeof(struct HDMIRX_VID_PARA))) {
@@ -1573,9 +1572,8 @@ static long hdmirx_ioctl(struct file *filp,
 		break;
 
 	case MTK_HDMIRX_AUD_INFO:
-		if (myhdmi->power_on == 0)
-			memset(&aud_info, 0, sizeof(struct HDMIRX_AUD_INFO));
-		else
+		memset(&aud_info, 0, sizeof(struct HDMIRX_AUD_INFO));
+		if (myhdmi->power_on != 0)
 			io_get_aud_info(myhdmi, &aud_info);
 		if (copy_to_user((void __user *)arg, &aud_info,
 			sizeof(struct HDMIRX_AUD_INFO))) {
