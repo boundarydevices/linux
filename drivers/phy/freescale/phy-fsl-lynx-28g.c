@@ -1119,8 +1119,10 @@ static int lynx_28g_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 	switch (mode) {
 	case PHY_MODE_ETHERNET:
 		return lynx_28g_set_interface(phy, submode);
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_MODE_ETHERNET_PHY:
 		return lynx_28g_set_link_mode(phy, submode);
+#endif
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -1160,8 +1162,10 @@ static int lynx_28g_validate(struct phy *phy, enum phy_mode mode, int submode,
 	switch (mode) {
 	case PHY_MODE_ETHERNET:
 		return lynx_28g_validate_interface(phy, submode);
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_MODE_ETHERNET_PHY:
 		return lynx_28g_validate_link_mode(phy, submode);
+#endif
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -1208,7 +1212,9 @@ static const struct phy_ops lynx_28g_ops = {
 	.power_off	= lynx_28g_power_off,
 	.set_mode	= lynx_28g_set_mode,
 	.validate	= lynx_28g_validate,
+#ifndef CONFIG_IMX_GKI_FIX
 	.check_cdr_lock	= lynx_28g_check_cdr_lock,
+#endif
 	.configure	= lynx_28g_configure,
 	.owner		= THIS_MODULE,
 };

@@ -40,7 +40,9 @@ enum phy_mode {
 	PHY_MODE_UFS_HS_B,
 	PHY_MODE_PCIE,
 	PHY_MODE_ETHERNET,
+#ifndef CONFIG_IMX_GKI_FIX
 	PHY_MODE_ETHERNET_PHY,
+#endif
 	PHY_MODE_MIPI_DPHY,
 	PHY_MODE_SATA,
 	PHY_MODE_LVDS,
@@ -69,7 +71,9 @@ union phy_configure_opts {
 	struct phy_configure_opts_mipi_dphy	mipi_dphy;
 	struct phy_configure_opts_dp		dp;
 	struct phy_configure_opts_lvds		lvds;
+#ifndef CONFIG_IMX_GKI_FIX
 	struct phy_configure_opts_xgkr		xgkr;
+#endif
 };
 
 /**
@@ -139,7 +143,9 @@ struct phy_ops {
 	 * Returns: 0 if the operation was successful, negative error code
 	 * otherwise.
 	 */
+#ifndef CONFIG_IMX_GKI_FIX
 	int	(*check_cdr_lock)(struct phy *phy, bool *cdr_locked);
+#endif
 	void	(*release)(struct phy *phy);
 	struct module *owner;
 };

@@ -553,16 +553,20 @@ EXPORT_SYMBOL_GPL(phy_validate);
 
 int phy_check_cdr_lock(struct phy *phy, bool *cdr_locked)
 {
-	int ret;
+	int ret = 0;
 
 	if (!phy)
 		return -EINVAL;
 
+#ifndef CONFIG_IMX_GKI_FIX
 	if (!phy->ops->check_cdr_lock)
 		return -EOPNOTSUPP;
+#endif
 
 	mutex_lock(&phy->mutex);
+#ifndef CONFIG_IMX_GKI_FIX
 	ret = phy->ops->check_cdr_lock(phy, cdr_locked);
+#endif
 	mutex_unlock(&phy->mutex);
 
 	return ret;

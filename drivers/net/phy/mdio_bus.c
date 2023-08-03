@@ -849,9 +849,11 @@ int __mdiobus_c45_read(struct mii_bus *bus, int addr, int devad, u32 regnum)
 
 	lockdep_assert_held_once(&bus->mdio_lock);
 
+#ifndef CONFIG_IMX_GKI_FIX
 	if (bus->read_c45)
 		retval = bus->read_c45(bus, addr, devad, regnum);
 	else
+#endif
 		retval = bus->read(bus, addr, mdiobus_c45_addr(devad, regnum));
 
 	trace_mdio_access(bus, 1, addr, regnum, retval, retval);
@@ -880,9 +882,11 @@ int __mdiobus_c45_write(struct mii_bus *bus, int addr, int devad, u32 regnum,
 
 	lockdep_assert_held_once(&bus->mdio_lock);
 
+#ifndef CONFIG_IMX_GKI_FIX
 	if (bus->write_c45)
 		err = bus->write_c45(bus, addr, devad, regnum, val);
 	else
+#endif
 		err = bus->write(bus, addr, mdiobus_c45_addr(devad, regnum),
 				 val);
 
