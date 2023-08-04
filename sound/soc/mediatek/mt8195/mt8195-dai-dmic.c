@@ -351,13 +351,13 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 		/* request fifo soft rst */
 		msk = 0;
 		if (channels > ch_base * 3)
-			msk |= PWR2_TOP_CON1_DMIC4_FIFO_SOFT_RST_EN;
+			msk |= PWR2_TOP_CON1_DMIC_FIFO_SOFT_RST_EN(dmic_priv->clk_index[3]);
 		if (channels > ch_base * 2)
-			msk |= PWR2_TOP_CON1_DMIC3_FIFO_SOFT_RST_EN;
+			msk |= PWR2_TOP_CON1_DMIC_FIFO_SOFT_RST_EN(dmic_priv->clk_index[2]);
 		if (channels > ch_base)
-			msk |= PWR2_TOP_CON1_DMIC2_FIFO_SOFT_RST_EN;
+			msk |= PWR2_TOP_CON1_DMIC_FIFO_SOFT_RST_EN(dmic_priv->clk_index[1]);
 		if (channels > 0)
-			msk |= PWR2_TOP_CON1_DMIC1_FIFO_SOFT_RST_EN;
+			msk |= PWR2_TOP_CON1_DMIC_FIFO_SOFT_RST_EN(dmic_priv->clk_index[0]);
 
 		regmap_set_bits(afe->regmap, PWR2_TOP_CON1, msk);
 
@@ -417,13 +417,13 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 		/* release fifo soft rst */
 		msk = 0;
 		if (channels > ch_base * 3)
-			msk |= PWR2_TOP_CON1_DMIC4_FIFO_SOFT_RST_EN;
+			msk |= PWR2_TOP_CON1_DMIC_FIFO_SOFT_RST_EN(dmic_priv->clk_index[3]);
 		if (channels > ch_base * 2)
-			msk |= PWR2_TOP_CON1_DMIC3_FIFO_SOFT_RST_EN;
+			msk |= PWR2_TOP_CON1_DMIC_FIFO_SOFT_RST_EN(dmic_priv->clk_index[2]);
 		if (channels > ch_base)
-			msk |= PWR2_TOP_CON1_DMIC2_FIFO_SOFT_RST_EN;
+			msk |= PWR2_TOP_CON1_DMIC_FIFO_SOFT_RST_EN(dmic_priv->clk_index[1]);
 		if (channels > 0)
-			msk |= PWR2_TOP_CON1_DMIC1_FIFO_SOFT_RST_EN;
+			msk |= PWR2_TOP_CON1_DMIC_FIFO_SOFT_RST_EN(dmic_priv->clk_index[0]);
 
 		regmap_clear_bits(afe->regmap, PWR2_TOP_CON1, msk);
 		break;
