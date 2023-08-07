@@ -6,10 +6,28 @@
 #include <linux/tracefs.h>
 
 #include <asm/kvm_host.h>
-#include <asm/kvm_define_hypevents.h>
 #include <asm/setup.h>
 
 #include "hyp_trace.h"
+
+static const char *hyp_printk_fmt_from_id(u8 fmt_id);
+
+#include <asm/kvm_define_hypevents.h>
+
+extern char __hyp_printk_fmts_start[];
+extern char __hyp_printk_fmts_end[];
+
+static const char *hyp_printk_fmt_from_id(u8 fmt_id)
+{
+	u8 max_ids = (__hyp_printk_fmts_end -
+		      __hyp_printk_fmts_start) / sizeof(struct hyp_printk_fmt);
+
+	if (fmt_id >= max_ids)
+		return "Unknown Format";
+
+	return (const char *)(__hyp_printk_fmts_start +
+			      (fmt_id * sizeof(struct hyp_printk_fmt)));
+}
 
 extern struct hyp_event __hyp_events_start[];
 extern struct hyp_event __hyp_events_end[];
@@ -310,6 +328,9 @@ int hyp_trace_init_events(void)
 	struct hyp_event_id *hyp_event_id = __hyp_event_ids_start;
 	struct hyp_event *event = __hyp_events_start;
 	int id = 0;
+
+	/* __hyp_printk event only supports U8_MAX different formats */
+	WARN_ON((__hyp_printk_fmts_end - __hyp_printk_fmts_start) > U8_MAX);
 
 	for (; (unsigned long)event < (unsigned long)__hyp_events_end;
 		event++, hyp_event_id++, id++) {
