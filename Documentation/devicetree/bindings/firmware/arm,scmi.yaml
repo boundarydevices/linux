@@ -237,6 +237,39 @@ properties:
       reg:
         const: 0x18
 
+  protocol@19:
+    type: object
+    allOf:
+      - $ref: "#/$defs/protocol-node"
+      - $ref: "../pinctrl/pinctrl.yaml"
+    unevaluatedProperties: false
+
+    properties:
+      reg:
+        const: 0x19
+
+      '#pinctrl-cells':
+        const: 0
+
+    patternProperties:
+      '-pins$':
+        type: object
+        allOf:
+          - $ref: "../pinctrl/pincfg-node.yaml#"
+          - $ref: "../pinctrl/pinmux-node.yaml#"
+        unevaluatedProperties: false
+
+        description:
+          A pin multiplexing sub-node describe how to configure a
+          set of pins is some desired function.
+          A single sub-node may define several pin configurations.
+          This sub-node is using default pinctrl bindings to configure
+          pin multiplexing and using SCMI protocol to apply specified
+          configuration using SCMI protocol.
+
+    required:
+      - reg
+
 additionalProperties: false
 
 $defs:
@@ -389,6 +422,26 @@ examples:
 
             scmi_powercap: protocol@18 {
                 reg = <0x18>;
+            };
+
+            scmi_pinctrl: protocol@19 {
+                reg = <0x19>;
+                #pinctrl-cells = <0>;
+
+                i2c2-pins {
+                    groups = "i2c2_a", "i2c2_b";
+                    function = "i2c2";
+                };
+
+                mdio-pins {
+                    groups = "avb_mdio";
+                    drive-strength = <24>;
+                };
+
+                keys_pins: keys-pins {
+                    pins = "GP_5_17", "GP_5_20", "GP_5_22", "GP_2_1";
+                    bias-pull-up;
+                };
             };
         };
     };
