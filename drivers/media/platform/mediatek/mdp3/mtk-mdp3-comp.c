@@ -1230,12 +1230,6 @@ static const struct mdp_comp_ops ccorr_ops = {
 static int init_split(struct mdp_comp_ctx *ctx, struct mdp_cmdq_cmd *cmd)
 {
 	struct mdp_dev *mdp_dev = ctx->comp->mdp_dev;
-	phys_addr_t base = ctx->comp->reg_base;
-	u8 subsys_id = ctx->comp->subsys_id;
-
-	/* Reset engine */
-	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_RESET, 0x1, VPP_SPLIT_RESET_MASK);
-	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_RESET, 0x0, VPP_SPLIT_RESET_MASK);
 
 	mtk_mmsys_vpp_split_out_config(mdp_dev->mm_subsys[MDP_MM_SUBSYS_1].mmsys,
 				       &cmd->pkt);
