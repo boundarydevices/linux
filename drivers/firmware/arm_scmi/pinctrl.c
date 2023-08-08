@@ -305,7 +305,7 @@ static int scmi_pinctrl_config_get(const struct scmi_protocol_handle *ph,
 				   u8 config_type, unsigned long *config_value)
 {
 	int ret;
-	u32 attributes;
+	/*u32 attributes;*/
 	struct scmi_xfer *t;
 	struct scmi_msg_conf_get *tx;
 
