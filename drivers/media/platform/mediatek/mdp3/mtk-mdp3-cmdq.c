@@ -234,7 +234,7 @@ static int mdp_path_subfrm_require(const struct mdp_path *path,
 
 	index = __get_pipe(path->mdp_dev, path->comps[0].comp->public_id);
 
-	if (index == MDP_PIPE_SPLIT)
+	if (index == MDP_PIPE_SPLIT || index == MDP_PIPE_SPLIT2)
 		mtk_mutex_write_sof(mutex, MUTEX_SOF_IDX_HDMI_VSYNC_MODE);
 	else
 		mtk_mutex_write_sof(mutex, MUTEX_SOF_IDX_SINGLE_MODE);
@@ -785,7 +785,8 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 		if (is_dummy_engine(path->mdp_dev, inner_id))
 			continue;
 		ctx = &path->comps[index];
-		if (get_comp_public_id(path->mdp_dev, inner_id) == MDP_COMP_SPLIT) {
+		if (get_comp_public_id(path->mdp_dev, inner_id) == MDP_COMP_SPLIT ||
+		    get_comp_public_id(path->mdp_dev, inner_id) == MDP_COMP_SPLIT2) {
 			event = ctx->comp->gce_event[MDP_GCE_EVENT_SOF] + mutex->id;
 			if (cmd->user == MDP_CMDQ_USER_CAP &&
 			    cap_ctx->cap_status != CAP_STATUS_START)
