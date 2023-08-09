@@ -118,7 +118,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-rm67191.dtb imx8mp-evk-it626
 			  imx8mp-evk-ov2775-ov5640.dtb imx8mp-evk-basler-ov5640.dtb imx8mp-evk-basler.dtb \
 			  imx8mp-evk-basler-ov2775.dtb imx8mp-evk-dual-basler.dtb \
 			  imx8mp-evk-dual-ov2775.dtb imx8mp-evk-spdif-lb.dtb imx8mp-evk-dsp.dtb \
-			  imx8mp-evk-sof-wm8960.dtb \
+			  imx8mp-evk-sof-wm8960.dtb imx8mp-evk-sof-pdm.dtb \
 			  imx8mp-evk-os08a20-ov5640.dtb imx8mp-evk-os08a20.dtb \
 			  imx8mp-evk-dual-os08a20.dtb \
 			  imx8mp-evk-iqaudio-dacplus.dtb imx8mp-evk-iqaudio-dacpro.dtb imx8mp-evk-hifiberry-dacplus.dtb \
@@ -385,7 +385,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx91p-9x9-qsb.dtb imx91p-9x9-qsb-aud-hat.dtb \
 			  imx91p-9x9-qsb-i3c.dtb \
 			  imx91p-9x9-qsb-lpspi.dtb \
 			  imx91p-9x9-qsb-lpspi-slave.dtb \
-			  imx91p-9x9-qsb-ld.dtb
+			  imx91p-9x9-qsb-ld.dtb \
+			  imx91p-9x9-qsb-ontat-wvga-panel.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx91p-11x11-evk.dtb imx91p-11x11-evk-mt9m114.dtb \
 			  imx91p-11x11-evk-mqs.dtb imx91p-11x11-evk-aud-hat.dtb \
 			  imx91p-11x11-evk-ontat-wvga-panel.dtb \

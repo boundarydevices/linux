@@ -83,30 +83,7 @@ static int fsl_rpmsg_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
-	if (!(rpmsg->mclk_streams & BIT(substream->stream))) {
-		ret = clk_prepare_enable(rpmsg->mclk);
-		if (ret) {
-			dev_err(dai->dev, "failed to enable mclk: %d\n", ret);
-			return ret;
-		}
-
-		rpmsg->mclk_streams |= BIT(substream->stream);
-	}
-
 	return ret;
-}
-
-static int fsl_rpmsg_hw_free(struct snd_pcm_substream *substream,
-			     struct snd_soc_dai *dai)
-{
-	struct fsl_rpmsg *rpmsg = snd_soc_dai_get_drvdata(dai);
-
-	if ((rpmsg->mclk != NULL) && (rpmsg->mclk_streams & BIT(substream->stream))) {
-		clk_disable_unprepare(rpmsg->mclk);
-		rpmsg->mclk_streams &= ~BIT(substream->stream);
-	}
-
-	return 0;
 }
 
 static int fsl_rpmsg_startup(struct snd_pcm_substream *substream,
@@ -124,7 +101,6 @@ static int fsl_rpmsg_startup(struct snd_pcm_substream *substream,
 static const struct snd_soc_dai_ops fsl_rpmsg_dai_ops = {
 	.startup	= fsl_rpmsg_startup,
 	.hw_params      = fsl_rpmsg_hw_params,
-	.hw_free        = fsl_rpmsg_hw_free,
 };
 
 static struct snd_soc_dai_driver fsl_rpmsg_dai = {
@@ -357,6 +333,26 @@ static int fsl_rpmsg_runtime_resume(struct device *dev)
 		}
 	}
 
+	if ((rpmsg->mclk != NULL) && !(rpmsg->mclk_streams & BIT(SNDRV_PCM_STREAM_CAPTURE))) {
+		ret = clk_prepare_enable(rpmsg->mclk);
+		if (ret) {
+			dev_err(dev, "failed to enable mclk: %d\n", ret);
+			return ret;
+		}
+
+		rpmsg->mclk_streams |= BIT(SNDRV_PCM_STREAM_CAPTURE);
+	}
+
+	if ((rpmsg->mclk != NULL) && !(rpmsg->mclk_streams & BIT(SNDRV_PCM_STREAM_PLAYBACK))) {
+		ret = clk_prepare_enable(rpmsg->mclk);
+		if (ret) {
+			dev_err(dev, "failed to enable mclk: %d\n", ret);
+			return ret;
+		}
+
+		rpmsg->mclk_streams |= BIT(SNDRV_PCM_STREAM_PLAYBACK);
+	}
+
 	return 0;
 
 ocram_err:
@@ -373,6 +369,17 @@ static int fsl_rpmsg_runtime_suspend(struct device *dev)
 
 	if(rpmsg->ocram != NULL)
 		clk_disable_unprepare(rpmsg->ocram);
+
+	if ((rpmsg->mclk != NULL) && (rpmsg->mclk_streams & BIT(SNDRV_PCM_STREAM_CAPTURE))) {
+		clk_disable_unprepare(rpmsg->mclk);
+		rpmsg->mclk_streams &= ~BIT(SNDRV_PCM_STREAM_CAPTURE);
+	}
+
+	if ((rpmsg->mclk != NULL) && (rpmsg->mclk_streams & BIT(SNDRV_PCM_STREAM_PLAYBACK))) {
+		clk_disable_unprepare(rpmsg->mclk);
+		rpmsg->mclk_streams &= ~BIT(SNDRV_PCM_STREAM_PLAYBACK);
+	}
+
 	clk_disable_unprepare(rpmsg->dma);
 	clk_disable_unprepare(rpmsg->ipg);
 
