@@ -53,7 +53,7 @@ struct kvm_iommu_ops {
 	bool (*dabt_handler)(struct kvm_cpu_context *host_ctxt, u64 esr, u64 addr);
 };
 
-int kvm_iommu_init(void);
+int kvm_iommu_init(struct kvm_iommu_ops *ops);
 
 int kvm_iommu_init_device(struct kvm_hyp_iommu *iommu);
 

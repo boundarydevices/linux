@@ -924,6 +924,20 @@ static int smmu_put_device(struct device *dev, void *data)
 	return 0;
 }
 
+/*
+ * Drop the PM references of the SMMU taken at probe
+ * after it's guaranteed the hypervisor as initialized the SMMUs.
+ */
+static int kvm_arm_smmu_v3_post_init(void)
+{
+	if (!kvm_arm_smmu_count)
+		return 0;
+
+	WARN_ON(driver_for_each_device(&kvm_arm_smmu_driver.driver, NULL,
+				       NULL, smmu_put_device));
+	return 0;
+}
+
 static int kvm_arm_smmu_v3_init_drv(void)
 {
 	int ret;
@@ -953,7 +967,10 @@ static int kvm_arm_smmu_v3_init_drv(void)
 	kvm_hyp_arm_smmu_v3_smmus = kvm_arm_smmu_array;
 	kvm_hyp_arm_smmu_v3_count = kvm_arm_smmu_count;
 
-	return 0;
+	ret = kvm_iommu_init_hyp(kern_hyp_va(lm_alias(&kvm_nvhe_sym(smmu_ops))));
+	if (ret)
+		return ret;
+	return kvm_arm_smmu_v3_post_init();
 
 err_free:
 	kvm_arm_smmu_array_free();
@@ -975,26 +992,8 @@ static int kvm_arm_smmu_v3_register(void)
 	if (!is_protected_kvm_enabled())
 		return 0;
 
-	return kvm_iommu_register_driver(&kvm_smmu_v3_ops,
-					kern_hyp_va(lm_alias(&kvm_nvhe_sym(smmu_ops))));
+	return kvm_iommu_register_driver(&kvm_smmu_v3_ops);
 };
 
-/*
- * KVM init hypervisor at device_sync init call,
- * so we drop the PM references of the SMMU taken at probe
- * at the late initcall where it's guaranteed the hypervisor
- * has initialized the SMMUs.
- */
-static int kvm_arm_smmu_v3_post_init(void)
-{
-	if (!kvm_arm_smmu_count)
-		return 0;
-
-	WARN_ON(driver_for_each_device(&kvm_arm_smmu_driver.driver, NULL,
-				       NULL, smmu_put_device));
-	return 0;
-}
-
 core_initcall(kvm_arm_smmu_v3_register);
-late_initcall(kvm_arm_smmu_v3_post_init);
 MODULE_LICENSE("GPL v2");

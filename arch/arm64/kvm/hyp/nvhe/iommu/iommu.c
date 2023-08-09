@@ -144,15 +144,15 @@ static void domain_put(struct kvm_hyp_iommu_domain *domain)
 	BUG_ON(!atomic_dec_return_release(&domain->refs));
 }
 
-int kvm_iommu_init(void)
+int kvm_iommu_init(struct kvm_iommu_ops *ops)
 {
 	int ret;
 	u64 domain_root_pfn = __hyp_pa(kvm_hyp_iommu_domains) >> PAGE_SHIFT;
 
-	if (!kvm_iommu_ops ||
-	    !kvm_iommu_ops->init ||
-	    !kvm_iommu_ops->alloc_domain ||
-	    !kvm_iommu_ops->free_domain)
+	if (!ops ||
+	    !ops->init ||
+	    !ops->alloc_domain ||
+	    !ops->free_domain)
 		return 0;
 
 	ret = hyp_pool_init_empty(&iommu_host_pool, 64);
@@ -164,7 +164,9 @@ int kvm_iommu_init(void)
 	if (ret)
 		return ret;
 
-	ret = kvm_iommu_ops->init();
+	kvm_iommu_ops = ops;
+
+	ret = ops->init();
 	if (ret)
 		goto out_reclaim_domain;
 
