@@ -644,7 +644,7 @@ static int mtk_dai_dmic_hw_gain_ctrl_put(struct snd_kcontrol *kcontrol,
 	struct mt8195_afe_private *afe_priv = afe->platform_priv;
 	struct mtk_dai_dmic_priv *dmic_priv;
 	unsigned int source = ucontrol->value.enumerated.item[0];
-	unsigned int *cached;
+	unsigned int *cached = 0;
 
 	if (source >= e->items)
 		return -EINVAL;
