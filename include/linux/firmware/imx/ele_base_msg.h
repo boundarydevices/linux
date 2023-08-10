@@ -56,6 +56,14 @@
 #define ELE_IMEM_EXPORT			0x1
 #define ELE_IMEM_IMPORT			0x2
 
+#define ELE_READ_FUSE_REQ		0x97
+#define ELE_READ_FUSE_REQ_MSG_SZ	0x08
+#define ELE_READ_FUSE_RSP_MSG_SZ	0x0C
+#define ELE_READ_FUSE_OTP_UNQ_ID_RSP_MSG_SZ \
+					0x1C
+#define OTP_UNIQ_ID			0x01
+#define OTFAD_CONFIG			0x2
+
 int ele_get_info(struct device *dev, phys_addr_t addr, u32 data_size);
 int ele_ping(struct device *dev);
 int ele_start_rng(struct device *dev);
@@ -64,4 +72,6 @@ int ele_service_swap(struct device *dev,
 		     phys_addr_t addr,
 		     u32 addr_size, u16 flag);
 
+int read_common_fuse(struct device *dev,
+		     uint16_t fuse_id, u32 *value);
 #endif

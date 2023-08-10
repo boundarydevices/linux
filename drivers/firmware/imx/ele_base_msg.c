@@ -269,3 +269,122 @@ int ele_service_swap(struct device *dev,
 
 	return ret;
 }
+
+static int read_otp_uniq_id(struct ele_mu_priv *priv, u32 *value)
+{
+	int ret;
+	unsigned int status;
+
+	ret  = validate_rsp_hdr(priv,
+				priv->rx_msg->header,
+				ELE_READ_FUSE_REQ,
+				ELE_READ_FUSE_OTP_UNQ_ID_RSP_MSG_SZ,
+				true);
+	if (ret)
+		return ret;
+
+	status = RES_STATUS(priv->rx_msg->data[0]);
+	if (status != priv->success_tag) {
+		dev_err(priv->dev, "Command Id[%d], Response Failure = 0x%x",
+			ELE_READ_FUSE_REQ, status);
+		ret = -1;
+	} else {
+		value[0] = priv->rx_msg->data[1];
+		value[1] = priv->rx_msg->data[2];
+		value[2] = priv->rx_msg->data[3];
+		value[3] = priv->rx_msg->data[4];
+
+		ret = 0;
+	}
+
+	return ret;
+}
+
+static int read_fuse_word(struct ele_mu_priv *priv, u32 *value)
+{
+	int ret;
+	unsigned int status;
+
+	ret  = validate_rsp_hdr(priv,
+				priv->rx_msg->header,
+				ELE_READ_FUSE_REQ,
+				ELE_READ_FUSE_RSP_MSG_SZ,
+				true);
+	if (ret)
+		return ret;
+
+	status = RES_STATUS(priv->rx_msg->data[0]);
+	if (status != priv->success_tag) {
+		dev_err(priv->dev, "Command Id[%d], Response Failure = 0x%x",
+			ELE_READ_FUSE_REQ, status);
+		ret = -1;
+	} else {
+		value[0] = priv->rx_msg->data[1];
+
+		ret = 0;
+	}
+
+	return ret;
+}
+
+/**
+ * read_common_fuse() - Brief description of function.
+ * @struct device *dev: Device to send the request to read fuses.
+ * @uint16_t fuse_id: Fuse identifier to read.
+ * @u32 *value: unsigned integer array to store the fused-values.
+ *
+ * Secure-enclave like EdgeLock Enclave, manages the fuse. This API
+ * requests FW to read the common fuses. FW sends the read value as
+ * response.
+ *
+ * Context: This function takes two mutex locks: one on the command
+ *          and second on the message unit.
+ *          such that multiple commands cannot be sent.
+ *          for the device Describes whether the function can sleep, what locks it takes,
+ *          releases, or expects to be held. It can extend over multiple
+ *          lines.
+ * Return: Describe the return value of function_name.
+ *
+ * The return value description can also have multiple paragraphs, and should
+ * be placed at the end of the comment block.
+ */
+int read_common_fuse(struct device *dev,
+		     uint16_t fuse_id, u32 *value)
+{
+	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+	int ret;
+
+	ret = imx_se_alloc_tx_rx_buf(priv);
+	if (ret)
+		return ret;
+
+	ret = plat_fill_cmd_msg_hdr(priv,
+				    (struct mu_hdr *)&priv->tx_msg->header,
+				    ELE_READ_FUSE_REQ,
+				    ELE_READ_FUSE_REQ_MSG_SZ,
+				    true);
+	if (ret) {
+		pr_err("Error: plat_fill_cmd_msg_hdr failed.\n");
+		goto exit;
+	}
+
+	priv->tx_msg->data[0] = fuse_id;
+	ret = imx_ele_msg_send_rcv(priv);
+	if (ret < 0)
+		goto exit;
+
+	switch (fuse_id) {
+	case OTP_UNIQ_ID:
+		ret = read_otp_uniq_id(priv, value);
+		break;
+	default:
+		ret = read_fuse_word(priv, value);
+		break;
+	}
+
+exit:
+	imx_se_free_tx_rx_buf(priv);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(read_common_fuse);

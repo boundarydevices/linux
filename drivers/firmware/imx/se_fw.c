@@ -10,6 +10,7 @@
 #include <linux/export.h>
 #include <linux/firmware/imx/ele_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
+#include <linux/firmware/imx/se_fw_inc.h>
 #include <linux/genalloc.h>
 #include <linux/io.h>
 #include <linux/init.h>
@@ -1151,6 +1152,7 @@ static int se_fw_probe(struct platform_device *pdev)
 	}
 
 	priv->info = info;
+	memcpy(priv->pdev_name, pdev->name, strlen(pdev->name) + 1);
 	priv->max_dev_ctx = info->max_dev_ctx;
 	priv->cmd_tag = info->cmd_tag;
 	priv->rsp_tag = info->rsp_tag;
@@ -1312,6 +1314,32 @@ exit:
 	 */
 	return se_probe_cleanup(pdev);
 }
+
+/**
+ * get_se_dev() - to fetch the refernce to the device, corresponding to an MU.
+ * @pdev_name: Physical device name of the secure-enclave pNode.
+ *
+ * This function returns the reference to the device, probed against an MU.
+ * Outside this driver or any kernel service requiring to access the secure
+ * services over an MU, needs the reference to the device.
+ *
+ * Context: Other module, requiring to access the secure services over an
+ *          MU, needs the reference to the device.
+ *
+ * Return: Reference to the device.
+ */
+struct device *get_se_dev(const uint8_t *pdev_name)
+{
+	struct ele_mu_priv *priv;
+
+	list_for_each_entry(priv, &priv_data_list, priv_data) {
+		if (!memcmp(priv->pdev_name, pdev_name, strlen(pdev_name) + 1))
+			return priv->dev;
+	}
+
+	return NULL;
+}
+EXPORT_SYMBOL_GPL(get_se_dev);
 
 static int se_fw_remove(struct platform_device *pdev)
 {
