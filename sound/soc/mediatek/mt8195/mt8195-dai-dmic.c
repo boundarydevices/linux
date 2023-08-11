@@ -159,39 +159,6 @@ static void mtk_dai_dmic_hw_gain_on(struct mtk_base_afe *afe,
 		regmap_clear_bits(afe->regmap, reg->con0, msk);
 }
 
-static void mtk_dai_dmic_hw_gain_one_heart(struct mtk_base_afe *afe,
-					   unsigned int id, bool on)
-{
-	const struct mtk_dai_dmic_hw_gain_ctrl_reg *reg;
-	unsigned int msk;
-
-	reg = get_dmic_hw_gain_ctrl_reg(afe, id);
-	if (!reg)
-		return;
-
-	switch (id) {
-	case DMIC0:
-		/* dmic0 is group leader and no one heart bit */
-		return;
-	case DMIC1:
-		msk = DMIC_BYPASS_HW_GAIN2_ONE_HEART;
-		break;
-	case DMIC2:
-		msk = DMIC_BYPASS_HW_GAIN3_ONE_HEART;
-		break;
-	case DMIC3:
-		msk = DMIC_BYPASS_HW_GAIN4_ONE_HEART;
-		break;
-	default:
-		return;
-	}
-
-	if (on)
-		regmap_set_bits(afe->regmap, reg->bypass, msk);
-	else
-		regmap_clear_bits(afe->regmap, reg->bypass, msk);
-}
-
 static const struct reg_sequence mtk_dai_dmic_iir_coeff_reg_defaults[] = {
 	{ AFE_DMIC0_IIR_COEF_02_01, 0x00000000 },
 	{ AFE_DMIC0_IIR_COEF_04_03, 0x00003FB8 },
@@ -285,13 +252,11 @@ static void mtk_dai_dmic_hw_gain_enable(struct mtk_base_afe *afe,
 	for (id = 0; id <= end; id++) {
 		reorder_id = dmic_priv->clk_index[id];
 		if (enable && dmic_priv->gain_on[reorder_id]) {
-			mtk_dai_dmic_hw_gain_one_heart(afe, reorder_id, enable);
-			mtk_dai_dmic_hw_gain_byass(afe, reorder_id, !enable);
-			mtk_dai_dmic_hw_gain_on(afe, reorder_id, enable);
+			mtk_dai_dmic_hw_gain_byass(afe, reorder_id, false);
+			mtk_dai_dmic_hw_gain_on(afe, reorder_id, true);
 		} else {
-			mtk_dai_dmic_hw_gain_one_heart(afe, reorder_id, !enable);
-			mtk_dai_dmic_hw_gain_on(afe, reorder_id, enable);
-			mtk_dai_dmic_hw_gain_byass(afe, reorder_id, !enable);
+			mtk_dai_dmic_hw_gain_on(afe, reorder_id, false);
+			mtk_dai_dmic_hw_gain_byass(afe, reorder_id, true);
 		}
 	}
 }
