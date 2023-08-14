@@ -7,7 +7,7 @@
 #ifndef __MDP3_COMP_MT8183_H__
 #define __MDP3_COMP_MT8183_H__
 
-#include "mtk-mdp3-type.h"
+#include "../mtk-mdp3-type.h"
 
 /*
  * ISP-MDP generic output information
