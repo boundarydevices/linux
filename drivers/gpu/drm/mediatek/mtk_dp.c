@@ -2531,7 +2531,7 @@ static int mtk_dp_poweron(struct mtk_dp *mtk_dp)
 	ret = clk_prepare_enable(mtk_dp->dp_tx_clk);
 	if (ret < 0) {
 		dev_err(mtk_dp->dev, "Fail to enable clock: %d\n", ret);
-		goto err;
+		goto end;
 	}
 	ret = phy_init(mtk_dp->phy);
 	if (ret) {
@@ -2547,12 +2547,13 @@ static int mtk_dp_poweron(struct mtk_dp *mtk_dp)
 	mtk_dp_init_port(mtk_dp);
 	mtk_dp_power_enable(mtk_dp);
 	mtk_dp_hwirq_enable(mtk_dp, true);
+	goto end;
 
 err_phy_config:
 	phy_exit(mtk_dp->phy);
 err_phy_init:
 	clk_disable_unprepare(mtk_dp->dp_tx_clk);
-err:
+end:
 	mutex_unlock(&mtk_dp->dp_lock);
 	return ret;
 }
