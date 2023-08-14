@@ -759,7 +759,7 @@ restart:
 			INCR(ehci->stats.normal);
 		} else {
 			/* Force to check port status */
-			if (ehci->has_ci_pec_bug)
+			if (ehci->has_fsl_port_bug)
 				status |= STS_PCD;
 			INCR(ehci->stats.error);
 		}
