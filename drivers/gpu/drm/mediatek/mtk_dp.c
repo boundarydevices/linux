@@ -1036,6 +1036,16 @@ static u32 mtk_dp_swirq_get_clear(struct mtk_dp *mtk_dp)
 	return irq_status;
 }
 
+static void mtk_dp_swirq_enable(struct mtk_dp *mtk_dp, bool enable)
+{
+	if (enable)
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_35C4, 0,
+				SW_IRQ_MASK_DP_TRANS_P0_MASK);
+	else
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_35C4, 0xFFFF,
+				SW_IRQ_MASK_DP_TRANS_P0_MASK);
+}
+
 static u32 mtk_dp_hwirq_get_clear(struct mtk_dp *mtk_dp)
 {
 	u8 irq_status = (mtk_dp_read(mtk_dp, MTK_DP_TRANS_P0_3418) &
@@ -2503,11 +2513,45 @@ err:
 	return msg->size;
 }
 
+static void mtk_dp_swirq_hpd(struct mtk_dp *mtk_dp, u8 conn)
+{
+	u32 data;
+
+	data = mtk_dp_read(mtk_dp, MTK_DP_TRANS_P0_3414);
+
+	mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+			HPD_OVR_EN_DP_TRANS_P0_MASK,
+			HPD_OVR_EN_DP_TRANS_P0_MASK);
+
+	if (conn)
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+			HPD_SET_DP_TRANS_P0_MASK,
+			HPD_SET_DP_TRANS_P0_MASK);
+	else
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+			0,
+			HPD_SET_DP_TRANS_P0_MASK);
+}
+
 static void mtk_dp_aux_init(struct mtk_dp *mtk_dp)
 {
 	drm_dp_aux_init(&mtk_dp->aux);
 	mtk_dp->aux.name = "aux_mtk_dp";
 	mtk_dp->aux.transfer = mtk_dp_aux_transfer;
+}
+
+static void mtk_dp_swirq_hpd_interrupt_set(struct mtk_dp *mtk_dp, u8 status)
+{
+	dev_info(mtk_dp->dev, "[DPTX] status:%d [2:DISCONNECT, 4:CONNECT]\n", status);
+
+	if (status == MTK_DP_HPD_CONNECT) {
+		mtk_dp_init_port(mtk_dp);
+		mtk_dp_swirq_hpd(mtk_dp, TRUE);
+	} else
+		mtk_dp_swirq_hpd(mtk_dp, FALSE);
+
+	mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_35C0, status,
+			SW_IRQ_SET_DP_TRANS_P0_MASK);
 }
 
 static void mtk_dp_poweroff(struct mtk_dp *mtk_dp)
@@ -3101,8 +3145,13 @@ static int mtk_dp_suspend(struct device *dev)
 		usleep_range(2000, 3000);
 	}
 
+	if (!mtk_dp_is_edp(mtk_dp)) {
+		mtk_dp_swirq_enable(mtk_dp, false);
+		mtk_dp_swirq_hpd_interrupt_set(mtk_dp, MTK_DP_HPD_DISCONNECT);
+	} else
+		mtk_dp_hwirq_enable(mtk_dp, false);
+
 	mtk_dp_power_disable(mtk_dp);
-	mtk_dp_hwirq_enable(mtk_dp, false);
 
 	pm_runtime_put_sync(dev);
 
@@ -3117,7 +3166,12 @@ static int mtk_dp_resume(struct device *dev)
 
 	mtk_dp_init_port(mtk_dp);
 	mtk_dp_power_enable(mtk_dp);
-	mtk_dp_hwirq_enable(mtk_dp, true);
+
+	if (!mtk_dp_is_edp(mtk_dp)) {
+		mtk_dp_swirq_enable(mtk_dp, true);
+		mtk_dp_swirq_hpd_interrupt_set(mtk_dp, MTK_DP_HPD_CONNECT);
+	} else
+		mtk_dp_hwirq_enable(mtk_dp, true);
 
 	return 0;
 }
