@@ -729,7 +729,7 @@
 };
 
 &dp_intf1 {
-	status = "okay";
+	status = "disabled";
 	mediatek,oob-hpd;
 	ports {
 		port {
@@ -743,7 +743,7 @@
 &dp_tx {
 	pinctrl-names = "default";
 	pinctrl-0 = <&dptx_pin>;
-	status = "okay";
+	status = "disabled";
 
 	ports {
 		#address-cells = <1>;
@@ -1236,7 +1236,7 @@
 	dai-link-2 {
 		sound-dai = <&afe>;
 		dai-link-name = "DPTX_BE";
-		status = "okay";
+		status = "disabled";
 
 		codec-0 {
 			sound-dai = <&dp_tx>;
