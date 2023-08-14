@@ -16,6 +16,7 @@
 #include <linux/of_net.h>
 #include <linux/of_device.h>
 #include <linux/of_mdio.h>
+#include <linux/regulator/consumer.h>
 
 #include "stmmac.h"
 #include "stmmac_platform.h"
@@ -398,9 +399,30 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 	struct device_node *np = pdev->dev.of_node;
 	struct plat_stmmacenet_data *plat;
 	struct stmmac_dma_cfg *dma_cfg;
+	struct regulator *avddh;
 	int phy_mode;
 	void *ret;
 	int rc;
+
+	avddh = devm_regulator_get_optional(&pdev->dev, "avddh");
+	if (IS_ERR(avddh)) {
+		if (PTR_ERR(avddh) != -ENODEV) {
+			if (PTR_ERR(avddh) != -EPROBE_DEFER)
+				dev_err(&pdev->dev,
+					"Failed to get avddh regulator(%ld)!\n",
+					PTR_ERR(avddh));
+			return (void *)avddh;
+		}
+		avddh = NULL;
+	}
+	if (avddh) {
+		rc = regulator_enable(avddh);
+		if (rc) {
+			dev_err(&pdev->dev,
+				"failed to enable avddh regulator: %d\n", rc);
+			return ERR_PTR(rc);
+		}
+	}
 
 	plat = devm_kzalloc(&pdev->dev, sizeof(*plat), GFP_KERNEL);
 	if (!plat)
