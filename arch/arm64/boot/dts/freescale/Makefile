@@ -386,7 +386,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx91p-9x9-qsb.dtb imx91p-9x9-qsb-aud-hat.dtb \
 			  imx91p-9x9-qsb-lpspi.dtb \
 			  imx91p-9x9-qsb-lpspi-slave.dtb \
 			  imx91p-9x9-qsb-ld.dtb \
-			  imx91p-9x9-qsb-ontat-wvga-panel.dtb
+			  imx91p-9x9-qsb-ontat-wvga-panel.dtb \
+			  imx91p-9x9-qsb-can1.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx91p-11x11-evk.dtb imx91p-11x11-evk-mt9m114.dtb \
 			  imx91p-11x11-evk-mqs.dtb imx91p-11x11-evk-aud-hat.dtb \
 			  imx91p-11x11-evk-ontat-wvga-panel.dtb \
