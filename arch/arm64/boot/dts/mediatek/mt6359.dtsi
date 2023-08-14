@@ -192,11 +192,13 @@
 				regulator-max-microvolt = <2200000>;
 				regulator-always-on;
 			};
+			/* mt6359 only */
 			mt6359_vrfck_ldo_reg: ldo_vrfck {
 				regulator-name = "vrfck";
 				regulator-min-microvolt = <1500000>;
 				regulator-max-microvolt = <1700000>;
 			};
+			/* mt6359p only */
 			mt6359_vrfck_1_ldo_reg: ldo_vrfck_1 {
 				regulator-name = "vrfck";
 				regulator-min-microvolt = <1240000>;
@@ -214,11 +216,13 @@
 				regulator-max-microvolt = <3300000>;
 				regulator-always-on;
 			};
+			/* mt6359 only */
 			mt6359_vemc_ldo_reg: ldo_vemc {
 				regulator-name = "vemc";
 				regulator-min-microvolt = <2900000>;
 				regulator-max-microvolt = <3300000>;
 			};
+			/* mt6359p only */
 			mt6359_vemc_1_ldo_reg: ldo_vemc_1 {
 				regulator-name = "vemc";
 				regulator-min-microvolt = <2500000>;
