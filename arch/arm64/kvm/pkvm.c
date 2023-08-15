@@ -131,6 +131,7 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 	struct kvm_pinned_page *ppage, *tmp;
 	struct mm_struct *mm = current->mm;
 	struct list_head *ppages;
+	unsigned long pages = 0;
 
 	if (pkvm_is_hyp_created(host_kvm)) {
 		WARN_ON(kvm_call_hyp_nvhe(__pkvm_teardown_vm,
@@ -146,11 +147,13 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 					  page_to_pfn(ppage->page)));
 		cond_resched();
 
-		account_locked_vm(mm, 1, false);
 		unpin_user_pages_dirty_lock(&ppage->page, 1, true);
 		list_del(&ppage->link);
 		kfree(ppage);
+		pages++;
 	}
+
+	account_locked_vm(mm, pages, false);
 }
 
 /*
