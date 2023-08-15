@@ -32,7 +32,6 @@
 				 <PINMUX_GPIO118__FUNC_O_I2SO2_D1>,
 				 <PINMUX_GPIO125__FUNC_O_DMIC1_CLK>,
 				 <PINMUX_GPIO126__FUNC_I0_DMIC1_DAT>,
-				 <PINMUX_GPIO128__FUNC_O_DMIC2_CLK>,
 				 <PINMUX_GPIO129__FUNC_I0_DMIC2_DAT>,
 				 <PINMUX_GPIO121__FUNC_B0_PCM_CLK>,
 				 <PINMUX_GPIO122__FUNC_B0_PCM_SYNC>,
@@ -200,31 +199,6 @@
 		};
 	};
 
-	rt1715_int: rt1715_int_pin {
-		pins_cmd0_dat {
-			pinmux = <PINMUX_GPIO12__FUNC_B_GPIO12>;
-			bias-pull-up;
-			input-enable;
-		};
-	};
-
-	panel_pins_default: panel-pins-default {
-		panel-dcdc {
-			pinmux = <PINMUX_GPIO45__FUNC_B_GPIO45>;
-			output-low;
-		};
-
-		panel-en {
-			pinmux = <PINMUX_GPIO111__FUNC_B_GPIO111>;
-			output-low;
-		};
-
-		panel-rst {
-			pinmux = <PINMUX_GPIO25__FUNC_B_GPIO25>;
-			output-high;
-		};
-	};
-
 	mmc0_pins_default: mmc0default {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO161__FUNC_B1_MSDC0_DAT0>,
@@ -251,6 +225,15 @@
 			pinmux = <PINMUX_GPIO155__FUNC_O_MSDC0_RSTB>;
 			drive-strength = <MTK_DRIVE_6mA>;
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+
+		pins-hog {
+#define GP_SM_GPIO11	<&pio 45 GPIO_ACTIVE_LOW>	/* KPROW1 */
+			pinmux = <PINMUX_GPIO45__FUNC_B_GPIO45>,
+#define GP_SD2_POWER_EN	<&pio 111 GPIO_ACTIVE_HIGH>	/* I2SIN_D1 */
+				 <PINMUX_GPIO111__FUNC_B_GPIO111>,
+#define GP_DP0_HPD	<&pio 25 GPIO_ACTIVE_LOW>	/* LCM_RST */
+				 <PINMUX_GPIO25__FUNC_B_GPIO25>;
 		};
 	};
 
@@ -483,8 +466,8 @@
 };
 
 / {
-	model = "MediaTek Genio-700 EVK";
-	compatible = "mediatek,mt8390-evk", "mediatek,mt8188";
+	model = "Boundary Devices mt8390 tungsten smarc";
+	compatible = "boundary,mt8390-tungsten_smarc", "mediatek,mt8188";
 
 	aliases {
 		serial0 = &uart0;
@@ -649,26 +632,6 @@
 		regulator-max-microvolt = <5000000>;
 	};
 
-	VDD_5V: VDD-5V {
-		compatible = "regulator-fixed";
-		regulator-name = "VDD-5V";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&pio 10 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		regulator-always-on;
-	};
-
-	VDD_3V3: VDD-3V3 {
-		compatible = "regulator-fixed";
-		regulator-name = "VDD-3V3";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&pio 9 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		regulator-always-on;
-	};
-
 	sdio_fixed_3v3: regulator@2 {
 		compatible = "regulator-fixed";
 		regulator-name = "sdio_card";
@@ -795,14 +758,6 @@
 	pinctrl-0 = <&i2c1_pin>;
 	clock-frequency = <400000>;
 	status = "okay";
-
-	it5205fn: it5205fn@48 {
-		compatible = "mediatek,it5205fn";
-		reg = <0x48>;
-		type3v3-supply = <&mt6359_vcn33_1_bt_ldo_reg>;
-		svid = /bits/ 16 <0xff01>;
-		status = "okay";
-	};
 };
 
 &i2c3 {
@@ -813,61 +768,10 @@
 };
 
 &i2c4 {
-	pinctrl-names = "default", "default";
+	pinctrl-names = "default";
 	pinctrl-0 = <&i2c4_pin>;
-	pinctrl-1 = <&rt1715_int>;
 	clock-frequency = <1000000>;
 	status = "okay";
-
-	rt1715@4e {
-		compatible = "richtek,rt1715";
-		reg = <0x4e>;
-		interrupts-extended = <&pio 12 IRQ_TYPE_LEVEL_LOW>;
-		vbus-supply = <&usb_p1_vbus>;
-		status = "okay";
-
-		usb_con: connector {
-			compatible = "usb-c-connector";
-			label = "USB-C";
-			data-role = "dual";
-			power-role = "dual";
-			try-power-role = "sink";
-			source-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
-							PDO_FIXED_DATA_SWAP)>;
-			sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
-							PDO_FIXED_DATA_SWAP)>;
-			op-sink-microwatt = <10000000>;
-			orientation-switch = <&it5205fn>;
-			mode-switch = <&it5205fn>;
-			displayport = <&dp_intf1>;
-
-			altmodes {
-				dp {
-					svid = <0x0ff01>;
-					vdo = <0x1c1c47>;
-				};
-			};
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					reg = <0>;
-					tcpc_typec_usb: endpoint {
-							remote-endpoint = <&ssusb1_ep>;
-					};
-				};
-			};
-		};
-
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {};
-		};
-	};
 };
 
 &pmic {
@@ -1127,12 +1031,6 @@
 	usb-role-switch;
 	status = "okay";
 	wakeup-source;
-
-	port {
-		ssusb1_ep: endpoint {
-			remote-endpoint = <&tcpc_typec_usb>;
-		};
-	};
 };
 
 &u2port1 {
@@ -1164,7 +1062,6 @@
 	connector {
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
 		type = "micro";
-		id-gpios = <&pio 89 GPIO_ACTIVE_HIGH>;
 		vbus-supply = <&usb_p2_vbus>;
 	};
 };
@@ -1252,6 +1149,10 @@
 	domain-supply = <&mt6359_vproc1_buck_reg>;
 };
 
+/* J2D */
+#define GP_SM_GPIO13(a)			<&pio 5 a>
+#define PD_SM_GPIO13(a)			PINMUX_GPIO5__FUNC_B_GPIO5
+
 
 /* J2F */
 #define SM_I2C_LCD			i2c2
@@ -1275,6 +1176,9 @@
 #define GP_SM_LCD0_BKLT_PWM(a)		<&pio 29 a>
 #define PD_SM_LCD0_BKLT_PWM(a)		PINMUX_GPIO29__FUNC_B_GPIO29
 #define PD_SM_LCD0_BKLT_PWM_OUT(a)	PINMUX_GPIO29__FUNC_O_DISP_PWM0
+
+#define GP_SM_CARRIER_STANDBY(a)	<&pio 128 a>
+#define PD_SM_CARRIER_STANDBY(a)	PINMUX_GPIO128__FUNC_B_GPIO128
 /* ******************************************* */
 
 /* ****** bd-universal-smarc ************************************* */
@@ -1302,6 +1206,16 @@
 #define PAD_PULLDN	0
 #define PAD_PULLDNIRQ	0
 &pio {
+#ifdef PD_SM_GPIO13
+	pinctrl2(mux9546, lcd) {
+		pins-reset {
+			PINS_START
+				PD_SM_GPIO13(PAD_PULLDN)
+			PINS_END
+		};
+	};
+#endif
+
 	pinctrl(SM_I2C_LCD) {
 		pins-bus {
 			PINS_START
@@ -1393,9 +1307,13 @@
 #define PD_MIPI_PWM(a)		PD_SM_LCD0_BKLT_PWM(a)	/* Pin 7, S141 */
 #define PD_MIPI_PWM_OUT(a)	PD_SM_LCD0_BKLT_PWM_OUT(a)
 
+#define GP_MIPI_IRQ(a)		GP_SM_CARRIER_STANDBY(a)
+#define PD_MIPI_IRQ(a)		PD_SM_CARRIER_STANDBY(a) /* Pin 8, S153 */
+
 #define GP_MIPI_ENABLE(a)	GP_SM_LCD0_VDD_EN(a)
 #define PD_MIPI_ENABLE(a)	PD_SM_LCD0_VDD_EN(a)	/* Pin 11, S133 */
 /* ****** mipi_dsi ************************************* */
+#include "../freescale/panel-m101nwwb.dtsi"
 / {
 	backlight_mipi: backlight-mipi {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
@@ -1417,9 +1335,8 @@
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
-		clocks = <&vdosys0 CLK_VDO0_DSI0_DSI>,
-			<&vdosys0 CLK_VDO0_DSI0>;
-		clock-names = "mipi_clk", "pixel_clock";
+		clocks = <&vdosys0 CLK_VDO0_DSI0_DSI>;
+		clock-names = "mipi_clk";
 		compatible = "panel,common";
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
@@ -1428,14 +1345,14 @@
 		enable-gpios = GP_LTK08_MIPI_EN;
 		mipi-cmds = <&mipi_cmds_ltk080a60a004t>;
 #endif
+		mipi-cmds = <&mipi_cmds_m101nwwb>;
 		mode-skip-eot;
 		mode-video;
 		mode-video-burst;
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
-		pinctrl-names = "default", "sn65dsi83";
-		pinctrl-0 = <&panel_pins_default>;
-		pinctrl-1 = <&panel_pins_default>, <&pinctrl_sn65dsi83>;
+		pinctrl-names = "sn65dsi83";
+		pinctrl-0 = <&pinctrl_sn65dsi83>;
 		power-supply = <&reg_vref_5v0>;
 		reg = <0>;
 		reset-gpios = <&pio 25 GPIO_ACTIVE_HIGH>;
@@ -1448,14 +1365,14 @@
 		display-timings {
 			t_mipi: t-dsi-default {
 				/* m101nwwb by default */
-				clock-frequency = <66000000>;
+				clock-frequency = <71700000>;
 				hactive = <1280>;
 				vactive = <800>;
 				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
+				hfront-porch = <151>;
+				vback-porch = <2>;
+				vfront-porch = <28>;
+				hsync-len = <4>;
 				vsync-len = <1>;
 #ifdef MIPI_HSYNC_HIGH
 				hsync-active = <1>;
@@ -1470,14 +1387,10 @@
 
 		mipi_to_lvds: mipi-to-lvds {
 			alias = <&mipi_to_lvds>;
-			enable-gpios = <&pio 111 GPIO_ACTIVE_HIGH>;
+			enable-gpios = GP_MIPI_ENABLE(GPIO_ACTIVE_HIGH);
 			i2c-address = <0x2c>;
-#define MIPI_I2C_BUS		i2c_lcd_c
-#define GP_SM_CARRIER_STANDBY(a)	<&pio 9 a>
-#define PD_SM_CARRIER_STANDBY(a)	PINMUX_GPIO9__FUNC_O_DMIC2_CLK
-#define PD_MIPI_IRQ(a)		PD_SM_CARRIER_STANDBY(a) /* Pin 8, S153 */
 			i2c-bus = <&MIPI_I2C_BUS>;
-			interrupts-extended = GP_SM_CARRIER_STANDBY(IRQ_TYPE_LEVEL_HIGH);
+			interrupts-extended = GP_MIPI_IRQ(IRQ_TYPE_LEVEL_HIGH);
 			status = "okay";
 		};
 
@@ -1507,9 +1420,15 @@
 	};
 
 	pinctrl_sn65dsi83: sn65dsi83grp {
-		pins {
+		pins-irq {
 			PINS_START
 				PD_MIPI_IRQ(PAD_PULLDNIRQ)
+			PINS_END
+			bias-pull-down;
+			input-enable;
+		};
+		pins-enable {
+			PINS_START
 				PD_MIPI_ENABLE(PAD_PULLDN)
 			PINS_END
 		};
