@@ -24,7 +24,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_graph.h>
 
-#include <mtk_hdmirx.h>
+#include "mtk_hdmirx.h"
 
 #include "hdmi_rx2_hw.h"
 #include "vga_table.h"
