@@ -6,6 +6,8 @@
 #include <asm/kvm_pkvm_module.h>
 #include <asm/kvm_hypevents.h>
 
+#include <nvhe/alloc.h>
+#include <nvhe/iommu.h>
 #include <nvhe/mem_protect.h>
 #include <nvhe/modules.h>
 #include <nvhe/mm.h>
@@ -79,11 +81,6 @@ void __pkvm_close_module_registration(void)
 	 */
 }
 
-static int __pkvm_module_host_donate_hyp(u64 pfn, u64 nr_pages)
-{
-	return ___pkvm_host_donate_hyp(pfn, nr_pages, true);
-}
-
 static void tracing_mod_hyp_printk(u8 fmt_id, u64 a, u64 b, u64 c, u64 d)
 {
 #ifdef CONFIG_TRACING
@@ -130,7 +127,8 @@ const struct pkvm_module_ops module_ops = {
 	.register_psci_notifier = __pkvm_register_psci_notifier,
 	.register_hyp_panic_notifier = __pkvm_register_hyp_panic_notifier,
 	.register_unmask_serror = __pkvm_register_unmask_serror,
-	.host_donate_hyp = __pkvm_module_host_donate_hyp,
+	.host_donate_hyp = ___pkvm_host_donate_hyp,
+	.host_donate_hyp_prot = ___pkvm_host_donate_hyp_prot,
 	.hyp_donate_host = __pkvm_hyp_donate_host,
 	.host_share_hyp = __pkvm_host_share_hyp,
 	.host_unshare_hyp = __pkvm_host_unshare_hyp,
@@ -145,6 +143,18 @@ const struct pkvm_module_ops module_ops = {
 	.tracing_reserve_entry = tracing_reserve_entry,
 	.tracing_commit_entry = tracing_commit_entry,
 	.tracing_mod_hyp_printk = tracing_mod_hyp_printk,
+	.hyp_alloc = hyp_alloc,
+	.hyp_alloc_errno = hyp_alloc_errno,
+	.hyp_free = hyp_free,
+	.hyp_alloc_missing_donations = hyp_alloc_missing_donations,
+	.iommu_donate_pages = kvm_iommu_donate_pages,
+	.iommu_reclaim_pages = kvm_iommu_reclaim_pages,
+	.iommu_init_device = kvm_iommu_init_device,
+	.udelay = pkvm_udelay,
+#ifdef CONFIG_LIST_HARDENED
+	.list_add_valid_or_report = __list_add_valid_or_report,
+	.list_del_entry_valid_or_report = __list_del_entry_valid_or_report,
+#endif
 };
 
 int __pkvm_init_module(void *module_init)
