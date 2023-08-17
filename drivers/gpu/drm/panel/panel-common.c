@@ -826,6 +826,7 @@ static int panel_common_disable(struct drm_panel *panel)
 	struct mipi_dsi_device *dsi;
 	struct panel_common *p = to_panel_common(panel);
 
+	pr_debug("%s:\n", __func__);
 	if (!p->enabled)
 		return 0;
 
@@ -897,6 +898,7 @@ static int panel_common_prepare(struct drm_panel *panel)
 	int err;
 	int hpd_asserted;
 
+	pr_debug("%s:\n", __func__);
 	if (p->prepared)
 		return 0;
 
@@ -968,6 +970,7 @@ static int panel_common_enable(struct drm_panel *panel)
 	struct mipi_dsi_device *dsi;
 	int ret;
 
+	pr_debug("%s:\n", __func__);
 	if (p->enabled)
 		return 0;
 
@@ -996,6 +999,7 @@ static int panel_common_enable2(struct drm_panel *panel)
 	struct mipi_dsi_device *dsi;
 	int ret;
 
+	pr_debug("%s:\n", __func__);
 	if (p->enabled2)
 		return 0;
 
