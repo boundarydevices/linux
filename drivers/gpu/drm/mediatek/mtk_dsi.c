@@ -467,6 +467,10 @@ static void mtk_dsi_config_vdo_timing(struct mtk_dsi *dsi)
 	else
 		dsi_tmp_buf_bpp = 3;
 
+	pr_debug("%s: %dx%d %d lanes=%d hfp=%d hbp=%d hsync=%d, vfp=%d vbp=%d vsync=%d\n", __func__,
+		vm->hactive, vm->vactive, vm->pixelclock, dsi->lanes,
+		vm->hfront_porch, vm->hback_porch, vm->hsync_len,
+		vm->vfront_porch, vm->vback_porch, vm->vsync_len);
 	writel(vm->vsync_len, dsi->regs + DSI_VSA_NL);
 	writel(vm->vback_porch, dsi->regs + DSI_VBP_NL);
 	writel(vm->vfront_porch, dsi->regs + DSI_VFP_NL);
@@ -604,6 +608,7 @@ static int mtk_dsi_poweron(struct mtk_dsi *dsi)
 {
 	struct device *dev = dsi->host.dev;
 	int ret;
+	struct videomode *vm = &dsi->vm;
 	u32 bit_per_pixel;
 	u32 reg_shadow_dbg = dsi->driver_data->reg_shadow_dbg;
 
@@ -627,6 +632,10 @@ static int mtk_dsi_poweron(struct mtk_dsi *dsi)
 	dsi->data_rate = DIV_ROUND_UP_ULL(dsi->vm.pixelclock * bit_per_pixel,
 					  dsi->lanes);
 
+	pr_debug("%s: %dx%d %d %d lanes=%d bpp=%d, hfp=%d hbp=%d hsync=%d, vfp=%d vbp=%d vsync=%d\n", __func__,
+		vm->hactive, vm->vactive, vm->pixelclock, dsi->data_rate, dsi->lanes, bit_per_pixel,
+		vm->hfront_porch, vm->hback_porch, vm->hsync_len,
+		vm->vfront_porch, vm->vback_porch, vm->vsync_len);
 	ret = clk_set_rate(dsi->hs_clk, dsi->data_rate);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set data rate: %d\n", ret);
@@ -690,7 +699,7 @@ static void mtk_dsi_poweroff(struct mtk_dsi *dsi)
 	 * mtk_dsi_stop() and mtk_dsi_start() is asymmetric, since
 	 * mtk_dsi_stop() should be called after mtk_drm_crtc_atomic_disable(),
 	 * which needs irq for vblank, and mtk_dsi_stop() will disable irq.
-	 * mtk_dsi_start() needs to be called in mtk_output_dsi_enable(),
+	 * mtk_dsi_start() needs to be called in mtk_dsi_bridge_enable(),
 	 * after dsi is fully set.
 	 */
 	mtk_dsi_stop(dsi);
@@ -708,8 +717,9 @@ static void mtk_dsi_poweroff(struct mtk_dsi *dsi)
 	phy_power_off(dsi->phy);
 }
 
-static void mtk_output_dsi_enable(struct mtk_dsi *dsi)
+static void mtk_dsi_bridge_enable(struct drm_bridge *bridge)
 {
+	struct mtk_dsi *dsi = bridge_to_dsi(bridge);
 	int ret;
 
 	if (dsi->enabled)
@@ -722,11 +732,13 @@ static void mtk_output_dsi_enable(struct mtk_dsi *dsi)
 	}
 
 	mtk_dsi_set_mode(dsi);
+	dsi->enabled = true;
+	drm_bridge_chain_enable(bridge);
 	mtk_dsi_clk_hs_mode(dsi, 1);
+	drm_bridge_chain_enable2(bridge);
 
 	mtk_dsi_start(dsi);
 
-	dsi->enabled = true;
 }
 
 static void mtk_output_dsi_disable(struct mtk_dsi *dsi)
@@ -763,13 +775,6 @@ static void mtk_dsi_bridge_disable(struct drm_bridge *bridge)
 	struct mtk_dsi *dsi = bridge_to_dsi(bridge);
 
 	mtk_output_dsi_disable(dsi);
-}
-
-static void mtk_dsi_bridge_enable(struct drm_bridge *bridge)
-{
-	struct mtk_dsi *dsi = bridge_to_dsi(bridge);
-
-	mtk_output_dsi_enable(dsi);
 }
 
 static const struct drm_bridge_funcs mtk_dsi_bridge_funcs = {
