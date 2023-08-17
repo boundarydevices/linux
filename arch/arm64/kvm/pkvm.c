@@ -1140,3 +1140,4 @@ int __pkvm_topup_hyp_alloc_mgt_gfp(unsigned long id, unsigned long nr_pages,
 
 	return ret;
 }
+EXPORT_SYMBOL(__pkvm_topup_hyp_alloc_mgt_gfp);
