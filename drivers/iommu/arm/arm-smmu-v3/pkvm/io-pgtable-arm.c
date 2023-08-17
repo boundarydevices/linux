@@ -13,6 +13,7 @@
 #include <nvhe/mem_protect.h>
 
 #include "arm_smmu_v3.h"
+#include "arm-smmu-v3-module.h"
 
 int arm_lpae_map_exists(void)
 {
