@@ -1394,7 +1394,7 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 	err = of_drm_get_panel_orientation(np, &panel->orientation);
 	if (err) {
 		dev_err(dev, "%pOF: failed to get orientation %d\n", np, err);
-		return err;
+		goto free_spi;
 	}
 
 	ddc = of_parse_phandle(np, "ddc-i2c-bus", 0);
@@ -1402,8 +1402,10 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		panel->ddc = of_find_i2c_adapter_by_node(ddc);
 		of_node_put(ddc);
 
-		if (!panel->ddc)
-			return -EPROBE_DEFER;
+		if (!panel->ddc) {
+			err = -EPROBE_DEFER;
+			goto free_spi;
+		}
 	}
 
 	if (!of_get_display_timing(np, "panel-timing", &dt))
@@ -1413,7 +1415,7 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 	if (sn65_np) {
 		if (of_device_is_available(sn65_np)) {
 			panel->sn65.mipi_clk = mipi_clk;
-			err = sn65_init(dev, &panel->sn65, np, sn65_np);
+			err = sn65_setup(dev, &panel->sn65, np, sn65_np);
 			if (err < 0)
 				goto free_ddc;
 		}
@@ -1478,8 +1480,16 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 	drm_panel_init(&panel->base, dev, &panel_common_funcs, connector_type);
 
 	err = drm_panel_of_backlight(&panel->base);
-	if (err)
+	if (err) {
+		dev_err(dev, "drm_panel_of_backlight failed %d\n", err);
 		goto free_ddc;
+	}
+
+	if (panel->sn65.mipi_clk) {
+		err = sn65_check(&panel->sn65);
+		if (err < 0)
+			goto free_ddc;
+	}
 
 	drm_panel_add(&panel->base);
 
