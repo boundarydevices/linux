@@ -1,0 +1,29 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	aliases {
+		mipi_cmds_com35h3r04uly = &mipi_cmds_com35h3r04uly;
+		pinctrl_com35h3r04uly = &pinctrl_mipi_com35h3r04uly;
+	};
+
+	/* 11263 Q035-030 REV - */
+	/* QV9000005            */
+	mipi_cmds_com35h3r04uly: mipi-cmds-com35h3r04uly {
+		alias = <&mipi_cmds_com35h3r04uly>;
+		aliasp = <&pinctrl_mipi_com35h3r04uly>;
+		mipi-cmds-enable = /bits/ 8 <
+			DELAY(11)
+			DCS_S0P(0x11)		/* Exit sleep */
+			DELAY(205)
+			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
+			DELAY(50)
+		>;
+		mipi-cmds-disable = /bits/ 8 <
+			DCS_S0P(0x28)		/* MIPI_DCS_SET_DISPLAY_OFF */
+			DCS_S0P(0x10)		/* Enter sleep */
+			DELAY(120)
+		>;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
+	};
+};
