@@ -69,8 +69,9 @@ struct panel_sn65dsi83
 	unsigned char rx_buf[63] __attribute__((aligned(64)));
 };
 
-int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
+int sn65_setup(struct device *dev, struct panel_sn65dsi83 *sn,
 		struct device_node *disp_dsi, struct device_node *np);
+int sn65_check(struct panel_sn65dsi83 *sn);
 int sn65_remove(struct panel_sn65dsi83 *sn);
 
 void sn65_enable(struct panel_sn65dsi83 *sn);

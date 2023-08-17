@@ -559,7 +559,7 @@ static DEVICE_ATTR(sn65dsi83_enable, 0644, sn65dsi83_enable_show, sn65dsi83_enab
 /*
  * I2C init/probing/exit functions
  */
-int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
+int sn65_setup(struct device *dev, struct panel_sn65dsi83 *sn,
 		struct device_node *disp_dsi, struct device_node *np)
 {
 	struct fwnode_handle *child = of_fwnode_handle(np);
@@ -631,19 +631,8 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 			dev_err(dev, "Failed to get enable gpio: %d\n", ret);
 		return ret;
 	}
-	if (gp_en) {
-		sn_enable_gp(gp_en);
-	} else {
+	if (!gp_en)
 		dev_warn(dev, "no enable pin available");
-	}
-	ret = sn_i2c_read_byte(sn, SN_CLK_SRC);
-	if (ret < 0) {
-		/* enable might be used for something else, change to input */
-		gpiod_direction_input(gp_en);
-		dev_info(dev, "i2c read failed\n");
-		return -ENODEV;
-	}
-	gpiod_set_value(gp_en, 0);
 
 	sn->dev = dev;
 	sn->gp_en = gp_en;
@@ -690,6 +679,26 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 		if (ret)
 			pr_info("%s: request_irq failed, irq:%i\n", client_name, sn->irq);
 	}
+
+	return 0;
+}
+
+int sn65_check(struct panel_sn65dsi83 *sn)
+{
+	struct device *dev = sn->dev;
+	int ret;
+
+	if (sn->gp_en)
+		sn_enable_gp(sn->gp_en);
+
+	ret = sn_i2c_read_byte(sn, SN_CLK_SRC);
+	if (ret < 0) {
+		/* enable might be used for something else, change to input */
+		gpiod_direction_input(sn->gp_en);
+		dev_info(dev, "i2c read failed\n");
+		return -ENODEV;
+	}
+	gpiod_set_value(sn->gp_en, 0);
 
 	ret = device_create_file(dev, &dev_attr_sn65dsi83_enable);
 	ret = device_create_file(dev, &dev_attr_sn65dsi83_reg);
