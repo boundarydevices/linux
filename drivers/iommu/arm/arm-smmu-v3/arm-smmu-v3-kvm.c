@@ -868,7 +868,7 @@ static int kvm_arm_smmu_suspend(struct device *dev)
 	struct host_arm_smmu_device *host_smmu = smmu_to_host(smmu);
 
 	if (host_smmu->power_domain.type == KVM_POWER_DOMAIN_HOST_HVC)
-		return kvm_call_hyp_nvhe(__pkvm_host_hvc_pd, host_smmu->id, 0);
+		return pkvm_iommu_suspend(dev);
 	return 0;
 }
 
@@ -878,7 +878,7 @@ static int kvm_arm_smmu_resume(struct device *dev)
 	struct host_arm_smmu_device *host_smmu = smmu_to_host(smmu);
 
 	if (host_smmu->power_domain.type == KVM_POWER_DOMAIN_HOST_HVC)
-		return kvm_call_hyp_nvhe(__pkvm_host_hvc_pd, host_smmu->id, 1);
+		return pkvm_iommu_resume(dev);
 	return 0;
 }
 
@@ -1003,9 +1003,18 @@ static void kvm_arm_smmu_v3_remove_drv(void)
 	platform_driver_unregister(&kvm_arm_smmu_driver);
 }
 
+static pkvm_handle_t kvm_arm_smmu_v3_id(struct device *dev)
+{
+	struct arm_smmu_device *smmu = dev_get_drvdata(dev);
+	struct host_arm_smmu_device *host_smmu = smmu_to_host(smmu);
+
+	return host_smmu->id;
+}
+
 struct kvm_iommu_driver kvm_smmu_v3_ops = {
 	.init_driver = kvm_arm_smmu_v3_init_drv,
 	.remove_driver = kvm_arm_smmu_v3_remove_drv,
+	.get_iommu_id = kvm_arm_smmu_v3_id,
 };
 
 static int kvm_arm_smmu_v3_register(void)
