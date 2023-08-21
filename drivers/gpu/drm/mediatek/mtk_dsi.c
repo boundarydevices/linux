@@ -467,7 +467,7 @@ static void mtk_dsi_config_vdo_timing(struct mtk_dsi *dsi)
 	else
 		dsi_tmp_buf_bpp = 3;
 
-	pr_debug("%s: %dx%d %d lanes=%d hfp=%d hbp=%d hsync=%d, vfp=%d vbp=%d vsync=%d\n", __func__,
+	pr_debug("%s: %dx%d %ld lanes=%d hfp=%d hbp=%d hsync=%d, vfp=%d vbp=%d vsync=%d\n", __func__,
 		vm->hactive, vm->vactive, vm->pixelclock, dsi->lanes,
 		vm->hfront_porch, vm->hback_porch, vm->hsync_len,
 		vm->vfront_porch, vm->vback_porch, vm->vsync_len);
@@ -632,7 +632,7 @@ static int mtk_dsi_poweron(struct mtk_dsi *dsi)
 	dsi->data_rate = DIV_ROUND_UP_ULL(dsi->vm.pixelclock * bit_per_pixel,
 					  dsi->lanes);
 
-	pr_debug("%s: %dx%d %d %d lanes=%d bpp=%d, hfp=%d hbp=%d hsync=%d, vfp=%d vbp=%d vsync=%d\n", __func__,
+	pr_debug("%s: %dx%d %ld %d lanes=%d bpp=%d, hfp=%d hbp=%d hsync=%d, vfp=%d vbp=%d vsync=%d\n", __func__,
 		vm->hactive, vm->vactive, vm->pixelclock, dsi->data_rate, dsi->lanes, bit_per_pixel,
 		vm->hfront_porch, vm->hback_porch, vm->hsync_len,
 		vm->vfront_porch, vm->vback_porch, vm->vsync_len);
