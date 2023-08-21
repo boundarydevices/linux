@@ -8,151 +8,210 @@
 #define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
 #define pinctrl_ref(a) <&concat(pinctrl_, a)>
 
-&iomuxc {
-	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
-		fsl,pins = <
-			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
+#ifdef IMX
+#define IOMUX iomuxc
+#define pins_group(name, _pins, _attr...) \
+		fsl,pins = <		\
+			##_pins		\
 		>;
+#define pd_dnirq_down(_irq, _down) \
+		pins_group(group,	\
+			_irq		\
+			_down,		\
+		)
+#define pd_upirq_down(_irq, _down) \
+		pins_group(group,	\
+			_irq		\
+			_down,		\
+		)
+#else
+#define IOMUX pio
+#define pins_group(name, _pins, _attr...)	\
+	pins-##name {			\
+		pinmux = <		\
+			##_pins		\
+		>;			\
+		##_attr	\
+	};
+#define pd_dnirq_down(_irq, _down) \
+		pins_group(dnirq,				\
+			_irq,					\
+			bias-pull-down;				\
+			input-enable;				\
+		)						\
+		pins_group(down,				\
+			_down,					\
+			bias-pull-down;				\
+		)
+#define pd_upirq_down(_irq, _down) \
+		pins_group(upirq,				\
+			_irq,					\
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;	\
+			input-enable;				\
+		)						\
+		pins_group(down,				\
+			_down,					\
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>; \
+		)
+#endif
+
+&IOMUX {
+	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
+		pins_group(pulldn,
+			/* gpio selected by u-boot */
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_cs005_0004_03: mipi-cs005-0004-03grp {
-		fsl,pins = <
+		pins_group(pulldn,
 #define GP_CS005_0004_03_BKL_EN		GP_MIPI_ENABLE(GPIO_ACTIVE_HIGH)
 			PD_MIPI_ENABLE(PAD_NOPULL)
 #define GP_CS005_0004_03_DISPLAY_EN	GP_MIPI_IRQ(GPIO_ACTIVE_HIGH)
-			PD_MIPI_IRQ(PAD_PULLDN)
-		>;
+			PD_MIPI_IRQ(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_et055fh06: mipi-et055fh06grp {
-		fsl,pins = <
+		pins_group(pulldn,
 			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
-		fsl,pins = <
+		pins_group(pulldn,
 #define GP_LCD133_070_RESET	GP_MIPI_IRQ(GPIO_ACTIVE_LOW)
 			PD_MIPI_IRQ(PAD_PULLDN)
 #define GP_LCD133_070_ENABLE	GP_MIPI_ENABLE(GPIO_ACTIVE_HIGH)
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
-		fsl,pins = <
+		pins_group(pulldn,
 			/* gpio selected by u-boot */
 			PD_MIPI_ENABLE(PAD_PULLDN)
 #define GP_JM430_DISPLAY_EN	GP_MIPI_IRQ(GPIO_ACTIVE_HIGH)
-			PD_MIPI_IRQ(PAD_PULLDN)
-		>;
+			PD_MIPI_IRQ(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_ls050t1sx12: mipi-ls050t1sx12grp {
-		fsl,pins = <
+		pins_group(pulldn,
 			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
+		pins_group(pulldn,
 			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
+		pins_group(pulldn,
 #define GP_LTK08_MIPI_EN	GP_MIPI_IRQ(GPIO_ACTIVE_HIGH)
-			PD_MIPI_IRQ(PAD_PULLDN)
-		>;
+			PD_MIPI_IRQ(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_tcxd070iblmat77: mipi-tcxd070iblmat77grp {
-		fsl,pins = <
+		pins_group(pulldn,
 			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_mipi_zwt055azh: mipi-zwt055azhgrp {
-		fsl,pins = <
+		pins_group(pulldn,
 			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl(MIPI_PWM) {
-		fsl,pins = <
-			PD_MIPI_PWM_OUT(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_MIPI_PWM_OUT(PAD_PULLDN),
+			bias-pull-down;
+		)
 	};
 
 	pinctrl_sc18is602b: sc18is602bgrp {
-		fsl,pins = <
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 	pinctrl_sn65dsi83: sn65dsi83grp {
-		fsl,pins = <
-			PD_MIPI_IRQ(PAD_PULLDNIRQ)
+		pd_dnirq_down(
+			PD_MIPI_IRQ(PAD_PULLDNIRQ),
 			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+		)
 	};
 
 	pinctrl_ts_mipi_atmel: ts-mipi-atmelgrp {
-		fsl,pins = <
-			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ),
 			PD_MIPI_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 
 	pinctrl_ts_mipi_ft5x06: ts-mipi-ft5x06grp {
-		fsl,pins = <
-			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ),
 			PD_MIPI_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 
 	/* only for panel-lxd-m8509a */
 	pinctrl_ts_mipi_ft5x06_3: ts-mipi-ft5x06-3grp {
-		fsl,pins = <
-			PD_MIPI_PWM(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_MIPI_PWM(PAD_PULLUPIRQ),
 			PD_MIPI_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 
 	pinctrl_ts_mipi_gslx680: ts-mipi-gslx680grp {
-		fsl,pins = <
-			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ),
 			PD_MIPI_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 
 	pinctrl_ts_mipi_gt911: ts-mipi-gt911grp {
-		fsl,pins = <
-			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ),
 			/* driver writes levels, instead of active/inactive */
 			PD_MIPI_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 
 	pinctrl_ts_mipi_ili251x: ts-mipi-ili251xgrp {
-		fsl,pins = <
-			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ),
 			PD_MIPI_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 
 	pinctrl_ts_mipi_st1633: ts-mipi-st1633grp {
-		fsl,pins = <
-			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_MIPI_TS_IRQ(PAD_PULLUPIRQ),
 			PD_MIPI_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 };
 
@@ -178,8 +237,8 @@
 		fb_mipi = &fb_mipi;
 		lcdif = &MIPI_DISPLAY;
 		mipi = &fb_mipi;
-		mipi_dsi = &mipi_dsi;
-		mipi_dsi_bridge = &mipi_dsi;
+		mipi_dsi = &MIPI_DSI;
+		mipi_dsi_bridge = &MIPI_DSI;
 		mipi_to_lvds = &mipi_to_lvds;
 		pwm_mipi = &MIPI_PWM;
 		spi_lcd = &spi_lcd;
@@ -334,7 +393,7 @@
 	};
 };
 
-&mipi_dsi {
+&MIPI_DSI {
 	status = "disabled";
 
 	fb_mipi: panel@0 {
@@ -342,9 +401,13 @@
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
-		clocks = MIPI_PHY_CLOCK,
-			MIPI_PIXEL_CLOCK;
+#ifdef MIPI_PIXEL_CLOCK
+		clocks = MIPI_PHY_CLOCK, MIPI_PIXEL_CLOCK;
 		clock-names = "mipi_clk", "pixel_clock";
+#else
+		clocks = MIPI_PHY_CLOCK;
+		clock-names = "mipi_clk";
+#endif
 		compatible = "panel,common";
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
@@ -368,14 +431,14 @@
 		display-timings {
 			t_mipi: t-dsi-default {
 				/* m101nwwb by default */
-				clock-frequency = <66000000>;
+				clock-frequency = <71700000>;
 				hactive = <1280>;
 				vactive = <800>;
 				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
+				hfront-porch = <151>;
+				vback-porch = <2>;
+				vfront-porch = <28>;
+				hsync-len = <4>;
 				vsync-len = <1>;
 #ifdef MIPI_HSYNC_HIGH
 				hsync-active = <1>;
@@ -408,9 +471,7 @@
 
 #ifdef MIPI_ADD_PORT
 	ports {
-		port@1 {
-			reg = <1>;
-
+		port {
 			mipi_dsi_out: endpoint {
 				remote-endpoint = <&panel1_in>;
 			};
@@ -428,21 +489,22 @@
 #ifndef SKIP_LONTIUM_DAUGHTER_BOARDS
 /* Some board's touch connector is already behind i2c mux */
 /* So this should not be included */
-&iomuxc {
+&IOMUX {
 	pinctrl_lt8912_2: lt8912-2grp {
-		fsl,pins = <
+		pd_upirq_down(
+#define GPIRQ_LT8912_2	GP_MIPI_IRQ(IRQ_TYPE_LEVEL_LOW)
+			PD_MIPI_IRQ(PAD_PULLUPIRQ),
 #define GP_LT8912_2_RESET	GP_MIPI_ENABLE(GPIO_ACTIVE_LOW)
-				PD_MIPI_ENABLE(PAD_PULLDN)
-#define GPIRQ_LT8912_2		GP_MIPI_IRQ(IRQ_TYPE_LEVEL_LOW)
-				PD_MIPI_IRQ(PAD_PULLUPIRQ)
-		>;
+			PD_MIPI_ENABLE(PAD_PULLDN)
+		)
 	};
 
 	pinctrl_mipi_er_tft050: mipi-er-tft050grp {
-		fsl,pins = <
+		pins_group(pulldn,
 #define GP_TC358767_EN		GP_MIPI_ENABLE(GPIO_ACTIVE_HIGH)
-				PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
+			PD_MIPI_ENABLE(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 };
 
