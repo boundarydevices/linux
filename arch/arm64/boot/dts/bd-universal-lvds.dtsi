@@ -7,18 +7,67 @@
 #define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
 #define pinctrl_ref(a) <&concat(pinctrl_, a)>
 
-&iomuxc {
-	pinctrl_backlight_lvds: backlight-lvdsgrp {
-		fsl,pins = <
-			PD_LVDS_BACKLIGHT(PAD_PULLDN)
+#ifdef IMX
+#define IOMUX iomuxc
+#define pins_group(name, _pins, _attr...) \
+		fsl,pins = <		\
+			##_pins		\
 		>;
+#define pd_dnirq_down(_irq, _down) \
+		pins_group(group,	\
+			_irq		\
+			_down,		\
+		)
+#define pd_upirq_down(_irq, _down) \
+		pins_group(group,	\
+			_irq		\
+			_down,		\
+		)
+#else
+#define IOMUX pio
+#define pins_group(name, _pins, _attr...)	\
+	pins-##name {			\
+		pinmux = <		\
+			##_pins		\
+		>;			\
+		##_attr	\
+	};
+#define pd_dnirq_down(_irq, _down) \
+		pins_group(dnirq,				\
+			_irq,					\
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>; \
+			input-enable;				\
+		)						\
+		pins_group(down,				\
+			_down,					\
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>; \
+		)
+#define pd_upirq_down(_irq, _down) \
+		pins_group(upirq,				\
+			_irq,					\
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;	\
+			input-enable;				\
+		)						\
+		pins_group(down,				\
+			_down,					\
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>; \
+		)
+#endif
+
+&IOMUX {
+	pinctrl_backlight_lvds: backlight-lvdsgrp {
+		pins_group(pulldn,
+			PD_LVDS_BACKLIGHT(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 #ifdef PD_LVDS2_BACKLIGHT
 	pinctrl_backlight_lvds2: backlight-lvds2grp {
-		fsl,pins = <
-			PD_LVDS2_BACKLIGHT(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_LVDS2_BACKLIGHT(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 #endif
 
@@ -29,50 +78,53 @@
 #define VAL(a) concat(VAL_, a)
 
 	pinctrl(LVDS_PWM) {
-		fsl,pins = <
-			PD_LVDS_PWM(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_LVDS_PWM(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 
 #if VAL(LVDS2_PWM) != VAL(LVDS_PWM)
 	pinctrl(LVDS2_PWM) {
-		fsl,pins = <
-			PD_LVDS2_PWM(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_LVDS2_PWM(PAD_PULLDN),
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		)
 	};
 #endif
 
 	pinctrl_ts_lvds_atmel: ts-lvds-atmelgrp {
-		fsl,pins = <
-			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
 			PD_LVDS_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 
 	pinctrl_ts_lvds_egalax: ts-lvds-egalaxgrp {
-		fsl,pins = <
-			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
-		>;
+		pins_group(pullup,
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		)
 	};
 
 	pinctrl_ts_lvds_ft5x06: ts-lvds-ft5x06grp {
-		fsl,pins = <
-			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
+		pd_upirq_down(
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
 			PD_LVDS_TS_RESET(PAD_PULLDN)
-		>;
+		)
 	};
 
 	pinctrl_ts_lvds_gt911: ts-lvds-gt911grp {
-		fsl,pins = <
+		pins_group(pullup,
 			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
 			PD_LVDS_TS_RESET(PAD_PULLUP)
-		>;
+		)
 	};
 
 	pinctrl_ts_lvds_ili251x: ts-lvds-ili251xgrp {
-		fsl,pins = <
+		pins_group(pullup,
 			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
-		>;
+		)
 	};
 };
 
