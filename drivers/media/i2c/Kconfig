@@ -1235,6 +1235,14 @@ config VIDEO_AP1302
 	  To compile this driver as a module, choose M here: the
 	  module will be called ap1302.
 
+config VIDEO_AR0330
+	tristate "Aptina AR0330 support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select VIDEO_CCS_PLL
+	help
+	  This is a Video4Linux2 sensor-level driver for the Aptina
+	  AR0330 3.4 Mpixel camera.
+
 config VIDEO_MT9P031
 	tristate "Aptina MT9P031 support"
 	depends on I2C && VIDEO_V4L2
