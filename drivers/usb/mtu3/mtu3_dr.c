@@ -294,7 +294,7 @@ static int ssusb_role_sw_register(struct otg_switch_mtk *otg_sx)
 		return 0;
 
 	mode = usb_get_role_switch_default_mode(dev);
-	if (mode == USB_DR_MODE_PERIPHERAL)
+	if (mode != USB_DR_MODE_HOST)
 		otg_sx->default_role = USB_ROLE_DEVICE;
 	else
 		otg_sx->default_role = USB_ROLE_HOST;
