@@ -108,12 +108,16 @@ int ssusb_set_vbus(struct otg_switch_mtk *otg_sx, int is_on)
 	/* vbus is optional */
 	if (!vbus)
 		return 0;
+	if (otg_sx->vbus_state == is_on)
+		return 0;
 
+	otg_sx->vbus_state = is_on;
 	dev_dbg(ssusb->dev, "%s: turn %s\n", __func__, is_on ? "on" : "off");
 
 	if (is_on) {
 		ret = regulator_enable(vbus);
 		if (ret) {
+			otg_sx->vbus_state = 0;
 			dev_err(ssusb->dev, "vbus regulator enable failed\n");
 			return ret;
 		}
@@ -131,19 +135,20 @@ static void ssusb_mode_sw_work(struct work_struct *work)
 	struct ssusb_mtk *ssusb = otg_sx_to_ssusb(otg_sx);
 	struct mtu3 *mtu = ssusb->u3d;
 	enum usb_role desired_role = otg_sx->desired_role;
-	enum usb_role current_role;
 
-	current_role = ssusb->is_host ? USB_ROLE_HOST : USB_ROLE_DEVICE;
+	if (otg_sx->cur_role == desired_role)
+		return;
+	otg_sx->cur_role = desired_role;
 
+#if 0
 	if (desired_role == USB_ROLE_NONE) {
 		/* the default mode is host as probe does */
 		desired_role = USB_ROLE_HOST;
 		if (otg_sx->default_role == USB_ROLE_DEVICE)
 			desired_role = USB_ROLE_DEVICE;
 	}
+#endif
 
-	if (current_role == desired_role)
-		return;
 
 	dev_dbg(ssusb->dev, "set role : %s\n", usb_role_string(desired_role));
 	mtu3_dbg_trace(ssusb->dev, "set role : %s", usb_role_string(desired_role));
@@ -174,6 +179,13 @@ static void ssusb_mode_sw_work(struct work_struct *work)
 		mtu3_start(mtu);
 		break;
 	case USB_ROLE_NONE:
+		mtu3_stop(mtu);
+		ssusb_set_force_mode(ssusb, MTU3_DR_FORCE_DEVICE);
+		ssusb->is_host = false;
+		ssusb_set_vbus(otg_sx, 0);
+		ssusb_set_force_vbus(ssusb, false);
+		switch_port_to_device(ssusb);
+		break;
 	default:
 		dev_err(ssusb->dev, "invalid role\n");
 	}

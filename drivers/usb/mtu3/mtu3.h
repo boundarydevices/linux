@@ -213,11 +213,13 @@ struct otg_switch_mtk {
 	struct notifier_block id_nb;
 	struct work_struct dr_work;
 	enum usb_role desired_role;
+	enum usb_role cur_role;
 	enum usb_role default_role;
 	struct usb_role_switch *role_sw;
 	bool role_sw_used;
 	bool is_u3_drd;
 	bool manual_drd_enabled;
+	u32 vbus_state;
 };
 
 /**
