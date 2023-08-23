@@ -309,7 +309,6 @@ static void ssusb_host_setup(struct ssusb_mtk *ssusb)
 	if (!ssusb->force_vbus)
 		ssusb_set_force_vbus(ssusb, false);
 
-	ssusb_set_vbus(&ssusb->otg_switch, 1);
 }
 
 static void ssusb_host_cleanup(struct ssusb_mtk *ssusb)
