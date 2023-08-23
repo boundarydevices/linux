@@ -404,6 +404,7 @@ static int mtu3_probe(struct platform_device *pdev)
 			dev_err(dev, "failed to initialize host\n");
 			goto comm_exit;
 		}
+		ssusb_set_vbus(&ssusb->otg_switch, 1);
 		break;
 	case USB_DR_MODE_OTG:
 		ret = ssusb_gadget_init(ssusb);
