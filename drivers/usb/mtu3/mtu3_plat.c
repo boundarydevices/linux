@@ -219,6 +219,7 @@ static int get_ssusb_rscs(struct platform_device *pdev, struct ssusb_mtk *ssusb)
 	struct otg_switch_mtk *otg_sx = &ssusb->otg_switch;
 	struct clk_bulk_data *clks = ssusb->clks;
 	struct device *dev = &pdev->dev;
+	struct regulator *vbus;
 	int i;
 	int ret;
 
@@ -289,11 +290,15 @@ static int get_ssusb_rscs(struct platform_device *pdev, struct ssusb_mtk *ssusb)
 	of_property_read_u32(node, "mediatek,u2p-dis-msk",
 			     &ssusb->u2p_dis_msk);
 
-	otg_sx->vbus = devm_regulator_get(dev, "vbus");
-	if (IS_ERR(otg_sx->vbus)) {
-		dev_err(dev, "failed to get vbus\n");
-		return PTR_ERR(otg_sx->vbus);
+	vbus = devm_regulator_get_optional(dev, "vbus");
+	if (IS_ERR(vbus)) {
+		if (PTR_ERR(vbus) != -ENODEV) {
+			dev_err(dev, "failed to get vbus\n");
+			return PTR_ERR(vbus);
+		}
+		vbus = NULL;
 	}
+	otg_sx->vbus = vbus;
 
 	if (ssusb->dr_mode == USB_DR_MODE_HOST)
 		goto out;
