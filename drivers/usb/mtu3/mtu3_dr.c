@@ -160,21 +160,14 @@ static void ssusb_mode_sw_work(struct work_struct *work)
 		mtu3_stop(mtu);
 		switch_port_to_host(ssusb);
 		ssusb_set_vbus(otg_sx, 1);
-
-		/* This ssusb_set_force_vbus(ssusb, false) cause no effect
-		 * when USB P2 is switched to device in force_vbus mode.
-		 * Therefore the following condition is added.
-		 */
-		if (!ssusb->force_vbus)
-			ssusb_set_force_vbus(ssusb, false);
-
+		ssusb_set_vbusvalid_state(ssusb);
 		ssusb->is_host = true;
 		break;
 	case USB_ROLE_DEVICE:
 		ssusb_set_force_mode(ssusb, MTU3_DR_FORCE_DEVICE);
 		ssusb->is_host = false;
 		ssusb_set_vbus(otg_sx, 0);
-		ssusb_set_force_vbus(ssusb, true);
+		ssusb_set_vbusvalid_state(ssusb);
 		switch_port_to_device(ssusb);
 		mtu3_start(mtu);
 		break;
@@ -183,11 +176,11 @@ static void ssusb_mode_sw_work(struct work_struct *work)
 		ssusb_set_force_mode(ssusb, MTU3_DR_FORCE_DEVICE);
 		ssusb->is_host = false;
 		ssusb_set_vbus(otg_sx, 0);
-		ssusb_set_force_vbus(ssusb, false);
+		ssusb_set_vbusvalid_state(ssusb);
 		switch_port_to_device(ssusb);
 		break;
 	default:
-		dev_err(ssusb->dev, "invalid role\n");
+		dev_err(ssusb->dev, "invalid role %d %s\n", desired_role, usb_role_string(desired_role));
 	}
 	pm_runtime_put(ssusb->dev);
 }
@@ -283,6 +276,10 @@ static int ssusb_role_sw_set(struct usb_role_switch *sw, enum usb_role role)
 	struct ssusb_mtk *ssusb = usb_role_switch_get_drvdata(sw);
 	struct otg_switch_mtk *otg_sx = &ssusb->otg_switch;
 
+	if ((unsigned)role > USB_ROLE_DEVICE) {
+		dev_err(ssusb->dev, "invalid role given %d\n", role);
+		return -EINVAL;
+	}
 	ssusb_set_mode(otg_sx, role);
 
 	return 0;

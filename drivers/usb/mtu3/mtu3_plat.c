@@ -45,28 +45,44 @@ int ssusb_check_clocks(struct ssusb_mtk *ssusb, u32 ex_clks)
 	return 0;
 }
 
-void ssusb_set_force_vbus(struct ssusb_mtk *ssusb, bool vbus_on)
+void ssusb_set_vbusvalid_state(struct ssusb_mtk *ssusb)
 {
-	u32 u2ctl;
-	u32 misc;
+	struct otg_switch_mtk *otg_sx = &ssusb->otg_switch;
+	u32 u2ctl, u2ctl_old;
+	u32 misc, misc_old;
 
-	if (!ssusb->force_vbus)
+	if (!ssusb->force_vbus && !ssusb->force_vbus_peripheral)
 		return;
 
-	u2ctl = mtu3_readl(ssusb->ippc_base, SSUSB_U2_CTRL(0));
-	misc = mtu3_readl(ssusb->mac_base, U3D_MISC_CTRL);
-	if (vbus_on) {
-		u2ctl &= ~SSUSB_U2_PORT_OTG_SEL;
+	misc_old = misc = mtu3_readl(ssusb->mac_base, U3D_MISC_CTRL);
+	misc &= ~(VBUS_FRC_EN | VBUS_ON);
+
+	switch (otg_sx->cur_role) {
+	case USB_ROLE_HOST:
+		if (ssusb->force_vbus)
+			misc |= VBUS_FRC_EN | VBUS_ON;
+		break;
+	case USB_ROLE_DEVICE:
 		misc |= VBUS_FRC_EN | VBUS_ON;
-	} else {
-		/* FIXME The following commented line of code
-		 * is causing the crash of the host controller
-		 */
-		//u2ctl |= SSUSB_U2_PORT_OTG_SEL;
-		misc &= ~(VBUS_FRC_EN | VBUS_ON);
+		u2ctl = mtu3_readl(ssusb->ippc_base, SSUSB_U2_CTRL(0));
+		u2ctl &= ~SSUSB_U2_PORT_OTG_SEL;
+		mtu3_writel(ssusb->ippc_base, SSUSB_U2_CTRL(0), u2ctl);
+		break;
+	case USB_ROLE_NONE:
+		u2ctl_old = u2ctl = mtu3_readl(ssusb->ippc_base, SSUSB_U2_CTRL(0));
+		u2ctl |= SSUSB_U2_PORT_OTG_SEL;
+		if (u2ctl != u2ctl_old) {
+			pr_debug("%s: role=%d u2 was %x, now %x %d %d\n", __func__, otg_sx->cur_role, u2ctl_old, u2ctl,
+				ssusb->force_vbus, ssusb->force_vbus_peripheral);
+			mtu3_writel(ssusb->ippc_base, SSUSB_U2_CTRL(0), u2ctl);
+		}
+		break;
 	}
-	mtu3_writel(ssusb->ippc_base, SSUSB_U2_CTRL(0), u2ctl);
-	mtu3_writel(ssusb->mac_base, U3D_MISC_CTRL, misc);
+	if (misc != misc_old) {
+		pr_debug("%s: role=%d was %x, now %x %d %d\n", __func__, otg_sx->cur_role, misc_old, misc,
+			ssusb->force_vbus, ssusb->force_vbus_peripheral);
+		mtu3_writel(ssusb->mac_base, U3D_MISC_CTRL, misc);
+	}
 }
 
 static int wait_for_ip_sleep(struct ssusb_mtk *ssusb)
@@ -269,6 +285,7 @@ static int get_ssusb_rscs(struct platform_device *pdev, struct ssusb_mtk *ssusb)
 		return ssusb->wakeup_irq;
 
 	ssusb->force_vbus = of_property_read_bool(node, "mediatek,force-vbus");
+	ssusb->force_vbus_peripheral = of_property_read_bool(node, "mediatek,force-vbus-peripheral");
 
 	ssusb->dr_mode = usb_get_dr_mode(dev);
 	if (ssusb->dr_mode == USB_DR_MODE_UNKNOWN)
