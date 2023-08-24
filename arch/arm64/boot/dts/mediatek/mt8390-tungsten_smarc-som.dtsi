@@ -20,7 +20,7 @@
 #endif
 
 &pio {
-	aud_pins_default: audiodefault {
+	pinctrl_aud_default: aud-defaultgrp {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO101__FUNC_O_AUD_CLK_MOSI>,
 				 <PINMUX_GPIO102__FUNC_O_AUD_SYNC_MOSI>,
@@ -32,14 +32,14 @@
 		};
 	};
 
-	dptx_pin: dptx-pin {
+	pinctrl_dptx: dptxgrp {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO46__FUNC_I0_DP_TX_HPD>;
 			bias-pull-up;
 		};
 	};
 
-	eth_default_pins: eth-default-pins {
+	pinctrl_eth_default: eth-defaultgrp {
 		pins-txd {
 			pinmux = <PINMUX_GPIO131__FUNC_O_GBE_TXD3>,
 				 <PINMUX_GPIO132__FUNC_O_GBE_TXD2>,
@@ -81,7 +81,7 @@
 		};
 	};
 
-	eth_sleep_pins: eth-sleep-pins {
+	pinctrl_eth_sleep: eth-sleepgrp {
 		pins-txd {
 			pinmux = <PINMUX_GPIO131__FUNC_B_GPIO131>,
 				 <PINMUX_GPIO132__FUNC_B_GPIO132>,
@@ -108,7 +108,7 @@
 		};
 	};
 
-	eth_gpio_rx_pins: eth-gpio-rx-pins {
+	pinctrl_eth_gpio_rx: eth-gpio-rxgrp {
 		pins-rx-low {
 			pinmux =
 #define GP_PHY_RX_CTL		<&GPIO 141 GPIO_ACTIVE_HIGH>
@@ -132,14 +132,14 @@
 	};
 
 
-	pinctrl_hog: hog-pins {
+	pinctrl_hog: hoggrp {
 		pins-hog {
 #define GP_DP0_HPD(a)	<&GPIO 25 a>	/* LCM_RST */
 			pinmux = <PINMUX_GPIO25__FUNC_B_GPIO25>;
 		};
 	};
 
-	mmc0_pins_default: mmc0default {
+	pinctrl_mmc0_default: mmc0-defaultgrp {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO161__FUNC_B1_MSDC0_DAT0>,
 				 <PINMUX_GPIO160__FUNC_B1_MSDC0_DAT1>,
@@ -168,7 +168,7 @@
 		};
 	};
 
-	mmc0_pins_uhs: mmc0uhs{
+	pinctrl_mmc0_uhs: mmc0-uhsgrp{
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO161__FUNC_B1_MSDC0_DAT0>,
 				 <PINMUX_GPIO160__FUNC_B1_MSDC0_DAT1>,
@@ -203,7 +203,7 @@
 		};
 	};
 
-	mmc2_pins_default: mmc2default {
+	pinctrl_mmc2_default: mmc2-defaultgrp {
 		pins-clk {
 			pinmux = <PINMUX_GPIO170__FUNC_B1_MSDC2_CLK>;
 			drive-strength = <MTK_DRIVE_4mA>;
@@ -231,7 +231,7 @@
 		};
 	};
 
-	mmc2_pins_uhs: mmc2uhs {
+	pinctrl_mmc2_uhs: mmc2-uhsgrp {
 		pins-clk {
 			pinmux = <PINMUX_GPIO170__FUNC_B1_MSDC2_CLK>;
 			drive-strength = <MTK_DRIVE_4mA>;
@@ -250,15 +250,16 @@
 		};
 	};
 
-	mmc2_pins_eint: dat1-eint {
+	pinctrl_mmc2_eint: mmc2-eintgrp {
 		pins-dat1 {
+#define GP_MMC2_DATA1	<&GPIO 172 GPIO_ACTIVE_HIGH>
 			pinmux = <PINMUX_GPIO172__FUNC_B_GPIO172>;
 			input-enable;
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 		};
 	};
 
-	mmc2_pins_dat1: sdio-dat1 {
+	pinctrl_mmc2_dat1: mmc2-dat1grp {
 		pins-dat1 {
 			pinmux = <PINMUX_GPIO172__FUNC_B1_MSDC2_DAT1>;
 			input-enable;
@@ -267,7 +268,7 @@
 		};
 	};
 
-	wifi_pins_pwrseq: wifipwrseq {
+	pinctrl_wifi_pwrseq: wifi-pwrseqgrp {
 		pins-wifi-enable {
 #define GP_WIFI_RESET	<&GPIO 89 GPIO_ACTIVE_LOW>
 			pinmux = <PINMUX_GPIO89__FUNC_B_GPIO89>;	/* USB2_IDDIG */
@@ -275,10 +276,19 @@
 		};
 	};
 
-	usb1_default: usbp1default {
-		usb-hub-3v3-en-pin {
-			pinmux = <PINMUX_GPIO147__FUNC_B_GPIO147>;	/* DPI_HYSNC */
-			output-high;
+	pinctrl_reg_hub: reg-hubgrp {
+		reset-pin {
+#define GP_HUB_ENABLE	<&GPIO 147 GPIO_ACTIVE_HIGH>			/* HUB_RESET */
+			pinmux = <PINMUX_GPIO147__FUNC_B_GPIO147>;	/* DPI_HSYNC */
+			output-low;
+		};
+	};
+
+	pinctrl_ssusb2: ssusb2grp {
+		reset-pin {
+#define GP_SSUSB2_RESET	<&GPIO 80 GPIO_ACTIVE_LOW>
+			pinmux = <PINMUX_GPIO80__FUNC_B_GPIO80>;	/* SPIM2_CLK */
+			output-low;
 		};
 	};
 };
@@ -356,33 +366,15 @@
 		};
 	};
 
-	hub3v3: regulator@4 {
+	reg_hub: regulator@5 {
 		compatible = "regulator-fixed";
-		regulator-name = "vhub3v3";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&GPIO 112 0>; /* HUB_3V3_EN */
-		startup-delay-us = <10000>;
 		enable-active-high;
-	};
-
-	onboard_hub: regulator@5 {
-		compatible = "regulator-fixed";
+		gpio = GP_HUB_ENABLE;
+		pinctrl-0 = <&pinctrl_reg_hub>;
+		pinctrl-names = "default";
 		regulator-name = "hub_reset";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
-		gpio = <&GPIO 7 0>; /* HUB_RESET */
-		vin-supply = <&hub3v3>;
-		enable-active-low;
-	};
-
-	lcm1_tp_avdd: lcm1-tp-avdd {
-		compatible = "regulator-fixed";
-		regulator-name = "lcm1-tp-avdd";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&GPIO 119 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
 	};
 
 	reg_1p8v: regulator-1p8v {
@@ -406,8 +398,6 @@
 		regulator-name = "sdio_card";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&GPIO 74 0>;
-		enable-active-high;
 		regulator-always-on;
 	};
 
@@ -434,9 +424,9 @@
 	phy-mode ="rgmii-rxid";
 	phy-handle = <&ethernet_phy0>;
 	pinctrl-names = "default", "sleep", "gpio-rx";
-	pinctrl-0 = <&eth_default_pins>;
-	pinctrl-1 = <&eth_sleep_pins>;
-	pinctrl-2 = <&eth_gpio_rx_pins>;
+	pinctrl-0 = <&pinctrl_eth_default>;
+	pinctrl-1 = <&pinctrl_eth_sleep>;
+	pinctrl-2 = <&pinctrl_eth_gpio_rx>;
 	status = "okay";
 
 	mdio {
@@ -474,7 +464,7 @@
 
 &dp_tx {
 	pinctrl-names = "default";
-	pinctrl-0 = <&dptx_pin>;
+	pinctrl-0 = <&pinctrl_dptx>;
 	status = "disabled";
 
 	ports {
@@ -575,8 +565,8 @@
 	no-sdio;
 	no-sd;
 	pinctrl-names = "default", "state_uhs";
-	pinctrl-0 = <&mmc0_pins_default>;
-	pinctrl-1 = <&mmc0_pins_uhs>;
+	pinctrl-0 = <&pinctrl_mmc0_default>;
+	pinctrl-1 = <&pinctrl_mmc0_uhs>;
 	status = "okay";
 	supports-cqe;
 	vmmc-supply = <&mt6359_vemc_1_ldo_reg>;
@@ -601,7 +591,7 @@
 &wifi_pwrseq {
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&wifi_pins_pwrseq>;
+	pinctrl-0 = <&pinctrl_wifi_pwrseq>;
 	reset-gpios = GP_WIFI_RESET;
 	post-power-on-delay-ms = <200>;
 };
@@ -610,11 +600,11 @@
 	status = "okay";
 	pinctrl-names = "default", "state_uhs", "state_eint",
 					"state_dat1";
-	pinctrl-0 = <&mmc2_pins_default>;
-	pinctrl-1 = <&mmc2_pins_uhs>;
-	pinctrl-2 = <&mmc2_pins_eint>;
-	pinctrl-3 = <&mmc2_pins_dat1>;
-	eint-gpios = <&GPIO 172 0>;
+	pinctrl-0 = <&pinctrl_mmc2_default>;
+	pinctrl-1 = <&pinctrl_mmc2_uhs>;
+	pinctrl-2 = <&pinctrl_mmc2_eint>;
+	pinctrl-3 = <&pinctrl_mmc2_dat1>;
+	eint-gpios = GP_MMC2_DATA1;
 	bus-width = <4>;
 	max-frequency = <200000000>;
 	cap-sd-highspeed;
@@ -713,8 +703,6 @@
 &ssusb1 {
 	dr_mode = "host";
 	mediatek,force-vbus;
-	pinctrl-0 = <&usb1_default>;
-	pinctrl-names = "default";
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	wakeup-source;
@@ -735,13 +723,16 @@
 &usb_host1 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	vbus-supply = <&onboard_hub>;
+	vbus-supply = <&reg_hub>;
 };
 
 &ssusb2 {
 	dr_mode = "host";
 	maximum-speed = "high-speed";
 	mediatek,force-vbus;
+	pinctrl-0 = <&pinctrl_ssusb2>;
+	pinctrl-names = "default";
+	reset-gpios = GP_SSUSB2_RESET;
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	wakeup-source;
@@ -776,7 +767,7 @@
 	compatible = "mediatek,mt8390-evk";
 	model = "mt8390-evk";
 	pinctrl-names = "default";
-	pinctrl-0 = <&aud_pins_default>;
+	pinctrl-0 = <&pinctrl_aud_default>;
 	audio-routing =
 		"Headphone", "Headphone L",
 		"Headphone", "Headphone R",
@@ -1103,8 +1094,8 @@
 #define GP_SM_ESPI_IO2(a)		<&GPIO 73 a>
 #define PD_SM_ESPI_IO2(a)		PINMUX_GPIO73__FUNC_B_GPIO73		/* SPIM0_MIO2 */
 #define PD_SM_ESPI_IO2_ESPI(a)		PINMUX_GPIO73__FUNC_B0_SPIM0_MIO2	/* SPIM0_MIO2 */
-#define GP_SM_ESPI_IO3(a)		<&GPIO 73 a>
-#define PD_SM_ESPI_IO3(a)		PINMUX_GPIO73__FUNC_B_GPIO73		/* SPIM0_MIO3 */
+#define GP_SM_ESPI_IO3(a)		<&GPIO 74 a>
+#define PD_SM_ESPI_IO3(a)		PINMUX_GPIO74__FUNC_B_GPIO74		/* SPIM0_MIO3 */
 #define PD_SM_ESPI_IO3_ESPI(a)		PINMUX_GPIO74__FUNC_B0_SPIM0_MIO3	/* SPIM0_MIO3 */
 #define GP_SM_ESPI_RESET(a)		<&GPIO 114 a>
 #define PD_SM_ESPI_RESET(a)		PINMUX_GPIO114__FUNC_B_GPIO114		/* I2SO2_MCK */
