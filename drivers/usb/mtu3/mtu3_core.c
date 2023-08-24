@@ -662,7 +662,7 @@ static void mtu3_regs_init(struct mtu3 *mtu)
 	/* vbus detected by HW */
 	mtu3_clrbits(mbase, U3D_MISC_CTRL, VBUS_FRC_EN | VBUS_ON);
 
-	ssusb_set_force_vbus(mtu->ssusb, true);
+	ssusb_set_vbusvalid_state(mtu->ssusb);
 
 	/* use new QMU format when HW version >= 0x1003 */
 	if (mtu->gen2cp)
