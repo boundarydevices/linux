@@ -52,11 +52,18 @@ static enum usb_role hd3ss3220_get_attached_state(struct hd3ss3220 *hd3ss3220)
 	unsigned int reg_val;
 	enum usb_role attached_state;
 	int ret;
+	int i = 0;
 
-	ret = regmap_read(hd3ss3220->regmap, HD3SS3220_REG_CN_STAT_CTRL,
+	while (1) {
+		ret = regmap_read(hd3ss3220->regmap, HD3SS3220_REG_CN_STAT_CTRL,
 			  &reg_val);
-	if (ret < 0)
-		return ret;
+		if (ret >= 0)
+			break;
+		i++;
+		dev_err(hd3ss3220->dev, "regmap read failed %d loop %d\n", ret, i);
+		if (i >= 5)
+			return ret;
+	}
 
 	switch (reg_val & HD3SS3220_REG_CN_STAT_CTRL_ATTACHED_STATE_MASK) {
 	case HD3SS3220_REG_CN_STAT_CTRL_AS_DFP:
@@ -103,6 +110,9 @@ static const struct typec_operations hd3ss3220_ops = {
 static void hd3ss3220_set_role(struct hd3ss3220 *hd3ss3220)
 {
 	enum usb_role role_state = hd3ss3220_get_attached_state(hd3ss3220);
+
+	if ((int)role_state < 0)
+		return;
 
 	usb_role_switch_set_role(hd3ss3220->role_sw, role_state);
 	if (role_state == USB_ROLE_NONE)
