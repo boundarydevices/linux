@@ -108,7 +108,7 @@
 
 	pinctrl_gpio_keys: gpio-keysgrp {
 		fsl,pins = <
-#define GP_GPIOKEY_SW4		<&gpio2 29 GPIO_ACTIVE_HIGH>
+#define GP_GPIOKEY_ESC		<&gpio2 29 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_EB1__GPIO2_IO29		0x130b0
 		>;
 	};
@@ -534,10 +534,10 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
 
-		sw4 {
-			label = "sw4";
-			gpios = GP_GPIOKEY_SW4;
-			linux,code = <KEY_4>;
+		button-esc {
+			label = "esc";
+			gpios = GP_GPIOKEY_ESC;
+			linux,code = <KEY_ESC>;
 		};
 	};
 
