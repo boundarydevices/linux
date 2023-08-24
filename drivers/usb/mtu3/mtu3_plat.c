@@ -6,6 +6,7 @@
  */
 
 #include <linux/dma-mapping.h>
+#include <linux/gpio/consumer.h>
 #include <linux/iopoll.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -356,6 +357,11 @@ static int mtu3_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct ssusb_mtk *ssusb;
 	int ret = -ENOMEM;
+	struct gpio_desc *reset;
+
+	reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(reset))
+		return PTR_ERR(reset);
 
 	/* all elements are set to ZERO as default value */
 	ssusb = devm_kzalloc(dev, sizeof(*ssusb), GFP_KERNEL);
@@ -452,6 +458,8 @@ static int mtu3_probe(struct platform_device *pdev)
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
 	pm_runtime_forbid(dev);
+	gpiod_set_value_cansleep(reset, 0);
+	ssusb->reset = reset;
 
 	return 0;
 
@@ -496,6 +504,7 @@ static int mtu3_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_put_noidle(&pdev->dev);
 	pm_runtime_set_suspended(&pdev->dev);
+	gpiod_set_value_cansleep(ssusb->reset, 1);
 
 	return 0;
 }
