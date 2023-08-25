@@ -23,11 +23,29 @@ struct mt8188_mt6359_priv {
 	struct snd_soc_jack hdmi_jack;
 };
 
+/* HDMI jack detection DAPM pins */
+static struct snd_soc_jack_pin mt8188_hdmi_jack_pins[] = {
+	{
+		.pin = "HDMI",
+		.mask = SND_JACK_LINEOUT,
+	},
+};
+
+/* DP jack detection DAPM pins */
+static struct snd_soc_jack_pin mt8188_dp_jack_pins[] = {
+	{
+		.pin = "DP",
+		.mask = SND_JACK_LINEOUT,
+	},
+};
+
 static const struct snd_soc_dapm_widget
 	mt8188_mt6359_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("AP DMIC", NULL),
+	SND_SOC_DAPM_SINK("HDMI"),
+	SND_SOC_DAPM_SINK("DP"),
 };
 
 #define CKSYS_AUD_TOP_CFG 0x032c
@@ -246,7 +264,8 @@ static int mt8188_dptx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	int ret;
 
 	ret = snd_soc_card_jack_new(rtd->card, "DP Jack", SND_JACK_LINEOUT,
-				    &priv->dp_jack, NULL, 0);
+				    &priv->dp_jack, mt8188_dp_jack_pins,
+				    ARRAY_SIZE(mt8188_dp_jack_pins));
 	if (ret)
 		return ret;
 
@@ -261,7 +280,8 @@ static int mt8188_hdmi_codec_init(struct snd_soc_pcm_runtime *rtd)
 	int ret;
 
 	ret = snd_soc_card_jack_new(rtd->card, "HDMI Jack", SND_JACK_LINEOUT,
-				    &priv->hdmi_jack, NULL, 0);
+				    &priv->hdmi_jack, mt8188_hdmi_jack_pins,
+				    ARRAY_SIZE(mt8188_hdmi_jack_pins));
 	if (ret)
 		return ret;
 
