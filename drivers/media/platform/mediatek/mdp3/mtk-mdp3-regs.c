@@ -130,7 +130,7 @@ const struct mdp_format *mdp_try_fmt_mplane(struct mdp_dev *mdp,
 					    struct mdp_frameparam *param,
 					    u32 ctx_id)
 {
-	struct device *dev = &param->ctx->mdp_dev->pdev->dev;
+	struct device *dev = &mdp->pdev->dev;
 	struct v4l2_pix_format_mplane *pix_mp = &f->fmt.pix_mp;
 	const struct mdp_format *fmt;
 	const struct mdp_pix_limit *pix_limit;
