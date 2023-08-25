@@ -286,7 +286,7 @@ struct mxc_mipi_csi2_dev {
 	struct csis_hw_reset hw_reset;
 	struct csis_phy_gpr  phy_gpr;
 
-	struct v4l2_async_subdev    asd;
+	struct v4l2_async_connection asd;
 	struct v4l2_async_notifier  subdev_notifier;
 	struct v4l2_async_subdev    *async_subdevs[2];
 
