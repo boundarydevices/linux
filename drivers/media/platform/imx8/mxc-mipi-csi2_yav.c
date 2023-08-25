@@ -476,7 +476,7 @@ static inline struct mxc_mipi_csi2_dev
 
 static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 				 struct v4l2_subdev *subdev,
-				 struct v4l2_async_subdev *asd)
+				 struct v4l2_async_connection *asd)
 {
 	struct mxc_mipi_csi2_dev *csi2dev = notifier_to_mipi_dev(notifier);
 
@@ -502,10 +502,10 @@ static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 	struct device *dev = &csi2dev->pdev->dev;
 	struct device_node *parent = dev->of_node;
 	struct device_node *node, *port, *rem;
-	struct v4l2_async_subdev *asd;
+	struct v4l2_async_connection *asd;
 	int ret;
 
-	v4l2_async_nf_init(&csi2dev->subdev_notifier);
+	v4l2_async_nf_init(&csi2dev->subdev_notifier, &csi2dev->v4l2_dev);
 
 	/* Attach sensors linked to csi receivers */
 	for_each_available_child_of_node(parent, node) {
@@ -532,7 +532,7 @@ static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 		asd = v4l2_async_nf_add_fwnode(
 						&csi2dev->subdev_notifier,
 						csi2dev->fwnode,
-						struct v4l2_async_subdev);
+						struct v4l2_async_connection);
 		if (IS_ERR(asd)) {
 			dev_err(dev, "failed to add subdev to a notifier\n");
 			of_node_put(rem);
@@ -546,8 +546,7 @@ static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 	csi2dev->subdev_notifier.v4l2_dev = &csi2dev->v4l2_dev;
 	csi2dev->subdev_notifier.ops = &subdev_notifier_ops;
 
-	ret = v4l2_async_nf_register(&csi2dev->v4l2_dev,
-					   &csi2dev->subdev_notifier);
+	ret = v4l2_async_nf_register(&csi2dev->subdev_notifier);
 	if (ret)
 		dev_err(dev,
 			"Error register async notifier regoster, ret %d\n",
