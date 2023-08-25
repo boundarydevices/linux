@@ -183,7 +183,7 @@ struct mxc_parallel_csi_dev {
 	struct clk *clk_pixel;
 	bool clk_enable;
 
-	struct v4l2_async_subdev	asd;
+	struct v4l2_async_connection	asd;
 	struct v4l2_async_notifier	subdev_notifier;
 	struct v4l2_async_subdev	*async_subdevs[2];
 	struct v4l2_mbus_framefmt	format;
