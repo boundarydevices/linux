@@ -754,9 +754,10 @@
 	};
 };
 
-#ifdef SM_I2S0
+#if defined(SM_I2S0) || defined(SM_AFE)
 &i2c_gp_c {
 	wm8962: codec@1a {
+		#sound-dai-cells = <0>;
 		AVDD-supply = <&reg_vref_1v8>;
 		CPVDD-supply = <&reg_vref_1v8>;
 		DBVDD-supply = <&reg_vref_3v3>;
