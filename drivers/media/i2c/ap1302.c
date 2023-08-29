@@ -74,6 +74,14 @@
 #define AP1302_SIPM_ERR_0			AP1302_REG_16BIT(0x0014)
 #define AP1302_SIPM_ERR_1			AP1302_REG_16BIT(0x0016)
 #define AP1302_CHIP_REV				AP1302_REG_16BIT(0x0050)
+#define AP1302_HINF_FREQ			AP1302_REG_32BIT(0x0060)
+#define AP1302_SENSOR_PIXEL_FREQ		AP1302_REG_32BIT(0x0078)
+#define AP1302_OUT_PACKET_TIME		AP1302_REG_32BIT(0x00A4)
+#define AP1302_SENSOR_LINE_TIME			AP1302_REG_32BIT(0x00D8)
+#define AP1302_SENSOR_FRAME_TIME		AP1302_REG_32BIT(0x00E0)
+#define AP1302_SENSOR_EXP_TIME			AP1302_REG_32BIT(0x00E8)
+#define AP1302_SENSOR_GAIN			AP1302_REG_32BIT(0x00F4)
+#define AP1302_SENSOR_TOTAL_FRAME_TIME  AP1302_REG_32BIT(0x00FC)
 #define AP1302_CON_BUF				AP1302_REG_8BIT(0x0a2c)
 #define AP1302_CON_BUF_SIZE			512
 
@@ -427,6 +435,11 @@ struct ap1302_device {
 	unsigned int width_factor;
 
 	struct v4l2_ctrl_handler ctrls;
+	struct v4l2_ctrl *pixel_rate;
+	struct v4l2_ctrl *hblank;
+	struct v4l2_ctrl *vblank;
+	struct v4l2_ctrl *exposure;
+	struct v4l2_ctrl *analogue_gain;
 
 	const struct ap1302_sensor_info *sensor_info;
 	struct ap1302_sensor sensors[2];
@@ -1410,6 +1423,87 @@ static int ap1302_set_flicker_freq(struct ap1302_device *ap1302, s32 val)
 			    ap1302_flicker_values[val], NULL);
 }
 
+static unsigned long ap1302_get_hblank(struct ap1302_device *ap1302)
+{
+	u32  out_packet_time, hinf_freq;
+	u64 result;
+	int ret;
+
+	ret = ap1302_read(ap1302, AP1302_OUT_PACKET_TIME, &out_packet_time);
+	if (ret < 0)
+		return ret;
+	ret = ap1302_read(ap1302, AP1302_HINF_FREQ, &hinf_freq);
+	if (ret < 0)
+		return ret;
+
+	result = (u64)out_packet_time * (u64)hinf_freq;
+	return result >> 32;
+}
+
+static unsigned long ap1302_get_vblank(struct ap1302_device *ap1302)
+{
+	u32 total_frame_time, frame_time, line_time;
+	int ret;
+
+	ret = ap1302_read(ap1302, AP1302_SENSOR_TOTAL_FRAME_TIME, &total_frame_time);
+	if (ret < 0)
+		return ret;
+	ret = ap1302_read(ap1302, AP1302_SENSOR_FRAME_TIME, &frame_time);
+	if (ret < 0)
+		return ret;
+	ret = ap1302_read(ap1302, AP1302_SENSOR_LINE_TIME, &line_time);
+	if (ret < 0)
+		return ret;
+	if (line_time == 0)
+		return -EINVAL;
+
+	return (((u64)total_frame_time - frame_time) << 16) / line_time;
+}
+
+static unsigned long ap1302_get_analogue_gain(struct ap1302_device *ap1302)
+{
+	u32 val;
+	int ret;
+
+	ret = ap1302_read(ap1302, AP1302_SENSOR_GAIN, &val);
+	if (ret < 0)
+		return ret;
+
+	return val >> 16;
+}
+
+static unsigned long ap1302_get_exposure(struct ap1302_device *ap1302)
+{
+	u32 val;
+	int ret;
+
+	ret = ap1302_read(ap1302, AP1302_SENSOR_EXP_TIME, &val);
+	if (ret < 0)
+		return ret;
+
+	return val;
+}
+
+static unsigned long ap1302_get_pixel_rate(struct ap1302_device *ap1302)
+{
+	u32 val;
+	int ret;
+	u32 sign;
+	u32 int_part, frac_part, result;
+
+	ret = ap1302_read(ap1302, AP1302_SENSOR_PIXEL_FREQ, &val);
+	if (ret < 0)
+		return ret;
+
+	sign = (val >> 31) & 1;
+	int_part = (val >> 16) & 0x7fff;
+	frac_part = val & 0xffff;
+	if (sign == 1)
+		int_part = (~(int_part) + 1) & 0x7fff;
+	result = (int_part * 1000000) + ((frac_part * 1000000) / (1 << 16));
+	return result;
+}
+
 static int ap1302_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ap1302_device *ap1302 =
@@ -1490,12 +1584,51 @@ static int ap1302_ctrls_init(struct ap1302_device *ap1302)
 		return ret;
 	}
 
-	ret = v4l2_ctrl_handler_init(&ap1302->ctrls, ARRAY_SIZE(ap1302_ctrls) + 2);
+	ret = v4l2_ctrl_handler_init(&ap1302->ctrls, ARRAY_SIZE(ap1302_ctrls) + 7);
 	if (ret)
 		return ret;
 
 	for (i = 0; i < ARRAY_SIZE(ap1302_ctrls); i++)
 		v4l2_ctrl_new_custom(&ap1302->ctrls, &ap1302_ctrls[i], NULL);
+
+	/* By default, PIXEL_RATE is read only */
+	ap1302->pixel_rate = v4l2_ctrl_new_std(&ap1302->ctrls, &ap1302_ctrl_ops,
+				V4L2_CID_PIXEL_RATE,
+				ap1302_get_pixel_rate(ap1302),
+				ap1302_get_pixel_rate(ap1302), 1,
+				ap1302_get_pixel_rate(ap1302));
+
+	ap1302->hblank = v4l2_ctrl_new_std(&ap1302->ctrls, &ap1302_ctrl_ops,
+				V4L2_CID_HBLANK,
+				ap1302_get_hblank(ap1302),
+				ap1302_get_hblank(ap1302), 1,
+				ap1302_get_hblank(ap1302));
+	if (ap1302->hblank)
+		ap1302->hblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+
+	ap1302->vblank = v4l2_ctrl_new_std(&ap1302->ctrls, &ap1302_ctrl_ops,
+				V4L2_CID_VBLANK,
+				ap1302_get_vblank(ap1302),
+				ap1302_get_vblank(ap1302), 1,
+				ap1302_get_vblank(ap1302));
+	if (ap1302->vblank)
+		ap1302->vblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+
+	ap1302->exposure = v4l2_ctrl_new_std(&ap1302->ctrls, &ap1302_ctrl_ops,
+				V4L2_CID_EXPOSURE,
+				ap1302_get_exposure(ap1302),
+				ap1302_get_exposure(ap1302), 1,
+				ap1302_get_exposure(ap1302));
+	if (ap1302->exposure)
+		ap1302->exposure->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+
+	ap1302->analogue_gain = v4l2_ctrl_new_std(&ap1302->ctrls, &ap1302_ctrl_ops,
+				V4L2_CID_ANALOGUE_GAIN,
+				ap1302_get_analogue_gain(ap1302),
+				ap1302_get_analogue_gain(ap1302), 1,
+				ap1302_get_analogue_gain(ap1302));
+	if (ap1302->analogue_gain)
+		ap1302->analogue_gain->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 
 	v4l2_ctrl_new_fwnode_properties(&ap1302->ctrls, &ap1302_ctrl_ops,
 					&props);
