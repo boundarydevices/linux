@@ -21,14 +21,96 @@
 
 &pio {
 	pinctrl_aud_default: aud-defaultgrp {
-		pins-cmd-dat {
-			pinmux = <PINMUX_GPIO101__FUNC_O_AUD_CLK_MOSI>,
-				 <PINMUX_GPIO102__FUNC_O_AUD_SYNC_MOSI>,
-				 <PINMUX_GPIO103__FUNC_O_AUD_DAT_MOSI0>,
-				 <PINMUX_GPIO104__FUNC_O_AUD_DAT_MOSI1>,
-				 <PINMUX_GPIO105__FUNC_I0_AUD_DAT_MISO0>,
-				 <PINMUX_GPIO106__FUNC_I0_AUD_DAT_MISO1>,
-				 <PINMUX_GPIO125__FUNC_O_DMIC1_CLK>;
+		pins-aud-pmic {
+			pinmux = <
+				PINMUX_GPIO101__FUNC_O_AUD_CLK_MOSI
+				PINMUX_GPIO102__FUNC_O_AUD_SYNC_MOSI
+				PINMUX_GPIO103__FUNC_O_AUD_DAT_MOSI0
+				PINMUX_GPIO104__FUNC_O_AUD_DAT_MOSI1
+				PINMUX_GPIO105__FUNC_I0_AUD_DAT_MISO0
+				PINMUX_GPIO106__FUNC_I0_AUD_DAT_MISO1
+			>;
+		};
+
+		pins-pcm-wifi {
+			pinmux = <
+				PINMUX_GPIO121__FUNC_B0_PCM_CLK		/* PCM_CLK */
+				PINMUX_GPIO122__FUNC_B0_PCM_SYNC	/* PCM_SYNC */
+				PINMUX_GPIO123__FUNC_O_PCM_DO		/* PCM_DO */
+				PINMUX_GPIO124__FUNC_I0_PCM_DI		/* PCM_DI */
+			>;
+		};
+
+		//i2s0 I2SO1 is master
+		pins-i2s0-slave {
+			pinmux = <
+				PINMUX_GPIO119__FUNC_O_I2SO1_MCK	/* I2SO2_D2 */
+				PINMUX_GPIO112__FUNC_O_I2SO1_WS		/* I2SIN_D2 */
+				PINMUX_GPIO120__FUNC_O_I2SO1_BCK	/* I2SO2_D3 */
+				PINMUX_GPIO113__FUNC_O_I2SO1_D0		/* I2SIN_D3 */
+
+				PINMUX_GPIO107__FUNC_B_GPIO107		/* I2SIN_MCK */
+				PINMUX_GPIO108__FUNC_I0_SPLIN_LRCK	/* I2SIN_BCK */
+				PINMUX_GPIO109__FUNC_I0_SPLIN_BCK	/* I2SIN_WS */
+				PINMUX_GPIO110__FUNC_I0_SPLIN_D0	/* I2SIN_D0 */
+			>;
+		};
+
+		//i2s2
+		pins-i2s2-out {
+			pinmux = <
+				PINMUX_GPIO116__FUNC_B0_I2SO2_WS	/* I2SO2_WS */
+				PINMUX_GPIO115__FUNC_B0_I2SO2_BCK	/* I2SO2_BCK */
+				PINMUX_GPIO117__FUNC_O_I2SO2_D0		/* I2SO2_D0 */
+			>;
+		};
+	};
+
+	pinctrl_aud_i2s0_master_in: aud-i2s0-master-ingrp {
+		pins-i2s0-in {
+			pinmux = <
+				PINMUX_GPIO107__FUNC_I0_SPLIN_MCK	/* I2SIN_MCK */
+				PINMUX_GPIO119__FUNC_B_GPIO119		/* I2SO2_D2 */
+				PINMUX_GPIO108__FUNC_I0_SPLIN_LRCK	/* I2SIN_BCK */
+				PINMUX_GPIO112__FUNC_B_GPIO112		/* I2SIN_D2 */
+				PINMUX_GPIO109__FUNC_I0_SPLIN_BCK	/* I2SIN_WS */
+				PINMUX_GPIO120__FUNC_B_GPIO120		/* I2SO2_D3 */
+				PINMUX_GPIO110__FUNC_I0_SPLIN_D0	/* I2SIN_D0 */
+			>;
+		};
+	};
+
+	pinctrl_aud_i2s0_master_out: aud-i2s0-master-outgrp {
+		pins-i2s0-master-out {
+			pinmux = <
+				PINMUX_GPIO107__FUNC_B_GPIO107		/* I2SIN_MCK */
+				PINMUX_GPIO119__FUNC_O_I2SO1_MCK	/* I2SO2_D2 */
+				PINMUX_GPIO108__FUNC_B_GPIO108		/* I2SIN_BCK */
+				PINMUX_GPIO112__FUNC_O_I2SO1_WS		/* I2SIN_D2 */
+				PINMUX_GPIO109__FUNC_B_GPIO109		/* I2SIN_WS */
+				PINMUX_GPIO120__FUNC_O_I2SO1_BCK	/* I2SO2_D3 */
+				PINMUX_GPIO113__FUNC_O_I2SO1_D0		/* I2SIN_D3 */
+			>;
+		};
+	};
+
+	pinctrl_aud_i2s2_master_in: aud-i2s2-master-ingrp {
+		pins-i2s2-in {
+			pinmux = <
+				PINMUX_GPIO116__FUNC_B0_I2SIN_WS	/* I2SO2_WS */
+				PINMUX_GPIO115__FUNC_B0_I2SIN_BCK	/* I2SO2_BCK */
+				PINMUX_GPIO118__FUNC_I0_I2SIN_D1	/* I2SO2_D1 */
+			>;
+		};
+	};
+
+	pinctrl_aud_i2s2_master_out: aud-i2s2-master-outgrp {
+		pins-i2s2-master-out {
+			pinmux = <
+				PINMUX_GPIO116__FUNC_B0_I2SO2_WS	/* I2SO2_WS */
+				PINMUX_GPIO115__FUNC_B0_I2SO2_BCK	/* I2SO2_BCK */
+				PINMUX_GPIO117__FUNC_O_I2SO2_D0		/* I2SO2_D0 */
+			>;
 		};
 	};
 
@@ -220,15 +302,6 @@
 			drive-strength = <MTK_DRIVE_6mA>;
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 		};
-
-		pins-pcm {
-			pinmux = <
-				PINMUX_GPIO121__FUNC_B0_PCM_CLK
-				PINMUX_GPIO122__FUNC_B0_PCM_SYNC
-				PINMUX_GPIO123__FUNC_O_PCM_DO
-				PINMUX_GPIO124__FUNC_I0_PCM_DI
-			>;
-		};
 	};
 
 	pinctrl_mmc2_uhs: mmc2-uhsgrp {
@@ -301,6 +374,7 @@
 		mipi = &fb_mipi;
 		mipi_dsi = &dsi0;
 		mipi_to_lvds = &mipi_to_lvds;
+		rtc1 = &mt6359rtc;
 		t_mipi = &t_mipi;
 	};
 
@@ -377,44 +451,39 @@
 		regulator-max-microvolt = <1800000>;
 	};
 
-	reg_1p8v: regulator-1p8v {
+	reg_vref_1v8: regulator@0 {
 		compatible = "regulator-fixed";
-		regulator-name = "fixed-1.8V";
+		regulator-name = "vref-1v8";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
-		regulator-boot-on;
 		regulator-always-on;
 	};
 
-	reg_vref_5v0: regulator-vref-5v0 {
+	reg_vref_3v3: regulator@1 {
 		compatible = "regulator-fixed";
-		regulator-name = "vref-5v0";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-	};
-
-	sdio_fixed_3v3: regulator@2 {
-		compatible = "regulator-fixed";
-		regulator-name = "sdio_card";
+		regulator-name = "vref-3v3";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
 	};
 
-	sdio_fixed_1v8: regulator@3 {
+	reg_vref_5v0: regulator@2 {
 		compatible = "regulator-fixed";
-		regulator-name = "sdio_io";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-		enable-active-high;
+		regulator-name = "vref-5v0";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
 		regulator-always-on;
 	};
 };
 
 &afe {
 	#sound-dai-cells = <0>;
-	mediatek,dmic-iir-on;
-	mediatek,dmic-clk-mono;
+	mediatek,etdm-in1-multi-pin-mode;	/* I2S */
+	mediatek,etdm-in2-multi-pin-mode;	/* I2S */
+	mediatek,etdm-out1-multi-pin-mode;	/* I2S */
+	mediatek,etdm-out2-multi-pin-mode;	/* I2S */
+	mediatek,etdm-in1-cowork-source = <2>;	/* clocks from etdm1_out */
+	mediatek,etdm-in2-cowork-source = <3>;	/* clocks from etdm2_out */
 	status = "okay";
 };
 
@@ -519,6 +588,8 @@
 &mt6359codec {
 	mediatek,mic-type-0 = <1>; /* ACC */
 	mediatek,mic-type-1 = <3>; /* DCC */
+	mediatek,mic-type-2 = <0>;
+	mediatek,dmic-mode = <0>;
 };
 
 &mt6359_vbbck_ldo_reg {
@@ -616,8 +687,8 @@
 	no-mmc;
 	no-sd;
 	non-removable;
-	vmmc-supply = <&sdio_fixed_3v3>;
-	vqmmc-supply = <&sdio_fixed_1v8>;
+	vmmc-supply = <&reg_vref_3v3>;
+	vqmmc-supply = <&reg_vref_1v8>;
 	mmc-pwrseq = <&wifi_pwrseq>;
 };
 
@@ -768,16 +839,26 @@
 	model = "mt8390-evk";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_aud_default>;
+
 	audio-routing =
 		"Headphone", "Headphone L",
 		"Headphone", "Headphone R",
+#if 1
+		"Headphone", "HPOUTL",
+		"Headphone", "HPOUTR";
+#endif
+#if 0
+		"Speaker", "SPKOUTL",
+		"Speaker", "SPKOUTR",
 		"AIN1", "Headset Mic",
 		"DMIC_INPUT", "AP DMIC",
 		"AP DMIC", "AUDGLB",
 		"AP DMIC", "MIC_BIAS_0",
 		"AP DMIC", "MIC_BIAS_2";
+#endif
 	status = "okay";
 
+#if 1
 	dai-link-0 {
 		sound-dai = <&afe>;
 		dai-link-name = "ADDA_BE";
@@ -791,6 +872,7 @@
 			sound-dai = <&dmic_codec>;
 		};
 	};
+#endif
 
 	dai-link-1 {
 		sound-dai = <&afe>;
@@ -809,6 +891,16 @@
 
 		codec-0 {
 			sound-dai = <&dp_tx>;
+		};
+	};
+
+	dai-link-3 {
+		sound-dai = <&afe>;
+		dai-link-name = "ETDM1_OUT_BE";
+		status = "okay";
+
+		codec-0 {
+			sound-dai = <&wm8962>;
 		};
 	};
 };
@@ -967,6 +1059,8 @@
 #define PD_SM_PCIE_CLK_REQ_OUT(a)	PINMUX_GPIO49__FUNC_B1_CLKREQN		/* PCIE_CLKREQ_N */
 
 /* J2I */
+#define SM_AFE				afe
+#define SM_AUDIO_MCK			<&topckgen CLK_TOP_I2SO1>
 #define GP_SM_AUDIO_MCK(a)		<&GPIO 119 a>
 #define PD_SM_AUDIO_MCK(a)		PINMUX_GPIO107__FUNC_B_GPIO107 PINMUX_GPIO119__FUNC_B_GPIO119
 #define PD_SM_AUDIO_MCK_I2S(a)		PINMUX_GPIO107__FUNC_I0_SPLIN_MCK PINMUX_GPIO119__FUNC_O_I2SO1_MCK	/* I2SIN_MCK, I2SO2_D2 */
@@ -1023,8 +1117,10 @@
 #define PD_SM_CARRIER_PWR_ON(a)		PINMUX_GPIO127__FUNC_B_GPIO127		/* DMIC1_DAT_R */
 #define GP_SM_FORCE_RECOV(a)		<&GPIO 126 a>
 #define PD_SM_FORCE_RECOV(a)		PINMUX_GPIO126__FUNC_B_GPIO126		/* DMIC1_DAT */
-#define GP_SM_BAT_LOW(a)		<&GPIO 149 a>
-#define PD_SM_BAT_LOW(a)		PINMUX_GPIO149__FUNC_B_GPIO149		/* DPI_DE */
+#define GP_SM_BAT_LOW(a)		<&GPIO 125 a>
+#define PD_SM_BAT_LOW(a)		PINMUX_GPIO125__FUNC_B_GPIO125		/* DMIC1_CLK */
+#define GP_SM_TEST(a)			<&GPIO 149 a>
+#define PD_SM_TEST(a)			PINMUX_GPIO149__FUNC_B_GPIO149		/* DPI_DE */
 
 #define GP_SM_GPIO0(a)			<&GPIO 0 a>
 #define PD_SM_GPIO0(a)			PINMUX_GPIO0__FUNC_B_GPIO0		/* GPIO00 */
