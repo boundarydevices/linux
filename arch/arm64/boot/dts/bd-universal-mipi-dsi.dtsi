@@ -51,7 +51,7 @@
 		)						\
 		pins_group(down,				\
 			_down,					\
-			bias-pull-down = <MTK_PUPD_SET_R1R0_10>; \
+			bias-pull-down;				\
 		)
 #endif
 
