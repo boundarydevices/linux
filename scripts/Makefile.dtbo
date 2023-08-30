@@ -1,12 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 __dtbo := $(sort $(dtbo-y))
 
-dtbo-base	:= $(sort $(foreach m,$(__dtbo),$($(m)-base)))
-dtbo := $(foreach m,$(__dtbo),$(if $($(m)-base),$(m)))
-
-__dtbo     := $(addprefix $(obj)/,$(__dtbo))
-dtbo-base	:= $(addprefix $(obj)/,$(dtbo-base))
-dtbo	:= $(addprefix $(obj)/,$(dtbo))
+dtbo	:= $(addprefix $(obj)/,$(__dtbo))
 
 ifneq ($(DTC_OVERLAY_TEST_EXT),)
 DTC_OVERLAY_TEST = $(DTC_OVERLAY_TEST_EXT)
@@ -27,4 +22,4 @@ $(obj)/%.dtbo: $(src)/%.dts FORCE
 
 $(call multi_depend, $(dtbo), , -base)
 
-always +=  $(dtbo)
+always-y +=  $(dtbo)
