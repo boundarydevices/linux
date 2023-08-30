@@ -1,0 +1,20 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&adsp>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target = <&sound>;
+		__overlay__ {
+			mediatek,adsp = <&adsp>;
+			mediatek,dai-link = "ADDA_BE", "DMIC_BE", "AFE_SOF_DL2", "AFE_SOF_DL3",
+				"AFE_SOF_UL4", "AFE_SOF_UL5";
+		};
+	};
+};

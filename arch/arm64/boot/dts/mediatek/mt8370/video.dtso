@@ -1,0 +1,196 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (c) 2021 MediaTek Inc.
+ * Author: Macross Chen <macross.chen@mediatek.com>
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/mediatek,mt8188-clk.h>
+#include <dt-bindings/mailbox/mediatek,mt8188-gce.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/memory/mediatek,mt8188-memory-port.h>
+#include <dt-bindings/power/mediatek,mt8188-power.h>
+
+/ {
+	compatible = "mediatek,mt8188";
+
+	fragment@0 {
+		target-path = "/soc";
+		__overlay__ {
+			vcu: vcu@18000000 {
+				compatible = "mediatek-vcu";
+				mediatek,vcuid = <0>;
+				mediatek,vcuname = "vcu";
+				mediatek,vcu-off  = <0>;
+				reg = <0 0x18000000 0 0x40000>,/* VDEC_BASE */
+					 <0 0x1a020000 0 0x10000>;/* VENC_BASE */
+
+				iommus = <&iommu_vdo M4U_PORT_L19_VENC_RD_COMV>;
+				dma-ranges = <0x1 0x0 0x0 0x40000000 0x1 0x0>;
+
+				mediatek,mailbox-gce = <&gce1>;
+				mediatek,dec_gce_th_num = <1>;
+				mediatek,enc_gce_th_num = <1>;
+
+				mboxes = <&gce1 16 CMDQ_THR_PRIO_1>,
+					 <&gce1 17 CMDQ_THR_PRIO_1>;
+
+				gce-event-names = "venc_eof",
+				  "venc_wp_2nd_done",
+				  "venc_wp_3nd_done";
+
+				gce-events = <CMDQ_EVENT_VENC_TOP_VENC_FRAME_DONE>,
+					<CMDQ_EVENT_VENC_TOP_WP_2ND_STAGE_DONE>,
+					<CMDQ_EVENT_VENC_TOP_WP_3RD_STAGE_DONE>;
+
+				gce-gpr = <GCE_GPR_R10>, <GCE_GPR_R11>;
+			};
+
+			vdec: vdec@18000000 {
+				compatible = "mediatek,mt8188-vcodec-dec";
+				mediatek,platform = "platform:mt8188";
+				mediatek,ipm = <2>;
+				reg = <0 0x18000000 0 0x800>,/* VDEC_BASE */
+					<0 0x18020000 0 0x1000>,/* VDEC_VLD */
+					<0 0x18025000 0 0x1000>,/* VDEC_MISC */
+					<0 0x18010000 0 0x800>,/* VDEC_LAT_MISC */
+					<0 0x18004000 0 0x1000>,/* VDEC_RACING_CTRL */
+					<0 0x1800f000 0 0x800>,/* VDEC_SOC_GCON */
+					<0 0x18010800 0 0x800>,/* VDEC_LAT_WDMA */
+					<0 0x18001000 0 0x1000>,/* VDEC_LAT_TOP */
+					<0 0x18000800 0 0x800>;/* VDEC_UFO_ENC */
+				reg-names = "VDEC_BASE",
+					"VDEC_VLD",
+					"VDEC_MISC",
+					"VDEC_LAT_MISC",
+					"VDEC_RACING_CTRL",
+					"VDEC_SOC_GCON",
+					"VDEC_LAT_WDMA",
+					"VDEC_LAT_TOP",
+					"VDEC_UFO_ENC";
+
+				iommus = <&iommu_vdo M4U_PORT_L19_VENC_RD_COMV>;
+				dma-ranges = <0x1 0x0 0x0 0x40000000 0x1 0x0>;
+				power-domains = <&spm MT8188_POWER_DOMAIN_VDEC0>;/* SOC */
+				interrupts = <GIC_SPI 707 IRQ_TYPE_LEVEL_HIGH 0>,
+						 <GIC_SPI 708 IRQ_TYPE_LEVEL_HIGH 0>,
+						 <GIC_SPI 710 IRQ_TYPE_LEVEL_HIGH 0>;
+
+				clocks = <&vdecsys_soc CLK_VDEC1_SOC_LARB1>,
+					 <&vdecsys_soc CLK_VDEC1_SOC_LAT>,
+					 <&vdecsys_soc CLK_VDEC1_SOC_VDEC>,
+					 <&vdecsys CLK_VDEC2_LARB1>,
+					 <&vdecsys CLK_VDEC2_VDEC>;
+
+				clock-names = "SOC_MT_CG_LARB1",
+					 "LAT_MT_CG_VDEC",
+					 "SOC_MT_CG_VDEC",
+					 "CORE_MT_CG_LARB1",
+					 "CORE_MT_CG_VDEC";
+
+				assigned-clocks = <&topckgen CLK_TOP_VDEC>;
+				assigned-clock-parents = <&apmixedsys CLK_APMIXED_TVDPLL2>;
+				mediatek,vcu = <&vcu>;
+			};
+
+			venc@1a020000 {
+				compatible = "mediatek,mt8188-vcodec-enc";
+				mediatek,platform = "platform:mt8188";
+				mediatek,ipm = <2>;
+				reg = <0 0x1a020000 0 0x10000>;/* VENC_C0 */
+				reg-names = "VENC_SYS";
+			iommus = <&iommu_vdo M4U_PORT_L19_VENC_RD_COMV>;
+				dma-ranges = <0x1 0x0 0x0 0x40000000 0x1 0x0>;
+				interrupts = <GIC_SPI 353 IRQ_TYPE_LEVEL_HIGH 0>;
+				clocks = <&vencsys CLK_VENC1_VENC>;
+				clock-names = "MT_CG_VENC0";
+				assigned-clocks = <&topckgen CLK_TOP_VENC>;
+				assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D4>;
+				mediatek,vcu = <&vcu>;
+			port-arg-num = <3>;
+			port-def = <0 M4U_PORT_L19_VENC_RCPU 0>,
+				<0 M4U_PORT_L19_VENC_REC 0>,
+				<0 M4U_PORT_L19_VENC_BSDMA 0>,
+				<0 M4U_PORT_L19_VENC_SV_COMV 0>,
+				<0 M4U_PORT_L19_VENC_RD_COMV 0>,
+				<0 M4U_PORT_L19_VENC_NBM_RDMA 1>,
+				<0 M4U_PORT_L19_VENC_NBM_RDMA_LITE 1>,
+				<0 M4U_PORT_L19_VENC_SUB_W_LUMA 0>,
+				<0 M4U_PORT_L19_VENC_FCS_NBM_RDMA 1>,
+				<0 M4U_PORT_L19_VENC_NBM_WDMA 1>,
+				<0 M4U_PORT_L19_VENC_NBM_WDMA_LITE 1>,
+				<0 M4U_PORT_L19_VENC_FCS_NBM_WDMA 1>,
+				<0 M4U_PORT_L19_VENC_CUR_LUMA 0>,
+				<0 M4U_PORT_L19_VENC_CUR_CHROMA 0>,
+				<0 M4U_PORT_L19_VENC_REF_LUMA 0>,
+				<0 M4U_PORT_L19_VENC_REF_CHROMA 0>,
+				<0 M4U_PORT_L19_VENC_SUB_R_LUMA 0>;
+			};
+
+			venc_l19 {
+				compatible = "mediatek,mt8188-venc-larb";
+				mediatek,larb-id = <19>;
+				mediatek,hw-id = <0>;
+				power-domains = <&spm MT8188_POWER_DOMAIN_VENC>;
+				iommus = <&iommu_vdo M4U_PORT_L19_VENC_RCPU>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_REC>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_BSDMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_SV_COMV>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_RD_COMV>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_NBM_RDMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_NBM_RDMA_LITE>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_SUB_W_LUMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_FCS_NBM_RDMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_NBM_WDMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_NBM_WDMA_LITE>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_FCS_NBM_WDMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_CUR_LUMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_CUR_CHROMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_REF_LUMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_REF_CHROMA>,
+					 <&iommu_vdo M4U_PORT_L19_VENC_SUB_R_LUMA>;
+				dma-ranges = <0x1 0x0 0x0 0x40000000 0x1 0x0>;
+			};
+
+			vdec_l21 {
+				compatible = "mediatek,mt8188-vcodec-larb";
+				mediatek,larb-id = <21>;
+				mediatek,hw-id = <0>;
+				power-domains = <&spm MT8188_POWER_DOMAIN_VDEC1>;/* core0 */
+				iommus = <&iommu_vdo M4U_PORT_L21_HW_VDEC_MC_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_UFO_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_PP_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_PRED_RD_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_PRED_WR_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_PPWRAP_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_TILE_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_VLD_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_VLD2_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_AVC_MV_EXT>,
+					 <&iommu_vdo M4U_PORT_L21_HW_VDEC_UFO_EXT_C>;
+				dma-ranges = <0x1 0x0 0x0 0x40000000 0x1 0x0>;
+			};
+
+			vdec_l23 {
+				compatible = "mediatek,mt8188-vcodec-larb";
+				mediatek,larb-id = <23>;
+				mediatek,hw-id = <1>;
+				power-domains = <&spm MT8188_POWER_DOMAIN_VDEC0>;/* soc */
+				iommus = <&iommu_vpp M4U_PORT_L23_HW_VDEC_LAT0_VLD_EXT>,
+					 <&iommu_vpp M4U_PORT_L23_HW_VDEC_LAT0_VLD2_EXT>,
+					 <&iommu_vpp M4U_PORT_L23_HW_VDEC_LAT0_AVC_MV_EXT>,
+					 <&iommu_vpp M4U_PORT_L23_HW_VDEC_LAT0_PRED_RD_EXT>,
+					 <&iommu_vpp M4U_PORT_L23_HW_VDEC_LAT0_TILE_EXT>,
+					 <&iommu_vpp M4U_PORT_L23_HW_VDEC_LAT0_WDMA_EXT>,
+					 <&iommu_vpp M4U_PORT_L23_HW_VDEC_UFO_ENC_EXT>,
+					 <&iommu_vpp M4U_PORT_L23_HW_VDEC_UFO_ENC_EXT_C>,
+					 <&iommu_vpp M4U_PORT_L23_HW_VDEC_MC_EXT_C>;
+				dma-ranges = <0x1 0x0 0x0 0x40000000 0x1 0x0>;
+			};
+
+		};
+	};
+};

@@ -65,3 +65,7 @@ dtb-$(CONFIG_ARCH_MEDIATEK) += mt8516-pumpkin.dtb
 
 DTC_FLAGS_mt8390-tungsten-smarc := -@
 DTC_FLAGS_mt8370-tungsten-smarc := -@
+
+subdir-y += mt8370
+subdir-y += mt8390
+subdir-y += mt83x0-tungsten-smarc

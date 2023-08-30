@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2024 Ezurio LLC
+ *
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&pio>;
+		__overlay__ {
+			camera_pins_cam0_rst: cam0-rst {
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO0__FUNC_B_GPIO0>;
+					output-low;
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&i2c3>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			pca9554_a27_0: pca9554@27 {
+				compatible = "nxp,pca9554";
+				pinctrl-names = "default";
+				reg = <0x27>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				status = "okay";
+				gpio-line-names = "EXPOSURE_TRIG_IN0", "FLASH_OUT0",
+						"CAM_SHUTTER0", "XVS0",	"CSI0_PDB",
+						"CSI0_INT", "INFO_TRIG_IN0", "CSI0_RST_N";
+			};
+
+			tevs_0: camera@48 {
+				compatible = "tn,tevs";
+				reg = <0x48>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&camera_pins_cam0_rst>;
+				reset-gpios = <&pio 0 GPIO_ACTIVE_HIGH>;
+				standby-gpios = <&pca9554_a27_0 6 GPIO_ACTIVE_HIGH>;
+				data-lanes = <4>;
+				data-frequency = <800>;
+				continuous-clock = <0>;
+				status = "okay";
+
+				port {
+					sensor0_out: endpoint {
+						remote-endpoint = <&seninf_csi_port_0_in>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&seninf_top>;
+		__overlay__ {
+			seninf_csi_port_0: seninf-csi-port-0 {
+				compatible = "mediatek,seninf";
+				csi-port = "0";
+				hs_trail_parameter = <0x0>;
+
+				port {
+					seninf_csi_port_0_in: endpoint {
+						remote-endpoint = <&sensor0_out>;
+						data-lanes = <1 2 3 4>;
+					};
+				};
+			};
+		};
+	};
+};

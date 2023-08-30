@@ -1,0 +1,110 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			backlight_lcd1: backlight-lcd1 {
+				compatible = "pwm-backlight";
+				pwms = <&disp_pwm1 0 500000>;
+				enable-gpios = <&pio 15 GPIO_ACTIVE_HIGH>;
+				brightness-levels = <0 1023>;
+				num-interpolated-steps = <1023>;
+				default-brightness-level = <576>;
+				status = "okay";
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&edp_tx>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&edp_pin>;
+			status = "okay";
+
+			aux-bus {
+				edp_panel: panel {
+					compatible = "auo,g156han03";
+					power-supply = <&edp_panel_fixed_3v3>;
+					backlight = <&backlight_lcd1>;
+					width-mm = <350>;
+					height-mm = <216>;
+					status = "okay";
+
+					port {
+						panel_in: endpoint {
+							remote-endpoint = <&edp_out>;
+						};
+					};
+				};
+			};
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					edp_in: endpoint {
+						remote-endpoint = <&dp_intf0_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					edp_out: endpoint {
+						remote-endpoint = <&panel_in>;
+						data-lanes = <0 1 2 3>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&dp_intf0>;
+		__overlay__ {
+			status = "okay";
+			ports {
+				port {
+					dp_intf0_out: endpoint {
+						remote-endpoint = <&edp_in>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&disp_pwm1>;
+		__overlay__ {
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&disp_pwm1_pin_default>;
+		};
+	};
+
+	fragment@4 {
+		target = <&pio>;
+		__overlay__ {
+			edp_pin: edp-pin-default {
+				pins-cmd-dat {
+					pinmux = <PINMUX_GPIO26__FUNC_I0_EDP_TX_HPD>;
+					bias-pull-down;
+				};
+			};
+
+			disp_pwm1_pin_default: disp-pwm1-pin-default {
+				pins1 {
+					pinmux = <PINMUX_GPIO30__FUNC_O_DISP_PWM1>,
+						 <PINMUX_GPIO15__FUNC_B_GPIO15>;
+				};
+			};
+		};
+	};
+};
