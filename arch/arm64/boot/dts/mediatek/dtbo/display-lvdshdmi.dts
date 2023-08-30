@@ -1,0 +1,70 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	fragment@0 {
+		target = <&i2c0>;
+		__overlay__ {
+			touchscreen@5d {
+				status = "disabled";
+			};
+			
+			it6122: it6122@6c {
+				compatible = "ite,it6122";
+				reg = <0x6c>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&it6122_pins_default>;
+				vio33tp1-gpio = <&pio 119 GPIO_ACTIVE_HIGH>;
+				ite,reset-gpio = <&pio 5 GPIO_ACTIVE_HIGH>;
+			};
+		};
+	};
+	
+	fragment@1 {
+		target = <&dsi0>;
+		__overlay__ {
+			panel@0 {
+				status = "disabled";
+			};
+			
+			panel@1 {
+				compatible = "koe,tx18d204vm0baa";
+				status = "okay";
+				reg = <0>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&panel_pins_default>;
+				bl-gpios = <&pio 45 GPIO_ACTIVE_HIGH>;
+				pwr-gpios = <&pio 111 GPIO_ACTIVE_HIGH>;
+				mediatek,it6122-attached;
+				port {
+					panel0_in: endpoint {
+						remote-endpoint = <&dsi0_out>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&lcm1_tp_avdd>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+	
+	fragment@3 {
+		target = <&pio>;
+		__overlay__ {
+			it6122_pins_default: it6122_pins_default {
+				pins-cmd-dat {
+					pinmux = <PINMUX_GPIO119__FUNC_B_GPIO119>,
+					<PINMUX_GPIO5__FUNC_B_GPIO5>;
+					output-high;
+				};
+			};
+		};
+	};
+};
