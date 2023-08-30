@@ -1,0 +1,27 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&dp_tx>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target = <&dp_intf1>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@8 {
+		target = <&sound>;
+		__overlay__ {
+			dai-link-2 { /* DPTX */
+				status = "okay";
+			};
+		};
+	};
+};

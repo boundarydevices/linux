@@ -1,0 +1,40 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&dp_tx>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target = <&dp_intf1>;
+		__overlay__ {
+			status = "okay";
+			mediatek,indicated-display-path = <1>;
+		};
+	};
+
+	fragment@2 {
+		target = <&disp_dpi1>;
+		__overlay__ {
+			status = "okay";
+			mediatek,indicated-display-path = <0>;
+		};
+	};
+
+	fragment@3 {
+		target = <&sound>;
+		__overlay__ {
+			dai-link-1 { /* HDMI */
+				status = "okay";
+			};
+
+			dai-link-2 { /* DPTX */
+				status = "okay";
+			};
+		};
+	};
+};
