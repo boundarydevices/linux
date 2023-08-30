@@ -27,3 +27,7 @@
 &mipi_to_lvds {
 	status = "okay";
 };
+
+&ts_mipi_goodix {
+	status = "okay";
+};
