@@ -176,7 +176,7 @@
 			PD_SM_I2C_CSI0_CK_I2C(PAD_I2C)
 			PD_SM_I2C_CSI0_DAT_I2C(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 
@@ -185,7 +185,7 @@
 			PD_SM_I2C_CSI0_CK(PAD_I2C)
 			PD_SM_I2C_CSI0_DAT(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 #endif
@@ -196,7 +196,7 @@
 			PD_SM_I2C_CSI1_CK_I2C(PAD_I2C)
 			PD_SM_I2C_CSI1_DAT_I2C(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 
@@ -205,7 +205,7 @@
 			PD_SM_I2C_CSI1_CK(PAD_I2C)
 			PD_SM_I2C_CSI1_DAT(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 #endif
@@ -215,7 +215,7 @@
 			PD_SM_I2C_GP_CK_I2C(PAD_I2C)
 			PD_SM_I2C_GP_DAT_I2C(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 
@@ -224,7 +224,7 @@
 			PD_SM_I2C_GP_CK(PAD_I2C)
 			PD_SM_I2C_GP_DAT(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 
@@ -233,7 +233,7 @@
 			PD_SM_I2C_LCD_CK_I2C(PAD_I2C)
 			PD_SM_I2C_LCD_DAT_I2C(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 
@@ -242,7 +242,7 @@
 			PD_SM_I2C_LCD_CK(PAD_I2C)
 			PD_SM_I2C_LCD_DAT(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 
@@ -251,7 +251,7 @@
 			PD_SM_I2C_PM_CK_I2C(PAD_I2C)
 			PD_SM_I2C_PM_DAT_I2C(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 
@@ -260,7 +260,7 @@
 			PD_SM_I2C_PM_CK(PAD_I2C)
 			PD_SM_I2C_PM_DAT(PAD_I2C),
 			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
+			drive-strength-microamp = <1000>;
 		)
 	};
 
