@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2024 Ezurio LLC
+ *
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "isp71.dtsi"
+#include "mtk-camera.dtsi"

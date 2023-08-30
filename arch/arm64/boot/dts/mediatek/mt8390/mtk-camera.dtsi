@@ -1,0 +1,67 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2022 MediaTek Inc.
+ *
+ */
+
+#include <dt-bindings/memory/mediatek,mt8188-memory-port.h>
+
+/*
+ * For the usage of these definitions, please refer to
+ * the Out-Of-Tree driver mtk-camisp-drvier:
+ * - Documentation/devicetree/bindings/media/mediatek,camera.yaml
+ * - include/dt-bindings/media/mtk-camera.h
+ */
+#define MTK_CAMERA_PREVIEW  1
+#define MTK_CAMERA_VIDEO    2
+#define MTK_CAMERA_CAPTURE  3
+
+/ {
+	fragment@3 {
+		target-path = "/soc";
+		__overlay__ {
+			cam_vcu: vcu@2 {
+				compatible = "mediatek-vcu";
+				mediatek,vcuid = <2>;
+				mediatek,vcuname = "vcu2";
+				iommus = <&iommu_vdo M4U_PORT_L19_VENC_RD_COMV>;
+			};
+
+			mtkcam0: mtkcam@0 {
+				compatible = "mediatek,camera";
+				mediatek,vcu = <&cam_vcu>;
+				mediatek,cameraid = <0>;
+				mediatek,platform = "platform:mtkcam0";
+				iommus = <&iommu_vpp M4U_PORT_L14_GCAMSV_B_IMGO_2>;
+				status = "disabled";
+			};
+
+			mtkcam1: mtkcam@1 {
+				compatible = "mediatek,camera";
+				mediatek,vcu = <&cam_vcu>;
+				mediatek,cameraid = <1>;
+				mediatek,platform = "platform:mtkcam1";
+				iommus = <&iommu_vpp M4U_PORT_L14_GCAMSV_B_IMGO_2>;
+				status = "disabled";
+			};
+
+			mtkcam2: mtkcam@2 {
+				compatible = "mediatek,camera";
+				mediatek,vcu = <&cam_vcu>;
+				mediatek,cameraid = <2>;
+				mediatek,platform = "platform:mtkcam2";
+				iommus = <&iommu_vpp M4U_PORT_L14_GCAMSV_B_IMGO_2>;
+				status = "disabled";
+			};
+
+			mtkcam3: mtkcam@3 {
+				compatible = "mediatek,camera";
+				mediatek,vcu = <&cam_vcu>;
+				mediatek,cameraid = <3>;
+				mediatek,platform = "platform:mtkcam3";
+				iommus = <&iommu_vpp M4U_PORT_L14_GCAMSV_B_IMGO_2>;
+				status = "disabled";
+			};
+		};
+	};
+};
