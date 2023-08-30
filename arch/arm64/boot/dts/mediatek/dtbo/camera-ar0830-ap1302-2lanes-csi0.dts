@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2023 MediaTek Inc.
+ *
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "camera-ar0830-ap1302-csi0.dts"
+
+/ {
+	fragment@10 {
+		target = <&i2c5>;
+		__overlay__ {
+			sensor0@3c {
+				sensor-names = "ar0830ap1302d2l_mipi_yuv";
+
+				port {
+					endpoint {
+						data-lanes = <1 2>;
+					};
+				};
+
+			};
+		};
+	};
+
+	fragment@11 {
+		target = <&seninf_top>;
+		__overlay__ {
+			seninf_csi_port_0 {
+				csi-port = "0";
+			};
+		};
+	};
+};

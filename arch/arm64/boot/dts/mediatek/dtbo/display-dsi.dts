@@ -1,0 +1,38 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&dpi1>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@1 {
+		target = <&hdmi0>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@2 {
+		target = <&hdmi_phy>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@3 {
+		target = <&sound>;
+		__overlay__ {
+			dai-link-1 { /* HDMI */
+				status = "disabled";
+			};
+
+			dai-link-2 { /* DPTX */
+				status = "disabled";
+			};
+		};
+	};
+};
