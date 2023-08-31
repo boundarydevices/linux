@@ -440,7 +440,7 @@
 		};
 	};
 
-	reg_hub: regulator@5 {
+	reg_hub: regulator-hub {
 		compatible = "regulator-fixed";
 		enable-active-high;
 		gpio = GP_HUB_ENABLE;
@@ -451,7 +451,7 @@
 		regulator-max-microvolt = <1800000>;
 	};
 
-	reg_vref_1v8: regulator@0 {
+	reg_vref_1v8: regulator-vref-1v8 {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-1v8";
 		regulator-min-microvolt = <1800000>;
@@ -459,7 +459,7 @@
 		regulator-always-on;
 	};
 
-	reg_vref_3v3: regulator@1 {
+	reg_vref_3v3: regulator-vref-3v3 {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-3v3";
 		regulator-min-microvolt = <3300000>;
@@ -467,7 +467,7 @@
 		regulator-always-on;
 	};
 
-	reg_vref_5v0: regulator@2 {
+	reg_vref_5v0: reg-vref-5v0 {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-5v0";
 		regulator-min-microvolt = <5000000>;
@@ -647,8 +647,6 @@
 &mmc1 {
 	cap-sd-highspeed;
 	max-frequency = <200000000>;
-	no-mmc;
-	no-sdio;
 	sd-uhs-sdr50;
 	sd-uhs-sdr104;
 	status = "okay";
