@@ -497,6 +497,7 @@ static const struct mtk_i2c_compatible mt8186_compat = {
 };
 
 static const struct mtk_i2c_compatible mt8188_compat = {
+	.quirks = &mt8183_i2c_quirks,
 	.regs = mt_i2c_regs_v3,
 	.pmic_i2c = 0,
 	.dcm = 0,
