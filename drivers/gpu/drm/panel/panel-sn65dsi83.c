@@ -583,7 +583,7 @@ int sn65_setup(struct device *dev, struct panel_sn65dsi83 *sn,
 	of_node_put(i2c_node);
 
 	if (!i2c) {
-		dev_dbg(sn->dev, "%s:i2c deferred\n", __func__);
+		dev_dbg(dev, "%s:i2c deferred\n", __func__);
 		return -EPROBE_DEFER;
 	}
 	sn->i2c = i2c;
@@ -601,32 +601,32 @@ int sn65_setup(struct device *dev, struct panel_sn65dsi83 *sn,
 	pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR(pinctrl)) {
 		ret = PTR_ERR(pinctrl);
-		dev_dbg(sn->dev, "%s:devm_pinctrl_get %d\n", __func__, ret);
+		dev_dbg(dev, "%s:devm_pinctrl_get %d\n", __func__, ret);
 		return ret;
 	}
 	pins = pinctrl_lookup_state(pinctrl, "sn65dsi83");
 	if (IS_ERR(pins)) {
 		ret = PTR_ERR(pins);
-		dev_dbg(sn->dev, "%s:pinctrl_lookup_state %d\n", __func__, ret);
+		dev_dbg(dev, "%s:pinctrl_lookup_state %d\n", __func__, ret);
 		return ret;
 	}
 	ret = pinctrl_select_state(pinctrl, pins);
 	if (ret) {
-		dev_dbg(sn->dev, "%s:pinctrl_select_state %d\n", __func__, ret);
+		dev_dbg(dev, "%s:pinctrl_select_state %d\n", __func__, ret);
 		return ret;
 	}
 
 	pixel_clk = devm_clk_get(dev, "pixel_clock");
 	if (IS_ERR(pixel_clk)) {
 		ret = PTR_ERR(pixel_clk);
-		dev_dbg(sn->dev, "%s:devm_clk_get pixel_clk  %d\n", __func__, ret);
+		dev_dbg(dev, "%s:devm_clk_get pixel_clk  %d\n", __func__, ret);
 		pixel_clk = NULL;
 	}
 
 	gp_en = devm_fwnode_get_gpiod_from_child(dev, "enable", child, GPIOD_OUT_LOW, "sn65_en");
 	if (IS_ERR(gp_en)) {
 		ret = PTR_ERR(gp_en);
-		dev_dbg(sn->dev, "%s:devm_fwnode_get_gpiod_from_child enable  %d\n", __func__, ret);
+		dev_dbg(dev, "%s:devm_fwnode_get_gpiod_from_child enable  %d\n", __func__, ret);
 		if (PTR_ERR(gp_en) != -EPROBE_DEFER)
 			dev_err(dev, "Failed to get enable gpio: %d\n", ret);
 		return ret;
@@ -634,7 +634,6 @@ int sn65_setup(struct device *dev, struct panel_sn65dsi83 *sn,
 	if (!gp_en)
 		dev_warn(dev, "no enable pin available");
 
-	sn->dev = dev;
 	sn->gp_en = gp_en;
 	sn->pixel_clk = pixel_clk;
 	mutex_init(&sn->power_mutex);
@@ -679,6 +678,7 @@ int sn65_setup(struct device *dev, struct panel_sn65dsi83 *sn,
 		if (ret)
 			pr_info("%s: request_irq failed, irq:%i\n", client_name, sn->irq);
 	}
+	sn->dev = dev;
 
 	return 0;
 }
@@ -696,6 +696,7 @@ int sn65_check(struct panel_sn65dsi83 *sn)
 		/* enable might be used for something else, change to input */
 		gpiod_direction_input(sn->gp_en);
 		dev_info(dev, "i2c read failed\n");
+		sn->dev = NULL;
 		return -ENODEV;
 	}
 	gpiod_set_value(sn->gp_en, 0);
