@@ -1555,7 +1555,12 @@ u32 ocelot_get_bridge_fwd_mask(struct ocelot *ocelot, int src_port)
 		if (!ocelot_port)
 			continue;
 
-		if (ocelot_port->stp_state == BR_STATE_FORWARDING &&
+		/* Keep the bridge port in the forwarding mask if the port
+		 * is in the forwarding state, or in forced forwarding mode.
+		 * The latter is needed for 802.1CB.
+		 */
+		if ((ocelot_port->stp_state == BR_STATE_FORWARDING ||
+		     ocelot_port->force_forward) &&
 		    ocelot_port->bridge == bridge)
 			mask |= BIT(port);
 	}
