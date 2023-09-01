@@ -915,6 +915,28 @@ static void panel_edp_shutdown(struct device *dev)
 	drm_panel_unprepare(&panel->base);
 }
 
+static const struct display_timing ltk133fhbct01_timing = {
+	.pixelclock = { 100000000, 147800000, 160000000 },
+	.hactive = { 1920, 1920, 1920 },
+	.hfront_porch = { 20, 140, 340 },
+	.hback_porch = { 70, 70, 70 },
+	.hsync_len = { 70, 70, 70 },
+	.vactive = { 1080, 1080, 1080 },
+	.vfront_porch = { 10, 10, 10 },
+	.vback_porch = { 10, 10, 10 },
+	.vsync_len = { 12, 25, 138 },
+};
+
+static const struct panel_desc ltk133fhbct01 = {
+	.timings = &ltk133fhbct01_timing,
+	.num_timings = 1,
+	.bpc = 8,
+	.size = {
+		.width = 294,
+		.height = 165,
+	},
+};
+
 static const struct display_timing auo_b101ean01_timing = {
 	.pixelclock = { 65300000, 72500000, 75000000 },
 	.hactive = { 1280, 1280, 1280 },
@@ -1748,6 +1770,9 @@ static const struct of_device_id platform_of_match[] = {
 	{
 		/* Must be first */
 		.compatible = "edp-panel",
+	}, {
+		.compatible = "ltk,133fhbct01",
+		.data = &ltk133fhbct01,
 	}, {
 		.compatible = "auo,b101ean01",
 		.data = &auo_b101ean01,
