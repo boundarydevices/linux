@@ -1623,6 +1623,7 @@ static int panel_common_dsi_probe(struct mipi_dsi_device *dsi)
 		struct panel_common *panel = dev_get_drvdata(&dsi->dev);
 
 		drm_panel_remove(&panel->base);
+		sn65_remove(&panel->sn65);
 	}
 
 	return err;
