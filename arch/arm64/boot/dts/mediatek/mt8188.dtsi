@@ -3076,7 +3076,6 @@
 			reg = <0 0x11021000 0 0x4000>;
 			interrupts = <GIC_SPI 716 IRQ_TYPE_LEVEL_HIGH 0>;
 			interrupt-names = "macirq";
-			mac-address = [00 55 7b b5 7d f7];
 			clock-names = "axi",
 				      "apb",
 				      "mac_cg",
