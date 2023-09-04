@@ -152,7 +152,7 @@ static void mtk_camsv30_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h,
 		return;
 	}
 
-	spin_lock(&cam_dev->irqlock);
+	spin_lock_irq(&cam_dev->irqlock);
 
 	mtk_camsv30_tg_write(cam_dev, CAMSV_TG_SEN_MODE, conf->tg_sen_mode);
 
@@ -199,7 +199,7 @@ static void mtk_camsv30_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h,
 	mtk_camsv30_write(cam_dev, CAMSV_MODULE_EN,
 			  mtk_camsv30_read(cam_dev, CAMSV_MODULE_EN) | 0x00000010U);
 
-	spin_unlock(&cam_dev->irqlock);
+	spin_unlock_irq(&cam_dev->irqlock);
 	pm_runtime_put_autosuspend(cam_dev->dev);
 }
 
@@ -207,10 +207,9 @@ static irqreturn_t isp_irq_camsv30(int irq, void *data)
 {
 	struct mtk_cam_dev *cam_dev = (struct mtk_cam_dev *)data;
 	struct mtk_cam_dev_buffer *buf;
-	unsigned long flags = 0;
 	unsigned int irq_status;
 
-	spin_lock_irqsave(&cam_dev->irqlock, flags);
+	spin_lock(&cam_dev->irqlock);
 
 	irq_status = mtk_camsv30_read(cam_dev, CAMSV_INT_STATUS);
 
@@ -250,7 +249,7 @@ static irqreturn_t isp_irq_camsv30(int irq, void *data)
 		}
 	}
 
-	spin_unlock_irqrestore(&cam_dev->irqlock, flags);
+	spin_unlock(&cam_dev->irqlock);
 
 	return IRQ_HANDLED;
 }
