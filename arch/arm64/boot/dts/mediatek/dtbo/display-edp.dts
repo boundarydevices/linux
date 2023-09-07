@@ -52,8 +52,7 @@
 		__overlay__ {
 			edp_panel: panel {
 				compatible = "auo,g156han03";
-				power-supply = <&edp_panel_fixed_3v3>;
-				backlight = <&backlight_lcd0>;
+				backlight = <&backlight_mipi>;
 				width-mm = <350>;
 				height-mm = <216>;
 				status = "okay";
@@ -67,21 +66,10 @@
 		};
 	};
 
-	fragment@3 {
-		target = <&edp_panel_fixed_3v3>;
-		__overlay__ {
-			regulator-state-mem {
-				regulator-on-in-suspend;
-			};
-		};
-	};
-
 	fragment@4 {
-		target = <&backlight_lcd0>;
+		target = <&backlight_mipi>;
 		__overlay__ {
 			default-on;
-			power-supply = <&edp_panel_fixed_3v3>;
-			enable-active-high;
 			status = "okay";
 		};
 	};
@@ -100,7 +88,7 @@
 		__overlay__ {
 			edp_pin: edp-pin-default {
 				pins-cmd-dat {
-					pinmux = <PINMUX_GPIO17__FUNC_I0_EDP_TX_HPD>;
+					pinmux = <PINMUX_GPIO28__FUNC_I0_EDP_TX_HPD>;	/* DSI1_TE */
 					bias-pull-up;
 				};
 			};
