@@ -19,6 +19,8 @@
 #define GPIO	pio
 #endif
 
+#define USE_I2SIN_WITH_I2SO1
+
 &pio {
 	pinctrl_aud_default: aud-defaultgrp {
 		pins-aud-pmic {
@@ -42,7 +44,7 @@
 		};
 
 		//i2s0 I2SO1 is master
-		pins-i2s0-slave {
+		pins-i2s0 {
 			pinmux = <
 				PINMUX_GPIO119__FUNC_O_I2SO1_MCK	/* I2SO2_D2 */
 				PINMUX_GPIO112__FUNC_O_I2SO1_WS		/* I2SIN_D2 */
@@ -50,9 +52,13 @@
 				PINMUX_GPIO113__FUNC_O_I2SO1_D0		/* I2SIN_D3 */
 
 				PINMUX_GPIO107__FUNC_B_GPIO107		/* I2SIN_MCK */
-				PINMUX_GPIO108__FUNC_I0_SPLIN_LRCK	/* I2SIN_BCK */
-				PINMUX_GPIO109__FUNC_I0_SPLIN_BCK	/* I2SIN_WS */
+				PINMUX_GPIO108__FUNC_B_GPIO108		/* I2SIN_BCK */
+				PINMUX_GPIO109__FUNC_B_GPIO109		/* I2SIN_WS */
+#ifdef USE_I2SIN_WITH_I2SO1
+				PINMUX_GPIO110__FUNC_I0_I2SIN_D0	/* I2SIN_D0 */
+#else
 				PINMUX_GPIO110__FUNC_I0_SPLIN_D0	/* I2SIN_D0 */
+#endif
 			>;
 		};
 
@@ -482,8 +488,13 @@
 	mediatek,etdm-in2-multi-pin-mode;	/* I2S */
 	mediatek,etdm-out1-multi-pin-mode;	/* I2S */
 	mediatek,etdm-out2-multi-pin-mode;	/* I2S */
+#ifdef USE_I2SIN_WITH_I2SO1
+	mediatek,etdm-in1-cowork-source = <3>;	/* clocks from etdm2_out */
+	mediatek,etdm-in2-cowork-source = <2>;	/* clocks from etdm1_out */
+#else
 	mediatek,etdm-in1-cowork-source = <2>;	/* clocks from etdm1_out */
 	mediatek,etdm-in2-cowork-source = <3>;	/* clocks from etdm2_out */
+#endif
 	status = "okay";
 };
 
@@ -841,22 +852,17 @@
 	audio-routing =
 		"Headphone", "Headphone L",
 		"Headphone", "Headphone R",
-#if 1
 		"Headphone", "HPOUTL",
-		"Headphone", "HPOUTR";
-#endif
-#if 0
-		"Speaker", "SPKOUTL",
-		"Speaker", "SPKOUTR",
-		"AIN1", "Headset Mic",
-		"DMIC_INPUT", "AP DMIC",
-		"AP DMIC", "AUDGLB",
-		"AP DMIC", "MIC_BIAS_0",
-		"AP DMIC", "MIC_BIAS_2";
-#endif
+		"Headphone", "HPOUTR",
+		"Headphone", "SPKOUTL",
+		"Headphone", "SPKOUTR",
+		"Headset Mic", "MICBIAS",
+		"IN1R", "Headset Mic",
+		"IN2R", "Headset Mic",
+		"IN3L", "Headset Mic",
+		"IN3R", "Headset Mic";
 	status = "okay";
 
-#if 1
 	dai-link-0 {
 		sound-dai = <&afe>;
 		dai-link-name = "ADDA_BE";
@@ -870,7 +876,6 @@
 			sound-dai = <&dmic_codec>;
 		};
 	};
-#endif
 
 	dai-link-1 {
 		sound-dai = <&afe>;
@@ -895,6 +900,20 @@
 	dai-link-3 {
 		sound-dai = <&afe>;
 		dai-link-name = "ETDM1_OUT_BE";
+		status = "okay";
+
+		codec-0 {
+			sound-dai = <&wm8962>;
+		};
+	};
+
+	dai-link-4 {
+		sound-dai = <&afe>;
+#ifdef USE_I2SIN_WITH_I2SO1
+		dai-link-name = "ETDM2_IN_BE";
+#else
+		dai-link-name = "ETDM1_IN_BE";
+#endif
 		status = "okay";
 
 		codec-0 {
@@ -1027,14 +1046,14 @@
 #define GP_SM_LCD0_BKLT_PWM(a)		<&GPIO 29 a>
 #define PD_SM_LCD0_BKLT_PWM(a)		PINMUX_GPIO29__FUNC_B_GPIO29
 #define PD_SM_LCD0_BKLT_PWM_OUT(a)	PINMUX_GPIO29__FUNC_O_DISP_PWM0		/* DISP_PWM0 */
-#define GP_EDP0_HPD(a)			<&GPIO 46 a>
-#define PD_EDP0_HPD(a)			PINMUX_GPIO46__FUNC_B_GPIO46
-#define PD_EDP0_HPD_IN(a)		PINMUX_GPIO46__FUNC_I0_DP_TX_HPD	/* DPTX_HPD */
+#define GP_EDP0_HPD(a)			<&GPIO 28 a>
+#define PD_EDP0_HPD(a)			PINMUX_GPIO28__FUNC_B_GPIO28
+#define PD_EDP0_HPD_IN(a)		PINMUX_GPIO28__FUNC_I0_EDP_TX_HPD	/* DSI1_TE */
 #define GP_EDP1_HPD(a)			<&GPIO 19 a>
 #define PD_EDP1_HPD(a)			PINMUX_GPIO19__FUNC_B_GPIO19		/* CMMRST0 */
 
-#define GP_SM_LCD1_VDD_EN(a)		<&GPIO 28 a>
-#define PD_SM_LCD1_VDD_EN(a)		PINMUX_GPIO28__FUNC_B_GPIO28		/* DSI1_TE */
+#define GP_SM_LCD1_VDD_EN(a)		<&GPIO 46 a>
+#define PD_SM_LCD1_VDD_EN(a)		PINMUX_GPIO46__FUNC_B_GPIO46		/* DPTX_HPD */
 
 #define SM_PWM_LCD1			disp_pwm1
 #define GP_SM_LCD1_BKLT_PWM(a)		<&GPIO 30 a>
