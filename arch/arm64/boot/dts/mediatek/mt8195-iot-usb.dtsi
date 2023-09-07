@@ -39,6 +39,8 @@
 					 <&topckgen CLK_TOP_SSUSB_REF>,
 					 <&apmixedsys CLK_APMIXED_USB1PLL>;
 				clock-names = "sys_ck", "xhci_ck", "ref_ck", "mcu_ck";
+				usb2-lpm-disable;
+				mediatek,u3-rx-fifo-depth;
 				status = "disabled";
 			};
 		};
@@ -63,6 +65,8 @@
 			clock-names = "sys_ck", "xhci_ck", "ref_ck", "mcu_ck";
 			mediatek,syscon-wakeup = <&pericfg 0x400 104>;
 			wakeup-source;
+			usb2-lpm-disable;
+			mediatek,u3-rx-fifo-depth;
 			status = "disabled";
 		};
 
@@ -94,6 +98,7 @@
 				assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
 				clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_2P_XHCI>;
 				clock-names = "sys_ck";
+				usb2-lpm-disable;
 				status = "disabled";
 			};
 		};
