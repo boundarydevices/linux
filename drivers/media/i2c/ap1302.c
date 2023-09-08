@@ -28,6 +28,8 @@
 
 #define DRIVER_NAME "ap1302"
 
+#define BLOCK_SIZE 128
+
 #define AP1302_FW_WINDOW_SIZE			0x2000
 #define AP1302_FW_WINDOW_OFFSET			0x8000
 
@@ -1098,17 +1100,20 @@ static int ap1302_dump_console(struct ap1302_device *ap1302)
 	u8 *endp;
 	u8 *p;
 	int ret;
+	u16 idx;
 
 	buffer = kmalloc(AP1302_CON_BUF_SIZE + 1, GFP_KERNEL);
 	if (!buffer)
 		return -ENOMEM;
 
-	ret = __ap1302_read_raw(ap1302, AP1302_REG_ADDR(AP1302_CON_BUF),
-				AP1302_CON_BUF_SIZE, buffer);
-	if (ret < 0) {
-		dev_err(ap1302->dev, "Failed to read console buffer: %d\n",
-			ret);
-		goto done;
+	for (idx = 0; idx < AP1302_CON_BUF_SIZE; idx += BLOCK_SIZE) {
+		ret = __ap1302_read_raw(ap1302, AP1302_REG_ADDR(AP1302_CON_BUF + idx),
+			min(AP1302_CON_BUF_SIZE - idx, BLOCK_SIZE), buffer + idx);
+		if (ret < 0) {
+			dev_err(ap1302->dev, "Failed to read console buffer: %d\n",
+				ret);
+			goto done;
+		}
 	}
 
 	print_hex_dump(KERN_INFO, "console ", DUMP_PREFIX_OFFSET, 16, 1, buffer,
