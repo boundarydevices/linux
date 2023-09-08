@@ -8,6 +8,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/net/microchip-lan78xx.h>
 #include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
 #include <dt-bindings/usb/pd.h>
 #ifdef CONFIG_DEFCONFIG
@@ -829,6 +830,30 @@
 &usb_host2 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+
+	ethernet: ethernet@1 {
+                compatible = "usb424,7850";
+                reg = <1>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+                mdio {
+                        #address-cells = <0x1>;
+                        #size-cells = <0x0>;
+                        eth_phy: ethernet-phy@1 {
+                                reg = <1>;
+                                /* Lines are LEDs 0 - 3 respectivly.
+                                   We only use led 0(LINK1000) and 2(LINK_ACT)
+                                */
+                                microchip,led-modes = <
+                                        LAN78XX_LINK_1000_ACTIVITY
+                                        LAN78XX_LINK_10_ACTIVITY
+                                        LAN78XX_LINK_ACTIVITY
+                                        LAN78XX_LINK_10_100_ACTIVITY
+                                >;
+                        };
+                };
+        };
 };
 
 &mfg0 {
