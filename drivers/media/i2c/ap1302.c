@@ -447,7 +447,7 @@ struct ap1302_firmware_header {
 
 #define MAX_FW_LOAD_RETRIES		5
 #define MAX_CHIP_DETECT_RETRIES		5
-#define MAX_CHECK_RETRIES		5
+#define MAX_CHECK_RETRIES		10
 
 static const struct ap1302_format_info supported_video_formats[] = {
 	{
@@ -1162,6 +1162,9 @@ static int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 		ap1302_write(ap1302, AP1302_SYS_START,
 			     AP1302_SYS_START_PLL_LOCK |
 			     AP1302_SYS_START_STALL_MODE_DISABLED, &ret);
+		if (ret < 0)
+			return ret;
+
 		ap1302_write(ap1302, AP1302_SYS_START,
 			     AP1302_SYS_START_PLL_LOCK |
 			     AP1302_SYS_START_STALL_EN |
@@ -1169,19 +1172,10 @@ static int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 		if (ret < 0)
 			return ret;
 
-		msleep(200);
-
-		ap1302_write(ap1302, AP1302_ADV_IRQ_SYS_INTE,
-			     AP1302_ADV_IRQ_SYS_INTE_SIPM |
-			     AP1302_ADV_IRQ_SYS_INTE_SIPS_FIFO_WRITE, &ret);
-		if (ret < 0)
-			return ret;
-
 		return 0;
 	} else {
 		return ap1302_write(ap1302, AP1302_SYS_START,
 				    AP1302_SYS_START_PLL_LOCK |
-				    AP1302_SYS_START_STALL_STATUS |
 				    AP1302_SYS_START_STALL_EN |
 				    AP1302_SYS_START_STALL_MODE_DISABLED, NULL);
 	}
@@ -2349,7 +2343,7 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 		if ((checksum != 0 && checksum == fw_hdr->check) || crc == fw_hdr->check)
 			break;
 
-		msleep(100);
+		msleep(50);
 	}
 
 	if (retries == MAX_CHECK_RETRIES) {
@@ -2361,7 +2355,6 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	}
 
 	/* The AP1302 starts outputting frames right after boot, stop it. */
-	msleep(300);
 	ret = ap1302_stall(ap1302, true);
 
 done:
