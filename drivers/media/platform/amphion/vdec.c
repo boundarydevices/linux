@@ -215,7 +215,6 @@ static int vdec_op_s_ctrl(struct v4l2_ctrl *ctrl)
 		inst->header_separate = ctrl->val == V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE ? 1 : 0;
 		break;
 	case V4L2_CID_SECUREMODE:
-		dev_info(inst->dev, "vpu driver enter secure mode\n");
 		inst->secure_mode = ctrl->val;
 		break;
 	default:
@@ -1606,13 +1605,11 @@ static int vdec_start(struct vpu_inst *inst)
 		if (stream_buffer_size > 0) {
 			inst->stream_buffer.length = stream_buffer_size;
 			if (inst->secure_mode) {
-				dev_info(inst->dev, "allocate secure ring buffer\n");
 				ret = secure_vpu_alloc_dma(inst);
 				if (ret)
 					dev_err(inst->vpu->dev, "alloc secure ring buffer failed err=%d\n", ret);
 
 			} else {
-				dev_info(inst->dev, "use normal ring buffer\n");
 				ret = vpu_alloc_dma(inst->core, &inst->stream_buffer);
 			}
 			if (ret) {

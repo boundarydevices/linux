@@ -411,8 +411,6 @@ struct vpu_core *vpu_request_core(struct vpu_dev *vpu, enum vpu_core_type type)
 				vpu_parition = trusty_fast_call32(core->vpu->trusty_dev, SMC_WV_POWER_SET, 1, 0, 0);
 				if (vpu_parition < 0)
 					dev_err(core->dev, "decoder power on failed\n");
-				else
-					dev_info(core->dev, "vpu partirion number : %d\n", vpu_parition);
 			}
 		}
 	}
