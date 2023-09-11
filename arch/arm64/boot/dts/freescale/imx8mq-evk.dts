@@ -323,13 +323,18 @@
 	#size-cells = <0>;
 	status = "okay";
 	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		mipi1_sensor_ep: endpoint@0 {
+			reg = <0>;
 			remote-endpoint = <&ov5640_mipi1_ep>;
 			data-lanes = <1 2>;
 			bus-type = <4>;
 		};
 
 		csi1_mipi_ep: endpoint@1 {
+			reg = <1>;
 			remote-endpoint = <&csi1_ep>;
 		};
 	};
@@ -340,13 +345,18 @@
 	#size-cells = <0>;
 	status = "okay";
 	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		mipi2_sensor_ep: endpoint@0 {
+			reg = <0>;
 			remote-endpoint = <&ov5640_mipi2_ep>;
 			data-lanes = <1 2>;
 			bus-type = <4>;
 		};
 
 		csi2_mipi_ep: endpoint@1 {
+			reg = <1>;
 			remote-endpoint = <&csi2_ep>;
 		};
 	};
@@ -1231,6 +1241,8 @@
 	status = "okay";
 
 	port@0 {
+		reg = <0>;
+
 		dcss_out: endpoint {
 			  remote-endpoint = <&hdmi_in>;
 		};
@@ -1242,7 +1254,12 @@
 	lane-mapping = <0xe4>;
 	hdcp-config = <0x3>;
 	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	port@1 {
+		reg = <1>;
 		hdmi_in: endpoint {
 			remote-endpoint = <&dcss_out>;
 		};

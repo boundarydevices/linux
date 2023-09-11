@@ -57,7 +57,11 @@
 			"Mic Jack", "MICB";
 		status = "okay";
 
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		simple-audio-card,dai-link@0 {
+			reg = <0>;
 			format = "i2s";
 			cpu {
 				sound-dai = <&dsp 0>;
@@ -68,6 +72,7 @@
 		};
 
 		simple-audio-card,dai-link@1 {
+			reg = <1>;
 			format = "i2s";
 			bitclock-master=<&sndcodec>;
 			frame-master=<&sndcodec>;
