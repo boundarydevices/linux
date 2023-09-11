@@ -760,11 +760,11 @@
 };
 
 &spi0 {
-	mediatek,pad-select = <0>;	
+	mediatek,pad-select = <0>;
 };
 
 &spi1 {
-	mediatek,pad-select = <0>;	
+	mediatek,pad-select = <0>;
 };
 
 &u2port0 {
@@ -831,28 +831,28 @@
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 
 	ethernet: ethernet@1 {
-                compatible = "usb424,7850";
-                reg = <1>;
+		compatible = "usb424,7850";
+		reg = <1>;
 
 		#address-cells = <1>;
 		#size-cells = <0>;
-                mdio {
-                        #address-cells = <0x1>;
-                        #size-cells = <0x0>;
-                        eth_phy: ethernet-phy@1 {
-                                reg = <1>;
-                                /* Lines are LEDs 0 - 3 respectivly.
-                                   We only use led 0(LINK1000) and 2(LINK_ACT)
-                                */
-                                microchip,led-modes = <
-                                        LAN78XX_LINK_1000_ACTIVITY
-                                        LAN78XX_LINK_10_ACTIVITY
-                                        LAN78XX_LINK_ACTIVITY
-                                        LAN78XX_LINK_10_100_ACTIVITY
-                                >;
-                        };
-                };
-        };
+		mdio {
+			#address-cells = <0x1>;
+			#size-cells = <0x0>;
+			eth_phy: ethernet-phy@1 {
+				reg = <1>;
+				/* Lines are LEDs 0 - 3 respectivly.
+				 *  We only use led 0(LINK1000) and 2(LINK_ACT)
+				 */
+				microchip,led-modes = <
+					LAN78XX_LINK_1000_ACTIVITY
+					LAN78XX_LINK_10_ACTIVITY
+					LAN78XX_LINK_ACTIVITY
+					LAN78XX_LINK_10_100_ACTIVITY
+				>;
+			};
+		};
+	};
 };
 
 &mfg0 {
@@ -1119,7 +1119,7 @@
 #define PD_SM_I2S0_SDIN_I2S(a)		PINMUX_GPIO110__FUNC_I0_SPLIN_D0	/* I2SIN_D0 */
 
 #define GP_SM_I2S0_CK(a)		<&GPIO 120 a>
-#define PD_SM_I2S0_CK(a)		PINMUX_GPIO109__FUNC_B_GPIO109 PINMUX_GPIO120__FUNC_B_GPIO120 
+#define PD_SM_I2S0_CK(a)		PINMUX_GPIO109__FUNC_B_GPIO109 PINMUX_GPIO120__FUNC_B_GPIO120
 #define PD_SM_I2S0_CK_I2S(a)		PINMUX_GPIO109__FUNC_I0_SPLIN_BCK PINMUX_GPIO120__FUNC_O_I2SO1_BCK	/* I2SIN_WS I2SO2_D3 */
 
 #define GP_SM_I2S2_LRCK(a)		<&GPIO 116 a>
