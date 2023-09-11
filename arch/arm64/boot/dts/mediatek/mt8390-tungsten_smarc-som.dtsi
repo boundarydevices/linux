@@ -533,7 +533,6 @@
 
 &dp_intf1 {
 	status = "disabled";
-	mediatek,oob-hpd;
 	ports {
 		port {
 			dp_intf1_out: endpoint {
