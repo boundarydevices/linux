@@ -829,6 +829,7 @@
 &usb_host2 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vdd1p2-supply = <&mt6315_6_vbuck4>;
 
 	ethernet: ethernet@1 {
 		compatible = "usb424,7850";
