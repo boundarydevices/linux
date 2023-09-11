@@ -555,6 +555,27 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 		return PTR_ERR(mtk->vusb33);
 	}
 
+	{
+		struct regulator *vdd1p2;
+		vdd1p2 = devm_regulator_get_optional(dev, "vdd1p2");
+		if (IS_ERR(vdd1p2)) {
+			ret = PTR_ERR(vdd1p2);
+			dev_err(dev, "fail to get vdd1p2 %d\n", ret);
+			if (ret == -EPROBE_DEFER)
+				return ret;
+			vdd1p2 = NULL;
+		}
+		if (vdd1p2) {
+			ret = regulator_set_voltage(vdd1p2, 1193750, 1193750);
+			if (ret) {
+				dev_err(dev, "failed to increase vdd1p2: %d\n", ret);
+			}
+			ret = regulator_enable(vdd1p2);
+			if (ret) {
+				dev_err(dev, "%s: vdd1p2 regulator_enable %d\n", __func__, ret);
+			}
+		}
+	}
 	ret = xhci_mtk_clks_get(mtk);
 	if (ret)
 		return ret;
