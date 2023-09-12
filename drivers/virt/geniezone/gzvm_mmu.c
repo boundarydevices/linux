@@ -114,6 +114,59 @@ static int handle_single_demand_page(struct gzvm *vm, int memslot_id, u64 gfn)
 	ret = gzvm_arch_map_guest(vm->vm_id, memslot_id, pfn, gfn, 1);
 	if (unlikely(ret))
 		return -EFAULT;
+
+	return ret;
+}
+
+static int handle_block_demand_page(struct gzvm *vm, int memslot_id, u64 gfn)
+{
+	u32 nr_entries_all = GZVM_BLOCK_BASED_DEMAND_PAGE_SIZE / PAGE_SIZE;
+	u32 nr_entries = vm->gzvm_drv->demand_paging_batch_pages;
+	struct gzvm_memslot *memslot = &vm->memslot[memslot_id];
+	u64 start_gfn = ALIGN_DOWN(gfn, nr_entries_all);
+	u32 total_pages = memslot->npages;
+	u64 base_gfn = memslot->base_gfn;
+	u64 pfn, __gfn;
+	int ret, i;
+
+	if (start_gfn < base_gfn)
+		start_gfn = base_gfn;
+
+	u64 end_gfn = start_gfn + nr_entries_all;
+
+	if (start_gfn + nr_entries_all > base_gfn + total_pages)
+		end_gfn = base_gfn + total_pages;
+
+	mutex_lock(&vm->demand_paging_lock);
+	for (; start_gfn < end_gfn; start_gfn += nr_entries)  {
+		/*
+		 * If the start/end gfn of this demand paging block is outside the
+		 * memory region of memslot, adjust the start_gfn/nr_entries.
+		 */
+		if (start_gfn + nr_entries > base_gfn + total_pages)
+			nr_entries = base_gfn + total_pages - start_gfn;
+
+		for (i = 0, __gfn = start_gfn; i < nr_entries; i++, __gfn++) {
+			ret = gzvm_vm_allocate_guest_page(vm, memslot, __gfn,
+							  &pfn);
+			if (unlikely(ret)) {
+				pr_notice("VM-%u failed to allocate page for GFN 0x%llx (%d)\n",
+					  vm->vm_id, __gfn, ret);
+				ret = -ERR_FAULT;
+				goto err_unlock;
+			}
+			vm->demand_page_buffer[i] = pfn;
+		}
+
+		ret = gzvm_arch_map_guest_block(vm->vm_id, memslot_id,
+						start_gfn, nr_entries);
+		if (unlikely(ret)) {
+			ret = -EFAULT;
+			goto err_unlock;
+		}
+	}
+err_unlock:
+	mutex_unlock(&vm->demand_paging_lock);
 	return ret;
 }
 
@@ -140,5 +193,8 @@ int gzvm_handle_page_fault(struct gzvm_vcpu *vcpu)
 	if (unlikely(vm->mem_alloc_mode == GZVM_FULLY_POPULATED))
 		return -EFAULT;
 
-	return handle_single_demand_page(vm, memslot_id, gfn);
+	if (vm->demand_page_gran == PAGE_SIZE)
+		return handle_single_demand_page(vm, memslot_id, gfn);
+	else
+		return handle_block_demand_page(vm, memslot_id, gfn);
 }

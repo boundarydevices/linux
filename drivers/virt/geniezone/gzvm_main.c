@@ -6,10 +6,12 @@
 #include <linux/device.h>
 #include <linux/file.h>
 #include <linux/kdev_t.h>
+#include <linux/kobject.h>
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/sysfs.h>
 #include <linux/soc/mediatek/gzvm_drv.h>
 
 static struct gzvm_driver gzvm_drv = {
@@ -19,6 +21,64 @@ static struct gzvm_driver gzvm_drv = {
 		.sub = 0,
 	},
 };
+
+static ssize_t demand_paging_batch_pages_show(struct kobject *kobj,
+					      struct kobj_attribute *attr,
+					      char *buf)
+{
+	return sprintf(buf, "%u\n", gzvm_drv.demand_paging_batch_pages);
+}
+
+static ssize_t demand_paging_batch_pages_store(struct kobject *kobj,
+					       struct kobj_attribute *attr,
+					       const char *buf, size_t count)
+{
+	int ret;
+	u32 temp;
+
+	ret = kstrtoint(buf, 10, &temp);
+	if (ret < 0)
+		return ret;
+
+	if (temp == 0 || (PMD_SIZE % (PAGE_SIZE * temp)) != 0)
+		return -EINVAL;
+
+	gzvm_drv.demand_paging_batch_pages = temp;
+
+	return count;
+}
+
+/* /sys/kernel/gzvm/demand_paging_batch_pages */
+static struct kobj_attribute demand_paging_batch_pages_attr = {
+		.attr = {
+			.name = "demand_paging_batch_pages",
+			.mode = 0660,
+		},
+		.show = demand_paging_batch_pages_show,
+		.store = demand_paging_batch_pages_store,
+};
+
+static int gzvm_drv_sysfs_init(void)
+{
+	int ret = 0;
+
+	gzvm_drv.sysfs_root_dir = kobject_create_and_add("gzvm", kernel_kobj);
+
+	if (!gzvm_drv.sysfs_root_dir)
+		return -ENOMEM;
+
+	ret = sysfs_create_file(gzvm_drv.sysfs_root_dir,
+				&demand_paging_batch_pages_attr.attr);
+	if (ret)
+		pr_debug("failed to create demand_batch_pages in /sys/kernel/gzvm\n");
+
+	return ret;
+}
+
+static void gzvm_drv_sysfs_exit(void)
+{
+	kobject_del(gzvm_drv.sysfs_root_dir);
+}
 
 /**
  * gzvm_err_to_errno() - Convert geniezone return value to standard errno
@@ -119,6 +179,27 @@ static struct miscdevice gzvm_dev = {
 	.fops = &gzvm_chardev_ops,
 };
 
+static int gzvm_query_hyp_batch_pages(void)
+{
+	struct gzvm_enable_cap cap = {0};
+	int ret;
+
+	gzvm_drv.demand_paging_batch_pages = GZVM_DRV_DEMAND_PAGING_BATCH_PAGES;
+	cap.cap = GZVM_CAP_QUERY_HYP_BATCH_PAGES;
+
+	ret = gzvm_arch_query_hyp_batch_pages(&cap, NULL);
+	if (!ret)
+		gzvm_drv.demand_paging_batch_pages = cap.args[0];
+
+	/*
+	 * We have initialized demand_paging_batch_pages, and to maintain
+	 * compatibility with older GZ version, we can ignore the return value.
+	 */
+	if (ret == -EINVAL)
+		return 0;
+	return ret;
+}
+
 static int gzvm_drv_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -139,6 +220,15 @@ static int gzvm_drv_probe(struct platform_device *pdev)
 	ret = gzvm_drv_irqfd_init();
 	if (ret)
 		return ret;
+
+	ret = gzvm_drv_sysfs_init();
+	if (ret)
+		return ret;
+
+	ret = gzvm_query_hyp_batch_pages();
+	if (ret)
+		return ret;
+
 	return 0;
 }
 
@@ -146,6 +236,7 @@ static void gzvm_drv_remove(struct platform_device *pdev)
 {
 	gzvm_drv_irqfd_exit();
 	misc_deregister(&gzvm_dev);
+	gzvm_drv_sysfs_exit();
 }
 
 static const struct of_device_id gzvm_of_match[] = {

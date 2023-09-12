@@ -344,6 +344,8 @@ static void gzvm_destroy_all_ppage(struct gzvm *gzvm)
 
 static void gzvm_destroy_vm(struct gzvm *gzvm)
 {
+	size_t allocated_size;
+
 	pr_debug("VM-%u is going to be destroyed\n", gzvm->vm_id);
 
 	mutex_lock(&gzvm->lock);
@@ -355,6 +357,12 @@ static void gzvm_destroy_vm(struct gzvm *gzvm)
 	mutex_lock(&gzvm_list_lock);
 	list_del(&gzvm->vm_list);
 	mutex_unlock(&gzvm_list_lock);
+
+	if (gzvm->demand_page_buffer) {
+		allocated_size = GZVM_BLOCK_BASED_DEMAND_PAGE_SIZE / PAGE_SIZE *
+				 sizeof(u64);
+		free_pages_exact(gzvm->demand_page_buffer, allocated_size);
+	}
 
 	mutex_unlock(&gzvm->lock);
 
@@ -377,6 +385,48 @@ static const struct file_operations gzvm_vm_fops = {
 	.unlocked_ioctl = gzvm_vm_ioctl,
 };
 
+/**
+ * setup_vm_demand_paging() - Query hypervisor suitable demand page size and set
+ * @vm: gzvm instance for setting up demand page size
+ *
+ * Return: void
+ */
+static void setup_vm_demand_paging(struct gzvm *vm)
+{
+	struct gzvm_enable_cap cap = {0};
+	u32 buf_size;
+	void *buffer;
+	int ret;
+
+	buf_size = (GZVM_BLOCK_BASED_DEMAND_PAGE_SIZE / PAGE_SIZE) *
+		    sizeof(pte_t);
+	mutex_init(&vm->demand_paging_lock);
+	buffer = alloc_pages_exact(buf_size, GFP_KERNEL);
+	if (!buffer) {
+		/* Fall back to use default page size for demand paging */
+		vm->demand_page_gran = PAGE_SIZE;
+		vm->demand_page_buffer = NULL;
+		return;
+	}
+
+	cap.cap = GZVM_CAP_BLOCK_BASED_DEMAND_PAGING;
+	cap.args[0] = GZVM_BLOCK_BASED_DEMAND_PAGE_SIZE;
+	cap.args[1] = (__u64)virt_to_phys(buffer);
+	/* demand_page_buffer is freed when destroy VM */
+	vm->demand_page_buffer = buffer;
+
+	ret = gzvm_vm_ioctl_enable_cap(vm, &cap, NULL);
+	if (ret == 0) {
+		vm->demand_page_gran = GZVM_BLOCK_BASED_DEMAND_PAGE_SIZE;
+		/* freed when destroy vm */
+		vm->demand_page_buffer = buffer;
+	} else {
+		vm->demand_page_gran = PAGE_SIZE;
+		vm->demand_page_buffer = NULL;
+		free_pages_exact(buffer, buf_size);
+	}
+}
+
 static int setup_mem_alloc_mode(struct gzvm *vm)
 {
 	int ret;
@@ -385,10 +435,12 @@ static int setup_mem_alloc_mode(struct gzvm *vm)
 	cap.cap = GZVM_CAP_ENABLE_DEMAND_PAGING;
 
 	ret = gzvm_vm_ioctl_enable_cap(vm, &cap, NULL);
-	if (!ret)
+	if (!ret) {
 		vm->mem_alloc_mode = GZVM_DEMAND_PAGING;
-	else
+		setup_vm_demand_paging(vm);
+	} else {
 		vm->mem_alloc_mode = GZVM_FULLY_POPULATED;
+	}
 
 	return 0;
 }
