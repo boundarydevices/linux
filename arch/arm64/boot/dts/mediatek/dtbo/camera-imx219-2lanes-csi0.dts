@@ -1,0 +1,116 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2023 Boundary Devices
+ *
+ */
+
+#include <dt-bindings/clock/mediatek,mt8188-clk.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
+
+/dts-v1/;
+/plugin/;
+
+#include "isp71.dtsi"
+#include "mtk-camera.dtsi"
+
+/ {
+	fragment@5 {
+		target = <&spi2>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@6 {
+		target = <&pio>;
+		__overlay__ {
+			camera_pins_cam0_rst_0: cam0@rst_0 {
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO0__FUNC_B_GPIO0>;
+					output-low;
+				};
+			};
+			camera_pins_cam0_rst_1: cam0@rst_1 {
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO0__FUNC_B_GPIO0>;
+					output-high;
+				};
+			};
+			camera_pins_cam0_pdn_0: cam0@pdn_0 {
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO50__FUNC_B_GPIO50>;
+					output-low;
+				};
+			};
+			camera_pins_cam0_pdn_1: cam0@pdn_1 {
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO50__FUNC_B_GPIO50>;
+					output-high;
+				};
+			};
+		};
+	};
+
+	fragment@7 {
+		target = <&i2c3>;
+		__overlay__ {
+			sensor0@10 {
+				compatible = "mediatek,imgsensor";
+				sensor-names = "imx219d2l_mipi_raw";
+				reg = <0x10>;
+				status = "okay";
+
+				pinctrl-names = "rst_low",
+						"rst_high",
+						"pdn_low",
+						"pdn_high";
+				pinctrl-0 = <&camera_pins_cam0_rst_0>;
+				pinctrl-1 = <&camera_pins_cam0_rst_1>;
+				pinctrl-2 = <&camera_pins_cam0_pdn_0>;
+				pinctrl-3 = <&camera_pins_cam0_pdn_1>;
+
+				clocks = <&topckgen CLK_TOP_UNIVPLL_192M_D32>,
+					<&topckgen CLK_TOP_UNIVPLL_192M_D16>,
+					<&clk13m>,
+					<&topckgen CLK_TOP_UNIVPLL_192M_D8>,
+					<&clk26m>,
+					<&topckgen CLK_TOP_UNIVPLL_192M_D4>,
+					<&topckgen CLK_TOP_UNIVPLL_D6_D8>,
+					<&topckgen CLK_TOP_CAMTG>;
+				clock-names = "6", "12", "13", "24", "26", "48", "52", "mclk";
+
+				port {
+					sensor0_out: endpoint {
+						remote-endpoint = <&seninf_csi_port_0_in>;
+						data-lanes = <1 2>;
+						link-frequencies = /bits/ 64 <456000000>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@8 {
+		target = <&seninf_top>;
+		__overlay__ {
+			seninf_csi_port_0: seninf_csi_port_0 {
+				compatible = "mediatek,seninf";
+				csi-port = "0";
+				port {
+					seninf_csi_port_0_in: endpoint {
+						remote-endpoint = <&sensor0_out>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@9 {
+		target = <&mtkcam0>;
+		__overlay__ {
+			status = "okay";
+			mediatek,stream-enable = <MTK_CAMERA_PREVIEW>;
+		};
+	};
+};

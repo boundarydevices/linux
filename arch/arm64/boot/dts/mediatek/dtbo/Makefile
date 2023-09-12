@@ -1,6 +1,7 @@
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_MEDIATEK) += \
 	apusys.dtbo \
+	camera-imx219-2lanes-csi0.dtbo \
 	display-dp.dtbo \
 	display-dsidp.dtbo \
 	display-dsi.dtbo \
