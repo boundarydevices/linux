@@ -220,11 +220,19 @@
 		};
 	};
 
-
 	pinctrl_hog: hoggrp {
 		pins-hog {
 #define GP_DP0_HPD(a)	<&GPIO 25 a>	/* LCM_RST */
 			pinmux = <PINMUX_GPIO25__FUNC_B_GPIO25>;
+		};
+	};
+
+	i2c3_pin: i2c3-pin {
+		pins-bus {
+			pinmux = <PINMUX_GPIO62__FUNC_B1_SDA3>,
+				 <PINMUX_GPIO61__FUNC_B1_SCL3>;
+			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
+			mediatek,drive-strength-adv = <7>;
 		};
 	};
 
@@ -568,6 +576,13 @@
 };
 
 &hdmi0 {
+	status = "okay";
+};
+
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pin>;
+	clock-frequency = <100000>;
 	status = "okay";
 };
 
