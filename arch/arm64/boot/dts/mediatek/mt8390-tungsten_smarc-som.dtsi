@@ -557,7 +557,12 @@
 &dsi0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "okay";
+	poweron-in-hs-mode = <0>;
+};
+
+&dsi1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	poweron-in-hs-mode = <0>;
 };
 
@@ -631,12 +636,6 @@
 &mt6359_vufs_ldo_reg {
 	regulator-always-on;
 };
-
-#ifndef UBOOT
-&mipi_tx0 {
-	status = "okay";
-};
-#endif
 
 &mmc0 {
 	bus-width = <8>;
@@ -1070,38 +1069,64 @@
 
 /* J2G */
 #ifndef UBOOT
-#define MIPI_DSI			dsi0
 #define SM_FB_HDMI			hdmi0
+
+#define MIPI_DSI			dsi0
 #define SM_FB_MIPI			dsi0
 #define SM_FB_MIPI_SUBSYSTEM		dsi0
-#endif
-#define MIPI_ADD_PORT
 #define SM_MIPI_PHY_CLOCK		<&vdosys0 CLK_VDO0_DSI0_DSI>
+
+#define MIPI1_DSI			dsi1
+#define SM_FB_MIPI1			dsi1
+#define SM_FB_MIPI1_SUBSYSTEM		dsi1
+#define SM_MIPI1_PHY_CLOCK		<&vdosys0 CLK_VDO0_DSI1_DSI>
+#endif
+
+#define MIPI_ADD_PORT
 #define GP_SM_LCD0_BKLT_EN(a)		<&GPIO 146 a>
 #define PD_SM_LCD0_BKLT_EN(a)		PINMUX_GPIO146__FUNC_B_GPIO146		/* DPI_D15 */
+#define DN_SM_LCD0_BKLT_EN		bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+#define UP_SM_LCD0_BKLT_EN		bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+
 #define GP_SM_LCD0_VDD_EN(a)		<&GPIO 26 a>
 #define PD_SM_LCD0_VDD_EN(a)		PINMUX_GPIO26__FUNC_B_GPIO26		/* DSI0_TE */
+#define DN_SM_LCD0_VDD_EN		bias-pull-down;
+#define UP_SM_LCD0_VDD_EN		bias-pull-up;
 
 #define SM_PWM_LCD0			disp_pwm0
 #define GP_SM_LCD0_BKLT_PWM(a)		<&GPIO 29 a>
 #define PD_SM_LCD0_BKLT_PWM(a)		PINMUX_GPIO29__FUNC_B_GPIO29
 #define PD_SM_LCD0_BKLT_PWM_OUT(a)	PINMUX_GPIO29__FUNC_O_DISP_PWM0		/* DISP_PWM0 */
-#define GP_EDP0_HPD(a)			<&GPIO 28 a>
-#define PD_EDP0_HPD(a)			PINMUX_GPIO28__FUNC_B_GPIO28
-#define PD_EDP0_HPD_IN(a)		PINMUX_GPIO28__FUNC_I0_EDP_TX_HPD	/* DSI1_TE */
-#define GP_EDP1_HPD(a)			<&GPIO 19 a>
-#define PD_EDP1_HPD(a)			PINMUX_GPIO19__FUNC_B_GPIO19		/* CMMRST0 */
+#define DN_SM_LCD0_BKLT_PWM		bias-pull-down;
+#define UP_SM_LCD0_BKLT_PWM		bias-pull-up;
+
+#define GP_SM_EDP0_HPD(a)		<&GPIO 28 a>
+#define PD_SM_EDP0_HPD(a)		PINMUX_GPIO28__FUNC_B_GPIO28
+#define PD_SM_EDP0_HPD_IN(a)		PINMUX_GPIO28__FUNC_I0_EDP_TX_HPD	/* DSI1_TE */
+#define DN_SM_EDP0_HPD			bias-pull-down;
+#define UP_SM_EDP0_HPD			bias-pull-up;
+
+#define GP_SM_EDP1_HPD(a)		<&GPIO 19 a>
+#define PD_SM_EDP1_HPD(a)		PINMUX_GPIO19__FUNC_B_GPIO19		/* CMMRST0 */
+#define DN_SM_EDP1_HPD			bias-pull-down;
+#define UP_SM_EDP1_HPD			bias-pull-up;
 
 #define GP_SM_LCD1_VDD_EN(a)		<&GPIO 46 a>
 #define PD_SM_LCD1_VDD_EN(a)		PINMUX_GPIO46__FUNC_B_GPIO46		/* DPTX_HPD */
+#define DN_SM_LCD1_VDD_EN		bias-pull-down;
+#define UP_SM_LCD1_VDD_EN		bias-pull-up;
 
 #define SM_PWM_LCD1			disp_pwm1
 #define GP_SM_LCD1_BKLT_PWM(a)		<&GPIO 30 a>
 #define PD_SM_LCD1_BKLT_PWM(a)		PINMUX_GPIO30__FUNC_B_GPIO30
 #define PD_SM_LCD1_BKLT_PWM_OUT(a)	PINMUX_GPIO30__FUNC_O_DISP_PWM1		/* DISP_PWM1 */
+#define DN_SM_LCD1_BKLT_PWM		bias-pull-down;
+#define UP_SM_LCD1_BKLT_PWM		bias-pull-up;
 
 #define GP_SM_LVDS1_BACKLIGHT_EN(a)	<&GPIO 15 a>
 #define PD_SM_LVDS1_BACKLIGHT_EN(a)	PINMUX_GPIO15__FUNC_B_GPIO15		/* GPIO15 */
+#define DN_SM_LVDS1_BACKLIGHT_EN	bias-pull-down;
+#define UP_SM_LVDS1_BACKLIGHT_EN	bias-pull-up;
 
 /* J2H */
 #ifndef UBOOT
@@ -1172,6 +1197,9 @@
 #define PD_SM_CHARGER_PRESENT(a)	PINMUX_GPIO129__FUNC_B_GPIO129		/* DMIC2_DAT */
 #define GP_SM_CARRIER_STANDBY(a)	<&GPIO 128 a>
 #define PD_SM_CARRIER_STANDBY(a)	PINMUX_GPIO128__FUNC_B_GPIO128		/* DMIC2_CLK */
+#define DN_SM_CARRIER_STANDBY		bias-pull-down;
+#define UP_SM_CARRIER_STANDBY		bias-pull-up;
+
 #define GP_SM_CARRIER_PWR_ON(a)		<&GPIO 127 a>
 #define PD_SM_CARRIER_PWR_ON(a)		PINMUX_GPIO127__FUNC_B_GPIO127		/* DMIC1_DAT_R */
 #define GP_SM_FORCE_RECOV(a)		<&GPIO 126 a>
@@ -1197,8 +1225,14 @@
 #define PD_SM_GPIO6(a)			PINMUX_GPIO6__FUNC_B_GPIO6		/* GPIO06 */
 #define GP_SM_GPIO7(a)			<&GPIO 7 a>
 #define PD_SM_GPIO7(a)			PINMUX_GPIO7__FUNC_B_GPIO7		/* GPIO07 */
+#define DN_SM_GPIO7			bias-pull-down;
+#define UP_SM_GPIO7			bias-pull-up;
+
 #define GP_SM_GPIO8(a)			<&GPIO 9 a>
 #define PD_SM_GPIO8(a)			PINMUX_GPIO9__FUNC_B_GPIO9		/* GPIO09 */
+#define DN_SM_GPIO8			bias-pull-down;
+#define UP_SM_GPIO8			bias-pull-up;
+
 #define GP_SM_GPIO9(a)			<&GPIO 43 a>
 #define PD_SM_GPIO9(a)			PINMUX_GPIO43__FUNC_B_GPIO43		/* KPCOL1 */
 #define GP_SM_GPIO10(a)			<&GPIO 44 a>

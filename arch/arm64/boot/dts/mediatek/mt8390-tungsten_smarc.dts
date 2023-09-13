@@ -11,16 +11,16 @@
 	compatible = "boundary,mt8390-tungsten_smarc", "mediatek,mt8188";
 };
 
-#ifdef SM_FB_MIPI
-&backlight_mipi {
-	status = "okay";
-};
-
+#if !defined(UBOOT) && 1
 &dsi0 {
 	status = "okay";
 };
 
-&fb_mipi {
+&mipi_backlight {
+	status = "okay";
+};
+
+&mipi_fb {
 	mipi-cmds = <&mipi_cmds_m101nwwb>;
 	status = "okay";
 };
@@ -29,7 +29,39 @@
 	status = "okay";
 };
 
+&mipi_tx0 {
+	status = "okay";
+};
+
 &ts_mipi_goodix {
+	status = "okay";
+};
+#endif
+
+
+#if !defined(UBOOT) && 0
+&dsi1 {
+	status = "okay";
+};
+
+&mipi1_backlight {
+	status = "okay";
+};
+
+&mipi1_fb {
+	mipi-cmds = <&mipi_cmds_m101nwwb>;
+	status = "okay";
+};
+
+&mipi1_to_lvds {
+	status = "okay";
+};
+
+&mipi_tx1 {
+	status = "okay";
+};
+
+&ts_mipi1_goodix {
 	status = "okay";
 };
 #endif
