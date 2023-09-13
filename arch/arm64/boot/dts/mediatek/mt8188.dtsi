@@ -24,6 +24,8 @@
 
 	aliases {
 		dpi1 = &dpi1;
+		dsi0 = &dsi0;
+		dsi1 = &dsi1;
 		hdmi0 = &hdmi0;
 		gce0 = &gce0;
 		gce1 = &gce1;
@@ -1060,6 +1062,18 @@
 			status = "disabled";
 		};
 
+		disp_pwm1: disp_pwm1@1100f000 {
+			compatible = "mediatek,mt8183-disp-pwm";
+			reg = <0 0x1100f000 0 0x1000>;
+			interrupts = <GIC_SPI 793 IRQ_TYPE_LEVEL_LOW 0>;
+			clocks = <&topckgen CLK_TOP_DISP_PWM1>,
+				 <&infracfg_ao CLK_INFRA_AO_DISP_PWM1>;
+			clock-names = "main", "mm";
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
+			#pwm-cells = <2>;
+			status = "disabled";
+		};
+
 		spi1: spi@11010000 {
 			compatible = "mediatek,mt6765-spi";
 			reg = <0 0x11010000 0 0x1000>;
@@ -1356,6 +1370,16 @@
 			#clock-cells = <0>;
 			#phy-cells = <0>;
 			clock-output-names = "mipi_tx0_pll";
+			status = "disabled";
+		};
+
+		mipi_tx1: mipi_dphy1@11c90000 {
+			compatible = "mediatek,mt8188-mipi-tx", "mediatek,mt8183-mipi-tx";
+			reg = <0 0x11c90000 0 0x1000>;
+			clocks = <&clk26m>;
+			#clock-cells = <0>;
+			#phy-cells = <0>;
+			clock-output-names = "mipi_tx1_pll";
 			status = "disabled";
 		};
 
@@ -2726,7 +2750,7 @@
 
 		dsi0: dsi0@1c008000 {
 			compatible = "mediatek,mt8188-dsi";
-			reg = <0 0x1c008000 0 0x1000>, <0 0x1c01d000 0 0x1000>;
+			reg = <0 0x1c008000 0 0x1000>;
 			interrupts = <GIC_SPI 644 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DSI0>,
@@ -2734,6 +2758,20 @@
 				<&mipi_tx0>;
 			clock-names = "engine", "digital", "hs";
 			phys = <&mipi_tx0>;
+			phy-names = "dphy";
+			status = "disabled";
+		};
+
+		dsi1: dsi0@1c012000 {
+			compatible = "mediatek,mt8188-dsi";
+			reg = <0 0x1c012000 0 0x1000>;
+			interrupts = <GIC_SPI 654 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DSI1>,
+				<&vdosys0 CLK_VDO0_DSI1_DSI>,
+				<&mipi_tx1>;
+			clock-names = "engine", "digital", "hs";
+			phys = <&mipi_tx1>;
 			phy-names = "dphy";
 			status = "disabled";
 		};
