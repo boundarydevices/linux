@@ -864,6 +864,8 @@ static int mtk_dsi_bind(struct device *dev, struct device *master, void *data)
 	int ret;
 	struct drm_device *drm = data;
 	struct mtk_dsi *dsi = dev_get_drvdata(dev);
+	if (!dsi)
+		return -EINVAL;
 	if (!dsi->next_bridge)
 		return 0;
 
