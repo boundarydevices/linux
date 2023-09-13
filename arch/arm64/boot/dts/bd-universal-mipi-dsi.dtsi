@@ -9,7 +9,6 @@
 #define pinctrl_ref(a) <&concat(pinctrl_, a)>
 
 #ifdef IMX
-#define IOMUX iomuxc
 #define pins_group(name, _pins, _attr...) \
 		fsl,pins = <		\
 			##_pins		\
@@ -25,7 +24,6 @@
 			_down,		\
 		)
 #else
-#define IOMUX pio
 #define pins_group(name, _pins, _attr...)	\
 	pins-##name {			\
 		pinmux = <		\
@@ -471,7 +469,9 @@
 
 #ifdef MIPI_ADD_PORT
 	ports {
-		port {
+		port@1 {
+			reg = <1>;
+
 			mipi_dsi_out: endpoint {
 				remote-endpoint = <&panel1_in>;
 			};
