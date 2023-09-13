@@ -2,39 +2,7 @@
 /*
  * Copyright 2023 Boundary Devices
  */
-
-#define concat(a, b)   _concat_(a, b)
-#define _concat_(a, b)  a ## b
-#define concat4(a, b, c, d)   _concat4_(a, b, c, d)
-#define _concat4_(a, b, c, d)  a ## b ## c ## d
-#define concat6(a, b, c, d, e, f)   _concat6_(a, b, c, d, e, f)
-#define _concat6_(a, b, c, d, e, f)  a ## b ## c ## d ## e ## f
-#define concat8(a, b, c, d, e, f, g, h)   _concat8_(a, b, c, d, e, f, g, h)
-#define _concat8_(a, b, c, d, e, f, g, h)  a ## b ## c ## d ## e ## f ## g ## h
-
-#define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
-#define pinctrl2(a, b) concat4(pinctrl_, a, _, b): concat(a-b, grp)
-#define pinctrl3(a, b, c) concat6(pinctrl_, a, _, b, _, c): concat(a-b-c, grp)
-#define pinctrl4(a, b, c, d) concat8(pinctrl_, a, _, b, _, c, _, d): concat(a-b-c-d, grp)
-#define pinctrl_ref(a) <&concat(pinctrl_, a)>
-#define pinctrl_ref2(a, b) <&concat4(pinctrl_, a, _, b)>
-#define pinctrl_ref3(a, b, c) <&concat6(pinctrl_, a, _, b, _, c)>
-#define pinctrl_ref4(a, b, c, d) <&concat8(pinctrl_, a, _, b, _, c, _, d)>
-
-#ifdef IMX
-#define pins_group(name, _pins, _attr...) \
-		fsl,pins = <		\
-			##_pins		\
-		>;
-#else
-#define pins_group(name, _pins, _attr...)	\
-	pins-##name {			\
-		pinmux = <		\
-			##_pins		\
-		>;			\
-		##_attr	\
-	};
-#endif
+#include "bd-universal.h"
 
 &IOMUX {
 	pinctrl-0 = <&pinctrl_hog>, <&pinctrl_hog_carrier>;
@@ -1065,32 +1033,87 @@
 #endif
 
 #ifdef SM_FB_MIPI
-/* J11 mipi display */
+/* J13 mipi display */
 #define MIPI_DISPLAY		SM_FB_MIPI
 #define MIPI_SUBSYSTEM		SM_FB_MIPI_SUBSYSTEM
 #define MIPI_PHY_CLOCK		SM_MIPI_PHY_CLOCK
 #ifdef SM_MIPI_PIXEL_CLOCK
 #define MIPI_PIXEL_CLOCK	SM_MIPI_PIXEL_CLOCK
 #endif
+
 #define MIPI_I2C_BUS		i2c_lcd_c
 #define MIPI_PWM		SM_PWM_LCD0
 
 #define GP_MIPI_PWM(a)		GP_SM_LCD0_BKLT_PWM(a)
 #define PD_MIPI_PWM(a)		PD_SM_LCD0_BKLT_PWM(a)	/* Pin 7, S141 */
 #define PD_MIPI_PWM_OUT(a)	PD_SM_LCD0_BKLT_PWM_OUT(a)
+#define DN_MIPI_PWM		DN_SM_LCD0_BKLT_PWM
+#define UP_MIPI_PWM		UP_SM_LCD0_BKLT_PWM
 
 #define GP_MIPI_IRQ(a)		GP_SM_CARRIER_STANDBY(a)
 #define PD_MIPI_IRQ(a)		PD_SM_CARRIER_STANDBY(a) /* Pin 8, S153 */
+#define DN_MIPI_IRQ		DN_SM_CARRIER_STANDBY
+#define UP_MIPI_IRQ		UP_SM_CARRIER_STANDBY
 
 #define GP_MIPI_TS_IRQ(a)	GP_SM_LCD0_BKLT_EN(a)
 #define PD_MIPI_TS_IRQ(a)	PD_SM_LCD0_BKLT_EN(a)	/* Pin 9, S127 */
+#define DN_MIPI_TS_IRQ		DN_SM_LCD0_BKLT_EN
+#define UP_MIPI_TS_IRQ		UP_SM_LCD0_BKLT_EN
 
 #define GP_MIPI_TS_RESET(a)	GP_SM_GPIO7(a)		/* Pin 10, P115 */
 #define PD_MIPI_TS_RESET(a)	PD_SM_GPIO7(a)
+#define DN_MIPI_TS_RESET	DN_SM_GPIO7
+#define UP_MIPI_TS_RESET	UP_SM_GPIO7
 
 #define GP_MIPI_ENABLE(a)	GP_SM_LCD0_VDD_EN(a)
 #define PD_MIPI_ENABLE(a)	PD_SM_LCD0_VDD_EN(a)	/* Pin 11, S133 */
+#define DN_MIPI_ENABLE		DN_SM_LCD0_VDD_EN
+#define UP_MIPI_ENABLE		UP_SM_LCD0_VDD_EN
 
+#include "bd-universal-mipi-dsi.dtsi"
+#define MIPI_COMMANDS_DONE
+#endif
+
+#ifdef SM_FB_MIPI1
+/* J14 mipi display */
+#define MIPI1_DISPLAY		SM_FB_MIPI1
+#define MIPI1_SUBSYSTEM		SM_FB_MIPI1_SUBSYSTEM
+#define MIPI1_PHY_CLOCK		SM_MIPI1_PHY_CLOCK
+#ifdef SM_MIPI1_PIXEL_CLOCK
+#define MIPI1_PIXEL_CLOCK	SM_MIPI1_PIXEL_CLOCK
+#endif
+
+#define MIPI1_I2C_BUS		i2c_lcd_d
+#define MIPI1_PWM		SM_PWM_LCD1
+
+#define GP_MIPI1_PWM(a)		GP_SM_LCD1_BKLT_PWM(a)
+#define PD_MIPI1_PWM(a)		PD_SM_LCD1_BKLT_PWM(a)	/* Pin 7, S141 */
+#define PD_MIPI1_PWM_OUT(a)	PD_SM_LCD1_BKLT_PWM_OUT(a)
+#define DN_MIPI1_PWM		DN_SM_LCD1_BKLT_PWM
+#define UP_MIPI1_PWM		UP_SM_LCD1_BKLT_PWM
+
+#define GP_MIPI1_IRQ(a)		GP_SM_GPIO8(a)
+#define PD_MIPI1_IRQ(a)		PD_SM_GPIO8(a) /* Pin 8, S153 */
+#define DN_MIPI1_IRQ		DN_SM_GPIO8
+#define UP_MIPI1_IRQ		UP_SM_GPIO8
+
+#define GP_MIPI1_TS_IRQ(a)	GP_SM_LVDS1_BACKLIGHT_EN(a)
+#define PD_MIPI1_TS_IRQ(a)	PD_SM_LVDS1_BACKLIGHT_EN(a)	/* Pin 9, S127 */
+#define DN_MIPI1_TS_IRQ		DN_SM_LVDS1_BACKLIGHT_EN
+#define UP_MIPI1_TS_IRQ		UP_SM_LVDS1_BACKLIGHT_EN
+
+#define GP_MIPI1_TS_RESET(a)	GP_SM_EDP1_HPD(a)		/* Pin 10, P115 */
+#define PD_MIPI1_TS_RESET(a)	PD_SM_EDP1_HPD(a)
+#define DN_MIPI1_TS_RESET	DN_SM_EDP1_HPD
+#define UP_MIPI1_TS_RESET	UP_SM_EDP1_HPD
+
+#define GP_MIPI1_ENABLE(a)	GP_SM_LCD1_VDD_EN(a)
+#define PD_MIPI1_ENABLE(a)	PD_SM_LCD1_VDD_EN(a)	/* Pin 11, S133 */
+#define DN_MIPI1_ENABLE		DN_SM_LCD1_VDD_EN
+#define UP_MIPI1_ENABLE		UP_SM_LCD1_VDD_EN
+
+#define MIPI_	MIPI1_
+#define mipi	mipi1
 #include "bd-universal-mipi-dsi.dtsi"
 #endif
 
