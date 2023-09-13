@@ -11,6 +11,7 @@
 	compatible = "boundary,mt8390-tungsten_smarc", "mediatek,mt8188";
 };
 
+#ifdef SM_FB_MIPI
 &backlight_mipi {
 	status = "okay";
 };
@@ -31,3 +32,4 @@
 &ts_mipi_goodix {
 	status = "okay";
 };
+#endif

@@ -156,7 +156,7 @@
 			drive-strength = <MTK_DRIVE_2mA>;
 			input-enable;
 		};
-#if 0
+#ifdef UBOOT
 		pins-power {
 #define GP_EQOS_RESET	<&GPIO 27 GPIO_ACTIVE_LOW>
 			pinmux = <PINMUX_GPIO27__FUNC_B_GPIO27>;
@@ -164,7 +164,7 @@
 		};
 #endif
 		pins-intr {
-#define GPIRQ_EQOS_PHY	<&GPIO 148 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_EQOS_PHY	<&pio 148 IRQ_TYPE_LEVEL_LOW>
 			pinmux = <PINMUX_GPIO148__FUNC_B_GPIO148>;
 			input-enable;
 		};
@@ -376,13 +376,8 @@
 / {
 	aliases {
 		serial0 = &uart0;
-		dsi0 = &dsi0;
 		ethernet0 = &eth;
-		mipi = &fb_mipi;
-		mipi_dsi = &dsi0;
-		mipi_to_lvds = &mipi_to_lvds;
 		rtc1 = &mt6359rtc;
-		t_mipi = &t_mipi;
 	};
 
 	chosen {
@@ -483,6 +478,7 @@
 	};
 };
 
+#ifndef UBOOT
 &afe {
 	#sound-dai-cells = <0>;
 	mediatek,etdm-in1-multi-pin-mode;	/* I2S */
@@ -498,6 +494,7 @@
 #endif
 	status = "okay";
 };
+#endif
 
 &eth {
 	avddh-supply = <&mt6359_vpa_buck_reg>;
@@ -527,6 +524,7 @@
 	};
 };
 
+#ifndef UBOOT
 &dpi1 {
 	status = "okay";
 };
@@ -570,6 +568,7 @@
 &hdmi0 {
 	status = "okay";
 };
+#endif
 
 &pmic {
 	interrupt-parent = <&pio>;
@@ -591,10 +590,12 @@
 	};
 };
 
+#ifndef UBOOT
 &scp {
 	memory-region = <&scp_mem_reserved>;
 	status = "okay";
 };
+#endif
 
 &mt6359codec {
 	mediatek,mic-type-0 = <1>; /* ACC */
@@ -631,9 +632,11 @@
 	regulator-always-on;
 };
 
+#ifndef UBOOT
 &mipi_tx0 {
 	status = "okay";
 };
+#endif
 
 &mmc0 {
 	bus-width = <8>;
@@ -668,6 +671,7 @@
 	regulator-enable-ramp-delay = <480>;
 };
 
+#ifndef UBOOT
 &wifi_pwrseq {
 	status = "okay";
 	pinctrl-names = "default";
@@ -700,11 +704,13 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 	mmc-pwrseq = <&wifi_pwrseq>;
 };
+#endif
 
 &mt6359_vcn18_ldo_reg {
 	regulator-always-on;
 };
 
+#ifndef UBOOT
 &spmi {
 	#address-cells = <2>;
 	#size-cells = <1>;
@@ -859,6 +865,7 @@
 &mfg0 {
 	domain-supply = <&mt6359_vproc2_buck_reg>;
 };
+#endif
 
 &mt6359_vmodem_buck_reg {
 	regulator-always-on;
@@ -868,6 +875,7 @@
 	regulator-always-on;
 };
 
+#ifndef UBOOT
 &sound {
 	compatible = "mediatek,mt8390-evk";
 	model = "mt8390-evk";
@@ -954,8 +962,10 @@
 &img_vcore {
 	domain-supply = <&mt6359_vproc1_buck_reg>;
 };
+#endif
 
 #define MEDIATEK
+#define IOMUX pio
 
 /* J2A, GND and VDD_IN_01-10 */
 
@@ -1021,7 +1031,9 @@
 #define PD_SM_GPIO13(a)			PINMUX_GPIO5__FUNC_B_GPIO5		/* GPIO5 */
 
 /* J2E */
+#ifndef UBOOT
 #define SM_USBOTG_DWC			ssusb
+#endif
 #define GP_SM_USB0_IDDIG(a)		<&GPIO 83 GPIO_ACTIVE_HIGH>
 #define PD_SM_USB0_IDDIG(a)		PINMUX_GPIO83__FUNC_B_GPIO83		/* USB0_IDDIG */
 #define GP_SM_USB0_EN_OC(a)		<&GPIO 85 a>
@@ -1057,9 +1069,12 @@
 #define PD_SM_SMB_ALERT(a)		PINMUX_GPIO12__FUNC_B_GPIO12		/* GPIO12 */
 
 /* J2G */
+#ifndef UBOOT
+#define MIPI_DSI			dsi0
 #define SM_FB_HDMI			hdmi0
 #define SM_FB_MIPI			dsi0
 #define SM_FB_MIPI_SUBSYSTEM		dsi0
+#endif
 #define MIPI_ADD_PORT
 #define SM_MIPI_PHY_CLOCK		<&vdosys0 CLK_VDO0_DSI0_DSI>
 #define GP_SM_LCD0_BKLT_EN(a)		<&GPIO 146 a>
@@ -1089,7 +1104,9 @@
 #define PD_SM_LVDS1_BACKLIGHT_EN(a)	PINMUX_GPIO15__FUNC_B_GPIO15		/* GPIO15 */
 
 /* J2H */
+#ifndef UBOOT
 #define SM_PCIE				pcie
+#endif
 #define GP_SM_PCIE_A_RST(a)		<&GPIO 48 a>
 #define PD_SM_PCIE_A_RST(a)		PINMUX_GPIO48__FUNC_B_GPIO48
 #define PD_SM_PCIE_A_RST_OUT(a)		PINMUX_GPIO48__FUNC_O_PERSTN		/* PCIE_PERESET_N */
@@ -1140,7 +1157,7 @@
 #define PD_SM_I2S2_CK_I2S(a)		PINMUX_GPIO115__FUNC_B0_I2SIN_BCK	/* I2SO2_BCK */
 
 /* J2J */
-#define GP_SM_GPIO12(a)			<&GPIO 42 a>
+#define GP_SM_GPIO12(a)			<&pio 42 a>
 #define PD_SM_GPIO12(a)			PINMUX_GPIO42__FUNC_B_GPIO42		/* KPCOL0 */
 #define GP_SM_WDT_TIMEOUT(a)		<&GPIO 100 a>
 #define PD_SM_WDT_TIMEOUT(a)		PINMUX_GPIO100__FUNC_B_GPIO100
@@ -1194,7 +1211,9 @@
 #define PD_SM_POWER_BTN(a)
 
 /* J2K */
+#ifndef UBOOT
 #define SM_SPI0				spi1
+#endif
 #define GP_SM_SPI0_CS0(a)		<&GPIO 75 a>
 #define PD_SM_SPI0_CS0(a)		PINMUX_GPIO75__FUNC_B_GPIO75
 #define PD_SM_SPI0_CS0_SPI(a)		PINMUX_GPIO75__FUNC_O_SPIM1_CSB		/* SPIM1_CSB */
@@ -1210,7 +1229,9 @@
 #define GP_SM_SPI0_CS1(a)		<&GPIO 82 a>
 #define PD_SM_SPI0_CS1(a)		PINMUX_GPIO82__FUNC_B_GPIO82		/* SPIM2_MISO */
 
+#ifndef UBOOT
 #define SM_ESPI				spi0
+#endif
 #define GP_SM_ESPI_CS0(a)		<&GPIO 69 a>
 #define PD_SM_ESPI_CS0(a)		PINMUX_GPIO69__FUNC_B_GPIO69
 #define PD_SM_ESPI_CS0_ESPI(a)		PINMUX_GPIO69__FUNC_O_SPIM0_CSB		/* SPIM0_CSB */
