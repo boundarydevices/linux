@@ -22,13 +22,11 @@
 #define pinctrl_ref4(a, b, c, d) <&concat8(pinctrl_, a, _, b, _, c, _, d)>
 
 #ifdef IMX
-#define IOMUX iomuxc
 #define pins_group(name, _pins, _attr...) \
 		fsl,pins = <		\
 			##_pins		\
 		>;
 #else
-#define IOMUX pio
 #define pins_group(name, _pins, _attr...)	\
 	pins-##name {			\
 		pinmux = <		\
@@ -131,6 +129,7 @@
 	};
 #endif
 
+#ifdef SM_ESPI
 	pinctrl(SM_ESPI) {
 #ifdef IMX
 		pins_group(espi,
@@ -141,7 +140,7 @@
 			PD_SM_ESPI_CS1(PAD_PULLUP)
 			PD_SM_ESPI_RESET(PAD_PULLDN)
 			PD_SM_ESPI_IO2(PAD_PULLDN),
-		>;
+		)
 #else
 		pins_group(nopull,
 			PD_SM_ESPI_CK_ESPI(PAD_ESPI)
@@ -169,6 +168,7 @@
 		)
 #endif
 	};
+#endif
 
 #ifdef PD_SM_I2C_CSI0_CK_I2C
 	pinctrl(SM_I2C_CSI0) {
@@ -289,6 +289,7 @@
 	};
 #endif
 
+#ifdef SM_PCIE
 	pinctrl(SM_PCIE) {
 		pins_group(pcie,
 #ifdef PD_SM_PCIE_A_RST_OUT
@@ -309,6 +310,7 @@
 			, bias-pull-up;
 		)
 	};
+#endif
 
 	pinctrl(SM_SDIO) {
 #ifdef IMX
@@ -319,11 +321,16 @@
 			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_50M)
 			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_50M)
 			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_50M)
-			PD_SM_SDIO_PWR_EN_SDIO(PAD_PULLDN)
 			PD_SM_SDIO_VSELECT_SDIO(PAD_PULLDN)
 			PD_SM_SDIO_WP_SDIO(PAD_PULLUPIRQ)
 			PD_SM_SDIO_CD(PAD_PULLUPIRQ)
+#if defined(PD_SM_SDIO_PWR_EN_SDIO) || defined(PD_SM_SDIO_PWR_EN)
+#if defined(PD_SM_SDIO_PWR_EN_SDIO)
+			PD_SM_SDIO_PWR_EN_SDIO(PAD_PULLDN)
+#else
 			PD_SM_SDIO_PWR_EN(PAD_PULLDN)
+#endif
+#endif
 		)
 #else
 		pins_group(clk,
@@ -439,6 +446,7 @@
 		)
 	};
 
+#ifdef SM_SPI0
 	pinctrl(SM_SPI0) {
 		pins_group(spi,
 			PD_SM_SPI0_CK_SPI(PAD_SPI0)
@@ -449,19 +457,25 @@
 			bias-disable;
 		)
 	};
+#endif
 };
 
 / {
 	aliases {
+#ifdef SM_FB_HDMI
 		fb_hdmi = &SM_FB_HDMI;
+#endif
 		rtc0 = &rv3028;
+#ifdef SM_USBOTG_DWC
 		usb_mux = &usb_mux;
+#endif
 	};
 
 	chosen {
 		stdout-path = &SM_SER1;
 	};
 
+#ifdef SM_USBOTG_DWC
 	connector {
 		compatible = "usb-c-connector";
 		label = "USB-C";
@@ -486,6 +500,7 @@
 			};
 		};
 	};
+#endif
 
 #ifdef SM_I2C_CSI0
 	csi0_mclk: csi0-mclk {
@@ -613,6 +628,7 @@
 #endif
 };
 
+#ifdef SM_SPI0
 &SM_SPI0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -627,7 +643,9 @@
 		spi-max-frequency = <500000>;
 	};
 };
+#endif
 
+#ifdef SM_ESPI
 &SM_ESPI {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -642,6 +660,7 @@
 		spi-max-frequency = <500000>;
 	};
 };
+#endif
 
 #ifdef SM_CAN0
 &SM_CAN0 {
@@ -722,6 +741,7 @@
 	};
 };
 
+#ifdef SM_USBOTG_DWC
 &i2c_gp_b {
 	usb_mux: hd3ss3220@60 {
 		/* tusb320 is compatible with hd3ss3220 */
@@ -753,6 +773,7 @@
 		};
 	};
 };
+#endif
 
 #if defined(SM_I2S0) || defined(SM_AFE)
 &i2c_gp_c {
@@ -915,6 +936,7 @@
 };
 #endif
 
+#ifdef SM_PCIE
 &SM_PCIE {
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_PCIE);
@@ -923,6 +945,7 @@
 #endif
 	status = "okay";
 };
+#endif
 
 #ifdef SM_PCIE_PHY
 &SM_PCIE_PHY {
@@ -1001,6 +1024,7 @@
 };
 #endif
 
+#ifdef SM_USBOTG_DWC
 &SM_USBOTG_DWC {
 	dr_mode = "otg";
 #ifdef PD_SM_USB0_IDDIG
@@ -1030,6 +1054,7 @@
 		};
 	};
 };
+#endif
 
 #ifdef SM_USBOTG_PHY
 &SM_USBOTG_PHY {
@@ -1039,6 +1064,7 @@
 };
 #endif
 
+#ifdef SM_FB_MIPI
 /* J11 mipi display */
 #define MIPI_DISPLAY		SM_FB_MIPI
 #define MIPI_SUBSYSTEM		SM_FB_MIPI_SUBSYSTEM
@@ -1048,7 +1074,6 @@
 #endif
 #define MIPI_I2C_BUS		i2c_lcd_c
 #define MIPI_PWM		SM_PWM_LCD0
-#define MIPI_DSI		SM_FB_MIPI
 
 #define GP_MIPI_PWM(a)		GP_SM_LCD0_BKLT_PWM(a)
 #define PD_MIPI_PWM(a)		PD_SM_LCD0_BKLT_PWM(a)	/* Pin 7, S141 */
@@ -1067,6 +1092,7 @@
 #define PD_MIPI_ENABLE(a)	PD_SM_LCD0_VDD_EN(a)	/* Pin 11, S133 */
 
 #include "bd-universal-mipi-dsi.dtsi"
+#endif
 
 #ifdef SM_FB_LVDS
 #define LVDS_DISPLAY		SM_FB_LVDS
