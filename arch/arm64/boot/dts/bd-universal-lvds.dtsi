@@ -8,7 +8,6 @@
 #define pinctrl_ref(a) <&concat(pinctrl_, a)>
 
 #ifdef IMX
-#define IOMUX iomuxc
 #define pins_group(name, _pins, _attr...) \
 		fsl,pins = <		\
 			##_pins		\
@@ -24,7 +23,6 @@
 			_down,		\
 		)
 #else
-#define IOMUX pio
 #define pins_group(name, _pins, _attr...)	\
 	pins-##name {			\
 		pinmux = <		\
@@ -35,12 +33,12 @@
 #define pd_dnirq_down(_irq, _down) \
 		pins_group(dnirq,				\
 			_irq,					\
-			bias-pull-down = <MTK_PUPD_SET_R1R0_10>; \
+			bias-pull-down;				\
 			input-enable;				\
 		)						\
 		pins_group(down,				\
 			_down,					\
-			bias-pull-down = <MTK_PUPD_SET_R1R0_10>; \
+			bias-pull-down;				\
 		)
 #define pd_upirq_down(_irq, _down) \
 		pins_group(upirq,				\
@@ -50,7 +48,7 @@
 		)						\
 		pins_group(down,				\
 			_down,					\
-			bias-pull-down = <MTK_PUPD_SET_R1R0_10>; \
+			bias-pull-down; \
 		)
 #endif
 
