@@ -1,5 +1,16 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm2(er, tft050) {
+		aliasp = <&pinctrlm_ref(er_tft050)>;
+		pins_group(pulldn,
+#define GP_TC358767_EN		GP(ENABLE, GPIO_ACTIVE_HIGH)
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 /* TC358767: mipi to rgb bridge */
 /*
  * 54-66 fps, 800 x 480
@@ -13,13 +24,16 @@
  */
 / {
 	aliases {
+		pinctrl_dsi(er_tft050) = &pinctrlm_ref(er_tft050);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_er_tft050 = &mipi_cmds_er_tft050;
-		pinctrl_er_tft050 = &pinctrl_mipi_er_tft050;
 	};
 
 	mipi_cmds_er_tft050: mipi-cmds-er-tft050 {
 		alias = <&mipi_cmds_er_tft050>;
-		aliasp = <&pinctrl_mipi_er_tft050>;
 		delay-prepare = <130>;
 #if 0
 #if LANES==1
@@ -35,6 +49,7 @@
 		mipi-dsi-multiple = <26000000>;	/* needed for display port, but we don't use */
 #endif
 		i2c-address = <0x68>;
+		/* fixme, should be in fb_mipi node */
 		i2c-bus = <&mipi_ref(tc358767_bus)>;
 		i2c-cmds-enable = /bits/ 8 <
 #if 0
@@ -143,4 +158,5 @@ mw.l 0x40100000 0x7 ;i2c write 0x40100000 68 170.2 4 -s
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
