@@ -2,55 +2,7 @@
 /*
  * Copyright 2023 Boundary Devices
  */
-#define concat(a, b)   _concat_(a, b)
-#define _concat_(a, b)  a ## b
-#define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
-#define pinctrl_ref(a) <&concat(pinctrl_, a)>
-
-#ifdef IMX
-#define pins_group(name, _pins, _attr...) \
-		fsl,pins = <		\
-			##_pins		\
-		>;
-#define pd_dnirq_down(_irq, _down) \
-		pins_group(group,	\
-			_irq		\
-			_down,		\
-		)
-#define pd_upirq_down(_irq, _down) \
-		pins_group(group,	\
-			_irq		\
-			_down,		\
-		)
-#else
-#define pins_group(name, _pins, _attr...)	\
-	pins-##name {			\
-		pinmux = <		\
-			##_pins		\
-		>;			\
-		##_attr	\
-	};
-#define pd_dnirq_down(_irq, _down) \
-		pins_group(dnirq,				\
-			_irq,					\
-			bias-pull-down;				\
-			input-enable;				\
-		)						\
-		pins_group(down,				\
-			_down,					\
-			bias-pull-down;				\
-		)
-#define pd_upirq_down(_irq, _down) \
-		pins_group(upirq,				\
-			_irq,					\
-			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;	\
-			input-enable;				\
-		)						\
-		pins_group(down,				\
-			_down,					\
-			bias-pull-down; \
-		)
-#endif
+#include "bd-universal.h"
 
 &IOMUX {
 	pinctrl_backlight_lvds: backlight-lvdsgrp {
@@ -92,9 +44,11 @@
 #endif
 
 	pinctrl_ts_lvds_atmel: ts-lvds-atmelgrp {
-		pd_upirq_down(
+		pd_irq_reset(
 			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
-			PD_LVDS_TS_RESET(PAD_PULLDN)
+			UP_LVDS_TS_IRQ,
+			PD_LVDS_TS_RESET(PAD_PULLDN),
+			DN_LVDS_TS_RESET
 		)
 	};
 
@@ -106,9 +60,11 @@
 	};
 
 	pinctrl_ts_lvds_ft5x06: ts-lvds-ft5x06grp {
-		pd_upirq_down(
+		pd_irq_reset(
 			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
-			PD_LVDS_TS_RESET(PAD_PULLDN)
+			UP_LVDS_TS_IRQ,
+			PD_LVDS_TS_RESET(PAD_PULLDN),
+			DN_LVDS_TS_RESET
 		)
 	};
 
