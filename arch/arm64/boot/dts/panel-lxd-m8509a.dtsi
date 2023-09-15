@@ -1,6 +1,7 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
 / {
+#ifndef MIPI_COMMANDS_DONE
 	aliases {
 		mipi_cmds_lxd_m8509a = &mipi_cmds_lxd_m8509a;
 	};
@@ -90,4 +91,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
