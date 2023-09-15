@@ -1,15 +1,29 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm(zwt055azh) {
+		aliasp = <&pinctrlm_ref(zwt055azh)>;
+		pins_group(pulldn,
+			/* gpio selected by u-boot */
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(zwt055azh) = &pinctrlm_ref(zwt055azh);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_zwt055azh = &mipi_cmds_zwt055azh;
-		pinctrl_zwt055azh = &pinctrl_mipi_zwt055azh;
 	};
 
 	/* hx8399c controller */
 	mipi_cmds_zwt055azh: mipi-cmds-zwt055azh {
 		alias = <&mipi_cmds_zwt055azh>;
-		aliasp = <&pinctrl_mipi_zwt055azh>;
 		delay-prepare = <100>;
 		delay-unprepare = <2>;
 		mipi-cmds-enable = /bits/ 8 <
@@ -91,4 +105,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
