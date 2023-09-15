@@ -748,6 +748,7 @@
   extcon_register_notifier
   extcon_set_property
   extcon_set_property_capability
+  extcon_set_property_sync
   extcon_set_state_sync
   extcon_unregister_notifier
   fasync_helper
@@ -971,6 +972,7 @@
   iommu_attach_device
   iommu_attach_device_pasid
   iommu_attach_group
+  iommu_detach_device
   iommu_detach_device_pasid
   iommu_device_register
   iommu_device_sysfs_add
@@ -2288,6 +2290,9 @@
   __xfrm_state_destroy
   xfrm_state_lookup_byspi
   xfrm_stateonly_find
+  xhci_address_device
+  xhci_bus_resume
+  xhci_bus_suspend
   xhci_gen_setup
   xhci_init_driver
   xhci_resume

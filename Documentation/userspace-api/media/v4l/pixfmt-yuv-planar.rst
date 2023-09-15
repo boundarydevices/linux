@@ -135,7 +135,7 @@ All components are stored with the same number of bits per component.
       - 12
       - 4:2:0
       - Cb, Cr
-      - Yes
+      - No
       - Linear
     * - V4L2_PIX_FMT_NV16
       - 'NV16'

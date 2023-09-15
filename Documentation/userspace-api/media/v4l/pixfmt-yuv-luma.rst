@@ -157,3 +157,7 @@ are often referred to as greyscale formats.
     than 16 bits. For example, 10 bits per pixel uses values in the range 0 to
     1023. For the IPU3_Y10 format 25 pixels are packed into 32 bytes, which
     leaves the 6 most significant bits of the last byte padded with 0.
+
+    For Y012 and Y12 formats, Y012 places its data in the 12 high bits, with
+    padding zeros in the 4 low bits, in contrast to the Y12 format, which has
+    its padding located in the most significant bits of the 16 bit word.
