@@ -22,6 +22,7 @@
 	};
 
 #define LANES 4
+#ifndef MIPI_COMMANDS_DONE
 	mipi_cmds_dmt050wvnxcmi: mipi-cmds-dmt050wvnxcmi {
 		alias = <&mipi_cmds_dmt050wvnxcmi>;
 		delay-prepare = <130>;
@@ -170,7 +171,7 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 #endif
-		spi = <&spidev_lcd>;
+		spi = <&mipi_ref2(spidev, lcd)>;
 		spi-9-bit;
 		spi-cmds-disable = /bits/ 8 <
 			DCS_S0P(0x10)		/* Enter sleep */
@@ -337,4 +338,5 @@
 		>;
 		spi-max-frequency = <5000000>;
 	};
+#endif
 };
