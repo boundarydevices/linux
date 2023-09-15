@@ -1,14 +1,30 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm2(lcd133, 070) {
+		aliasp = <&pinctrlm_ref(lcd133_070)>;
+		pins_group(pulldn,
+#define GP_LCD133_070_RESET	GP(IRQ, GPIO_ACTIVE_LOW)
+			PD(IRQ, PAD_PULLDN)
+#define GP_LCD133_070_ENABLE	GP(ENABLE, GPIO_ACTIVE_HIGH)
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(lcd133_070) = &pinctrlm_ref(lcd133_070);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_lcd133_070 = &mipi_cmds_lcd133_070;
-		pinctrl_lcd133_070 = &pinctrl_mipi_lcd133_070;
 	};
 
 	mipi_cmds_lcd133_070: mipi-cmds-lcd133-070 {
 		alias = <&mipi_cmds_lcd133_070>;
-		aliasp = <&pinctrl_mipi_lcd133_070>;
 #if 0
 		delay-power-up = <100>;
 		delay-prepare = <1000>;
@@ -39,4 +55,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
