@@ -22,6 +22,7 @@
 	};
 
 #define LANES 4
+#ifndef MIPI_COMMANDS_DONE
 	mipi_cmds_dmt050wvnxcmi: mipi-cmds-dmt050wvnxcmi {
 		alias = <&mipi_cmds_dmt050wvnxcmi>;
 		delay-prepare = <130>;
@@ -337,4 +338,5 @@
 		>;
 		spi-max-frequency = <5000000>;
 	};
+#endif
 };
