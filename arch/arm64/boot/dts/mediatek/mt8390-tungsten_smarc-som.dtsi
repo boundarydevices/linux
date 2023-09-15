@@ -236,6 +236,15 @@
 		};
 	};
 
+	i2c4_pin: i2c4-pin {
+		pins-bus {
+			pinmux = <PINMUX_GPIO64__FUNC_B1_SDA4>,
+				 <PINMUX_GPIO63__FUNC_B1_SCL4>;
+			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
+			mediatek,drive-strength-adv = <7>;
+		};
+	};
+
 	pinctrl_mmc0_default: mmc0-defaultgrp {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO161__FUNC_B1_MSDC0_DAT0>,
@@ -582,6 +591,13 @@
 &i2c3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c3_pin>;
+	clock-frequency = <100000>;
+	status = "okay";
+};
+
+&i2c4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4_pin>;
 	clock-frequency = <100000>;
 	status = "okay";
 };
