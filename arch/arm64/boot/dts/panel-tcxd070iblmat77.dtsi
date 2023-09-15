@@ -1,14 +1,28 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm(tcxd070iblmat77) {
+		aliasp = <&pinctrlm_ref(tcxd070iblmat77)>;
+		pins_group(pulldn,
+			/* gpio selected by u-boot */
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(tcxd070iblmat77) = &pinctrlm_ref(tcxd070iblmat77);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_tcxd070iblmat77 = &mipi_cmds_tcxd070iblmat77;
-		pinctrl_tcxd070iblmat77 = &pinctrl_mipi_tcxd070iblmat77;
 	};
 
 	mipi_cmds_tcxd070iblmat77: mipi-cmds-tcxd070iblmat77 {
 		alias = <&mipi_cmds_tcxd070iblmat77>;
-		aliasp = <&pinctrl_mipi_tcxd070iblmat77>;
 		delay-prepare = <100>;
 		delay-unprepare = <2>;
 		mipi-cmds-enable = /bits/ 8 <
@@ -247,4 +261,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
