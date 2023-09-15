@@ -1,15 +1,29 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm(et055fh06) {
+		aliasp = <&pinctrlm_ref(et055fh06)>;
+		pins_group(pulldn,
+			/* gpio selected by u-boot */
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(et055fh06) = &pinctrlm_ref(et055fh06);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_et055fh06 = &mipi_cmds_et055fh06;
-		pinctrl_et055fh06 = &pinctrl_mipi_et055fh06;
 	};
 
 	/* hx8398 controller */
 	mipi_cmds_et055fh06: mipi-cmds-et055fh06 {
 		alias = <&mipi_cmds_et055fh06>;
-		aliasp = <&pinctrl_mipi_et055fh06>;
 		delay-prepare = <100>;
 		delay-unprepare = <2>;
 		mipi-cmds-enable = /bits/ 8 <
@@ -77,4 +91,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
