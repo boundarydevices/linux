@@ -5,76 +5,6 @@
 #include "bd-universal.h"
 
 &IOMUX {
-	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
-		fsl,pins = <
-			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_cs005_0004_03: mipi-cs005-0004-03grp {
-		fsl,pins = <
-			PD_MIPI_ENABLE(PAD_NOPULL)
-			PD_MIPI_IRQ(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_et055fh06: mipi-et055fh06grp {
-		fsl,pins = <
-			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
-		fsl,pins = <
-			PD_MIPI_IRQ(PAD_PULLDN)
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
-		fsl,pins = <
-			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-			PD_MIPI_IRQ(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_ls050t1sx12: mipi-ls050t1sx12grp {
-		fsl,pins = <
-			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
-			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
-			PD_MIPI_IRQ(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_tcxd070iblmat77: mipi-tcxd070iblmat77grp {
-		fsl,pins = <
-			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
-	};
-
-	pinctrl_mipi_zwt055azh: mipi-zwt055azhgrp {
-		fsl,pins = <
-			/* gpio selected by u-boot */
-			PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
-	};
-
 	pinctrlm(_MIPI_(PWM)) {
 		pins_group(pulldn,
 			PD(PWM_OUT, PAD_PULLDN),
@@ -450,12 +380,6 @@
 			PD(ENABLE, PAD_PULLDN),
 			DN(ENABLE)
 		)
-	};
-
-	pinctrl_mipi_er_tft050: mipi-er-tft050grp {
-		fsl,pins = <
-				PD_MIPI_ENABLE(PAD_PULLDN)
-		>;
 	};
 };
 
