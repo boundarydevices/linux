@@ -8,6 +8,7 @@
 #endif
 	};
 
+#ifndef MIPI_COMMANDS_DONE
 	/* hx8399a controller */
 	mipi_cmds_dmt055fhnmcmi: mipi-cmds-dmt055fhnmcmi {
 		alias = <&mipi_cmds_dmt055fhnmcmi>;
@@ -75,4 +76,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
