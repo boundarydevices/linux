@@ -1,14 +1,28 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm(com50h5n03ulc) {
+		aliasp = <&pinctrlm_ref(com50h5n03ulc)>;
+		pins_group(pulldn,
+			/* gpio selected by u-boot */
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(com50h5n03ulc) = &pinctrlm_ref(com50h5n03ulc);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_com50h5n03ulc = &mipi_cmds_com50h5n03ulc;
-		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
 	};
 
 	mipi_cmds_com50h5n03ulc: mipi-cmds-com50h5n03ulc {
 		alias = <&mipi_cmds_com50h5n03ulc>;
-		aliasp = <&pinctrl_mipi_com50h5n03ulc>;
 		min-hs-clock-multiple = <8>;
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(122)
@@ -68,4 +82,5 @@
 			DELAY(120)
 		>;
 	};
+#endif
 };
