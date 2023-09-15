@@ -8,6 +8,7 @@
 		pinctrl_dlc0350gev06 = &pinctrl_mipi_dlc0350gev06;
 	};
 
+#ifndef MIPI_COMMANDS_DONE
 	mipi_cmds_dlc0350gev06: mipi-cmds-dlc0350gev06 {
 		alias = <&mipi_cmds_dlc0350gev06>;
 		aliasp = <&pinctrl_mipi_dlc0350gev06>;
@@ -69,4 +70,5 @@
 		>;
 		mipi-delay-between-cmds = <1>;
 	};
+#endif
 };
