@@ -5,10 +5,12 @@
 		mipi_cmds_m101nwwb = &mipi_cmds_m101nwwb;
 	};
 
+#ifndef MIPI_COMMANDS_DONE
 	mipi_cmds_m101nwwb: mipi-cmds-m101nwwb {
 		alias = <&mipi_cmds_m101nwwb>;
 		mode-video-hbp-disable;
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
