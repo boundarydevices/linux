@@ -1,9 +1,26 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm_ref3(cs005, 0004, 03): mipi-cs005-0004-03grp {
+		aliasp = <&pinctrl_mipi_cs005_0004_03>;
+		pins_group(pulldn,
+#define GP_CS005_0004_03_BKL_EN		GP(ENABLE, GPIO_ACTIVE_HIGH)
+			PD(ENABLE, PAD_NOPULL)
+#define GP_CS005_0004_03_DISPLAY_EN	GP(IRQ, GPIO_ACTIVE_HIGH)
+			PD(IRQ, PAD_PULLDN),
+			DN(IRQ)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(cs005_0004_03) = &pinctrlm_ref(cs005_0004_03);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_cs005_0004_03 = &mipi_cmds_cs005_0004_03;
-		pinctrl_cs005_0004_03 = &pinctrl_mipi_cs005_0004_03;
 	};
 
 	/* ST7262-G4-1-H2 controller, 4 lane mipi controller */
@@ -13,7 +30,6 @@
 	 */
 	mipi_cmds_cs005_0004_03: mipi-cmds-cs005_0004_03 {
 		alias = <&mipi_cmds_cs005_0004_03>;
-		aliasp = <&pinctrl_mipi_cs005_0004_03>;
 		delay-before-backlight-on = <250>;
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(10)
@@ -60,4 +76,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
