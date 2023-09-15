@@ -1,14 +1,28 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm(ls050t1sx12) {
+		aliasp = <&pinctrlm_ref(ls050t1sx12)>;
+		pins_group(pulldn,
+			/* gpio selected by u-boot */
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(ls050t1sx12) = &pinctrlm_ref(ls050t1sx12);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_ls050t1sx12 = &mipi_cmds_ls050t1sx12;
-		pinctrl_ls050t1sx12 = &pinctrl_mipi_ls050t1sx12;
 	};
 
 	mipi_cmds_ls050t1sx12: mipi-cmds-ls050t1sx12 {
 		alias = <&mipi_cmds_ls050t1sx12>;
-		aliasp = <&pinctrl_mipi_ls050t1sx12>;
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(50)
 			DCS_S1P(0xff,0x10)	/* Page select */
@@ -45,4 +59,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
