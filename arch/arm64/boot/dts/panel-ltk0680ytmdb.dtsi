@@ -1,14 +1,28 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm(ltk0680ytmdb) {
+		aliasp = <&pinctrlm_ref(ltk0680ytmdb)>;
+		pins_group(pulldn,
+			/* gpio selected by u-boot */
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(ltk0680ytmdb) = &pinctrlm_ref(ltk0680ytmdb);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
-		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
 	};
 
 	mipi_cmds_ltk0680ytmdb: mipi-cmds-ltk0680ytmdb {
 		alias = <&mipi_cmds_ltk0680ytmdb>;
-		aliasp = <&pinctrl_mipi_ltk0680ytmdb>;
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(50)
 			GEN_S1P(0xCD,0xAA)
@@ -69,4 +83,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
