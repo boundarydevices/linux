@@ -131,8 +131,8 @@
 	};
 };
 
-#include "panel-com35h3r04uly.dtsi"
-#include "panel-q035-014.dtsi"
+#include "../panel-com35h3r04uly.dtsi"
+#include "../panel-q035-014.dtsi"
 
 / {
 	model = "NXP i.MX 8ULP tag";
