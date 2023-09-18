@@ -6,7 +6,7 @@
 /dts-v1/;
 
 #include "imx8mq.dtsi"
-#include "panel-m101nwwb.dtsi"
+#include "../panel-m101nwwb.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
