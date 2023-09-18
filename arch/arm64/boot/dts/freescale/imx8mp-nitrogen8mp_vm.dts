@@ -373,10 +373,10 @@
 	};
 };
 
-#include "panel-ltk0680ytmdb.dtsi"
-#include "panel-ltk069wxbct02.dtsi"
-#include "panel-ltk069wxict10.dtsi"
-#include "panel-ltk069wxict11.dtsi"
+#include "../panel-ltk0680ytmdb.dtsi"
+#include "../panel-ltk069wxbct02.dtsi"
+#include "../panel-ltk069wxict10.dtsi"
+#include "../panel-ltk069wxict11.dtsi"
 
 / {
 	model = "Boundary i.MX8MPlus nitrogen8mp_vm board";
