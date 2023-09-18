@@ -8,7 +8,7 @@
 	pinctrl_backlight_lvds: backlight-lvdsgrp {
 		pins_group(pulldn,
 			PD_LVDS_BACKLIGHT(PAD_PULLDN),
-			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+			DN_LVDS_BACKLIGHT
 		)
 	};
 
@@ -16,7 +16,7 @@
 	pinctrl_backlight_lvds2: backlight-lvds2grp {
 		pins_group(pulldn,
 			PD_LVDS2_BACKLIGHT(PAD_PULLDN),
-			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+			DN_LVDS2_BACKLIGHT
 		)
 	};
 #endif
@@ -30,7 +30,7 @@
 	pinctrl(LVDS_PWM) {
 		pins_group(pulldn,
 			PD_LVDS_PWM(PAD_PULLDN),
-			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+			DN_LVDS_PWM
 		)
 	};
 
@@ -38,7 +38,7 @@
 	pinctrl(LVDS2_PWM) {
 		pins_group(pulldn,
 			PD_LVDS2_PWM(PAD_PULLDN),
-			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+			DN_LVDS2_PWM
 		)
 	};
 #endif
@@ -55,7 +55,7 @@
 	pinctrl_ts_lvds_egalax: ts-lvds-egalaxgrp {
 		pins_group(pullup,
 			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
-			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+			UP_LVDS_TS_IRQ
 		)
 	};
 
@@ -71,13 +71,15 @@
 	pinctrl_ts_lvds_gt911: ts-lvds-gt911grp {
 		pins_group(pullup,
 			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
-			PD_LVDS_TS_RESET(PAD_PULLUP)
+			PD_LVDS_TS_RESET(PAD_PULLUP),
+			UP_LVDS_TS_RESET
 		)
 	};
 
 	pinctrl_ts_lvds_ili251x: ts-lvds-ili251xgrp {
 		pins_group(pullup,
-			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
+			UP_LVDS_TS_IRQ
 		)
 	};
 };
