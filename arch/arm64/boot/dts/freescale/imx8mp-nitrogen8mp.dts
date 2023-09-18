@@ -865,7 +865,7 @@
 #define PAD_PULLUP		0x140
 #define PAD_PULLDNIRQ		0x180
 #define PAD_PULLUPIRQ		0x1c0
-#include "nitrogen-mipi-dsi.dtsi"
+#include "../bd-universal-mipi-dsi.dtsi"
 
 #define LVDS_DISPLAY		lcdif2
 #define LVDS_I2C_BUS		i2c4
@@ -887,7 +887,7 @@
 #define GP_LVDS_TS_RESET(a)	<&gpio3 30 a>
 #define PD_LVDS_TS_RESET(a)
 #define LVDS_NO_TS_RESET
-#include "nitrogen-lvds.dtsi"
+#include "../bd-universal-lvds.dtsi"
 
 / {
 	aliases {
