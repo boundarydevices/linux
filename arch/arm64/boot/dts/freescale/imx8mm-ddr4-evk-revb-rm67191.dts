@@ -4,8 +4,8 @@
  */
 
 #include "imx8mm-ddr4-evk-revb.dts"
-#include "panel-raydium-rm67191.dtsi"
-#include "panel-ltk080a60a004t.dtsi"
+#include "../panel-raydium-rm67191.dtsi"
+#include "../panel-ltk080a60a004t.dtsi"
 
 &iomuxc {
 	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
