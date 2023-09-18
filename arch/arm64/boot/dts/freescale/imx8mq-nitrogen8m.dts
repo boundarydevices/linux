@@ -1290,4 +1290,4 @@
 #define PAD_PULLDN		0x06	/* No pulldown, need external resistor */
 #define PAD_PULLUPIRQ		0xc6
 #define PAD_PULLDNIRQ		0x86
-#include "nitrogen-mipi-dsi.dtsi"
+#include "../bd-universal-mipi-dsi.dtsi"
