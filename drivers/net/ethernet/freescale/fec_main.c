@@ -3923,7 +3923,7 @@ static int fec_enet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 			return -EOPNOTSUPP;
 
 		if (is_run) {
-			napi_disable(&fep->napi);
+			fec_napi_disable(fep);
 			netif_tx_disable(dev);
 		}
 
