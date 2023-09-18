@@ -2,7 +2,7 @@
 /*
  * Copyright 2018 Boundary Devices
  */
-#include "panel-ltk080a60a004t.dtsi"
+#include "../panel-ltk080a60a004t.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
