@@ -798,7 +798,7 @@
 #define GP_MIPI_ENABLE(a)	GP_SM_LCD0_VDD_EN(a)
 #define PD_MIPI_ENABLE(a)	PD_SM_LCD0_VDD_EN(a)	/* Pin 11, S133 */
 
-#include "nitrogen-mipi-dsi.dtsi"
+#include "bd-universal-mipi-dsi.dtsi"
 
 #define LVDS_DISPLAY		SM_FB_LVDS
 #define LVDS_I2C_BUS		SM_I2C_PM
@@ -820,4 +820,4 @@
 #define GP_LVDS_TS_RESET(a)	GP_SM_ESPI_ALERT(a)
 #define PD_LVDS_TS_RESET(a)	PD_SM_ESPI_ALERT(a)	/* J23 Pin 3, S43 */
 #define LVDS_NO_TS_RESET				/* S43 not routed on 1st som run */
-#include "nitrogen-lvds.dtsi"
+#include "bd-universal-lvds.dtsi"
