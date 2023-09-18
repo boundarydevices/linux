@@ -934,7 +934,7 @@
 #define PAD_PULLDN		0x100
 #define PAD_PULLUPIRQ		0x1c0
 #define PAD_PULLDNIRQ		0x180
-#include "nitrogen-mipi-dsi.dtsi"
+#include "../bd-universal-mipi-dsi.dtsi"
 
 &mipi_dsi {
 	assigned-clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
