@@ -29,6 +29,8 @@ struct pkvm_el2_module {
 	unsigned int nr_hyp_events;
 	unsigned int nr_hyp_printk_fmts;
 	kvm_nvhe_reloc_t *relocs;
+	struct list_head node;
+	struct list_head ext_symbols;
 	unsigned int nr_relocs;
 	int (*init)(const struct pkvm_module_ops *ops);
 };
