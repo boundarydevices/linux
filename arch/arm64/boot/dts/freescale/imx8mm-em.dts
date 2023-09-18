@@ -413,8 +413,8 @@
 	};
 };
 
-#include "panel-ltk080a60a004t.dtsi"
-#include "panel-m101nwwb.dtsi"
+#include "../panel-ltk080a60a004t.dtsi"
+#include "../panel-m101nwwb.dtsi"
 
 / {
 	model = "Boundary Devices i.MX 8M Mini EM";
