@@ -578,7 +578,7 @@
 		};
 
 		i2c6b: i2c6@1 {
-			/* CSI0 I2C*/
+			/* CSI1 I2C*/
 			clock-frequency = <100000>;
 			reg = <1>;
 			#address-cells = <1>;
@@ -873,10 +873,10 @@
 /* J2B */
 #define SM_I2C_CSI0			i2c6a
 #define SM_I2C_CSI1			i2c6b
-#define SM_PWM_CSI1			pwm3
-#define GP_SM_CSI1_MCK(a)		<&gpio5 3 a>
-#define PD_SM_CSI1_MCK(a)		MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03 a
-#define PD_SM_CSI1_MCK_PWM(a)		MX8MP_IOMUXC_SPDIF_TX__PWM3_OUT a
+#define SM_PWM_CSI1			pwm4
+#define GP_SM_CSI1_MCK(a)		<&gpio1 15 a>
+#define PD_SM_CSI1_MCK(a)		MX8MP_IOMUXC_GPIO1_IO15__GPIO1_IO15 a
+#define PD_SM_CSI1_MCK_PWM(a)		MX8MP_IOMUXC_GPIO1_IO15__PWM4_OUT a
 
 /* J2C */
 #define GP_SM_ENET0_SDP(a)		<&gpio1 9 a>
@@ -1094,8 +1094,8 @@
 #define PD_SM_GPIO3(a)
 #define GP_SM_GPIO4(a)			<&mcp23018 4 (a)>
 #define PD_SM_GPIO4(a)
-#define GP_SM_GPIO5(a)			<&mcp23018 5 (a | GPIO_PULL_UP)>
-#define PD_SM_GPIO5(a)
+#define GP_SM_GPIO5(a)			<&gpio5 3 a>
+#define PD_SM_GPIO5(a)			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03 a
 #define GP_SM_GPIO6(a)			<&mcp23018 6 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO6(a)
 #define GP_SM_GPIO7(a)			<&mcp23018 7 (a | GPIO_PULL_UP)>
@@ -1148,8 +1148,8 @@
 #define PD_SM_ESPI_IO1_ESPI(a)		MX8MP_IOMUXC_ECSPI2_MISO__ECSPI2_MISO a
 #define GP_SM_ESPI_ALERT(a)		<&mcp23018 8 (a | GPIO_PULL_UP)>
 #define PD_SM_ESPI_ALERT(a)
-#define GP_SM_ESPI_IO2(a)		<&gpio1 15 a>
-#define PD_SM_ESPI_IO2(a)		MX8MP_IOMUXC_GPIO1_IO15__GPIO1_IO15 a
+#define GP_SM_ESPI_IO2(a)		<&mcp23018 5 (a | GPIO_PULL_UP)>
+#define PD_SM_ESPI_IO2(a)
 #define GP_SM_ESPI_RESET(a)		<&gpio4 29 a>
 #define PD_SM_ESPI_RESET(a)		MX8MP_IOMUXC_SAI3_RXC__GPIO4_IO29 a
 #define PAD_ESPI			0x82
