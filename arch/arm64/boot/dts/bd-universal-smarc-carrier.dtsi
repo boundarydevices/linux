@@ -853,7 +853,7 @@
 		reg = <0x10>;
 		clocks = <&csi0_mclk>;
 		csi_id = <0>;
-		pwn-gpios = GP_SM_GPIO2(GPIO_ACTIVE_HIGH);
+		pwn-gpios = GP_SM_GPIO5(GPIO_ACTIVE_HIGH);
 		rst-gpios = GP_SM_GPIO0(GPIO_ACTIVE_LOW);
 		status = "okay";
 
@@ -887,8 +887,8 @@
 		reg = <0x10>;
 		clocks = <&csi0_mclk>;
 		csi_id = <1>;
-		pwn-gpios = GP_SM_GPIO3(GPIO_ACTIVE_HIGH);
-		rst-gpios = GP_SM_CSI1_MCK(GPIO_ACTIVE_LOW);
+		pwn-gpios = GP_SM_CSI1_MCK(GPIO_ACTIVE_HIGH);
+		rst-gpios = GP_SM_GPIO3(GPIO_ACTIVE_LOW);
 		status = "okay";
 
 		port {
