@@ -43,7 +43,7 @@
 	wm8962: wm8962@1a {
 		compatible = "wlf,wm8962";
 		reg = <0x1a>;
-		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_MCLK1>;
+		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
 		DCVDD-supply = <&reg_audio_pwr>;
 		DBVDD-supply = <&reg_audio_pwr>;
 		AVDD-supply = <&reg_audio_pwr>;

@@ -76,9 +76,9 @@
 		assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
 		assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
 		assigned-clock-rates = <12288000>;
-		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_IPG>,
-			 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_MCLK1>,
-			 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SDMA3_ROOT>,
+		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_IPG>,
+			 <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>,
+			 <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SDMA3_ROOT>,
 			 <&clk IMX8MP_AUDIO_PLL1_OUT>,
 			 <&clk IMX8MP_AUDIO_PLL2_OUT>;
 		clock-names = "ipg", "mclk", "dma", "pll8k", "pll11k";
@@ -100,9 +100,9 @@
 		assigned-clocks = <&clk IMX8MP_CLK_PDM>;
 		assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
 		assigned-clock-rates = <196608000>;
-		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_PDM_IPG>,
-			 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_PDM_ROOT>,
-			 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SDMA3_ROOT>,
+		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_PDM_IPG>,
+			 <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_PDM_ROOT>,
+			 <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SDMA3_ROOT>,
 			 <&clk IMX8MP_AUDIO_PLL1_OUT>,
 			 <&clk IMX8MP_AUDIO_PLL2_OUT>;
 		clock-names = "ipg", "mclk", "dma", "pll8k", "pll11k";
