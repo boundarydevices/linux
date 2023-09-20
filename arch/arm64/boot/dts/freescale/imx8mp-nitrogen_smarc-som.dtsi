@@ -4,6 +4,10 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MP
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp.dtsi"
@@ -283,10 +287,12 @@
 	};
 
 	reg_wlan_vmmc: regulator-wlan-vmmc {
+#ifndef UBOOT
 		assigned-clocks = <&clk IMX8MP_CLK_CLKOUT1_SEL>, <&clk IMX8MP_CLK_CLKOUT1>;
 		assigned-clock-parents = <&clk IMX8MP_CLK_32K>;
 		assigned-clock-rates = <0>, <32768>;
 		clocks = <&clk IMX8MP_CLK_CLKOUT1>;
+#endif
 		compatible = "regulator-fixed-clock";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_wlan_vmmc>;
@@ -307,7 +313,9 @@
 	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "audio-hdmi";
+#ifndef UBOOT
 		audio-cpu = <&aud2htx>;
+#endif
 		hdmi-out;
 		constraint-rate = <44100>,
 				<88200>,
@@ -324,11 +332,13 @@
 		status = "disabled";
 	};
 
+#ifndef UBOOT
 	sound-xcvr {
 		compatible = "fsl,imx-audio-xcvr";
 		model = "imx-audio-xcvr";
 		cpu-dai = <&xcvr>;
 	};
+#endif
 };
 
 &A53_0 {
@@ -347,6 +357,7 @@
 	cpu-supply = <&buck2>;
 };
 
+#ifndef UBOOT
 &aud2htx {
 	status = "okay";
 };
@@ -354,11 +365,13 @@
 &cameradev {
 	status = "okay";
 };
+#endif
 
 &clk {
 	init-on-array = <IMX8MP_CLK_HSIO_ROOT>;
 };
 
+#ifndef UBOOT
 &dewarp {
 	status = "okay";
 };
@@ -371,6 +384,7 @@
 	fsl,asrc-rate  = <48000>;
 	status = "okay";
 };
+#endif
 
 &eqos {
 	pinctrl-names = "default";
@@ -421,6 +435,7 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu_2d {
 	status = "okay";
 };
@@ -428,6 +443,7 @@
 &gpu_3d {
 	status = "okay";
 };
+#endif
 
 &hdmi {
 	status = "okay";
@@ -437,9 +453,11 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &hdmi_blk_ctrl {
 	status = "okay";
 };
+#endif
 
 &hdmi_pavi {
 	status = "okay";
@@ -628,6 +646,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &isi_0 {
 	status = "disabled";
 
@@ -655,6 +674,7 @@
 &isp_1 {
 	status = "okay";
 };
+#endif
 
 &lcdif1 {
 	status = "disabled";
@@ -668,6 +688,7 @@
 	status = "disabled";
 };
 
+#ifndef UBOOT
 &mipi_csi_0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -711,6 +732,7 @@
 &ml_vipsi {
 	status = "okay";
 };
+#endif
 
 &pcie {
 	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI>,
@@ -729,6 +751,7 @@
 	clk_mode = <3>;
 };
 
+#ifndef UBOOT
 &sai3 {
 	assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
 	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
@@ -743,6 +766,7 @@
 &sdma2 {
 	status = "okay";
 };
+#endif
 
 &snvs_pwrkey {
 	status = "okay";
@@ -832,6 +856,7 @@
 	};
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -847,6 +872,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
@@ -855,10 +881,12 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &xcvr {
 	#sound-dai-cells = <0>;
 	status = "okay";
 };
+#endif
 
 #define PAD_NOPULL		0x0
 #define PAD_PULLDN		0x100
@@ -871,9 +899,11 @@
 /* J2A, GND and VDD_IN_01-10 */
 
 /* J2B */
+#ifndef UBOOT
 #define SM_I2C_CSI0			i2c6a
 #define SM_I2C_CSI1			i2c6b
 #define SM_PWM_CSI1			pwm4
+#endif
 #define GP_SM_CSI1_MCK(a)		<&gpio1 15 a>
 #define PD_SM_CSI1_MCK(a)		MX8MP_IOMUXC_GPIO1_IO15__GPIO1_IO15 a
 #define PD_SM_CSI1_MCK_PWM(a)		MX8MP_IOMUXC_GPIO1_IO15__PWM4_OUT a
@@ -888,6 +918,8 @@
 
 /* J2D */
 #define SM_SDIO				usdhc2
+#define SM_SDIO_UHS			state_100mhz
+#define SM_SDIO_UHS200			state_200mhz
 #define GP_SM_SDIO_WP(a)		<&gpio2 20 a>
 #define PD_SM_SDIO_WP(a)		MX8MP_IOMUXC_SD2_WP__GPIO2_IO20 a
 #define PD_SM_SDIO_WP_SDIO(a)		MX8MP_IOMUXC_SD2_WP__USDHC2_WP a
@@ -984,6 +1016,7 @@
 #define PAD_CAN				0x154
 
 /* J2G */
+#define MIPI_DSI			mipi_dsi
 #define SM_FB_HDMI			lcdif3
 #define SM_FB_LVDS			lcdif2
 #define SM_FB_MIPI			lcdif1
@@ -1013,7 +1046,9 @@
 
 /* J2H */
 #define SM_PCIE				pcie
+#ifndef UBOOT
 #define SM_PCIE_PHY			pcie_phy
+#endif
 #define GP_SM_PCIE_A_RST(a)		<&gpio4 21 a>
 #define PD_SM_PCIE_A_RST(a)		MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21 a
 #define GP_SM_PCIE_WAKE(a)		<&gpio4 28 a>
@@ -1022,6 +1057,7 @@
 #define PD_SM_PCIE_CLK_REQ(a)		MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00 a
 
 /* J2I */
+#ifndef UBOOT
 #define SM_I2S0				sai3
 #define GP_SM_AUDIO_MCK(a)		<&gpio5 2 a>
 #define PD_SM_AUDIO_MCK(a)		MX8MP_IOMUXC_SAI3_MCLK__GPIO5_IO02 a
@@ -1062,6 +1098,7 @@
 #define PD_SM_I2S2_CK(a)		MX8MP_IOMUXC_SAI2_TXC__GPIO4_IO25 a
 #define PD_SM_I2S2_CK_I2S(a)		MX8MP_IOMUXC_SAI2_TXC__AUDIOMIX_SAI2_TX_BCLK a
 #define PAD_I2S				0xd6
+#endif
 
 /* J2J */
 #define GP_SM_GPIO12(a)			<&gpio3 2 a>
@@ -1146,6 +1183,8 @@
 #define GP_SM_ESPI_IO1(a)		<&gpio5 12 a>
 #define PD_SM_ESPI_IO1(a)		MX8MP_IOMUXC_ECSPI2_MISO__GPIO5_IO12 a
 #define PD_SM_ESPI_IO1_ESPI(a)		MX8MP_IOMUXC_ECSPI2_MISO__ECSPI2_MISO a
+#define GP_SM_ESPI_ALERT0(a)		<&mcp23018 8 (a | GPIO_PULL_UP)>
+#define PD_SM_ESPI_ALERT0(a)
 #define GP_SM_ESPI_ALERT(a)		<&mcp23018 8 (a | GPIO_PULL_UP)>
 #define PD_SM_ESPI_ALERT(a)
 #define GP_SM_ESPI_IO2(a)		<&mcp23018 5 (a | GPIO_PULL_UP)>
