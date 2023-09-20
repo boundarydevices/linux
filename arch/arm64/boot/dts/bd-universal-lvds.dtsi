@@ -264,14 +264,14 @@
 
 &LVDS_PWM {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(LVDS_PWM);
+	pinctrl-0 = <&pinctrl_ref(LVDS_PWM)>;
 	status = "okay";
 };
 
 #if VAL(LVDS2_PWM) != VAL(LVDS_PWM)
 &LVDS2_PWM {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(LVDS2_PWM);
+	pinctrl-0 = <&pinctrl_ref(LVDS2_PWM)>;
 	status = "okay";
 };
 #endif
