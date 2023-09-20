@@ -70,6 +70,7 @@
 #endif
 	};
 
+#ifndef UBOOT
 	mipi_xclk: mipi-xclk {
 		assigned-clocks = <&clk IMX8MMN(CLK_PWM4)>;
 		assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
@@ -79,6 +80,7 @@
 		clock-output-names = "mipi_pwm4";
 		pwms = <&pwm4 0 50>; /* 20 MHz */
 	};
+#endif
 };
 
 &ecspi2 {
@@ -121,6 +123,7 @@
 &i2c3 {
 	/delete-node/ i2cmux@70;
 
+#ifndef UBOOT
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -144,6 +147,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &reg_buck4 {
