@@ -4,9 +4,22 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MQ
+
+#ifdef UBOOT
+/* First 128KB is for PSCI ATF. */
+/memreserve/ 0x40000000 0x00020000;
+#endif
 
 #include "imx8mq.dtsi"
+#ifdef UBOOT
+#include "panel-m101nwwb.dtsi"
+#else
 #include "../panel-m101nwwb.dtsi"
+#endif
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -648,6 +661,7 @@
 		enable-active-high;
 	};
 
+#ifndef UBOOT
 	resmem: reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -682,11 +696,14 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
+#endif
 
 	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "imx-audio-hdmi";
+#ifndef UBOOT
 		audio-cpu = <&sai4>;
+#endif
 		constraint-rate = <32000 44100 48000 96000 192000>;
 		protocol = <1>;
 		hdmi-out;
@@ -694,6 +711,7 @@
 	};
 };
 
+#ifndef UBOOT
 &A53_0 {
 	cpu-supply = <&reg_buck3>;
 };
@@ -721,6 +739,7 @@
 		};
 	};
 };
+#endif
 
 &dcss {
 	status = "okay";
@@ -732,10 +751,12 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu3d {
 	power-domains = <&pgc_gpu>;
 	status = "okay";
 };
+#endif
 
 &hdmi {
 	assigned-clocks = <&clk IMX8MQ_CLK_MON_SEL>;
@@ -762,6 +783,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	pf8100@8 {
 		compatible = "nxp,pf8100";
 		reg = <0x08>;
@@ -858,6 +880,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c2 {
@@ -977,6 +1000,7 @@
 	};
 };
 
+#ifndef UBOOT
 &i2c4b {
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_ldo3>;
@@ -1008,6 +1032,7 @@
 		};
 	};
 };
+#endif
 
 &lcdif {
 	assigned-clocks = <&clk IMX8MQ_CLK_LCDIF_PIXEL>,
@@ -1017,6 +1042,7 @@
 	status = "disabled";
 };
 
+#ifndef UBOOT
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -1033,6 +1059,7 @@
 		};
 	};
 };
+#endif
 
 &mipi_dsi {
 	/delete-property/ no_clk_reset;
@@ -1126,10 +1153,13 @@
 	};
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
+#endif
 
+#ifndef UBOOT
 /delete-node/ &pgc_gpu;
 /delete-node/ &pgc_vpu;
 &pgc {
@@ -1163,6 +1193,7 @@
 		};
 	};
 };
+#endif
 
 &pwm2 {
 	pinctrl-names = "default";
@@ -1170,6 +1201,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
@@ -1196,6 +1228,7 @@
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3", "pll8k", "pll11k";
 	status = "okay";
 };
+#endif
 
 &uart1 { /* console */
 	pinctrl-names = "default";
@@ -1286,6 +1319,7 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
+#ifndef UBOOT
 &vpu {
 	power-domains = <&pgc_vpu>;
 	regulator-supply = <&reg_vref_0v9>;
@@ -1295,6 +1329,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
