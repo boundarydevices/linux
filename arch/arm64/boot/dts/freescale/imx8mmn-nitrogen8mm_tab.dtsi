@@ -2,7 +2,16 @@
 /*
  * Copyright 2018 Boundary Devices
  */
+/* panel-ltk080a60a004t.dtsi uses our standard irq pin for enable */
+#define GP_MIPI_IRQ(a)	<&gpio1 3 a>
+#define PD_MIPI_IRQ(a)	MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, a)
+#ifdef UBOOT
+#include "bd-universal.h"
+#include "panel-ltk080a60a004t.dtsi"
+#else
+#include "../bd-universal.h"
 #include "../panel-ltk080a60a004t.dtsi"
+#endif
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -198,7 +207,9 @@
 
 	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
 		fsl,pins = <
+#ifndef GP_LTK08_MIPI_EN
 #define GP_LTK08_MIPI_EN	<&gpio1 3 GPIO_ACTIVE_HIGH>
+#endif
 			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x116)
 		>;
 	};
@@ -511,6 +522,7 @@
 		status = "okay";
 	};
 
+#ifndef UBOOT
 	connector {
 		compatible = "usb-c-connector";
 		label = "USB-C";
@@ -543,6 +555,7 @@
 		clock-output-names = "csi_mclk";
 		pwms = <&pwm3 0 50 0>; /* 1 / 50 ns = 20 MHz */
 	};
+#endif
 
 	gpio-keys {
 		compatible = "gpio-keys";
@@ -634,6 +647,7 @@
 		enable-active-high;
 	};
 
+#ifndef UBOOT
 	sound-wm8960 {
 		audio-codec = <&wm8960>;
 		audio-cpu = <&sai3>;
@@ -657,6 +671,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
+#endif
 
 	wwan_rfkill: wwan-rfkill {
 		active-status-gpios = GP_EC21_ACTIVE_STATUS;
@@ -680,6 +695,7 @@
 	};
 };
 
+#ifndef UBOOT
 &A53_0 {
 	cpu-supply = <&reg_buck3>;
 };
@@ -687,6 +703,7 @@
 &gpu {
 	status = "okay";
 };
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -934,6 +951,7 @@
 	};
 };
 
+#ifndef UBOOT
 &i2c2d {
 	max77958@25 {
 		compatible = "max77958";
@@ -963,6 +981,7 @@
 		};
 	};
 };
+#endif
 
 &i2c3 {
 	clock-frequency = <100000>;
@@ -1027,6 +1046,7 @@
 	};
 };
 
+#ifndef UBOOT
 &i2c3b {
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_ldo3>;
@@ -1089,6 +1109,7 @@
 		torch-gpios = GP_TORCH_EN;
 	};
 };
+#endif
 
 &i2c4 {
 	clock-frequency = <100000>;
@@ -1116,6 +1137,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -1142,6 +1164,7 @@
 		};
 	};
 };
+#endif
 
 &mipi_dsi {
 	assigned-clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
@@ -1226,6 +1249,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai2>;
@@ -1244,6 +1268,7 @@
 &snvs_pwrkey {
 	status = "okay";
 };
+#endif
 
 &uart2 { /* console */
 	pinctrl-names = "default";
@@ -1286,6 +1311,7 @@
 	usb-role-switch;
 	vbus-supply = <&reg_usbotg_vbus>;
 
+#ifndef UBOOT
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -1304,6 +1330,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &usdhc1 {
