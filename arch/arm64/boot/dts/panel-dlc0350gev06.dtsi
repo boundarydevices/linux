@@ -2,15 +2,29 @@
 
 #define PAGE(page) DCS_L3P(0xff, 0x98, 0x81, page)
 
+&IOMUX {
+	pinctrlm(dlc0350gev06) {
+		aliasp = <&pinctrlm_ref(dlc0350gev06)>;
+		pins_group(pulldn,
+			/* gpio selected by u-boot */
+			PD(ENABLE, PAD_PULLDN),
+			DN(ENABLE)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(dlc0350gev06) = &pinctrlm_ref(dlc0350gev06);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_dlc0350gev06 = &mipi_cmds_dlc0350gev06;
-		pinctrl_dlc0350gev06 = &pinctrl_mipi_dlc0350gev06;
 	};
 
 	mipi_cmds_dlc0350gev06: mipi-cmds-dlc0350gev06 {
 		alias = <&mipi_cmds_dlc0350gev06>;
-		aliasp = <&pinctrl_mipi_dlc0350gev06>;
 		delay-prepare = <150>;
 		mipi-cmds-enable = /bits/ 8 <
 			DCS_L3P(0xB9,0xF1,0x12,0x83)
@@ -63,4 +77,5 @@
 			DCS_S0P(0x10)		/* Enter sleep */
 		>;
 	};
+#endif
 };
