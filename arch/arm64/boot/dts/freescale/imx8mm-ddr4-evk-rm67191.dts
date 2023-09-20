@@ -4,13 +4,17 @@
  */
 
 #include "imx8mm-ddr4-evk.dts"
+#define IMX8MM
+#include "../bd-universal.h"
 #include "../panel-raydium-rm67191.dtsi"
+/* panel-ltk080a60a004t.dtsi uses our standard irq pin for enable */
+#define GP_MIPI_IRQ(a)		<&gpio1 8 a>
+#define PD_MIPI_IRQ(a)		MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8	a
 #include "../panel-ltk080a60a004t.dtsi"
 
 &iomuxc {
 	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
 		fsl,pins = <
-#define GP_LTK08_MIPI_EN	<&gpio1 8 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8	0x116
 		>;
 	};
