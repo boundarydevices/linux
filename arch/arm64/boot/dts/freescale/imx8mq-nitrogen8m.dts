@@ -4,6 +4,15 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MQ
+
+#ifdef UBOOT
+/* First 128KB is for PSCI ATF. */
+/memreserve/ 0x40000000 0x00020000;
+#endif
 
 #include "imx8mq.dtsi"
 
@@ -453,7 +462,6 @@
 	};
 };
 
-
 / {
 	model = "Boundary Devices i.MX8MQ Nitrogen8M";
 	compatible = "boundary,imx8mq-nitrogen8m", "fsl,imx8mq";
@@ -469,7 +477,9 @@
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
+#ifndef UBOOT
 		display = <&dcss>;
+#endif
 		enable-gpios = GP_BACKLIGHT_EDP;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_edp>;
@@ -579,6 +589,7 @@
 		enable-active-high;
 	};
 
+#ifndef UBOOT
 	resmem: reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -611,11 +622,14 @@
 		hp-det = <2 0>;
 		model = "wm8960-audio";
 	};
+#endif
 
 	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "imx-audio-hdmi";
+#ifndef UBOOT
 		audio-cpu = <&sai4>;
+#endif
 		constraint-rate = <32000 44100 48000 96000 192000>;
 		protocol = <1>;
 		hdmi-out;
@@ -623,6 +637,7 @@
 	};
 };
 
+#ifndef UBOOT
 &a53_opp_table {
 	opp-800000000 {
 		opp-microvolt = <1000000>;
@@ -672,6 +687,7 @@
 		};
 	};
 };
+#endif
 
 &dcss {
 	status = "okay";
@@ -683,6 +699,7 @@
 	};
 };
 
+#ifndef UBOOT
 &ecspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
@@ -698,6 +715,7 @@
 		reg = <0>;
 	};
 };
+#endif
 
 &fec1 {
 	pinctrl-names = "default";
@@ -718,10 +736,23 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			interrupts-extended = GPIRQ_FEC1_PHY;
 			reg-mask = <0x90>;
+			rxc-skew-ps = <3000>;
+			rxd0-skew-ps = <0>;
+			rxd1-skew-ps = <0>;
+			rxd2-skew-ps = <0>;
+			rxd3-skew-ps = <0>;
+			rxdv-skew-ps = <0>;
+			txc-skew-ps = <3000>;
+			txd0-skew-ps = <0>;
+			txd1-skew-ps = <0>;
+			txd2-skew-ps = <0>;
+			txd3-skew-ps = <0>;
+			txen-skew-ps = <0>;
 		};
 	};
 };
 
+#ifndef UBOOT
 &gpu {
 	power-domains = <&pgc_gpu>;
 	status = "okay";
@@ -731,6 +762,7 @@
 	power-domains = <&pgc_gpu>;
 	status = "okay";
 };
+#endif
 
 &hdmi {
 	compatible = "cdn,imx8mq-hdmi";
@@ -848,6 +880,7 @@
 	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -877,6 +910,7 @@
 			};
 		};
 	};
+#endif
 
 	pcie-clock@6a {
 		compatible = "idt,9FGV0241AKILF";
@@ -894,6 +928,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	ov5640-mipi2@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -924,6 +959,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c4 {
@@ -959,6 +995,7 @@
 	status = "disabled";
 };
 
+#ifndef UBOOT
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -990,6 +1027,7 @@
 		};
 	};
 };
+#endif
 
 &mipi_dsi {
 	/delete-property/ no_clk_reset;
@@ -1015,6 +1053,7 @@
 	};
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -1097,6 +1136,7 @@
 		};
 	};
 };
+#endif
 
 &pwm1 {
 	pinctrl-names = "default";
@@ -1116,6 +1156,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
@@ -1148,6 +1189,7 @@
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3", "pll8k", "pll11k";
 	status = "okay";
 };
+#endif
 
 &uart1 { /* console */
 	pinctrl-names = "default";
@@ -1243,6 +1285,7 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
+#ifndef UBOOT
 &vpu {
 	power-domains = <&pgc_vpu>;
 	regulator-supply = <&reg_vref_0v9>;
@@ -1252,6 +1295,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
@@ -1261,6 +1305,7 @@
 };
 
 /* J11 mipi display */
+#define MIPI_DSI		mipi_dsi
 #define MIPI_ADD_PORT	/* imx8mq needs this */
 #define MIPI_DISPLAY		lcdif
 #define MIPI_SUBSYSTEM		lcdif
@@ -1286,8 +1331,8 @@
 #define GP_MIPI_ENABLE(a)	<&gpio3 15 a>
 #define PD_MIPI_ENABLE(a)	MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15 a	/* Pin 11 */
 
-#define PAD_NOPULL		0x06
-#define PAD_PULLDN		0x06	/* No pulldown, need external resistor */
-#define PAD_PULLUPIRQ		0xc6
-#define PAD_PULLDNIRQ		0x86
+#ifdef UBOOT
+#include "bd-universal-mipi-dsi.dtsi"
+#else
 #include "../bd-universal-mipi-dsi.dtsi"
+#endif
