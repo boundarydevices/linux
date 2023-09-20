@@ -4,6 +4,11 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
+
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #include "imx8mm.dtsi"
@@ -533,6 +538,7 @@
 	};
 };
 
+#ifndef UBOOT
 &A53_0 {
 	cpu-supply = <&reg_buck3>;
 };
@@ -594,6 +600,7 @@
 		wakeup-source;
 	};
 };
+#endif
 
 &fec1 {
 	mdc-gpios = GP_MII_MDC;
@@ -620,9 +627,11 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu {
 	status = "okay";
 };
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -908,6 +917,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	ov5640-mipi1@3c {
 #if 0
 		AVDD-supply = <&reg_ldo3>;
@@ -942,6 +952,7 @@
 		interrupts-extended = GPIRQ_RV4162;
 		wakeup-source;
 	};
+#endif
 };
 
 &i2c4 {
@@ -972,6 +983,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -1016,6 +1028,7 @@
 	reset-gpio = GP_PCIE0_RESET;
 	status = "okay";
 };
+#endif
 
 &pwm2 {
 	assigned-clocks = <&clk IMX8MMN(CLK_PWM2)>;
@@ -1026,11 +1039,13 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai2>;
 	status = "okay";
 };
+#endif
 
 &uart1 { /* BT */
 	pinctrl-names = "default";
@@ -1131,6 +1146,7 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -1151,6 +1167,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
@@ -1160,6 +1177,7 @@
 };
 
 /* J11 mipi display */
+#define MIPI_DSI		mipi_dsi
 #define MIPI_DISPLAY		lcdif
 #define MIPI_SUBSYSTEM		display_subsystem
 #ifndef MIPI_I2C_BUS
@@ -1189,11 +1207,11 @@
 #define PD_MIPI_ENABLE(a)	MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, a)	/* Pin 11 */
 #endif
 
-#define PAD_NOPULL		0x0
-#define PAD_PULLDN		0x100
-#define PAD_PULLUPIRQ		0x1c0
-#define PAD_PULLDNIRQ		0x180
+#ifdef UBOOT
+#include "bd-universal-mipi-dsi.dtsi"
+#else
 #include "../bd-universal-mipi-dsi.dtsi"
+#endif
 
 &mipi_dsi {
 	assigned-clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
