@@ -4,11 +4,27 @@
  */
 
 /dts-v1/;
-#include "imx8mm.dtsi"
-#include "../panel-ltk080a60a004t.dtsi"
-#include "../panel-m101nwwb.dtsi"
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
+
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
+#include "imx8mm.dtsi"
+
+/* panel-ltk080a60a004t.dtsi uses our standard irq pin for enable */
+#define GP_MIPI_IRQ(a)	<&gpio3 20 a>
+#define PD_MIPI_IRQ(a)	MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, a)
+#ifdef UBOOT
+#include "bd-universal.h"
+#include "panel-ltk080a60a004t.dtsi"
+#include "panel-m101nwwb.dtsi"
+#else
+#include "../bd-universal.h"
+#include "../panel-ltk080a60a004t.dtsi"
+#include "../panel-m101nwwb.dtsi"
+#endif
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -227,7 +243,6 @@
 
 	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
 		fsl,pins = <
-#define GP_LTK08_MIPI_EN	<&gpio3 20 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, 0x100)	/* J8, pin8, J8_GPIO1 */
 		>;
 	};
@@ -499,6 +514,7 @@
 		enable-active-high;
 	};
 
+#ifndef UBOOT
 	sound-wm8960 {
 		audio-codec = <&wm8960>;
 		audio-cpu = <&sai1>;
@@ -511,12 +527,14 @@
 		compatible = "fsl,imx-audio-wm8960";
 		model = "wm8960-audio";
 	};
+#endif
 };
 
 &A53_0 {
 	cpu-supply = <&reg_buck3>;
 };
 
+#ifndef UBOOT
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -531,6 +549,7 @@
 &gpu {
 	status = "okay";
 };
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -733,6 +752,7 @@
 };
 
 &i2c3b {
+#ifndef UBOOT
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_ldo3>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -756,6 +776,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c3c {
@@ -1099,6 +1120,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -1117,6 +1139,7 @@
 		};
 	};
 };
+#endif
 
 &mipi_dsi {
 	assigned-clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
@@ -1181,6 +1204,7 @@
 	};
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -1189,6 +1213,7 @@
 	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
 };
+#endif
 
 &pwm1 {
 	assigned-clocks = <&clk IMX8MMN(CLK_PWM1)>;
@@ -1320,6 +1345,7 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -1335,6 +1361,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
