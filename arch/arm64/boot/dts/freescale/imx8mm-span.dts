@@ -162,9 +162,11 @@
 
 };
 
+#ifndef UBOOT
 /delete-node/ &csi1_bridge;
 /delete-node/ &display_subsystem;
 /delete-node/ &mipi_csi_1;
+#endif
 /delete-node/ &pwm1;
 /delete-node/ &pwm2;
 /delete-node/ &pwm3;
@@ -174,6 +176,7 @@
 /delete-node/ &sai3;
 /delete-node/ &sai5;
 
+#ifndef UBOOT
 &ecspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
@@ -185,6 +188,7 @@
 
 	/delete-node/ can@0;
 };
+#endif
 
 &i2c2 {
 	/delete-node/ i2cmux@70;
