@@ -80,13 +80,13 @@
 /delete-node/ &mipi_to_lvds;
 
 /delete-node/ &pinctrl_bt_rfkill;
-/delete-node/ &pinctrl_sn65dsi83;
-/delete-node/ &pinctrl_ts_mipi_gt911;
-/delete-node/ &pinctrl_ts_mipi_ft5x06;
-/delete-node/ &pinctrl_ts_mipi_st1633;
-/delete-node/ &pinctrl_mipi_com50h5n03ulc;
-/delete-node/ &pinctrl_mipi_lcm_jm430;
-/delete-node/ &pinctrl_mipi_ltk0680ytmdb;
+/delete-node/ &pinctrlm_ref(sn65dsi83);
+/delete-node/ &pinctrlm_ts_ref(gt911);
+/delete-node/ &pinctrlm_ts_ref(ft5x06);
+/delete-node/ &pinctrlm_ts_ref(st1633);
+/delete-node/ &pinctrlm_ref(com50h5n03ulc);
+/delete-node/ &pinctrlm_ref(lcm_jm430);
+/delete-node/ &pinctrlm_ref(ltk0680ytmdb);
 /delete-node/ &pinctrl_reg_wlan_vmmc;
 
 /delete-node/ &reg_wlan_vmmc;
