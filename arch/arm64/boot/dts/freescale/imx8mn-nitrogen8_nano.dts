@@ -4,6 +4,11 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MN
+
 #define MX8MMN(a, b)	MX8MN_##a b
 #define IMX8MMN(a)	IMX8MN_##a
 #define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
@@ -15,6 +20,7 @@
 	compatible = "boundary,imx8mn-nitrogen8_nano", "fsl,imx8mn";
 };
 
+#ifndef UBOOT
 &cameradev {
 	status = "okay";
 };
@@ -26,3 +32,4 @@
 		status = "okay";
 	};
 };
+#endif
