@@ -4,6 +4,11 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
+
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
@@ -41,6 +46,7 @@
 	};
 };
 
+#ifndef UBOOT
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -73,6 +79,7 @@
 	reset-gpio = GP_PCIE0_RESET;
 	status = "okay";
 };
+#endif
 
 &usbotg2 {
 	dr_mode = "host";
@@ -83,6 +90,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -103,3 +111,4 @@
 	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
 };
+#endif
