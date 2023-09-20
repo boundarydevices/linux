@@ -978,6 +978,8 @@
 #define GP_SM_I2C_CSI0_DAT(a)		<&GPIO 62 a>
 #define PD_SM_I2C_CSI0_DAT(a)		PINMUX_GPIO62__FUNC_B_GPIO62
 #define PD_SM_I2C_CSI0_DAT_I2C(a)	PINMUX_GPIO62__FUNC_B1_SDA3
+#define DN_SM_I2C_CSI0_DAT		bias-pull-down = <MTK_PULL_SET_RSEL_011>;
+#define UP_SM_I2C_CSI0_DAT		bias-pull-up = <MTK_PULL_SET_RSEL_011>;
 
 #if 0
 #define SM_I2C_CSI1			i2c4
@@ -988,6 +990,8 @@
 #define GP_SM_I2C_CSI1_DAT(a)		<&GPIO 64 a>
 #define PD_SM_I2C_CSI1_DAT(a)		PINMUX_GPIO64__FUNC_B_GPIO64
 #define PD_SM_I2C_CSI1_DAT_I2C(a)	PINMUX_GPIO64__FUNC_B1_SDA4
+#define DN_SM_I2C_CSI1_DAT		bias-pull-down = <MTK_PULL_SET_RSEL_011>;
+#define UP_SM_I2C_CSI1_DAT		bias-pull-up = <MTK_PULL_SET_RSEL_011>;
 
 #define SM_PWM_CSI1			pwm3
 #define GP_SM_CSI1_MCK(a)		<&GPIO 23 a>
@@ -1008,11 +1012,20 @@
 #define PD_SM_SDIO_CMD_SDIO(a)		PINMUX_GPIO163__FUNC_B1_MSDC1_CMD
 #define GP_SM_SDIO_CD(a)		<&GPIO 2 a>
 #define PD_SM_SDIO_CD(a)		PINMUX_GPIO2__FUNC_B_GPIO2
+#define DN_SM_SDIO_CD			bias-pull-down;
+#define UP_SM_SDIO_CD			bias-pull-up;
+
 #define GP_SM_SDIO_CLK(a)		<&GPIO 164 a>
 #define PD_SM_SDIO_CLK(a)		PINMUX_GPIO164__FUNC_B_GPIO164
 #define PD_SM_SDIO_CLK_SDIO(a)		PINMUX_GPIO164__FUNC_B1_MSDC1_CLK
+#define DN_SM_SDIO_CLK			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+#define UP_SM_SDIO_CLK			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+
 #define GP_SM_SDIO_PWR_EN(a)		<&GPIO 111 a>
 #define PD_SM_SDIO_PWR_EN(a)		PINMUX_GPIO111__FUNC_B_GPIO111		/* I2SIN_D1 */
+#define DN_SM_SDIO_PWR_EN		bias-pull-down;
+#define UP_SM_SDIO_PWR_EN		bias-pull-up;
+
 #define GP_SM_SDIO_DATA0(a)		<&GPIO 165 a>
 #define PD_SM_SDIO_DATA0(a)		PINMUX_GPIO165__FUNC_B_GPIO165
 #define PD_SM_SDIO_DATA0_SDIO(a)	PINMUX_GPIO165__FUNC_B1_MSDC1_DAT0
@@ -1025,9 +1038,13 @@
 #define GP_SM_SDIO_DATA3(a)		<&GPIO 168 a>
 #define PD_SM_SDIO_DATA3(a)		PINMUX_GPIO168__FUNC_B_GPIO168
 #define PD_SM_SDIO_DATA3_SDIO(a)	PINMUX_GPIO168__FUNC_B1_MSDC1_DAT3
+#define DN_SM_SDIO_DATA3		bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+#define UP_SM_SDIO_DATA3		bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 
 #define GP_SM_GPIO13(a)			<&GPIO 5 a>
 #define PD_SM_GPIO13(a)			PINMUX_GPIO5__FUNC_B_GPIO5		/* GPIO5 */
+#define DN_SM_GPIO13			bias-pull-down;
+#define UP_SM_GPIO13			bias-pull-up;
 
 /* J2E */
 #ifndef UBOOT
@@ -1035,9 +1052,14 @@
 #endif
 #define GP_SM_USB0_IDDIG(a)		<&GPIO 83 GPIO_ACTIVE_HIGH>
 #define PD_SM_USB0_IDDIG(a)		PINMUX_GPIO83__FUNC_B_GPIO83		/* USB0_IDDIG */
+#define DN_SM_USB0_IDDIG		bias-pull-down;
+#define UP_SM_USB0_IDDIG		bias-pull-up;
+
 #define GP_SM_USB0_EN_OC(a)		<&GPIO 85 a>
 #define PD_SM_USB0_EN_OC(a)		PINMUX_GPIO84__FUNC_B_GPIO84 PINMUX_GPIO85__FUNC_B_GPIO85
 #define PD_SM_USB0_EN_OC_USB(a)		PINMUX_GPIO84__FUNC_B_GPIO84 PINMUX_GPIO85__FUNC_I0_VBUSVALID /* USB0_DRV_VBUS USB0_VBUS_VALID */
+#define DN_SM_USB0_EN_OC		bias-pull-down;
+#define UP_SM_USB0_EN_OC		bias-pull-up;
 
 /* J2F */
 #define SM_I2C_GP			i2c0
@@ -1047,6 +1069,8 @@
 #define GP_SM_I2C_GP_DAT(a)		<&GPIO 56 a>
 #define PD_SM_I2C_GP_DAT(a)		PINMUX_GPIO56__FUNC_B_GPIO56
 #define PD_SM_I2C_GP_DAT_I2C(a)		PINMUX_GPIO56__FUNC_B1_SDA0
+#define DN_SM_I2C_GP_DAT		bias-pull-down = <MTK_PULL_SET_RSEL_011>;
+#define UP_SM_I2C_GP_DAT		bias-pull-up = <MTK_PULL_SET_RSEL_011>;
 
 #define SM_I2C_LCD			i2c2
 #define GP_SM_I2C_LCD_CK(a)		<&GPIO 59 a>
@@ -1055,6 +1079,8 @@
 #define GP_SM_I2C_LCD_DAT(a)		<&GPIO 60 a>
 #define PD_SM_I2C_LCD_DAT(a)		PINMUX_GPIO60__FUNC_B_GPIO60
 #define PD_SM_I2C_LCD_DAT_I2C(a)	PINMUX_GPIO60__FUNC_B1_SDA2
+#define DN_SM_I2C_LCD_DAT		bias-pull-down = <MTK_PULL_SET_RSEL_011>;
+#define UP_SM_I2C_LCD_DAT		bias-pull-up = <MTK_PULL_SET_RSEL_011>;
 
 #define SM_I2C_PM			i2c1
 #define GP_SM_I2C_PM_CK(a)		<&GPIO 57 a>
@@ -1063,6 +1089,8 @@
 #define GP_SM_I2C_PM_DAT(a)		<&GPIO 58 a>
 #define PD_SM_I2C_PM_DAT(a)		PINMUX_GPIO58__FUNC_B_GPIO58
 #define PD_SM_I2C_PM_DAT_I2C(a)		PINMUX_GPIO58__FUNC_B1_SDA1
+#define DN_SM_I2C_PM_DAT		bias-pull-down = <MTK_PULL_SET_RSEL_011>;
+#define UP_SM_I2C_PM_DAT		bias-pull-up = <MTK_PULL_SET_RSEL_011>;
 
 #define GP_SM_SMB_ALERT(a)		<&GPIO 12 a>
 #define PD_SM_SMB_ALERT(a)		PINMUX_GPIO12__FUNC_B_GPIO12		/* GPIO12 */
@@ -1141,6 +1169,8 @@
 #define GP_SM_PCIE_CLK_REQ(a)		<&GPIO 49 a>
 #define PD_SM_PCIE_CLK_REQ(a)		PINMUX_GPIO49__FUNC_B_GPIO49
 #define PD_SM_PCIE_CLK_REQ_OUT(a)	PINMUX_GPIO49__FUNC_B1_CLKREQN		/* PCIE_CLKREQ_N */
+#define DN_SM_PCIE_CLK_REQ		bias-pull-down;
+#define UP_SM_PCIE_CLK_REQ		bias-pull-up;
 
 /* J2I */
 #define SM_AFE				afe
@@ -1191,6 +1221,9 @@
 #define PD_SM_LID(a)			PINMUX_GPIO65__FUNC_B_GPIO65		/* SCL5 */
 #define GP_SM_SLEEP(a)			<&GPIO 66 a>
 #define PD_SM_SLEEP(a)			PINMUX_GPIO66__FUNC_B_GPIO66		/* SDA5 */
+#define DN_SM_SLEEP			bias-pull-down;
+#define UP_SM_SLEEP			bias-pull-up;
+
 #define GP_SM_CHARGING(a)		<&GPIO 88 a>
 #define PD_SM_CHARGING(a)		PINMUX_GPIO88__FUNC_B_GPIO88		/* USB1_VBUS_VALID */
 #define GP_SM_CHARGER_PRESENT(a)	<&GPIO 129 a>
@@ -1239,6 +1272,9 @@
 #define PD_SM_GPIO10(a)			PINMUX_GPIO44__FUNC_B_GPIO44		/* KPROW0 */
 #define GP_SM_GPIO11(a)			<&GPIO 45 a>
 #define PD_SM_GPIO11(a)			PINMUX_GPIO45__FUNC_B_GPIO45		/* KPROW1 */
+#define DN_SM_GPIO11			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+#define UP_SM_GPIO11			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+
 #define GP_SM_RESET_OUT(a)		<&GPIO 130 a>
 #define PD_SM_RESET_OUT(a)		PINMUX_GPIO130__FUNC_B_GPIO130		/* DMIC2_DAT_R */
 #define GP_SM_POWER_BTN(a)
@@ -1271,6 +1307,9 @@
 #define PD_SM_ESPI_CS0_ESPI(a)		PINMUX_GPIO69__FUNC_O_SPIM0_CSB		/* SPIM0_CSB */
 #define GP_SM_ESPI_CS1(a)		<&GPIO 91 a>
 #define PD_SM_ESPI_CS1(a)		PINMUX_GPIO91__FUNC_B_GPIO91		/* USB2_VBUS_VALID */
+#define DN_SM_ESPI_CS1			bias-pull-down;
+#define UP_SM_ESPI_CS1			bias-pull-up;
+
 #define GP_SM_ESPI_CK(a)		<&GPIO 70 a>
 #define PD_SM_ESPI_CK(a)		PINMUX_GPIO70__FUNC_B_GPIO70
 #define PD_SM_ESPI_CK_ESPI(a)		PINMUX_GPIO70__FUNC_O_SPIM0_CLK		/* SPIM0_CLK */
@@ -1284,20 +1323,30 @@
 #define PD_SM_ESPI_ALERT0(a)		PINMUX_GPIO81__FUNC_B_GPIO81		/* SPIM2_MOSI */
 #define GP_SM_ESPI_ALERT1(a)		<&GPIO 79 a>
 #define PD_SM_ESPI_ALERT1(a)		PINMUX_GPIO79__FUNC_B_GPIO79		/* SPIM2_CSB */
+
 #define GP_SM_ESPI_IO2(a)		<&GPIO 73 a>
 #define PD_SM_ESPI_IO2(a)		PINMUX_GPIO73__FUNC_B_GPIO73		/* SPIM0_MIO2 */
 #define PD_SM_ESPI_IO2_ESPI(a)		PINMUX_GPIO73__FUNC_B0_SPIM0_MIO2	/* SPIM0_MIO2 */
+#define DN_SM_ESPI_IO2			bias-pull-down;
+#define UP_SM_ESPI_IO2			bias-pull-up;
+
 #define GP_SM_ESPI_IO3(a)		<&GPIO 74 a>
 #define PD_SM_ESPI_IO3(a)		PINMUX_GPIO74__FUNC_B_GPIO74		/* SPIM0_MIO3 */
 #define PD_SM_ESPI_IO3_ESPI(a)		PINMUX_GPIO74__FUNC_B0_SPIM0_MIO3	/* SPIM0_MIO3 */
+
 #define GP_SM_ESPI_RESET(a)		<&GPIO 114 a>
 #define PD_SM_ESPI_RESET(a)		PINMUX_GPIO114__FUNC_B_GPIO114		/* I2SO2_MCK */
+#define DN_SM_ESPI_RESET		bias-pull-down;
+#define UP_SM_ESPI_RESET		bias-pull-up;
 
 /* J2L */
 #define SM_SER0				uart1
 #define GP_SM_SER0_TX(a)		<&GPIO 33 a>
 #define PD_SM_SER0_TX(a)		PINMUX_GPIO33__FUNC_B_GPIO33
 #define PD_SM_SER0_TX_UART(a)		PINMUX_GPIO33__FUNC_O_UTXD1		/* UART1_TXD */
+#define DN_SM_SER0_TX			bias-pull-down;
+#define UP_SM_SER0_TX			bias-pull-up;
+
 #define GP_SM_SER0_RX(a)		<&GPIO 34 a>
 #define PD_SM_SER0_RX(a)		PINMUX_GPIO34__FUNC_B_GPIO34
 #define PD_SM_SER0_RX_UART(a)		PINMUX_GPIO34__FUNC_I1_URXD1		/* UART1_RXD */
@@ -1312,6 +1361,9 @@
 #define GP_SM_SER1_TX(a)		<&GPIO 31 a>
 #define PD_SM_SER1_TX(a)		PINMUX_GPIO31__FUNC_B_GPIO31
 #define PD_SM_SER1_TX_UART(a)		PINMUX_GPIO31__FUNC_O_UTXD0		/* UART0_TXD */
+#define DN_SM_SER1_TX			bias-pull-down;
+#define UP_SM_SER1_TX			bias-pull-up;
+
 #define GP_SM_SER1_RX(a)		<&GPIO 32 a>
 #define PD_SM_SER1_RX(a)		PINMUX_GPIO32__FUNC_B_GPIO32
 #define PD_SM_SER1_RX_UART(a)		PINMUX_GPIO32__FUNC_I1_URXD0		/* UART0_RXD */
@@ -1320,6 +1372,9 @@
 #define GP_SM_SER2_TX(a)		<&GPIO 16 a>
 #define PD_SM_SER2_TX(a)		PINMUX_GPIO16__FUNC_B_GPIO16
 #define PD_SM_SER2_TX_UART(a)		PINMUX_GPIO16__FUNC_O_UTXD3		/* GPIO16 */
+#define DN_SM_SER2_TX			bias-pull-down;
+#define UP_SM_SER2_TX			bias-pull-up;
+
 #define GP_SM_SER2_RX(a)		<&GPIO 17 a>
 #define PD_SM_SER2_RX(a)		PINMUX_GPIO17__FUNC_B_GPIO17
 #define PD_SM_SER2_RX_UART(a)		PINMUX_GPIO17__FUNC_I1_URXD3		/* GPIO17 */
