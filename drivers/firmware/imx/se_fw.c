@@ -24,6 +24,7 @@
 #include <linux/sys_soc.h>
 
 #include "se_fw.h"
+#include "ele_common.h"
 #include "ele_fw_api.h"
 
 #define SOC_ID_OF_IMX8ULP		0x084D
@@ -48,6 +49,9 @@ struct imx_info {
 	uint8_t *pool_name;
 	bool reserved_dma_ranges;
 	bool init_fw;
+	/* platform specific flag to enable/disable the ELE True RNG */
+	bool start_rng;
+	bool enable_ele_trng;
 };
 
 struct imx_info_list {
@@ -76,6 +80,8 @@ static const struct imx_info_list imx8ulp_info = {
 				.pool_name = "sram",
 				.reserved_dma_ranges = true,
 				.init_fw = false,
+				.start_rng = true,
+				.enable_ele_trng = false,
 			},
 	},
 };
@@ -99,6 +105,8 @@ static const struct imx_info_list imx93_info = {
 				.pool_name = NULL,
 				.reserved_dma_ranges = true,
 				.init_fw = true,
+				.start_rng = true,
+				.enable_ele_trng = true,
 			},
 	},
 };
@@ -1253,6 +1261,19 @@ static int se_fw_probe(struct platform_device *pdev)
 	ret = ele_ping(dev);
 	if (ret)
 		dev_err(dev, "Failed[%d] to ping the fw.\n", ret);
+
+	/* start ele rng */
+	if (info->start_rng) {
+		ret = ele_do_start_rng(dev);
+		if (ret)
+			dev_err(dev, "Failed to start ele rng\n");
+	}
+
+	if (!ret && info->enable_ele_trng) {
+		ret = ele_trng_init(dev);
+		if (ret)
+			dev_err(dev, "Failed to init ele-trng\n");
+	}
 
 	dev_info(dev, "i.MX secure-enclave: %s interface to firmware, configured.\n",
 		info->pdev_name[1]);

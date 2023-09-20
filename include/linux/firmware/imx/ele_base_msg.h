@@ -34,7 +34,20 @@
 #define ELE_PING_REQ_SZ			0x04
 #define ELE_PING_RSP_SZ			0x08
 
+#define ELE_START_RNG_REQ		0xA3
+#define ELE_START_RNG_REQ_MSG_SZ	0x04
+#define ELE_START_RNG_RSP_MSG_SZ	0x08
+
+#define ELE_GET_TRNG_STATE_REQ		0xA4
+#define ELE_GET_TRNG_STATE_REQ_MSG_SZ	0x04
+#define ELE_GET_TRNG_STATE_RSP_MSG_SZ	0x0C
+#define ELE_TRNG_STATE_OK		0x203
+#define ELE_GET_TRNG_STATE_RETRY_COUNT	0x5
+#define CSAL_TRNG_STATE_MASK		0x0000ffff
+
 int ele_get_info(struct device *dev, phys_addr_t addr, u32 data_size);
 int ele_ping(struct device *dev);
+int ele_start_rng(struct device *dev);
+int ele_get_trng_state(struct device *dev);
 
 #endif

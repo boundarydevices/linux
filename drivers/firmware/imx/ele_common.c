@@ -3,6 +3,10 @@
  * Copyright 2023 NXP
  */
 
+#include <linux/delay.h>
+#include <linux/device.h>
+#include <linux/firmware/imx/ele_base_msg.h>
+
 #include "ele_common.h"
 #include "se_fw.h"
 
@@ -136,4 +140,40 @@ int validate_rsp_hdr(struct ele_mu_priv *priv, unsigned int header,
 	} while (false);
 
 	return ret;
+}
+
+int ele_do_start_rng(struct device *dev)
+{
+	int ret;
+	int count = ELE_GET_TRNG_STATE_RETRY_COUNT;
+
+	ret = ele_get_trng_state(dev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to get trng state\n");
+		return ret;
+	} else if (ret != ELE_TRNG_STATE_OK) {
+		/* call start rng */
+		ret = ele_start_rng(dev);
+		if (ret) {
+			dev_err(dev, "Failed to start rng\n");
+			return ret;
+		}
+
+		/* poll get trng state API, ELE_GET_TRNG_STATE_RETRY_COUNT times
+		 * or while trng state != 0x203
+		 */
+		do {
+			msleep(10);
+			ret = ele_get_trng_state(dev);
+			if (ret < 0) {
+				dev_err(dev, "Failed to get trng state\n");
+				return ret;
+			}
+			count--;
+		} while ((ret != ELE_TRNG_STATE_OK) && count);
+		if (ret != ELE_TRNG_STATE_OK)
+			return -EIO;
+	}
+
+	return 0;
 }
