@@ -4,6 +4,10 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MP
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp.dtsi"
@@ -629,7 +633,9 @@
 	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "audio-hdmi";
+#ifndef UBOOT
 		audio-cpu = <&aud2htx>;
+#endif
 		hdmi-out;
 		constraint-rate = <44100>,
 				<88200>,
@@ -641,6 +647,7 @@
 		status = "okay";
 	};
 
+#ifndef UBOOT
 	sound-wm8960 {
 		amp-gain-gpios = GP_WM8960_AMP_G0, GP_WM8960_AMP_G1;
 		/* amp-gain-seq = /bits/ 8 <0 1 2 3>; */ /* default */
@@ -663,8 +670,10 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
+#endif
 };
 
+#ifndef UBOOT
 &A53_0 {
 	cpu-supply = <&buck2>;
 };
@@ -688,11 +697,13 @@
 &cameradev {
 	status = "okay";
 };
+#endif
 
 &clk {
 	init-on-array = <IMX8MP_CLK_HSIO_ROOT>;
 };
 
+#ifndef UBOOT
 &dewarp {
 	status = "okay";
 };
@@ -705,6 +716,7 @@
 	fsl,asrc-rate  = <48000>;
 	status = "okay";
 };
+#endif
 
 &ecspi2 {
 	#address-cells = <1>;
@@ -758,6 +770,7 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu_2d {
 	status = "okay";
 };
@@ -765,6 +778,7 @@
 &gpu_3d {
 	status = "okay";
 };
+#endif
 
 &hdmi {
 	status = "okay";
@@ -774,9 +788,11 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &hdmi_blk_ctrl {
 	status = "okay";
 };
+#endif
 
 &hdmi_pavi {
 	status = "okay";
@@ -952,7 +968,7 @@
 	};
 };
 
-
+#ifndef UBOOT
 &i2c3a {
 	basler_camera@36 {
 		compatible = "basler,basler-camera", "basler-camera";
@@ -994,6 +1010,7 @@
 		};
 	};
 };
+#endif
 
 &i2c3d {
 	rtc@68 {
@@ -1017,7 +1034,9 @@
 
 	wm8960: codec@1a {
 		clock-names = "mclk";
+#ifndef UBOOT
 		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI1_MCLK1>;
+#endif
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
 		wlf,gpio-cfg = <1 3>;
@@ -1025,6 +1044,7 @@
 	};
 };
 
+#ifndef UBOOT
 &irqsteer_hdmi {
 	status = "okay";
 };
@@ -1056,6 +1076,7 @@
 &isp_1 {
 	status = "disabled";
 };
+#endif
 
 &lcdif1 {
 	status = "disabled";
@@ -1069,7 +1090,7 @@
 	status = "disabled";
 };
 
-
+#ifndef UBOOT
 &mipi_csi_0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -1113,7 +1134,9 @@
 &ml_vipsi {
 	status = "okay";
 };
+#endif
 
+#ifndef UBOOT
 &pcie {
 	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI>,
 			  <&clk IMX8MP_CLK_PCIE_AUX>;
@@ -1136,8 +1159,9 @@
 	clk_mode = <3>;
 	status = "okay";
 };
+#endif
 
-
+#ifndef UBOOT
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
@@ -1159,6 +1183,7 @@
 &snvs_pwrkey {
 	status = "okay";
 };
+#endif
 
 &uart1 { /* BT */
 	pinctrl-names = "default";
@@ -1261,6 +1286,7 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -1276,6 +1302,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
@@ -1284,7 +1311,9 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &xcvr {
 	#sound-dai-cells = <0>;
 	status = "okay";
 };
+#endif
