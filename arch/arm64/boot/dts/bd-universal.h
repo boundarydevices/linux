@@ -21,10 +21,11 @@
 #define pinctrl2(a, b) concat4(pinctrl_, a, _, b): concat(a-b, grp)
 #define pinctrl3(a, b, c) concat6(pinctrl_, a, _, b, _, c): concat(a-b-c, grp)
 #define pinctrl4(a, b, c, d) concat8(pinctrl_, a, _, b, _, c, _, d): concat(a-b-c-d, grp)
-#define pinctrl_ref(a) <&concat(pinctrl_, a)>
-#define pinctrl_ref2(a, b) <&concat4(pinctrl_, a, _, b)>
-#define pinctrl_ref3(a, b, c) <&concat6(pinctrl_, a, _, b, _, c)>
-#define pinctrl_ref4(a, b, c, d) <&concat8(pinctrl_, a, _, b, _, c, _, d)>
+
+#define pinctrl_ref(a) concat(pinctrl_, a)
+#define pinctrl_ref2(a, b) concat4(pinctrl_, a, _, b)
+#define pinctrl_ref3(a, b, c) concat6(pinctrl_, a, _, b, _, c)
+#define pinctrl_ref4(a, b, c, d) concat8(pinctrl_, a, _, b, _, c, _, d)
 
 #define pinctrlm_ref(a)		c_(concat(pinctrl_, mipi), a)
 #define pinctrlm(a)		pinctrlm_ref(a): concat(mipi-a, grp)
@@ -35,11 +36,11 @@
 #define pinctrlm3(a, b, c)	pinctrlm_ref(c_(c_(a, b), c)): concat(mipi-a-b-c, grp)
 #define pinctrlm_ref3(a, b, c)	pinctrlm_ref(c_(c_(a, b), c))
 
-#define pinctrlm_ts(a)		pinctrlm2(ts, a)
-#define pinctrlm_ts_ref(a)	pinctrlm_ref2(ts, a)
+#define pinctrlm_ts(a)		pinctrl3(ts, mipi, a)
+#define pinctrlm_ts_ref(a)	pinctrl_ref3(ts, mipi, a)
 
-#define pinctrlm_ts2(a, b)	pinctrlm3(ts, a, b)
-#define pinctrlm_ts_ref2(a, b)	pinctrlm_ref3(ts, a, b)
+#define pinctrlm_ts2(a, b)	pinctrl4(ts, mipi, a, b)
+#define pinctrlm_ts_ref2(a, b)	pinctrl_ref4(ts, mipi, a, b)
 
 #define GP(a, b)	concat3(GP_, MIPI_, a)(b)
 #define PD(a, b)	concat3(PD_, MIPI_, a)(b)
@@ -57,7 +58,21 @@
 #define mipi_ref2(a, b)	mipi_ref(c_(a, b))
 #define mipi_ref_grp2(a, b) mipi_ref2(a, b): mipi-a-b
 
-#ifdef IMX
+#if defined(IMX8MM) || defined(IMX8MN) || defined(IMX8MP) || defined(IMX8MQ)
+#define IMX
+#define IOMUX iomuxc
+#if defined(IMX8MQ)
+#define PAD_NOPULL		0x06
+#define PAD_PULLDN		0x06	/* No pulldown, need external resistor */
+#define PAD_PULLUPIRQ		0xc6
+#define PAD_PULLDNIRQ		0x86
+#else
+#define PAD_NOPULL		0x0
+#define PAD_PULLDN		0x100
+#define PAD_PULLUP		0x140
+#define PAD_PULLDNIRQ		0x180
+#define PAD_PULLUPIRQ		0x1c0
+#endif
 #define pins_group(name, _pins, _attr...) \
 		fsl,pins = <		\
 			##_pins		\
