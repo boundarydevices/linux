@@ -4,6 +4,10 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MP
 
 #include <dt-bindings/phy/phy-imx8-pcie.h>
 #include <dt-bindings/usb/pd.h>
@@ -357,7 +361,9 @@
 	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "audio-hdmi";
+#ifndef UBOOT
 		audio-cpu = <&aud2htx>;
+#endif
 		hdmi-out;
 		constraint-rate = <44100>,
 				<88200>,
@@ -374,7 +380,9 @@
 		asrc-controller = <&easrc>;
 #endif
 		audio-codec = <&wm8960>;
+#ifndef UBOOT
 		audio-cpu = <&sai3>;
+#endif
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -402,13 +410,16 @@
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
 
+#ifndef UBOOT
 	sound-micfil {
 		compatible = "fsl,imx-audio-micfil";
 		model = "imx-audio-micfil";
 		cpu-dai = <&micfil>;
 	};
+#endif
 };
 
+#ifndef UBOOT
 &aud2htx {
 	status = "okay";
 };
@@ -429,6 +440,7 @@
 	fsl,asrc-rate  = <48000>;
 	status = "okay";
 };
+#endif
 
 &ecspi2 {
 	#address-cells = <1>;
@@ -470,6 +482,7 @@
 	};
 };
 
+#ifndef UBOOT
 &flexcan1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
@@ -483,6 +496,7 @@
 	xceiver-supply = <&reg_can2_stby>;
 	status = "okay";
 };
+#endif
 
 &hdmi {
 	status = "okay";
@@ -492,9 +506,11 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &hdmi_blk_ctrl {
 	status = "okay";
 };
+#endif
 
 &hdmi_pavi {
 	status = "okay";
@@ -544,6 +560,7 @@
 	};
 };
 
+#ifndef UBOOT
 &i2c2b {
 	basler_camera@36 {
 		compatible = "basler,basler-camera-vvcam", "basler-camera-vvcam";
@@ -585,6 +602,7 @@
 		};
 	};
 };
+#endif
 
 &i2c2d {
 	rtc@52 {
@@ -601,7 +619,9 @@
 &i2c3 {
 	wm8960: codec@1a {
 		clock-names = "mclk";
+#ifndef UBOOT
 		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_MCLK1>;
+#endif
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
 		wlf,gpio-cfg = <1 3>;
@@ -641,6 +661,7 @@
 	};
 };
 
+#ifndef UBOOT
 &irqsteer_hdmi {
 	status = "okay";
 };
@@ -652,7 +673,9 @@
 &isp_1 {
 	status = "okay";
 };
+#endif
 
+#ifndef UBOOT
 &micfil {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pdm>;
@@ -705,7 +728,9 @@
 &ml_vipsi {
 	status = "okay";
 };
+#endif
 
+#ifndef UBOOT
 &pcie {
 	assigned-clocks = <&clk IMX8MP_CLK_PCIE_AUX>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_50M>;
@@ -728,6 +753,7 @@
 	clock-names = "ref";
 	status = "okay";
 };
+#endif
 
 &pwm4 {
 	pinctrl-names = "default";
@@ -735,6 +761,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
@@ -748,6 +775,7 @@
 	fsl,sai-mclk-direction-output;
 	status = "okay";
 };
+#endif
 
 &uart2 {
 	/* console */
@@ -841,6 +869,7 @@
 };
 
 /* J11 mipi display */
+#define MIPI_DSI		mipi_dsi
 #define MIPI_DISPLAY		lcdif1
 #define MIPI_SUBSYSTEM		display_subsystem
 #define MIPI_I2C_BUS		i2c2d
@@ -865,12 +894,11 @@
 #define GP_MIPI_ENABLE(a)	<&gpio4 27 a>
 #define PD_MIPI_ENABLE(a)	MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27 a	/* Pin 11 */
 
-#define PAD_NOPULL		0x0
-#define PAD_PULLDN		0x100
-#define PAD_PULLUP		0x140
-#define PAD_PULLDNIRQ		0x180
-#define PAD_PULLUPIRQ		0x1c0
+#ifdef UBOOT
+#include "bd-universal-mipi-dsi.dtsi"
+#else
 #include "../bd-universal-mipi-dsi.dtsi"
+#endif
 
 #define LVDS_DISPLAY		lcdif2
 #define LVDS_I2C_BUS		i2c4
@@ -892,7 +920,11 @@
 #define GP_LVDS_TS_RESET(a)	<&gpio3 30 a>
 #define PD_LVDS_TS_RESET(a)
 #define LVDS_NO_TS_RESET
+#ifdef UBOOT
+#include "bd-universal-lvds.dtsi"
+#else
 #include "../bd-universal-lvds.dtsi"
+#endif
 
 / {
 	aliases {
