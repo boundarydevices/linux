@@ -4,6 +4,15 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MQ
+
+#ifdef UBOOT
+/* First 128KB is for PSCI ATF. */
+/memreserve/ 0x40000000 0x00020000;
+#endif
 
 #include "imx8mq.dtsi"
 
@@ -570,6 +579,7 @@
 		};
 	};
 
+#ifndef UBOOT
 	sound-wm8960 {
 		audio-codec = <&wm8960>;
 		audio-cpu = <&sai1>;
@@ -588,11 +598,14 @@
 		hp-det-gpio = GP_WM8960_HP_DET;
 		model = "wm8960-audio";
 	};
+#endif
 
 	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "imx-audio-hdmi";
+#ifndef UBOOT
 		audio-cpu = <&sai4>;
+#endif
 		constraint-rate = <32000 44100 48000 96000 192000>;
 		protocol = <1>;
 		hdmi-out;
@@ -600,6 +613,7 @@
 	};
 };
 
+#ifndef UBOOT
 &a53_opp_table {
 	opp-800000000 {
 		opp-microvolt = <1000000>;
@@ -649,6 +663,7 @@
 		};
 	};
 };
+#endif
 
 &dcss {
 	status = "okay";
@@ -699,6 +714,7 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu {
 	power-domains = <&pgc_gpu>;
 	status = "okay";
@@ -708,6 +724,7 @@
 	power-domains = <&pgc_gpu>;
 	status = "okay";
 };
+#endif
 
 &hdmi {
 	compatible = "cdn,imx8mq-hdmi";
@@ -814,6 +831,7 @@
 	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -839,6 +857,7 @@
 			};
 		};
 	};
+#endif
 
 	pcie-clock@6a {
 		compatible = "idt,9FGV0241AKILF";
@@ -856,6 +875,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	ov5640-mipi2@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -881,6 +901,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c4 {
@@ -961,9 +982,11 @@
 	};
 };
 
+#ifndef UBOOT
 &irqsteer {
 	status = "okay";
 };
+#endif
 
 &lcdif {
 	status = "disabled";
@@ -973,6 +996,7 @@
 				 <&clk IMX8MQ_CLK_25M>;
 };
 
+#ifndef UBOOT
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -1004,6 +1028,7 @@
 		};
 	};
 };
+#endif
 
 &mipi_dsi {
 	/delete-property/ no_clk_reset;
@@ -1029,6 +1054,7 @@
 	};
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -1077,7 +1103,9 @@
 	hard-wired;
 	status = "disabled";
 };
+#endif
 
+#ifndef UBOOT
 /delete-node/ &pgc_gpu;
 /delete-node/ &pgc_vpu;
 &pgc {
@@ -1111,6 +1139,7 @@
 		};
 	};
 };
+#endif
 
 &pwm2 {
 	pinctrl-names = "default";
@@ -1124,6 +1153,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
@@ -1156,6 +1186,7 @@
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3", "pll8k", "pll11k";
 	status = "okay";
 };
+#endif
 
 &uart1 { /* console */
 	pinctrl-names = "default";
@@ -1254,6 +1285,7 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
+#ifndef UBOOT
 &vpu {
 	power-domains = <&pgc_vpu>;
 	regulator-supply = <&reg_vref_0v9>;
@@ -1263,6 +1295,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
@@ -1272,6 +1305,7 @@
 };
 
 /* J11 mipi display */
+#define MIPI_DSI		mipi_dsi
 #define MIPI_ADD_PORT	/* imx8mq needs this */
 #define MIPI_DISPLAY		lcdif
 #define MIPI_SUBSYSTEM		lcdif
@@ -1298,8 +1332,8 @@
 #define GP_MIPI_ENABLE(a)	<&gpio3 15 a>
 #define PD_MIPI_ENABLE(a)	MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15 a	/* Pin 11 */
 
-#define PAD_NOPULL		0x06
-#define PAD_PULLDN		0x06	/* No pulldown, need external resistor */
-#define PAD_PULLUPIRQ		0xc6
-#define PAD_PULLDNIRQ		0x86
+#ifdef UBOOT
+#include "bd-universal-mipi-dsi.dtsi"
+#else
 #include "../bd-universal-mipi-dsi.dtsi"
+#endif
