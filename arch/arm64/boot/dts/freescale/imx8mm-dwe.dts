@@ -4,9 +4,12 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
-
 #include "imx8mm.dtsi"
 
 &iomuxc {
@@ -614,6 +617,7 @@
 	};
 };
 
+#ifndef UBOOT
 &A53_0 {
 	cpu-supply = <&reg_buck3>;
 };
@@ -634,6 +638,7 @@
 		reg = <0>;
 	};
 };
+#endif
 
 &fec1 {
 	mdc-gpios = GP_MII_MDC;
@@ -672,9 +677,11 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu {
 	status = "okay";
 };
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -685,6 +692,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	pf8100@8 {
 		compatible = "nxp,pf8100";
 		pinctrl-names = "default";
@@ -782,6 +790,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c2 {
@@ -824,6 +833,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -876,6 +886,7 @@
 	uart-has-rtscts;
 	status = "okay";
 };
+#endif
 
 &uart2 { /* console */
 	pinctrl-names = "default";
@@ -885,6 +896,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &uart3 { /* J15 */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>, <&pinctrl_zwave>;
@@ -905,6 +917,7 @@
 	assigned-clock-parents = <&clk IMX8MMN(CLK_24M)>;
 	status = "okay";
 };
+#endif
 
 &usbotg1 {
 	dr_mode = "otg";
@@ -952,6 +965,7 @@
 	vqmmc-supply = <&reg_usdhc2_vqmmc>;
 };
 
+#ifndef UBOOT
 &usdhc3 {
 	bus-width = <4>;
 	fsl,sdio-async-interrupt-enabled;
@@ -989,6 +1003,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default", "gpio";
