@@ -4,6 +4,9 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
 
 #include "imx8mm.dtsi"
 
@@ -676,6 +679,7 @@
 		enable-active-high;
 	};
 
+#ifndef UBOOT
 	sound-wm8960 {
 		amp-gain-gpios = GP_WM8960_AMP_G0, GP_WM8960_AMP_G1;
 		/* amp-gain-seq = /bits/ 8 <0 1 2 3>; */ /* default */
@@ -698,8 +702,10 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
+#endif
 };
 
+#ifndef UBOOT
 &A53_0 {
 	cpu-supply = <&reg_buck3>;
 };
@@ -741,6 +747,7 @@
 		xceiver-gpios = GP_CAN_EN;
 	};
 };
+#endif
 
 &fec1 {
 	pinctrl-names = "default";
@@ -765,6 +772,7 @@
 	};
 };
 
+#ifndef UBOOT
 &flexspi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexspi>;
@@ -774,6 +782,7 @@
 &gpu {
 	status = "okay";
 };
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -784,6 +793,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	pf8100@8 {
 		compatible = "nxp,pf8100";
 		pinctrl-names = "default";
@@ -882,6 +892,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c2 {
@@ -923,6 +934,7 @@
 	};
 };
 
+#ifndef UBOOT
 &i2c3a {
 	rtc@68 {
 		compatible = "microcrystal,rv4162";
@@ -945,6 +957,7 @@
 		interrupts-extended = GPIRQ_SC16IS7XX;
 	};
 };
+#endif
 
 &i2c4 {
 	clock-frequency = <100000>;
@@ -990,6 +1003,7 @@
 	};
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -1008,6 +1022,7 @@
 	pinctrl-0 = <&pinctrl_sai2>;
 	status = "okay";
 };
+#endif
 
 &uart1 { /* J56 - console also */
 	pinctrl-names = "default";
@@ -1017,6 +1032,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &uart2 { /* Silex */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
@@ -1049,6 +1065,7 @@
 	status = "okay";
         uart-has-rs485-half-duplex;
 };
+#endif
 
 &usbotg1 {
 	dr_mode = "otg";
@@ -1092,13 +1109,14 @@
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	status = "okay";
-#if 0
+#ifdef UBOOT
 	vqmmc-supply = <&reg_usdhc2_vqmmc>;
 #else
 	vqmmc-supply = <&reg_ldo2>;
 #endif
 };
 
+#ifndef UBOOT
 &usdhc3 {
 	bus-width = <4>;
 	fsl,sdio-async-interrupt-enabled;
@@ -1136,6 +1154,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
