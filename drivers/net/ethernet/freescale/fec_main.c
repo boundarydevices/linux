@@ -1717,7 +1717,6 @@ fec_enet_interrupt(int irq, void *dev_id)
 			ret = IRQ_HANDLED;
 		} else {
 			fep->events |= int_events;
-			netdev_info(ndev, "couldn't schedule NAPI\n");
 		}
 	}
 
