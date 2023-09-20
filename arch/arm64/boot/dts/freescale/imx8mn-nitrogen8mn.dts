@@ -4,6 +4,11 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MN
+
 #define MX8MMN(a, b)	MX8MN_##a b
 #define IMX8MMN(a)	IMX8MN_##a
 #define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
@@ -23,6 +28,7 @@
 	};
 };
 
+#ifndef UBOOT
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -46,3 +52,4 @@
 &isi_0 {
 	status = "okay";
 };
+#endif
