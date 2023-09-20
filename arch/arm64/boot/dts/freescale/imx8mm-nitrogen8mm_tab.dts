@@ -4,6 +4,11 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
+
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #include "imx8mm.dtsi"
@@ -23,6 +28,7 @@
 	compatible = "boundary,imx8mm-nitrogen8mm_tab", "fsl,imx8mm";
 };
 
+#ifndef UBOOT
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -33,6 +39,7 @@
 		};
 	};
 };
+#endif
 
 &usbotg2 {
 	autosuspend-delay-ms = <15000>;
@@ -45,6 +52,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -69,3 +77,4 @@
 &wwan_rfkill {
 	wakeup-dev = <&usbotg2>;
 };
+#endif
