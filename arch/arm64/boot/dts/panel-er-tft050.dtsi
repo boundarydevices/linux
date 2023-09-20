@@ -35,7 +35,7 @@
 		mipi-dsi-multiple = <26000000>;	/* needed for display port, but we don't use */
 #endif
 		i2c-address = <0x68>;
-		i2c-bus = <&tc358767_bus>;
+		i2c-bus = <&mipi_ref(tc358767_bus)>;
 		i2c-cmds-enable = /bits/ 8 <
 #if 0
 /* 2 lanes */
