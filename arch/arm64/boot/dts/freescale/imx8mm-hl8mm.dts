@@ -4,6 +4,9 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
 
 #include "imx8mm.dtsi"
 
@@ -415,6 +418,7 @@
 		status = "okay";
 	};
 
+#ifndef UBOOT
 	csi_mclk: csi-mclk {
 		compatible = "pwm-clock";
 		#clock-cells = <0>;
@@ -422,6 +426,7 @@
 		clock-output-names = "csi_mclk";
 		pwms = <&pwm2 0 50 0>; /* 1 / 50 ns = 20 MHz */
 	};
+#endif
 
 	reg_usdhc2_vqmmc: regulator-usdhc2-vqmmc {
 		compatible = "regulator-gpio";
@@ -479,6 +484,7 @@
 	};
 };
 
+#ifndef UBOOT
 &A53_0 {
 	cpu-supply = <&reg_buck3>;
 };
@@ -493,6 +499,7 @@
 		};
 	};
 };
+#endif
 
 &fec1 {
 	mdc-gpios = GP_MII_MDC;
@@ -519,9 +526,11 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu {
 	status = "okay";
 };
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -532,6 +541,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
+#ifndef UBOOT
 	pf8100@8 {
 		compatible = "nxp,pf8100";
 		pinctrl-names = "default";
@@ -631,6 +641,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c2 {
@@ -708,6 +719,7 @@
 	};
 };
 
+#ifndef UBOOT
 &i2c3b {
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_vref_2v5>;
@@ -733,6 +745,7 @@
 		};
 	};
 };
+#endif
 
 &i2c4 {
 	clock-frequency = <100000>;
@@ -753,6 +766,7 @@
 	};
 };
 
+#ifndef UBOOT
 &lcdif {
 	status = "okay";
 };
@@ -775,6 +789,7 @@
 		};
 	};
 };
+#endif
 
 &mipi_dsi {
 	assigned-clocks = <&clk IMX8MM_CLK_DSI_CORE>,
@@ -828,6 +843,7 @@
 	};
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -836,6 +852,7 @@
 	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
 };
+#endif
 
 &pwm1 {
 	pinctrl-names = "default";
@@ -858,6 +875,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai2>;
@@ -882,6 +900,7 @@
 		max-speed = <3000000>;
 	};
 };
+#endif
 
 &uart2 { /* console */
 	pinctrl-names = "default";
@@ -891,6 +910,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &uart3 { /* J15 */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
@@ -906,6 +926,7 @@
 	assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
 	status = "okay";
 };
+#endif
 
 &usbotg1 {
 	dr_mode = "otg";
@@ -948,13 +969,14 @@
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	status = "okay";
-#if 0
+#ifdef UBOOT
 	vqmmc-supply = <&reg_usdhc2_vqmmc>;
 #else
 	vqmmc-supply = <&reg_ldo2>;
 #endif
 };
 
+#ifndef UBOOT
 &usdhc3 {
 	bus-width = <4>;
 	fsl,sdio-async-interrupt-enabled;
@@ -987,6 +1009,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default", "gpio";
