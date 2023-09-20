@@ -1,14 +1,28 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+&IOMUX {
+	pinctrlm(ltk080a60a004t) {
+		aliasp = <&pinctrlm_ref(ltk080a60a004t)>;
+		pins_group(pulldn,
+#define GP_LTK08_MIPI_EN	GP(IRQ, GPIO_ACTIVE_HIGH)
+			PD(IRQ, PAD_PULLDN),
+			DN(IRQ)
+		)
+	};
+};
+
 / {
 	aliases {
+		pinctrl_dsi(ltk080a60a004t) = &pinctrlm_ref(ltk080a60a004t);
+	};
+
+#ifndef MIPI_COMMANDS_DONE
+	aliases {
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
-		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
 	};
 
 	mipi_cmds_ltk080a60a004t: mipi-cmds-ltk080a60a004t {
 		alias = <&mipi_cmds_ltk080a60a004t>;
-		aliasp = <&pinctrl_mipi_ltk080a60a004t>;
 		delay-prepare = <100>;
 		delay-unprepare = <2>;
 		mipi-cmds-enable = /bits/ 8 <
@@ -53,4 +67,5 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 	};
+#endif
 };
