@@ -4,10 +4,18 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MP
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp-nitrogen_smarc-som.dtsi"
+#ifdef UBOOT
+#include "bd-universal-smarc-carrier.dtsi"
+#else
 #include "../bd-universal-smarc-carrier.dtsi"
+#endif
 / {
 	model = "Boundary i.MX8MPlus nitrogen8mp smarc board";
 	compatible = "boundary,imx8mp-nitrogen-smarc", "fsl,imx8mp";
@@ -15,5 +23,4 @@
 	aliases {
 		rtc1 = &snvs_rtc;
 	};
-
 };
