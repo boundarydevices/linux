@@ -4,6 +4,10 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MQ
 
 #include "imx8mq.dtsi"
 
@@ -412,6 +416,7 @@
 	};
 };
 
+#ifndef UBOOT
 &a53_opp_table {
 	opp-800000000 {
 		opp-microvolt = <1000000>;
@@ -447,6 +452,7 @@
 		};
 	};
 };
+#endif
 
 &fec1 {
 	pinctrl-names = "default";
@@ -471,6 +477,7 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu3d {
 	status = "okay";
 };
@@ -486,10 +493,7 @@
 		};
 	};
 };
-
-&irqsteer {
-	status = "okay";
-};
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -644,6 +648,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -690,6 +695,7 @@
 	reset-gpio = GP_PCIE1_RESET;
 	status = "okay";
 };
+#endif
 
 &uart2 { /* console */
 	pinctrl-names = "default";
@@ -745,6 +751,7 @@
 	vmmc-supply = <&reg_vref_3v3>;
 };
 
+#ifndef UBOOT
 &vpu {
 	regulator-supply = <&reg_soc_gpu_vpu>;
 	status = "okay";
@@ -753,6 +760,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
