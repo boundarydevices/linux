@@ -3,6 +3,11 @@
  * Copyright 2018 Boundary Devices
  */
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
+
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #include <dt-bindings/phy/phy-imx8-pcie.h>
@@ -64,6 +69,7 @@
 		};
 	};
 
+#ifndef UBOOT
 	sound-wm8960 {
 		audio-codec = <&wm8960>;
 		audio-cpu = <&sai1>;
@@ -87,8 +93,10 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
+#endif
 };
 
+#ifndef UBOOT
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -116,6 +124,7 @@
 		xceiver-gpios = GP_CAN_EN;
 	};
 };
+#endif
 
 &i2c4 {
 	wm8960: codec@1a {
@@ -130,6 +139,7 @@
 	};
 };
 
+#ifndef UBOOT
 &pcie0 {
 	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
 			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
@@ -159,6 +169,7 @@
 	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
 };
+#endif
 
 &sai1 {
 	assigned-clocks = <&clk IMX8MMN(AUDIO_PLL1)>, <&clk IMX8MMN(AUDIO_PLL2)>, <&clk IMX8MMN(CLK_SAI1)>;
@@ -178,6 +189,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -193,3 +205,4 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
