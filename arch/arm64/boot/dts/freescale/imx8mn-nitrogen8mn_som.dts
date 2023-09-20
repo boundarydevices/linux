@@ -60,9 +60,11 @@
 	};
 };
 
+#ifndef UBOOT
 &cameradev {
 	status = "okay";
 };
+#endif
 
 &i2c2 {
 	rtc@68 {
@@ -78,6 +80,7 @@
 &i2c3 {
 	/delete-node/ i2cmux@70;
 
+#ifndef UBOOT
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -100,8 +103,10 @@
 			};
 		};
 	};
+#endif
 };
 
+#ifndef UBOOT
 &isi_0 {
 	status = "okay";
 
@@ -129,3 +134,4 @@
 		};
 	};
 };
+#endif
