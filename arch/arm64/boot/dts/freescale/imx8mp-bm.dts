@@ -4,6 +4,10 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MP
 
 #include "imx8mp-nitrogen8mp-som.dtsi"
 #define TC358867_I2C_BUS	<&i2c2d>
@@ -390,7 +394,9 @@
 	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "audio-hdmi";
+#ifndef UBOOT
 		audio-cpu = <&aud2htx>;
+#endif
 		hdmi-out;
 		constraint-rate = <44100>,
 				<88200>,
@@ -402,6 +408,7 @@
 		status = "okay";
 	};
 
+#ifndef UBOOT
 	sound-wm8962 {
 #if 0
 		asrc-controller = <&easrc>;
@@ -425,8 +432,10 @@
 		model = "imx-audio-micfil";
 		cpu-dai = <&micfil>;
 	};
+#endif
 };
 
+#ifndef UBOOT
 &aud2htx {
 	status = "okay";
 };
@@ -447,6 +456,7 @@
 	fsl,asrc-rate  = <48000>;
 	status = "okay";
 };
+#endif
 
 &flexcan1 {
 	pinctrl-names = "default";
@@ -463,9 +473,11 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &hdmi_blk_ctrl {
 	status = "okay";
 };
+#endif
 
 &hdmi_pavi {
 	status = "okay";
@@ -516,6 +528,7 @@
 };
 
 &i2c2b {
+#ifndef UBOOT
 	basler_camera@36 {
 		compatible = "basler,basler-camera-vvcam", "basler-camera-vvcam";
 		reg = <0x36>;
@@ -534,9 +547,11 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c2c {
+#ifndef UBOOT
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -559,6 +574,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c2d {
@@ -583,7 +599,9 @@
 		PLLVDD-supply = <&reg_vref_1v8>;
 		SPKVDD1-supply = <&reg_vref_5v0>;
 		SPKVDD2-supply = <&reg_vref_5v0>;
+#ifndef UBOOT
 		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_MCLK1>;
+#endif
 		compatible = "wlf,wm8962";
 		gpio-cfg = <
 			0x0000 /* n/c */
@@ -633,6 +651,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &isi_0 {
 	status = "disabled";
 };
@@ -648,6 +667,7 @@
 &isp_1 {
 	status = "disabled";
 };
+#endif
 
 &ldb {
 	lvds-channel@0 {
@@ -697,6 +717,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &micfil {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pdm>;
@@ -749,6 +770,7 @@
 &ml_vipsi {
 	status = "okay";
 };
+#endif
 
 &pwm2 {
 	pinctrl-names = "default";
@@ -765,6 +787,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
@@ -778,6 +801,7 @@
 	fsl,sai-mclk-direction-output;
 	status = "okay";
 };
+#endif
 
 &uart2 {
 	/* console */
