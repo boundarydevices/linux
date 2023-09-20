@@ -2,24 +2,22 @@
 /*
  * Copyright 2023 Boundary Devices
  */
-#define concat(a, b)   _concat_(a, b)
-#define _concat_(a, b)  a ## b
-#define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
-#undef pinctrl_ref
-#define pinctrl_ref(a) concat(pinctrl_, a)
+#include "bd-universal.h"
 
-&iomuxc {
+&IOMUX {
 	pinctrl_backlight_lvds: backlight-lvdsgrp {
-		fsl,pins = <
-			PD_LVDS_BACKLIGHT(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_LVDS_BACKLIGHT(PAD_PULLDN),
+			DN_LVDS_BACKLIGHT
+		)
 	};
 
 #ifdef PD_LVDS2_BACKLIGHT
 	pinctrl_backlight_lvds2: backlight-lvds2grp {
-		fsl,pins = <
-			PD_LVDS2_BACKLIGHT(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_LVDS2_BACKLIGHT(PAD_PULLDN),
+			DN_LVDS2_BACKLIGHT
+		)
 	};
 #endif
 
@@ -30,50 +28,59 @@
 #define VAL(a) concat(VAL_, a)
 
 	pinctrl(LVDS_PWM) {
-		fsl,pins = <
-			PD_LVDS_PWM(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_LVDS_PWM(PAD_PULLDN),
+			DN_LVDS_PWM
+		)
 	};
 
 #if VAL(LVDS2_PWM) != VAL(LVDS_PWM)
 	pinctrl(LVDS2_PWM) {
-		fsl,pins = <
-			PD_LVDS2_PWM(PAD_PULLDN)
-		>;
+		pins_group(pulldn,
+			PD_LVDS2_PWM(PAD_PULLDN),
+			DN_LVDS2_PWM
+		)
 	};
 #endif
 
 	pinctrl_ts_lvds_atmel: ts-lvds-atmelgrp {
-		fsl,pins = <
-			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
-			PD_LVDS_TS_RESET(PAD_PULLDN)
-		>;
+		pd_irq_reset(
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
+			UP_LVDS_TS_IRQ,
+			PD_LVDS_TS_RESET(PAD_PULLDN),
+			DN_LVDS_TS_RESET
+		)
 	};
 
 	pinctrl_ts_lvds_egalax: ts-lvds-egalaxgrp {
-		fsl,pins = <
-			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
-		>;
+		pins_group(pullup,
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
+			UP_LVDS_TS_IRQ
+		)
 	};
 
 	pinctrl_ts_lvds_ft5x06: ts-lvds-ft5x06grp {
-		fsl,pins = <
-			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
-			PD_LVDS_TS_RESET(PAD_PULLDN)
-		>;
+		pd_irq_reset(
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
+			UP_LVDS_TS_IRQ,
+			PD_LVDS_TS_RESET(PAD_PULLDN),
+			DN_LVDS_TS_RESET
+		)
 	};
 
 	pinctrl_ts_lvds_gt911: ts-lvds-gt911grp {
-		fsl,pins = <
+		pins_group(pullup,
 			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
-			PD_LVDS_TS_RESET(PAD_PULLUP)
-		>;
+			PD_LVDS_TS_RESET(PAD_PULLUP),
+			UP_LVDS_TS_RESET
+		)
 	};
 
 	pinctrl_ts_lvds_ili251x: ts-lvds-ili251xgrp {
-		fsl,pins = <
-			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
-		>;
+		pins_group(pullup,
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ),
+			UP_LVDS_TS_IRQ
+		)
 	};
 };
 
