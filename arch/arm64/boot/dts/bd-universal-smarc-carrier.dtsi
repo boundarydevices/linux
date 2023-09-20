@@ -2,255 +2,448 @@
 /*
  * Copyright 2023 Boundary Devices
  */
+#include "bd-universal.h"
 
-#define concat(a, b)   _concat_(a, b)
-#define _concat_(a, b)  a ## b
-#define concat4(a, b, c, d)   _concat4_(a, b, c, d)
-#define _concat4_(a, b, c, d)  a ## b ## c ## d
-#define concat6(a, b, c, d, e, f)   _concat6_(a, b, c, d, e, f)
-#define _concat6_(a, b, c, d, e, f)  a ## b ## c ## d ## e ## f
-#define concat8(a, b, c, d, e, f, g, h)   _concat8_(a, b, c, d, e, f, g, h)
-#define _concat8_(a, b, c, d, e, f, g, h)  a ## b ## c ## d ## e ## f ## g ## h
-
-#define pinctrl_ref(a) concat(pinctrl_, a)
-#define pinctrl_ref2(a, b) concat4(pinctrl_, a, _, b)
-#define pinctrl_ref3(a, b, c) concat6(pinctrl_, a, _, b, _, c)
-#define pinctrl_ref4(a, b, c, d) concat8(pinctrl_, a, _, b, _, c, _, d)
-
-#define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
-#define pinctrl2(a, b) concat4(pinctrl_, a, _, b): concat(a-b, grp)
-#define pinctrl3(a, b, c) concat6(pinctrl_, a, _, b, _, c): concat(a-b-c, grp)
-#define pinctrl4(a, b, c, d) concat8(pinctrl_, a, _, b, _, c, _, d): concat(a-b-c-d, grp)
-
-&iomuxc {
+&IOMUX {
 	pinctrl-0 = <&pinctrl_hog>, <&pinctrl_hog_carrier>;
 
 	pinctrl2(gpio, keys) {
-		PINS_START
+		pins_group(keys,
 			PD_SM_CHARGER_PRESENT(PAD_PULLUPIRQ)
 #ifdef PD_SM_FORCE_RECOV
 			PD_SM_FORCE_RECOV(PAD_PULLUPIRQ)
 #endif
 			PD_SM_LID(PAD_PULLUPIRQ)
 			PD_SM_CARRIER_PWR_ON(PAD_PULLUPIRQ)
-			PD_SM_SLEEP(PAD_PULLUPIRQ)
-		PINS_END
+			PD_SM_SLEEP(PAD_PULLUPIRQ),
+			UP_SM_SLEEP
+		)
 	};
 
+#ifdef PD_SM_GPIO11
+	pinctrl(hd3ss3220) {
+		pins_group(irq,
+			PD_SM_GPIO11(PAD_PULLUPIRQ),
+			UP_SM_GPIO11
+		)
+	};
+#endif
+
 	pinctrl2(hog, carrier) {
-		PINS_START
+		pins_group(hog,
 			PD_SM_ENET0_SDP(PAD_PULLDN)
+#ifdef PD_SM_ENET1_SDP
 			PD_SM_ENET1_SDP(PAD_PULLDN)
-			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
+#endif
 			PD_SM_GPIO12(PAD_PULLDN)
 			PD_SM_CSI1_MCK(PAD_PULLDN)
-		PINS_END
+			PD_SM_LCD1_VDD_EN(PAD_PULLDN),
+			DN_SM_LCD1_VDD_EN
+		)
 	};
 
 #ifdef PD_SM_GPIO13
 	pinctrl2(mux9546, lcd) {
-		PINS_START
-			PD_SM_GPIO13(PAD_PULLDN)
-		PINS_END
+		pins_group(reset,
+			PD_SM_GPIO13(PAD_PULLDN),
+			DN_SM_GPIO13
+		)
 	};
 #endif
 
+#ifdef PD_SM_USB0_IDDIG
+	pinctrl3(reg, usbotg, iddig) {
+		pins_group(iddig,
+			PD_SM_USB0_IDDIG(PAD_PULLDN),
+			UP_SM_USB0_IDDIG
+			input-enable;
+		)
+	};
+#endif
 	pinctrl4(reg, usbotg, vbus, off) {
-		PINS_START
-			PD_SM_USB0_EN_OC(PAD_PULLDN)
-		PINS_END
+		pins_group(vbus,
+			PD_SM_USB0_EN_OC(PAD_PULLDN),
+			DN_SM_USB0_EN_OC
+			output-low;
+		)
 	};
 
 	pinctrl4(reg, usbotg, vbus, on) {
-		PINS_START
+		pins_group(vbus,
 			/* power enable/ over-current */
-			PD_SM_USB0_EN_OC_USB(PAD_PULLUPIRQ)
-		PINS_END
+			PD_SM_USB0_EN_OC_USB(PAD_PULLUPIRQ),
+			UP_SM_USB0_EN_OC
+			input-enable;
+		)
 	};
 
+#ifdef SM_CAN0
 	pinctrl(SM_CAN0) {
-		PINS_START
+		pins_group(can,
 			PD_SM_CAN0_RX_CAN(PAD_CAN)
-			PD_SM_CAN0_TX_CAN(PAD_CAN)
-		PINS_END
+			PD_SM_CAN0_TX_CAN(PAD_CAN),
+			UP_SM_CAN0_TX_CAN;
+		)
 	};
+#endif
 
+#ifdef SM_CAN1
 	pinctrl(SM_CAN1) {
-		PINS_START
+		pins_group(can,
 			PD_SM_CAN1_RX_CAN(PAD_CAN)
-			PD_SM_CAN1_TX_CAN(PAD_CAN)
-		PINS_END
+			PD_SM_CAN1_TX_CAN(PAD_CAN),
+			UP_SM_CAN1_TX_CAN
+		)
 	};
+#endif
 
+#ifdef SM_ESPI
 	pinctrl(SM_ESPI) {
-		PINS_START
+#ifdef IMX
+		pins_group(espi,
 			PD_SM_ESPI_CK_ESPI(PAD_ESPI)
 			PD_SM_ESPI_IO0_ESPI(PAD_ESPI)
 			PD_SM_ESPI_IO1_ESPI(PAD_ESPI)
 			PD_SM_ESPI_CS0(PAD_PULLUP)
 			PD_SM_ESPI_CS1(PAD_PULLUP)
 			PD_SM_ESPI_RESET(PAD_PULLDN)
-			PD_SM_ESPI_IO2(PAD_PULLDN)
-		PINS_END
+			PD_SM_ESPI_IO2(PAD_PULLDN),
+		)
+#else
+		pins_group(nopull,
+			PD_SM_ESPI_CK_ESPI(PAD_ESPI)
+			PD_SM_ESPI_IO0_ESPI(PAD_ESPI)
+			PD_SM_ESPI_IO1_ESPI(PAD_ESPI),
+			bias-disable;
+		)
+		pins_group(pullup,
+#ifdef PD_SM_ESPI_CS0_ESPI
+			PD_SM_ESPI_CS0_ESPI(PAD_PULLUP)
+#else
+			PD_SM_ESPI_CS0(PAD_PULLUP)
+#endif
+#ifdef PD_SM_ESPI_CS1_ESPI
+			PD_SM_ESPI_CS1_ESPI(PAD_PULLUP),
+#else
+			PD_SM_ESPI_CS1(PAD_PULLUP),
+#endif
+			UP_SM_ESPI_CS1
+		)
+		pins_group(pulldn,
+			PD_SM_ESPI_RESET(PAD_PULLDN)
+			PD_SM_ESPI_IO2(PAD_PULLDN),
+			DN_SM_ESPI_IO2
+		)
+#endif
+	};
+#endif
+
+#ifdef PD_SM_I2C_CSI0_CK_I2C
+	pinctrl(SM_I2C_CSI0) {
+		pins_group(i2c,
+			PD_SM_I2C_CSI0_CK_I2C(PAD_I2C)
+			PD_SM_I2C_CSI0_DAT_I2C(PAD_I2C),
+			UP_SM_I2C_CSI0_DAT
+			drive-strength-microamp = <1000>;
+		)
 	};
 
+	pinctrl2(SM_I2C_CSI0, 1) {
+		pins_group(i2c,
+			PD_SM_I2C_CSI0_CK(PAD_I2C)
+			PD_SM_I2C_CSI0_DAT(PAD_I2C),
+			UP_SM_I2C_CSI0_DAT
+			drive-strength-microamp = <1000>;
+		)
+	};
+#endif
+
+#ifdef PD_SM_I2C_CSI1_CK_I2C
+	pinctrl(SM_I2C_CSI1) {
+		pins_group(i2c,
+			PD_SM_I2C_CSI1_CK_I2C(PAD_I2C)
+			PD_SM_I2C_CSI1_DAT_I2C(PAD_I2C),
+			UP_SM_I2C_CSI1_DAT
+			drive-strength-microamp = <1000>;
+		)
+	};
+
+	pinctrl2(SM_I2C_CSI1, 1) {
+		pins_group(i2c,
+			PD_SM_I2C_CSI1_CK(PAD_I2C)
+			PD_SM_I2C_CSI1_DAT(PAD_I2C),
+			UP_SM_I2C_CSI1_DAT
+			drive-strength-microamp = <1000>;
+		)
+	};
+#endif
+
 	pinctrl(SM_I2C_GP) {
-		PINS_START
+		pins_group(i2c,
 			PD_SM_I2C_GP_CK_I2C(PAD_I2C)
-			PD_SM_I2C_GP_DAT_I2C(PAD_I2C)
-		PINS_END
+			PD_SM_I2C_GP_DAT_I2C(PAD_I2C),
+			UP_SM_I2C_GP_DAT
+			drive-strength-microamp = <1000>;
+		)
 	};
 
 	pinctrl2(SM_I2C_GP, 1) {
-		PINS_START
+		pins_group(i2c,
 			PD_SM_I2C_GP_CK(PAD_I2C)
-			PD_SM_I2C_GP_DAT(PAD_I2C)
-		PINS_END
+			PD_SM_I2C_GP_DAT(PAD_I2C),
+			UP_SM_I2C_GP_DAT
+			drive-strength-microamp = <1000>;
+		)
 	};
 
 	pinctrl(SM_I2C_LCD) {
-		PINS_START
+		pins_group(i2c,
 			PD_SM_I2C_LCD_CK_I2C(PAD_I2C)
-			PD_SM_I2C_LCD_DAT_I2C(PAD_I2C)
-		PINS_END
+			PD_SM_I2C_LCD_DAT_I2C(PAD_I2C),
+			UP_SM_I2C_LCD_DAT
+			drive-strength-microamp = <1000>;
+		)
 	};
 
 	pinctrl2(SM_I2C_LCD, 1) {
-		PINS_START
+		pins_group(i2c,
 			PD_SM_I2C_LCD_CK(PAD_I2C)
-			PD_SM_I2C_LCD_DAT(PAD_I2C)
-		PINS_END
+			PD_SM_I2C_LCD_DAT(PAD_I2C),
+			UP_SM_I2C_LCD_DAT
+			drive-strength-microamp = <1000>;
+		)
 	};
 
 	pinctrl(SM_I2C_PM) {
-		PINS_START
+		pins_group(i2c,
 			PD_SM_I2C_PM_CK_I2C(PAD_I2C)
-			PD_SM_I2C_PM_DAT_I2C(PAD_I2C)
-		PINS_END
+			PD_SM_I2C_PM_DAT_I2C(PAD_I2C),
+			UP_SM_I2C_PM_DAT
+			drive-strength-microamp = <1000>;
+		)
 	};
 
 	pinctrl2(SM_I2C_PM, 1) {
-		PINS_START
+		pins_group(i2c,
 			PD_SM_I2C_PM_CK(PAD_I2C)
-			PD_SM_I2C_PM_DAT(PAD_I2C)
-		PINS_END
+			PD_SM_I2C_PM_DAT(PAD_I2C),
+			UP_SM_I2C_PM_DAT
+			drive-strength-microamp = <1000>;
+		)
 	};
 
 #ifdef SM_I2S0
 	pinctrl(SM_I2S0) {
-		PINS_START
+		pins_group(i2s,
 			/* WM8962 */
 			PD_SM_I2S0_LRCK_I2S(PAD_I2S)
 			PD_SM_I2S0_CK_I2S(PAD_I2S)
 			PD_SM_I2S0_SDIN_I2S(PAD_I2S)
 			PD_SM_I2S0_SDOUT_I2S(PAD_I2S)
 			PD_SM_AUDIO_MCK_I2S(PAD_I2S)
-		PINS_END
+		)
 	};
 #endif
 
 #ifdef SM_I2S2
 	pinctrl(SM_I2S2) {
-		PINS_START
+		pins_group(i2s,
 			/* HDA/I2S */
 			PD_SM_I2S2_LRCK_I2S(PAD_I2S)
 			PD_SM_I2S2_CK_I2S(PAD_I2S)
 			PD_SM_I2S2_SDIN_I2S(PAD_I2S)
 			PD_SM_I2S2_SDOUT_I2S(PAD_I2S)
-		PINS_END
+		)
 	};
 #endif
 
+#ifdef SM_PCIE
 	pinctrl(SM_PCIE) {
-		PINS_START
+		pins_group(pcie,
+#ifdef PD_SM_PCIE_A_RST_OUT
+			PD_SM_PCIE_A_RST_OUT(PAD_PULLDN)
+#else
 			PD_SM_PCIE_A_RST(PAD_PULLDN)
+#endif
+#ifdef PD_SM_PCIE_WAKE_IN
+			PD_SM_PCIE_WAKE_IN(PAD_PULLUP)
+#else
 			PD_SM_PCIE_WAKE(PAD_PULLUP)
+#endif
+#ifdef PD_SM_PCIE_CLK_REQ_OUT
+			PD_SM_PCIE_CLK_REQ_OUT(PAD_PULLUP)
+#else
 			PD_SM_PCIE_CLK_REQ(PAD_PULLUP)
-		PINS_END
+#endif
+			, UP_SM_PCIE_CLK_REQ
+		)
 	};
+#endif
 
 	pinctrl(SM_SDIO) {
-		PINS_START
+#ifdef IMX
+		pins_group(sdio,
 			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_50M)
 			PD_SM_SDIO_CMD_SDIO(PAD_SDIO_50M)
 			PD_SM_SDIO_DATA0_SDIO(PAD_SDIO_50M)
 			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_50M)
 			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_50M)
 			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_50M)
-			PD_SM_SDIO_PWR_EN_SDIO(PAD_PULLDN)
 			PD_SM_SDIO_VSELECT_SDIO(PAD_PULLDN)
 			PD_SM_SDIO_WP_SDIO(PAD_PULLUPIRQ)
 			PD_SM_SDIO_CD(PAD_PULLUPIRQ)
-		PINS_END
+#if defined(PD_SM_SDIO_PWR_EN_SDIO) || defined(PD_SM_SDIO_PWR_EN)
+#if defined(PD_SM_SDIO_PWR_EN_SDIO)
+			PD_SM_SDIO_PWR_EN_SDIO(PAD_PULLDN)
+#else
+			PD_SM_SDIO_PWR_EN(PAD_PULLDN)
+#endif
+#endif
+		)
+#else
+		pins_group(clk,
+			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_50M),
+			DN_SM_SDIO_CLK
+			drive-strength = <MTK_DRIVE_6mA>;
+		)
+
+		pins_group(cmd-data,
+			PD_SM_SDIO_CMD_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_DATA0_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_50M),
+			UP_SM_SDIO_DATA3
+			input-enable;
+			drive-strength = <MTK_DRIVE_6mA>;
+		)
+
+#if defined(PD_SM_SDIO_PWR_EN_SDIO) || defined(PD_SM_SDIO_PWR_EN)
+		pins_group(pwr,
+#if defined(PD_SM_SDIO_PWR_EN_SDIO)
+			PD_SM_SDIO_PWR_EN_SDIO(PAD_PULLDN),
+#else
+			PD_SM_SDIO_PWR_EN(PAD_PULLDN),
+#endif
+			DN_SM_SDIO_PWR_EN
+		)
+#endif
+
+		pins_group(pullup,
+#if defined(PD_SM_SDIO_WP_SDIO)
+			PD_SM_SDIO_WP_SDIO(PAD_PULLUPIRQ)
+#elif defined(PD_SM_SDIO_WP)
+			PD_SM_SDIO_WP(PAD_PULLUPIRQ)
+#endif
+			PD_SM_SDIO_CD(PAD_PULLUPIRQ),
+			UP_SM_SDIO_CD
+		)
+#endif
 	};
 
-	pinctrl2(SM_SDIO, 100mhz) {
-		PINS_START
+#ifdef SM_SDIO_UHS
+	pinctrl2(SM_SDIO, SM_SDIO_UHS) {
+#ifdef IMX
+		pins_group(sdio,
 			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_100M)
 			PD_SM_SDIO_CMD_SDIO(PAD_SDIO_100M)
 			PD_SM_SDIO_DATA0_SDIO(PAD_SDIO_100M)
 			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_100M)
 			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_100M)
 			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_100M)
-		PINS_END
-	};
+		)
+#else
+		pins_group(clk,
+			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_100M),
+			DN_SM_SDIO_CLK
+			drive-strength = <MTK_DRIVE_6mA>;
+		)
 
-	pinctrl2(SM_SDIO, 200mhz) {
-		PINS_START
+		pins_group(cmd_data,
+			PD_SM_SDIO_CMD_SDIO(PAD_SDIO_100M)
+			PD_SM_SDIO_DATA0_SDIO(PAD_SDIO_100M)
+			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_100M)
+			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_100M)
+			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_100M),
+			UP_SM_SDIO_DATA3
+			input-enable;
+			drive-strength = <MTK_DRIVE_6mA>;
+		)
+#endif
+	};
+#endif
+
+#ifdef SM_SDIO_UHS200
+	pinctrl2(SM_SDIO, SM_SDIO_UHS200) {
+		pins_group(,
 			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_200M)
 			PD_SM_SDIO_CMD_SDIO(PAD_SDIO_200M)
 			PD_SM_SDIO_DATA0_SDIO(PAD_SDIO_200M)
 			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_200M)
 			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_200M)
-			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_200M)
-		PINS_END
+			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_200M),
+		)
 	};
+#endif
 
 	pinctrl(SM_SER0) {
-		PINS_START
+		pins_group(uart,
 			PD_SM_SER0_RX_UART(PAD_PULLUP)
 			PD_SM_SER0_TX_UART(PAD_PULLUP)
+#ifdef PD_SM_SER0_RTS_UART
 			PD_SM_SER0_RTS_UART(PAD_PULLUP)
 			PD_SM_SER0_CTS_UART(PAD_PULLUP)
-		PINS_END
+#endif
+			, UP_SM_SER0_TX
+		)
 	};
 
 	pinctrl(SM_SER1) {
-		PINS_START
+		pins_group(uart,
 			PD_SM_SER1_RX_UART(PAD_PULLUP)
-			PD_SM_SER1_TX_UART(PAD_PULLUP)
-		PINS_END
+			PD_SM_SER1_TX_UART(PAD_PULLUP),
+			UP_SM_SER1_TX
+		)
 	};
 
 	pinctrl(SM_SER2) {
-		PINS_START
+		pins_group(uart,
 			PD_SM_SER2_RX_UART(PAD_PULLUP)
-			PD_SM_SER2_TX_UART(PAD_PULLUP)
-		PINS_END
+			PD_SM_SER2_TX_UART(PAD_PULLUP),
+			UP_SM_SER2_TX
+		)
 	};
 
+#ifdef SM_SPI0
 	pinctrl(SM_SPI0) {
-		PINS_START
+		pins_group(spi,
 			PD_SM_SPI0_CK_SPI(PAD_SPI0)
 			PD_SM_SPI0_DO_SPI(PAD_SPI0)
 			PD_SM_SPI0_DIN_SPI(PAD_SPI0)
 			PD_SM_SPI0_CS0(PAD_PULLUP)
-			PD_SM_SPI0_CS1(PAD_PULLUP)
-		PINS_END
+			PD_SM_SPI0_CS1(PAD_PULLUP),
+			bias-disable;
+		)
 	};
+#endif
 };
 
 / {
 	aliases {
+#ifdef SM_FB_HDMI
 		fb_hdmi = &SM_FB_HDMI;
+#endif
 		rtc0 = &rv3028;
+#ifdef SM_USBOTG_DWC
 		usb_mux = &usb_mux;
+#endif
 	};
 
 	chosen {
 		stdout-path = &SM_SER1;
 	};
 
+#ifdef SM_USBOTG_DWC
 	connector {
 		compatible = "usb-c-connector";
 		label = "USB-C";
@@ -275,6 +468,7 @@
 			};
 		};
 	};
+#endif
 
 #ifdef SM_I2C_CSI0
 	csi0_mclk: csi0-mclk {
@@ -375,6 +569,10 @@
 		regulator-name = "vref-3v3";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
+#ifdef GP_SM_SDIO_PWR_EN
+		gpio = GP_SM_SDIO_PWR_EN(GPIO_ACTIVE_HIGH);
+		enable-active-high;
+#endif
 	};
 
 #ifdef SM_I2S0
@@ -398,6 +596,7 @@
 #endif
 };
 
+#ifdef SM_SPI0
 &SM_SPI0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -412,7 +611,9 @@
 		spi-max-frequency = <500000>;
 	};
 };
+#endif
 
+#ifdef SM_ESPI
 &SM_ESPI {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -427,20 +628,25 @@
 		spi-max-frequency = <500000>;
 	};
 };
+#endif
 
+#ifdef SM_CAN0
 &SM_CAN0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ref(SM_CAN0)>;
 	status = "okay";
 	xceiver-supply = <&reg_can0_stby>;
 };
+#endif
 
+#ifdef SM_CAN1
 &SM_CAN1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ref(SM_CAN1)>;
 	status = "okay";
 	xceiver-supply = <&reg_can1_stby>;
 };
+#endif
 
 &SM_I2C_GP {
 	clock-frequency = <100000>;
@@ -503,11 +709,16 @@
 	};
 };
 
+#ifdef SM_USBOTG_DWC
 &i2c_gp_b {
 	usb_mux: hd3ss3220@60 {
 		/* tusb320 is compatible with hd3ss3220 */
 		compatible = "ti,hd3ss3220";
 		interrupts-extended = GP_SM_GPIO11(IRQ_TYPE_LEVEL_LOW);
+#ifdef PD_SM_GPIO11
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ref(hd3ss3220)>;
+#endif
 		reg = <0x60>;
 
 		ports {
@@ -530,10 +741,12 @@
 		};
 	};
 };
+#endif
 
-#ifdef SM_I2S0
+#if defined(SM_I2S0) || defined(SM_AFE)
 &i2c_gp_c {
 	wm8962: codec@1a {
+		#sound-dai-cells = <0>;
 		AVDD-supply = <&reg_vref_1v8>;
 		CPVDD-supply = <&reg_vref_1v8>;
 		DBVDD-supply = <&reg_vref_3v3>;
@@ -570,7 +783,7 @@
 		compatible = "nxp,pca9546";
 #ifdef PD_SM_GPIO13
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ref(mux9546_lcd)>;
+		pinctrl-0 = <&pinctrl_ref2(mux9546, lcd)>;
 #endif
 		reg = <0x73>;
 #ifdef GP_SM_GPIO13
@@ -625,12 +838,22 @@
 
 #ifdef SM_I2C_CSI0
 &SM_I2C_CSI0{
+#ifdef PD_SM_I2C_CSI0_CK_I2C
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_ref(SM_I2C_CSI0)>;
+	pinctrl-1 = <&pinctrl_ref2(SM_I2C_CSI0, 1)>;
+	scl-gpios = GP_SM_I2C_CSI0_CK(GPIO_OPEN_DRAIN);
+	sda-gpios = GP_SM_I2C_CSI0_DAT(GPIO_OPEN_DRAIN);
+	status = "okay";
+#endif
+
 	camera@10 {
 		compatible = "sony,imx219";
 		reg = <0x10>;
 		clocks = <&csi0_mclk>;
 		csi_id = <0>;
-		pwn-gpios = GP_SM_GPIO5(GPIO_ACTIVE_HIGH);
+		pwn-gpios = GP_SM_GPIO2(GPIO_ACTIVE_HIGH);
 		rst-gpios = GP_SM_GPIO0(GPIO_ACTIVE_LOW);
 		status = "okay";
 
@@ -649,13 +872,23 @@
 
 #ifdef SM_I2C_CSI1
 &SM_I2C_CSI1 {
+#ifdef PD_SM_I2C_CSI1_CK_I2C
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_ref(SM_I2C_CSI1)>;
+	pinctrl-1 = <&pinctrl_ref2(SM_I2C_CSI1, 1)>;
+	scl-gpios = GP_SM_I2C_CSI1_CK(GPIO_OPEN_DRAIN);
+	sda-gpios = GP_SM_I2C_CSI1_DAT(GPIO_OPEN_DRAIN);
+	status = "okay";
+#endif
+
 	camera@10 {
 		compatible = "sony,imx219";
 		reg = <0x10>;
 		clocks = <&csi0_mclk>;
 		csi_id = <1>;
-		pwn-gpios = GP_SM_CSI1_MCK(GPIO_ACTIVE_HIGH);
-		rst-gpios = GP_SM_GPIO3(GPIO_ACTIVE_LOW);
+		pwn-gpios = GP_SM_GPIO3(GPIO_ACTIVE_HIGH);
+		rst-gpios = GP_SM_CSI1_MCK(GPIO_ACTIVE_LOW);
 		status = "okay";
 
 		port {
@@ -671,13 +904,17 @@
 };
 #endif
 
+#ifdef SM_PCIE
 &SM_PCIE {
 	ext_osc = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ref(SM_PCIE)>;
+#ifndef PD_SM_PCIE_A_RST_OUT
 	reset-gpio = GP_SM_PCIE_A_RST(GPIO_ACTIVE_LOW);
+#endif
 	status = "okay";
 };
+#endif
 
 #ifdef SM_PCIE_PHY
 &SM_PCIE_PHY {
@@ -702,17 +939,25 @@
 };
 #endif
 
+#if defined(SM_SDIO_UHS) && defined(SM_SDIO_UHS200)
+#define _names(a, b, c) #a, #b, #c
+#elif defined(SM_SDIO_UHS)
+#define _names(a, b, c) #a, #b
+#else
+#define _names(a, b, c) #a
+#endif
+#define names(a, b, c)	_names(a, b, c)
+
 &SM_SDIO {
 	bus-width = <4>;
 	cd-gpios = GP_SM_SDIO_CD(GPIO_ACTIVE_LOW);
-#if 0
-	pinctrl-names = "default";
+	pinctrl-names = names(default, SM_SDIO_UHS, SM_SDIO_UHS200);
 	pinctrl-0 = <&pinctrl_ref(SM_SDIO)>;
-#else
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_ref(SM_SDIO)>;
-	pinctrl-1 = <&pinctrl_ref2(SM_SDIO, 100mhz)>;
-	pinctrl-2 = <&pinctrl_ref2(SM_SDIO, 200mhz)>;
+#ifdef SM_SDIO_UHS
+	pinctrl-1 = <&pinctrl_ref2(SM_SDIO, SM_SDIO_UHS)>;
+#endif
+#ifdef SM_SDIO_UHS200
+	pinctrl-2 = <&pinctrl_ref2(SM_SDIO, SM_SDIO_UHS200)>;
 #endif
 	status = "okay";
 	vmmc-supply = <&reg_vref_sdio>;
@@ -722,6 +967,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ref(SM_SER0)>;
 	status = "okay";
+#ifdef PD_SM_SER0_RTS_UART
+	uart-has-rtscts;
+#endif
 };
 
 &SM_SER1 {
@@ -737,14 +985,21 @@
 	status = "okay";
 };
 
+#ifdef SM_USBOTG
 &SM_USBOTG {
 	fsl,over-current-active-low;
 	fsl,vbus-oc-combined;
 	status = "okay";
 };
+#endif
 
+#ifdef SM_USBOTG_DWC
 &SM_USBOTG_DWC {
 	dr_mode = "otg";
+#ifdef PD_SM_USB0_IDDIG
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ref3(reg, usbotg, iddig)>;
+#endif
 	status = "okay";
 	usb-role-switch;
 	vbus-supply = <&reg_usb_otg_vbus>;
@@ -768,39 +1023,102 @@
 		};
 	};
 };
+#endif
 
+#ifdef SM_USBOTG_PHY
 &SM_USBOTG_PHY {
 	fsl,phy-tx-preemp-amp-tune = <2>;
 	status = "okay";
 	vbus-supply = <&reg_vref_5v0>;
 };
+#endif
 
-/* J11 mipi display */
+#ifdef SM_FB_MIPI
+/* J13 mipi display */
 #define MIPI_DISPLAY		SM_FB_MIPI
 #define MIPI_SUBSYSTEM		SM_FB_MIPI_SUBSYSTEM
 #define MIPI_PHY_CLOCK		SM_MIPI_PHY_CLOCK
+#ifdef SM_MIPI_PIXEL_CLOCK
 #define MIPI_PIXEL_CLOCK	SM_MIPI_PIXEL_CLOCK
+#endif
+
 #define MIPI_I2C_BUS		i2c_lcd_c
 #define MIPI_PWM		SM_PWM_LCD0
 
 #define GP_MIPI_PWM(a)		GP_SM_LCD0_BKLT_PWM(a)
 #define PD_MIPI_PWM(a)		PD_SM_LCD0_BKLT_PWM(a)	/* Pin 7, S141 */
 #define PD_MIPI_PWM_OUT(a)	PD_SM_LCD0_BKLT_PWM_OUT(a)
+#define DN_MIPI_PWM		DN_SM_LCD0_BKLT_PWM
+#define UP_MIPI_PWM		UP_SM_LCD0_BKLT_PWM
 
 #define GP_MIPI_IRQ(a)		GP_SM_CARRIER_STANDBY(a)
 #define PD_MIPI_IRQ(a)		PD_SM_CARRIER_STANDBY(a) /* Pin 8, S153 */
+#define DN_MIPI_IRQ		DN_SM_CARRIER_STANDBY
+#define UP_MIPI_IRQ		UP_SM_CARRIER_STANDBY
 
 #define GP_MIPI_TS_IRQ(a)	GP_SM_LCD0_BKLT_EN(a)
 #define PD_MIPI_TS_IRQ(a)	PD_SM_LCD0_BKLT_EN(a)	/* Pin 9, S127 */
+#define DN_MIPI_TS_IRQ		DN_SM_LCD0_BKLT_EN
+#define UP_MIPI_TS_IRQ		UP_SM_LCD0_BKLT_EN
 
 #define GP_MIPI_TS_RESET(a)	GP_SM_GPIO7(a)		/* Pin 10, P115 */
-#define PD_MIPI_TS_RESET(a)
+#define PD_MIPI_TS_RESET(a)	PD_SM_GPIO7(a)
+#define DN_MIPI_TS_RESET	DN_SM_GPIO7
+#define UP_MIPI_TS_RESET	UP_SM_GPIO7
 
 #define GP_MIPI_ENABLE(a)	GP_SM_LCD0_VDD_EN(a)
 #define PD_MIPI_ENABLE(a)	PD_SM_LCD0_VDD_EN(a)	/* Pin 11, S133 */
+#define DN_MIPI_ENABLE		DN_SM_LCD0_VDD_EN
+#define UP_MIPI_ENABLE		UP_SM_LCD0_VDD_EN
 
 #include "bd-universal-mipi-dsi.dtsi"
+#define MIPI_COMMANDS_DONE
+#endif
 
+#ifdef SM_FB_MIPI1
+/* J14 mipi display */
+#define MIPI1_DISPLAY		SM_FB_MIPI1
+#define MIPI1_SUBSYSTEM		SM_FB_MIPI1_SUBSYSTEM
+#define MIPI1_PHY_CLOCK		SM_MIPI1_PHY_CLOCK
+#ifdef SM_MIPI1_PIXEL_CLOCK
+#define MIPI1_PIXEL_CLOCK	SM_MIPI1_PIXEL_CLOCK
+#endif
+
+#define MIPI1_I2C_BUS		i2c_lcd_d
+#define MIPI1_PWM		SM_PWM_LCD1
+
+#define GP_MIPI1_PWM(a)		GP_SM_LCD1_BKLT_PWM(a)
+#define PD_MIPI1_PWM(a)		PD_SM_LCD1_BKLT_PWM(a)	/* Pin 7, S141 */
+#define PD_MIPI1_PWM_OUT(a)	PD_SM_LCD1_BKLT_PWM_OUT(a)
+#define DN_MIPI1_PWM		DN_SM_LCD1_BKLT_PWM
+#define UP_MIPI1_PWM		UP_SM_LCD1_BKLT_PWM
+
+#define GP_MIPI1_IRQ(a)		GP_SM_GPIO8(a)
+#define PD_MIPI1_IRQ(a)		PD_SM_GPIO8(a) /* Pin 8, S153 */
+#define DN_MIPI1_IRQ		DN_SM_GPIO8
+#define UP_MIPI1_IRQ		UP_SM_GPIO8
+
+#define GP_MIPI1_TS_IRQ(a)	GP_SM_LVDS1_BACKLIGHT_EN(a)
+#define PD_MIPI1_TS_IRQ(a)	PD_SM_LVDS1_BACKLIGHT_EN(a)	/* Pin 9, S127 */
+#define DN_MIPI1_TS_IRQ		DN_SM_LVDS1_BACKLIGHT_EN
+#define UP_MIPI1_TS_IRQ		UP_SM_LVDS1_BACKLIGHT_EN
+
+#define GP_MIPI1_TS_RESET(a)	GP_SM_EDP1_HPD(a)		/* Pin 10, P115 */
+#define PD_MIPI1_TS_RESET(a)	PD_SM_EDP1_HPD(a)
+#define DN_MIPI1_TS_RESET	DN_SM_EDP1_HPD
+#define UP_MIPI1_TS_RESET	UP_SM_EDP1_HPD
+
+#define GP_MIPI1_ENABLE(a)	GP_SM_LCD1_VDD_EN(a)
+#define PD_MIPI1_ENABLE(a)	PD_SM_LCD1_VDD_EN(a)	/* Pin 11, S133 */
+#define DN_MIPI1_ENABLE		DN_SM_LCD1_VDD_EN
+#define UP_MIPI1_ENABLE		UP_SM_LCD1_VDD_EN
+
+#define MIPI_	MIPI1_
+#define mipi	mipi1
+#include "bd-universal-mipi-dsi.dtsi"
+#endif
+
+#ifdef SM_FB_LVDS
 #define LVDS_DISPLAY		SM_FB_LVDS
 #define LVDS_I2C_BUS		SM_I2C_PM
 #define LVDS_PWM		SM_PWM_LCD0
@@ -818,7 +1136,8 @@
 #define GP_LVDS_TS_IRQ(a)	GP_SM_SMB_ALERT(a)
 #define PD_LVDS_TS_IRQ(a)	PD_SM_SMB_ALERT(a)	/* J23 Pin 4, P1 */
 
-#define GP_LVDS_TS_RESET(a)	GP_SM_ESPI_ALERT(a)
-#define PD_LVDS_TS_RESET(a)	PD_SM_ESPI_ALERT(a)	/* J23 Pin 3, S43 */
+#define GP_LVDS_TS_RESET(a)	GP_SM_ESPI_ALERT0(a)
+#define PD_LVDS_TS_RESET(a)	PD_SM_ESPI_ALERT0(a)	/* J23 Pin 3, S43 */
 #define LVDS_NO_TS_RESET				/* S43 not routed on 1st som run */
 #include "bd-universal-lvds.dtsi"
+#endif
