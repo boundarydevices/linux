@@ -4,6 +4,11 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
+
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #include <dt-bindings/phy/phy-imx8-pcie.h>
@@ -137,6 +142,7 @@
 	};
 };
 
+#ifndef UBOOT
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -147,6 +153,7 @@
 		};
 	};
 };
+#endif
 
 &ecspi2 {
 	pinctrl-names = "default";
@@ -223,6 +230,7 @@
 	};
 };
 
+#ifndef UBOOT
 &pcie0 {
 	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
 			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
@@ -247,6 +255,7 @@
 	fsl,tx-deemph-gen2 = <0xf>;
 	status = "okay";
 };
+#endif
 
 &sai1 {
 	assigned-clocks = <&clk IMX8MMN(AUDIO_PLL1)>, <&clk IMX8MMN(AUDIO_PLL2)>, <&clk IMX8MMN(CLK_SAI1)>;
@@ -266,6 +275,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -277,3 +287,4 @@
 &vpu_h1 {
 	status = "okay";
 };
+#endif
