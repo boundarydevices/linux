@@ -4,6 +4,10 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MP
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp.dtsi"
@@ -268,13 +272,16 @@
 		};
 	};
 
+#ifndef UBOOT
 	sound-xcvr {
 		compatible = "fsl,imx-audio-xcvr";
 		model = "imx-audio-xcvr";
 		cpu-dai = <&xcvr>;
 	};
+#endif
 };
 
+#ifndef UBOOT
 &A53_0 {
 	cpu-supply = <&buck2>;
 };
@@ -290,6 +297,7 @@
 &A53_3 {
 	cpu-supply = <&buck2>;
 };
+#endif
 
 &clk {
 	init-on-array = <IMX8MP_CLK_HSIO_ROOT>;
@@ -320,6 +328,7 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu_2d {
 	status = "okay";
 };
@@ -327,6 +336,7 @@
 &gpu_3d {
 	status = "okay";
 };
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -463,6 +473,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &isi_0 {
 	status = "disabled";
 
@@ -482,6 +493,7 @@
 		status = "okay";
 	};
 };
+#endif
 
 &lcdif1 {
 	status = "disabled";
@@ -495,6 +507,7 @@
 	status = "disabled";
 };
 
+#ifndef UBOOT
 &sdma2 {
 	status = "okay";
 };
@@ -502,6 +515,7 @@
 &snvs_pwrkey {
 	status = "okay";
 };
+#endif
 
 &uart1 { /* BT */
 	pinctrl-names = "default";
@@ -551,6 +565,7 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -566,6 +581,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
@@ -574,7 +590,9 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &xcvr {
 	#sound-dai-cells = <0>;
 	status = "okay";
 };
+#endif
