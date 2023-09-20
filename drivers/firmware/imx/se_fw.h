@@ -142,4 +142,12 @@ struct ele_mu_priv {
 	struct ele_imem_buf imem;
 };
 
+phys_addr_t get_phy_buf_mem_pool(struct device *dev,
+				 char *mem_pool_name,
+				 u32 **buf,
+				 uint32_t size);
+void free_phybuf_mem_pool(struct device *dev,
+			  char *mem_pool_name,
+			  u32 *buf,
+			  uint32_t size);
 #endif

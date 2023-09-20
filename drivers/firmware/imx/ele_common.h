@@ -9,6 +9,7 @@
 
 #include "se_fw.h"
 
+uint32_t plat_add_msg_crc(uint32_t *msg, uint32_t msg_len);
 int imx_ele_msg_send_rcv(struct ele_mu_priv *priv);
 void imx_se_free_tx_rx_buf(struct ele_mu_priv *priv);
 int imx_se_alloc_tx_rx_buf(struct ele_mu_priv *priv);
@@ -29,4 +30,11 @@ static inline int ele_trng_init(struct device *dev)
 #endif
 
 int ele_do_start_rng(struct device *dev);
+
+#ifdef CONFIG_PM_SLEEP
+int save_imem(struct device *dev);
+int restore_imem(struct device *dev,
+		 uint8_t *pool_name);
 #endif
+
+#endif /*__ELE_COMMON_H__ */

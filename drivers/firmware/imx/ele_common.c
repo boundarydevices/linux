@@ -45,6 +45,18 @@ void imx_se_free_tx_rx_buf(struct ele_mu_priv *priv)
 		devm_kfree(priv->dev, priv->rx_msg);
 }
 
+uint32_t plat_add_msg_crc(uint32_t *msg, uint32_t msg_len)
+{
+	uint32_t i;
+	uint32_t crc = 0;
+	uint32_t nb_words = msg_len / (uint32_t)sizeof(uint32_t);
+
+	for (i = 0; i < nb_words - 1; i++)
+		crc ^= *(msg + i);
+
+	return crc;
+}
+
 int imx_ele_msg_send_rcv(struct ele_mu_priv *priv)
 {
 	unsigned int wait;
@@ -177,3 +189,106 @@ int ele_do_start_rng(struct device *dev)
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+int save_imem(struct device *dev)
+{
+	int ret;
+	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+
+	/* EXPORT command will save encrypted IMEM to given address,
+	 * so later in resume, IMEM can be restored from the given
+	 * address.
+	 *
+	 * Size must be at least 64 kB.
+	 */
+	ret = ele_service_swap(dev,
+			       priv->imem.phyaddr,
+			       ELE_IMEM_SIZE,
+			       ELE_IMEM_EXPORT);
+	if (ret < 0)
+		dev_err(dev, "Failed to export IMEM\n");
+	else
+		dev_info(dev,
+				"Exported %d bytes of encrypted IMEM\n",
+				ret);
+
+	return ret;
+}
+
+int restore_imem(struct device *dev,
+		 uint8_t *pool_name)
+{
+	int ret;
+	u32 imem_state;
+	u32 *get_info_buf = NULL;
+	phys_addr_t get_info_phyaddr = 0;
+	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+
+	get_info_phyaddr
+		= pool_name ? get_phy_buf_mem_pool(dev,
+						   pool_name,
+						   &get_info_buf,
+						   DEVICE_GET_INFO_SZ)
+			    : 0x0;
+
+	if (!get_info_buf) {
+		dev_err(dev, "Unable to alloc sram from sram pool\n");
+		return -ENOMEM;
+	}
+
+	ret = ele_do_start_rng(dev);
+	if (ret)
+		goto exit;
+
+	/* get info from ELE */
+	ret = ele_get_info(dev, get_info_phyaddr, ELE_GET_INFO_READ_SZ);
+	if (ret) {
+		dev_err(dev, "Failed to get info from ELE.\n");
+		goto exit;
+	}
+
+	/* Get IMEM state, if 0xFE then import IMEM */
+	imem_state = (get_info_buf[ELE_IMEM_STATE_WORD]
+			& ELE_IMEM_STATE_MASK) >> 16;
+	if (imem_state == ELE_IMEM_STATE_BAD) {
+		/* IMPORT command will restore IMEM from the given
+		 * address, here size is the actual size returned by ELE
+		 * during the export operation
+		 */
+		ret = ele_service_swap(dev,
+				       priv->imem.phyaddr,
+				       priv->imem.size,
+				       ELE_IMEM_IMPORT);
+		if (ret) {
+			dev_err(dev, "Failed to import IMEM\n");
+			goto exit;
+		}
+	} else
+		goto exit;
+
+	/* After importing IMEM, check if IMEM state is equal to 0xCA
+	 * to ensure IMEM is fully loaded and
+	 * ELE functionality can be used.
+	 */
+	ret = ele_get_info(dev, get_info_phyaddr, ELE_GET_INFO_READ_SZ);
+	if (ret) {
+		dev_err(dev, "Failed to get info from ELE.\n");
+		goto exit;
+	}
+
+	imem_state = (get_info_buf[ELE_IMEM_STATE_WORD]
+			& ELE_IMEM_STATE_MASK) >> 16;
+	if (imem_state == ELE_IMEM_STATE_OK)
+		dev_info(dev, "Successfully restored IMEM\n");
+	else
+		dev_err(dev, "Failed to restore IMEM\n");
+
+exit:
+	if (pool_name && get_info_buf)
+		free_phybuf_mem_pool(dev, pool_name,
+				get_info_buf, DEVICE_GET_INFO_SZ);
+
+	return ret;
+}
+#endif

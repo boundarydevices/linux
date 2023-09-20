@@ -216,3 +216,56 @@ exit:
 
 	return ret;
 }
+
+int ele_service_swap(struct device *dev,
+		     phys_addr_t addr,
+		     u32 addr_size, u16 flag)
+{
+	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+	int ret;
+	unsigned int status;
+
+	ret = imx_se_alloc_tx_rx_buf(priv);
+	if (ret)
+		return ret;
+
+	ret = plat_fill_cmd_msg_hdr(priv,
+				    (struct mu_hdr *)&priv->tx_msg->header,
+				    ELE_SERVICE_SWAP_REQ,
+				    ELE_SERVICE_SWAP_REQ_MSG_SZ,
+				    true);
+	if (ret)
+		return ret;
+
+	priv->tx_msg->data[0] = flag;
+	priv->tx_msg->data[1] = addr_size;
+	priv->tx_msg->data[2] = ELE_NONE_VAL;
+	priv->tx_msg->data[3] = lower_32_bits(addr);
+	priv->tx_msg->data[4] = plat_add_msg_crc((uint32_t *)&priv->tx_msg[0],
+						 ELE_SERVICE_SWAP_REQ_MSG_SZ);
+	ret = imx_ele_msg_send_rcv(priv);
+	if (ret < 0)
+		return ret;
+
+	ret  = validate_rsp_hdr(priv,
+				priv->rx_msg->header,
+				ELE_SERVICE_SWAP_REQ,
+				ELE_SERVICE_SWAP_RSP_MSG_SZ,
+				true);
+	if (ret)
+		return ret;
+
+	status = RES_STATUS(priv->rx_msg->data[0]);
+	if (status != priv->success_tag) {
+		dev_err(dev, "Command Id[%d], Response Failure = 0x%x",
+			ELE_SERVICE_SWAP_REQ, status);
+		ret = -1;
+	} else {
+		if (flag == ELE_IMEM_EXPORT)
+			ret = priv->rx_msg->data[1];
+		else
+			ret = 0;
+	}
+
+	return ret;
+}

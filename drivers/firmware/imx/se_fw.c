@@ -52,6 +52,7 @@ struct imx_info {
 	/* platform specific flag to enable/disable the ELE True RNG */
 	bool start_rng;
 	bool enable_ele_trng;
+	bool imem_mgmt;
 };
 
 struct imx_info_list {
@@ -82,6 +83,7 @@ static const struct imx_info_list imx8ulp_info = {
 				.init_fw = false,
 				.start_rng = true,
 				.enable_ele_trng = false,
+				.imem_mgmt = true,
 			},
 	},
 };
@@ -107,6 +109,7 @@ static const struct imx_info_list imx93_info = {
 				.init_fw = true,
 				.start_rng = true,
 				.enable_ele_trng = true,
+				.imem_mgmt = false,
 			},
 	},
 };
@@ -211,7 +214,7 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 
 }
 
-static phys_addr_t get_phy_buf_mem_pool(struct device *dev,
+phys_addr_t get_phy_buf_mem_pool(struct device *dev,
 					char *mem_pool_name,
 					u32 **buf,
 					uint32_t size)
@@ -233,7 +236,7 @@ static phys_addr_t get_phy_buf_mem_pool(struct device *dev,
 	return gen_pool_virt_to_phys(mem_pool, (ulong)*buf);
 }
 
-static void free_phybuf_mem_pool(struct device *dev,
+void free_phybuf_mem_pool(struct device *dev,
 				 char *mem_pool_name,
 				 u32 *buf,
 				 uint32_t size)
@@ -1067,6 +1070,17 @@ static int se_probe_cleanup(struct platform_device *pdev)
 		priv->flags &= (~RESERVED_DMA_POOL);
 	}
 
+	/* free the buffer in ele-mu remove, previously allocated
+	 * in ele-mu probe to store encrypted IMEM
+	 */
+	if (priv->imem.buf) {
+		dmam_free_coherent(&pdev->dev,
+				   ELE_IMEM_SIZE,
+				   priv->imem.buf,
+				   priv->imem.phyaddr);
+		priv->imem.buf = NULL;
+	}
+
 	if (priv->ctxs) {
 		for (i = 0; i < priv->max_dev_ctx; i++) {
 			if (priv->ctxs[i])
@@ -1275,6 +1289,18 @@ static int se_fw_probe(struct platform_device *pdev)
 			dev_err(dev, "Failed to init ele-trng\n");
 	}
 
+	if (info->imem_mgmt) {
+		/* allocate buffer where ELE store encrypted IMEM */
+		priv->imem.buf = dmam_alloc_coherent(dev, ELE_IMEM_SIZE,
+						     &priv->imem.phyaddr,
+						     GFP_KERNEL);
+		if (!priv->imem.buf) {
+			dev_err(dev,
+				"dmam-alloc-failed: To store encr-IMEM.\n");
+			ret = -ENOMEM;
+			goto exit;
+		}
+	}
 	dev_info(dev, "i.MX secure-enclave: %s interface to firmware, configured.\n",
 		info->pdev_name[1]);
 
@@ -1297,16 +1323,26 @@ static int se_fw_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int se_fw_suspend(struct device *dev)
 {
+	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+	const struct imx_info *info = priv->info;
+
+	if (info && info->imem_mgmt)
+		priv->imem.size = save_imem(dev);
+
 	return 0;
 }
 
 static int se_fw_resume(struct device *dev)
 {
 	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+	const struct imx_info *info = priv->info;
 	int i;
 
 	for (i = 0; i < priv->max_dev_ctx; i++)
 		wake_up_interruptible(&priv->ctxs[i]->wq);
+
+	if (info && info->imem_mgmt)
+		restore_imem(dev, info->pool_name);
 
 	return 0;
 }
