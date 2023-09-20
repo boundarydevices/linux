@@ -4,6 +4,11 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
+
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
@@ -34,6 +39,7 @@
 	compatible = "boundary,imx8mm-nitrogen8_lite", "fsl,imx8mm";
 };
 
+#ifndef UBOOT
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -74,6 +80,7 @@
 	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
 };
+#endif
 
 &usbotg2 {
 	dr_mode = "host";
@@ -84,6 +91,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -99,3 +107,4 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
