@@ -4,8 +4,24 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
 
 #include "imx8mm.dtsi"
+/* panel-ltk080a60a004t.dtsi uses our standard irq pin for enable */
+#define GP_MIPI_IRQ(a)		<&gpio1 1 a>
+#define PD_MIPI_IRQ(a)	MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1	a
+#ifdef UBOOT
+#include "bd-universal.h"
+#include "panel-ltk080a60a004t.dtsi"
+#include "panel-m101nwwb.dtsi"
+#else
+#include "../bd-universal.h"
+#include "../panel-ltk080a60a004t.dtsi"
+#include "../panel-m101nwwb.dtsi"
+#endif
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -190,7 +206,6 @@
 
 	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
 		fsl,pins = <
-#define GP_LTK08_MIPI_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x116
 		>;
 	};
@@ -413,9 +428,6 @@
 	};
 };
 
-#include "../panel-ltk080a60a004t.dtsi"
-#include "../panel-m101nwwb.dtsi"
-
 / {
 	model = "Boundary Devices i.MX 8M Mini EM";
 	compatible = "boundary,imx8mm-em", "fsl,imx8mm";
@@ -597,9 +609,11 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu {
 	status = "okay";
 };
+#endif
 
 &i2c1 {
 	clock-frequency = <400000>;
@@ -968,6 +982,7 @@
 	};
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -993,6 +1008,7 @@
 	reset-gpio = GP_PCIE0_RESET;
 	status = "disabled";
 };
+#endif
 
 &pwm3 {
 	pinctrl-names = "default";
@@ -1089,6 +1105,7 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
+#ifndef UBOOT
 &vpu_g1 {
 	status = "okay";
 };
@@ -1100,6 +1117,7 @@
 &vpu_h1 {
 	status = "okay";
 };
+#endif
 
 &vpumix_pd {
 	dvfs-supply = <&reg_buck5>;
