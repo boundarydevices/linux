@@ -116,6 +116,18 @@
 			MX8MMN(IOMUXC_SPDIF_TX_SPDIF1_OUT, 0xd6)
 		>;
 	};
+
+	pinctrl_uart1: uart1grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_UART1_RXD_UART1_DCE_RX, 0x140)
+			MX8MMN(IOMUXC_UART1_TXD_UART1_DCE_TX, 0x140)
+			MX8MMN(IOMUXC_UART3_RXD_UART1_DCE_CTS_B, 0x140)
+			MX8MMN(IOMUXC_UART3_TXD_UART1_DCE_RTS_B, 0x140)
+#undef GP_BT_ENABLE
+#define GP_BT_ENABLE	<&gpio4 25 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI2_TXC_GPIO4_IO25, 0x119)
+		>;
+	};
 };
 
 / {
@@ -196,6 +208,7 @@
 		gpio = GP_REG_WLAN_VMMC;
 	};
 
+#ifndef UBOOT
 	sound-spdif {
 		compatible = "fsl,imx-audio-spdif";
 		model = "imx-spdif";
@@ -203,6 +216,7 @@
 		spdif-out;
 		spdif-in;
 	};
+#endif
 };
 
 &csi1_bridge {
@@ -250,6 +264,7 @@
 /delete-node/ &sai2;
 /delete-node/ &sai5;
 
+#ifndef UBOOT
 &spdif1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_spdif1>;
@@ -265,4 +280,11 @@
 	clock-names = "core", "rxtx0", "rxtx1", "rxtx2", "rxtx3",
 		"rxtx4", "rxtx5", "rxtx6", "rxtx7", "spba", "pll8k", "pll11k";
 	status = "okay";
+};
+#endif
+
+&uart1 { /* BT */
+	bluetooth {
+		enable-gpios = GP_BT_ENABLE;
+	};
 };
