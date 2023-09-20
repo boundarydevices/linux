@@ -158,7 +158,7 @@
 		status = "disabled";
 	};
 
-	mipi_ref_grp2(spi, lcd)@2f {
+	mipi_ref2(spi, lcd): spi@2f {
 		compatible = "nxp,sc18is602b";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrlm_ref(sc18is602b)>;
