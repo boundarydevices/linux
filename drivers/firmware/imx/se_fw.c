@@ -24,6 +24,7 @@
 #include <linux/sys_soc.h>
 
 #include "se_fw.h"
+#include "ele_fw_api.h"
 
 #define SOC_ID_OF_IMX8ULP		0x084D
 #define SOC_ID_OF_IMX93			0x9300
@@ -46,6 +47,7 @@ struct imx_info {
 	uint8_t *mbox_rx_name;
 	uint8_t *pool_name;
 	bool reserved_dma_ranges;
+	bool init_fw;
 };
 
 struct imx_info_list {
@@ -73,6 +75,7 @@ static const struct imx_info_list imx8ulp_info = {
 				.mbox_rx_name = "rx",
 				.pool_name = "sram",
 				.reserved_dma_ranges = true,
+				.init_fw = false,
 			},
 	},
 };
@@ -95,8 +98,9 @@ static const struct imx_info_list imx93_info = {
 				.mbox_rx_name = "rx",
 				.pool_name = NULL,
 				.reserved_dma_ranges = true,
+				.init_fw = true,
 			},
-		},
+	},
 };
 
 static const struct of_device_id se_fw_match[] = {
@@ -1228,6 +1232,13 @@ static int se_fw_probe(struct platform_device *pdev)
 			goto exit;
 		}
 		priv->flags |= RESERVED_DMA_POOL;
+	}
+
+	if (info->init_fw) {
+		/* start initializing ele fw */
+		ret = ele_init_fw(dev);
+		if (ret)
+			dev_err(dev, "Failed to initialize ele fw.\n");
 	}
 
 	if (info->socdev) {
