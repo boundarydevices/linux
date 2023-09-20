@@ -4,6 +4,15 @@
  */
 
 /dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MQ
+
+#ifdef UBOOT
+/* First 128KB is for PSCI ATF. */
+/memreserve/ 0x40000000 0x00020000;
+#endif
 
 #include "imx8mq.dtsi"
 
@@ -757,6 +766,7 @@
 			  3300000 0x0>;
 	};
 
+#ifndef UBOOT
 	resmem: reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -794,11 +804,14 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
+#endif
 
 	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "imx-audio-hdmi";
+#ifndef UBOOT
 		audio-cpu = <&sai4>;
+#endif
 		constraint-rate = <32000 44100 48000 96000 192000>;
 		protocol = <1>;
 		hdmi-out;
@@ -832,6 +845,7 @@
 	};
 };
 
+#ifndef UBOOT
 &ecspi1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
@@ -871,6 +885,7 @@
 		reg = <0>;
 	};
 };
+#endif
 
 &fec1 {
 	pinctrl-names = "default";
@@ -895,6 +910,7 @@
 	};
 };
 
+#ifndef UBOOT
 &gpu {
 	power-domains = <&pgc_gpu>;
 	status = "okay";
@@ -904,6 +920,7 @@
 	power-domains = <&pgc_gpu>;
 	status = "okay";
 };
+#endif
 
 &hdmi {
 	compatible = "cdn,imx8mq-hdmi";
@@ -1230,6 +1247,7 @@
 	};
 };
 
+#ifndef UBOOT
 &mu {
 	status = "okay";
 };
@@ -1318,6 +1336,7 @@
 		};
 	};
 };
+#endif
 
 &pwm1 {
 	pinctrl-names = "default";
@@ -1343,6 +1362,7 @@
 	status = "okay";
 };
 
+#ifndef UBOOT
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
@@ -1351,6 +1371,7 @@
 	assigned-clock-rates = <786432000>, <12288000>;
 	status = "okay";
 };
+#endif
 
 &uart1 { /* console */
 	pinctrl-names = "default";
@@ -1442,6 +1463,7 @@
 #endif
 };
 
+#ifndef UBOOT
 &vpu {
 	power-domains = <&pgc_vpu>;
 	regulator-supply = <&reg_vref_0v9>;
@@ -1451,6 +1473,7 @@
 &vpu_v4l2 {
 	status = "okay";
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
