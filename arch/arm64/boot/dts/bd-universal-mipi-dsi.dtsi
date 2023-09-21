@@ -528,7 +528,7 @@
 			};
 		};
 
-		tc358767_bus: MIPI_I2C_BUS@1 {
+		mipi_ref(tc358767_bus): MIPI_I2C_BUS@1 {
 			clock-frequency = <100000>;
 			reg = <1>;
 			#address-cells = <1>;
