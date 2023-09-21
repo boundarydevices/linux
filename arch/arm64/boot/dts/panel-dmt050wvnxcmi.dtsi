@@ -170,7 +170,7 @@
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
 #endif
-		spi = <&spidev_lcd>;
+		spi = <&mipi_ref2(spidev, lcd)>;
 		spi-9-bit;
 		spi-cmds-disable = /bits/ 8 <
 			DCS_S0P(0x10)		/* Enter sleep */
