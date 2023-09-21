@@ -966,7 +966,7 @@
 	status = "okay";
 };
 
-&spi_lcd {
+&mipi_ref2(spi, lcd) {
 	assigned-clocks = <&clk IMX8MMN(VIDEO_PLL1)>;
 	assigned-clock-rates = <384000000>;
 };
