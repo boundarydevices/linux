@@ -6,7 +6,8 @@
 #define concat(a, b)   _concat_(a, b)
 #define _concat_(a, b)  a ## b
 #define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
-#define pinctrl_ref(a) <&concat(pinctrl_, a)>
+#undef pinctrl_ref
+#define pinctrl_ref(a) concat(pinctrl_, a)
 
 &iomuxc {
 	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
@@ -421,7 +422,7 @@
 
 &MIPI_PWM {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(MIPI_PWM);
+	pinctrl-0 = <&pinctrl_ref(MIPI_PWM)>;
 	status = "okay";
 };
 
