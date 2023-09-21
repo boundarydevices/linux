@@ -182,7 +182,7 @@
 		mipi_dsi_bridge = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
 		pwm_mipi = &MIPI_PWM;
-		spi_lcd = &spi_lcd;
+		spi_lcd = &mipi_ref2(spi, lcd);
 		t_mipi = &t_mipi;
 		ts_atmel_mt = &ts_mipi_atmel_mt;
 		ts_ft5x06 = &ts_mipi_ft5x06;
@@ -220,7 +220,7 @@
 		status = "disabled";
 	};
 
-	spi_lcd: spi@2f {
+	mipi_ref2(spi, lcd): spi@2f {
 		compatible = "nxp,sc18is602b";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sc18is602b>;
@@ -230,7 +230,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		spidev_lcd: spidev@0 {
+		mipi_ref2(spidev, lcd): spidev@0 {
 			compatible = "spidev";
 			spi-cpha;
 			spi-cpol;
