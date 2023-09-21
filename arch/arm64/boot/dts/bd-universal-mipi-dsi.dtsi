@@ -97,7 +97,7 @@
 		>;
 	};
 
-	pinctrl_sn65dsi83: sn65dsi83grp {
+	pinctrlm_ref(sn65dsi83): sn65dsi83grp {
 		fsl,pins = <
 			PD_MIPI_IRQ(PAD_PULLDNIRQ)
 			PD_MIPI_ENABLE(PAD_PULLDN)
@@ -359,7 +359,7 @@
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
 		pinctrl-names = "sn65dsi83";
-		pinctrl-0 = <&pinctrl_sn65dsi83>;
+		pinctrl-0 = <&pinctrlm_ref(sn65dsi83)>;
 		power-supply = <&reg_vref_5v0>;
 		reg = <0>;
 		sn65dsi83 = <&mipi_to_lvds>;
