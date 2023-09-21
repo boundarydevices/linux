@@ -12,14 +12,15 @@
 #define concat8(a, b, c, d, e, f, g, h)   _concat8_(a, b, c, d, e, f, g, h)
 #define _concat8_(a, b, c, d, e, f, g, h)  a ## b ## c ## d ## e ## f ## g ## h
 
+#define pinctrl_ref(a) concat(pinctrl_, a)
+#define pinctrl_ref2(a, b) concat4(pinctrl_, a, _, b)
+#define pinctrl_ref3(a, b, c) concat6(pinctrl_, a, _, b, _, c)
+#define pinctrl_ref4(a, b, c, d) concat8(pinctrl_, a, _, b, _, c, _, d)
+
 #define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
 #define pinctrl2(a, b) concat4(pinctrl_, a, _, b): concat(a-b, grp)
 #define pinctrl3(a, b, c) concat6(pinctrl_, a, _, b, _, c): concat(a-b-c, grp)
 #define pinctrl4(a, b, c, d) concat8(pinctrl_, a, _, b, _, c, _, d): concat(a-b-c-d, grp)
-#define pinctrl_ref(a) <&concat(pinctrl_, a)>
-#define pinctrl_ref2(a, b) <&concat4(pinctrl_, a, _, b)>
-#define pinctrl_ref3(a, b, c) <&concat6(pinctrl_, a, _, b, _, c)>
-#define pinctrl_ref4(a, b, c, d) <&concat8(pinctrl_, a, _, b, _, c, _, d)>
 
 &iomuxc {
 	pinctrl-0 = <&pinctrl_hog>, <&pinctrl_hog_carrier>;
@@ -358,8 +359,8 @@
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
 		compatible = "regulator-fixed";
 		pinctrl-names = "off", "on";
-		pinctrl-0 = pinctrl_ref4(reg, usbotg, vbus, off);
-		pinctrl-1 = pinctrl_ref4(reg, usbotg, vbus, on);
+		pinctrl-0 = <&pinctrl_ref4(reg, usbotg, vbus, off)>;
+		pinctrl-1 = <&pinctrl_ref4(reg, usbotg, vbus, on)>;
 		regulator-name = "usb_otg_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
@@ -401,7 +402,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_SPI0);
+	pinctrl-0 = <&pinctrl_ref(SM_SPI0)>;
 	cs-gpios = GP_SM_SPI0_CS0(GPIO_ACTIVE_LOW), GP_SM_SPI0_CS1(GPIO_ACTIVE_LOW);
 	status = "okay";
 
@@ -416,7 +417,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_ESPI);
+	pinctrl-0 = <&pinctrl_ref(SM_ESPI)>;
 	cs-gpios = GP_SM_ESPI_CS0(GPIO_ACTIVE_LOW), GP_SM_ESPI_CS1(GPIO_ACTIVE_LOW);
 	status = "okay";
 
@@ -429,14 +430,14 @@
 
 &SM_CAN0 {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_CAN0);
+	pinctrl-0 = <&pinctrl_ref(SM_CAN0)>;
 	status = "okay";
 	xceiver-supply = <&reg_can0_stby>;
 };
 
 &SM_CAN1 {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_CAN1);
+	pinctrl-0 = <&pinctrl_ref(SM_CAN1)>;
 	status = "okay";
 	xceiver-supply = <&reg_can1_stby>;
 };
@@ -444,8 +445,8 @@
 &SM_I2C_GP {
 	clock-frequency = <100000>;
 	pinctrl-names = "default", "gpio";
-	pinctrl-0 = pinctrl_ref(SM_I2C_GP);
-	pinctrl-1 = pinctrl_ref2(SM_I2C_GP, 1);
+	pinctrl-0 = <&pinctrl_ref(SM_I2C_GP)>;
+	pinctrl-1 = <&pinctrl_ref2(SM_I2C_GP, 1)>;
 	scl-gpios = GP_SM_I2C_GP_CK(GPIO_OPEN_DRAIN);
 	sda-gpios = GP_SM_I2C_GP_DAT(GPIO_OPEN_DRAIN);
 	status = "okay";
@@ -559,8 +560,8 @@
 &SM_I2C_LCD {
 	clock-frequency = <100000>;
 	pinctrl-names = "default", "gpio";
-	pinctrl-0 = pinctrl_ref(SM_I2C_LCD);
-	pinctrl-1 = pinctrl_ref2(SM_I2C_LCD, 1);
+	pinctrl-0 = <&pinctrl_ref(SM_I2C_LCD)>;
+	pinctrl-1 = <&pinctrl_ref2(SM_I2C_LCD, 1)>;
 	scl-gpios = GP_SM_I2C_LCD_CK(GPIO_OPEN_DRAIN);
 	sda-gpios = GP_SM_I2C_LCD_DAT(GPIO_OPEN_DRAIN);
 	status = "okay";
@@ -569,7 +570,7 @@
 		compatible = "nxp,pca9546";
 #ifdef PD_SM_GPIO13
 		pinctrl-names = "default";
-		pinctrl-0 = pinctrl_ref(mux9546_lcd);
+		pinctrl-0 = <&pinctrl_ref(mux9546_lcd)>;
 #endif
 		reg = <0x73>;
 #ifdef GP_SM_GPIO13
@@ -615,8 +616,8 @@
 &SM_I2C_PM {
 	clock-frequency = <100000>;
 	pinctrl-names = "default", "gpio";
-	pinctrl-0 = pinctrl_ref(SM_I2C_PM);
-	pinctrl-1 = pinctrl_ref2(SM_I2C_PM, 1);
+	pinctrl-0 = <&pinctrl_ref(SM_I2C_PM)>;
+	pinctrl-1 = <&pinctrl_ref2(SM_I2C_PM, 1)>;
 	scl-gpios = GP_SM_I2C_PM_CK(GPIO_OPEN_DRAIN);
 	sda-gpios = GP_SM_I2C_PM_DAT(GPIO_OPEN_DRAIN);
 	status = "okay";
@@ -673,7 +674,7 @@
 &SM_PCIE {
 	ext_osc = <1>;
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_PCIE);
+	pinctrl-0 = <&pinctrl_ref(SM_PCIE)>;
 	reset-gpio = GP_SM_PCIE_A_RST(GPIO_ACTIVE_LOW);
 	status = "okay";
 };
@@ -688,7 +689,7 @@
 #ifdef SM_I2S0
 &SM_I2S0 {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_I2S0);
+	pinctrl-0 = <&pinctrl_ref(SM_I2S0)>;
 	status = "okay";
 };
 #endif
@@ -696,7 +697,7 @@
 #ifdef SM_I2S2
 &SM_I2S2 {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_I2S2);
+	pinctrl-0 = <&pinctrl_ref(SM_I2S2)>;
 	status = "okay";
 };
 #endif
@@ -706,12 +707,12 @@
 	cd-gpios = GP_SM_SDIO_CD(GPIO_ACTIVE_LOW);
 #if 0
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_SDIO);
+	pinctrl-0 = <&pinctrl_ref(SM_SDIO)>;
 #else
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = pinctrl_ref(SM_SDIO);
-	pinctrl-1 = pinctrl_ref2(SM_SDIO, 100mhz);
-	pinctrl-2 = pinctrl_ref2(SM_SDIO, 200mhz);
+	pinctrl-0 = <&pinctrl_ref(SM_SDIO)>;
+	pinctrl-1 = <&pinctrl_ref2(SM_SDIO, 100mhz)>;
+	pinctrl-2 = <&pinctrl_ref2(SM_SDIO, 200mhz)>;
 #endif
 	status = "okay";
 	vmmc-supply = <&reg_vref_sdio>;
@@ -719,20 +720,20 @@
 
 &SM_SER0 {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_SER0);
+	pinctrl-0 = <&pinctrl_ref(SM_SER0)>;
 	status = "okay";
 };
 
 &SM_SER1 {
 	/* console */
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_SER1);
+	pinctrl-0 = <&pinctrl_ref(SM_SER1)>;
 	status = "okay";
 };
 
 &SM_SER2 {
 	pinctrl-names = "default";
-	pinctrl-0 = pinctrl_ref(SM_SER2);
+	pinctrl-0 = <&pinctrl_ref(SM_SER2)>;
 	status = "okay";
 };
 
