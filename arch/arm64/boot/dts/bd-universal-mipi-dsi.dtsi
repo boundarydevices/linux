@@ -2,7 +2,10 @@
 /*
  * Copyright 2023 Boundary Devices
  */
+#include "bd-universal.h"
+#ifndef TC358867_I2C_BUS
 #define TC358867_I2C_BUS	<&MIPI_I2C_BUS>
+#endif
 #define concat(a, b)   _concat_(a, b)
 #define _concat_(a, b)  a ## b
 #define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
@@ -19,9 +22,7 @@
 
 	pinctrl_mipi_cs005_0004_03: mipi-cs005-0004-03grp {
 		fsl,pins = <
-#define GP_CS005_0004_03_BKL_EN		GP_MIPI_ENABLE(GPIO_ACTIVE_HIGH)
 			PD_MIPI_ENABLE(PAD_NOPULL)
-#define GP_CS005_0004_03_DISPLAY_EN	GP_MIPI_IRQ(GPIO_ACTIVE_HIGH)
 			PD_MIPI_IRQ(PAD_PULLDN)
 		>;
 	};
@@ -35,9 +36,7 @@
 
 	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
 		fsl,pins = <
-#define GP_LCD133_070_RESET	GP_MIPI_IRQ(GPIO_ACTIVE_LOW)
 			PD_MIPI_IRQ(PAD_PULLDN)
-#define GP_LCD133_070_ENABLE	GP_MIPI_ENABLE(GPIO_ACTIVE_HIGH)
 			PD_MIPI_ENABLE(PAD_PULLDN)
 		>;
 	};
@@ -441,7 +440,6 @@
 
 	pinctrl_mipi_er_tft050: mipi-er-tft050grp {
 		fsl,pins = <
-#define GP_TC358767_EN		GP_MIPI_ENABLE(GPIO_ACTIVE_HIGH)
 				PD_MIPI_ENABLE(PAD_PULLDN)
 		>;
 	};
