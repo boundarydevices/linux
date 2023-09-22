@@ -319,8 +319,6 @@
 };
 
 &mipi_csi_1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
 	port {
 		#address-cells = <1>;
@@ -341,8 +339,6 @@
 };
 
 &mipi_csi_2 {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
 	port {
 		#address-cells = <1>;
