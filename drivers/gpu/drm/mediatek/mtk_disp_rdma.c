@@ -161,7 +161,7 @@ void mtk_rdma_config(struct device *dev, unsigned int width,
 	if (is_dual_pipe)
 		width /= 2;
 	mtk_ddp_write_mask(cmdq_pkt, width, &rdma->cmdq_reg, rdma->regs,
-			   DISP_REG_RDMA_SIZE_CON_0, 0xfff);
+			   DISP_REG_RDMA_SIZE_CON_0, 0x1fff);
 	mtk_ddp_write_mask(cmdq_pkt, height, &rdma->cmdq_reg, rdma->regs,
 			   DISP_REG_RDMA_SIZE_CON_1, 0xfffff);
 
