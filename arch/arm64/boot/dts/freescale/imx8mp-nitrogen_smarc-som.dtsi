@@ -1185,8 +1185,6 @@
 #define PD_SM_ESPI_IO1_ESPI(a)		MX8MP_IOMUXC_ECSPI2_MISO__ECSPI2_MISO a
 #define GP_SM_ESPI_ALERT0(a)		<&mcp23018 8 (a | GPIO_PULL_UP)>
 #define PD_SM_ESPI_ALERT0(a)
-#define GP_SM_ESPI_ALERT(a)		<&mcp23018 8 (a | GPIO_PULL_UP)>
-#define PD_SM_ESPI_ALERT(a)
 #define GP_SM_ESPI_IO2(a)		<&mcp23018 5 (a | GPIO_PULL_UP)>
 #define PD_SM_ESPI_IO2(a)
 #define GP_SM_ESPI_RESET(a)		<&gpio4 29 a>
