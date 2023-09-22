@@ -129,4 +129,3 @@
 #define dsi1(a)		concat(a, 1)
 #define pinctrl_dsi(a)	c_(pinctrl_mipi1, a)
 #endif
-
