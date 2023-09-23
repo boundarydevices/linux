@@ -52,15 +52,14 @@
 #define ts_mipi_ref2(a, b)	concat3(ts_, mipi, concat(_, c_(a, b)))
 #define ts_mipi_ref_grp2(a, b) ts_mipi_ref(c_(a, b)): touchscreen-b
 
-#define mipi_ref(a)	a
+#define mipi_ref(a)	concat3(mipi, _, a)
 #define mipi_ref_grp(a)	mipi_ref(a): mipi-a
 
 #define mipi_ref2(a, b)	mipi_ref(c_(a, b))
 #define mipi_ref_grp2(a, b) mipi_ref2(a, b): mipi-a-b
 
-#undef pins_group
 #if defined(IMX8MM) || defined(IMX8MN) || defined(IMX8MP) || defined(IMX8MQ)
-#define IMX		1
+#define IMX
 #define IOMUX iomuxc
 #if defined(IMX8MQ)
 #define PAD_NOPULL		0x06
