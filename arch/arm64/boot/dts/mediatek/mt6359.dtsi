@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2021 MediaTek Inc.
  */
+
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/iio/mt635x-auxadc.h>
 
 &pwrap {
 	pmic: pmic {
@@ -293,8 +295,72 @@
 			};
 		};
 
+		pmic_auxadc: pmic-auxadc {
+			compatible = "mediatek,mt6359p-auxadc";
+			#io-channel-cells = <1>;
+
+			batadc {
+				channel = <AUXADC_BATADC>;
+				resistance-ratio = <7 2>;
+				avg-num = <128>;
+			};
+			bat-temp {
+				channel = <AUXADC_BAT_TEMP>;
+				resistance-ratio = <5 2>;
+			};
+			chip-temp {
+				channel = <AUXADC_CHIP_TEMP>;
+			};
+			vcore-temp {
+				channel = <AUXADC_VCORE_TEMP>;
+			};
+			vproc-temp {
+				channel = <AUXADC_VPROC_TEMP>;
+			};
+			vgpu-temp {
+				channel = <AUXADC_VGPU_TEMP>;
+			};
+			accdet {
+				channel = <AUXADC_ACCDET>;
+			};
+			dcxo-volt {
+				channel = <AUXADC_VDCXO>;
+				resistance-ratio = <3 2>;
+			};
+			tsx-temp {
+				channel = <AUXADC_TSX_TEMP>;
+				avg-num = <128>;
+			};
+			hpofs-cal {
+				channel = <AUXADC_HPOFS_CAL>;
+				avg-num = <256>;
+			};
+			dcxo-temp {
+				channel = <AUXADC_DCXO_TEMP>;
+				avg-num = <16>;
+			};
+			vbif {
+				channel = <AUXADC_VBIF>;
+				resistance-ratio = <5 2>;
+			};
+			imp {
+				channel = <AUXADC_IMP>;
+				resistance-ratio = <7 2>;
+				avg-num = <128>;
+			};
+		};
+
 		mt6359rtc: mt6359rtc {
 			compatible = "mediatek,mt6358-rtc";
+		};
+
+		pmic_efuse: pmic-efuse {
+			compatible = "mediatek,mt6359p-efuse";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			thermal_efuse_data1: e-data1 {
+				reg = <0x3e 10>;
+			};
 		};
 
 		mt6359keys: mt6359keys {
