@@ -198,12 +198,6 @@
 		>;
 	};
 
-	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
-			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x116
-		>;
-	};
-
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
 #define GP_PCIE0_RESET		<&gpio4 31 (GPIO_OPEN_DRAIN | GPIO_ACTIVE_LOW)>
