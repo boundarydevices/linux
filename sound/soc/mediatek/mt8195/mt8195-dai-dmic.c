@@ -257,6 +257,7 @@ static void mtk_dai_dmic_hw_gain_enable(struct mtk_base_afe *afe,
 		} else {
 			mtk_dai_dmic_hw_gain_on(afe, reorder_id, false);
 			mtk_dai_dmic_hw_gain_byass(afe, reorder_id, true);
+		}
 	}
 }
 
