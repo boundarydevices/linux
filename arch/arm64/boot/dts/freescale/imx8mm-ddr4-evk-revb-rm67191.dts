@@ -12,14 +12,6 @@
 #define PD_MIPI_IRQ(a)		MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8	a
 #include "../panel-ltk080a60a004t.dtsi"
 
-&iomuxc {
-	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
-			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8	0x116
-		>;
-	};
-};
-
 / {
 	reg_vref_5v: regulator-vref-5v {
 		compatible = "regulator-fixed";
