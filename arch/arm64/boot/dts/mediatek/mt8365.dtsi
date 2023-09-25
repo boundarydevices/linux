@@ -223,19 +223,19 @@
 
 			trips {
 				threshold: trip-point0 {
-					temperature = <95000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				target: trip-point1 {
-					temperature = <105000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_crit: cpu_crit0 {
-					temperature = <117000>;
+					temperature = <115000>;
 					hysteresis = <2000>;
 					type = "critical";
 				};
