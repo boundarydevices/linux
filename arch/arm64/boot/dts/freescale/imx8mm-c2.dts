@@ -223,27 +223,6 @@
 		>;
 	};
 
-	pinctrl_mipi_dlc0350gev06: mipi-dlc0350gev06grp {
-		fsl,pins = <
-/* Reset pin used as enable */
-#define GP_DLC0350_ENABLE	<&gpio1 3 GPIO_OPEN_DRAIN>
-			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x16)
-		>;
-	};
-
-	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
-		>;
-	};
-
-	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
-			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
-		>;
-	};
-
 	pinctrl_pwm2: pwm2grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_SPDIF_RX_PWM2_OUT, 0x16)
