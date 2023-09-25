@@ -28,6 +28,18 @@ DECLARE_PER_CPU(struct kvm_hyp_req, host_hyp_reqs);
 /* Protects domains in kvm_hyp_iommu_domains */
 static DEFINE_HYP_SPINLOCK(kvm_iommu_domain_lock);
 
+static atomic_t kvm_iommu_idmap_initialized;
+
+static inline void kvm_iommu_idmap_init_done(void)
+{
+	atomic_set_release(&kvm_iommu_idmap_initialized, 1);
+}
+
+static inline bool kvm_iommu_is_ready(void)
+{
+	return atomic_read_acquire(&kvm_iommu_idmap_initialized) == 1;
+}
+
 static int kvm_iommu_refill(struct kvm_hyp_memcache *host_mc)
 {
 	if (!kvm_iommu_ops)
@@ -100,7 +112,7 @@ void kvm_iommu_reclaim_pages(void *p, u8 order)
 }
 
 static struct kvm_hyp_iommu_domain *
-handle_to_domain(pkvm_handle_t domain_id)
+__handle_to_domain(pkvm_handle_t domain_id, bool alloc)
 {
 	int idx;
 	struct kvm_hyp_iommu_domain *domains;
@@ -112,6 +124,8 @@ handle_to_domain(pkvm_handle_t domain_id)
 	idx = domain_id / KVM_IOMMU_DOMAINS_PER_PAGE;
 	domains = (struct kvm_hyp_iommu_domain *)READ_ONCE(kvm_hyp_iommu_domains[idx]);
 	if (!domains) {
+		if (!alloc)
+			return NULL;
 		domains = kvm_iommu_donate_page();
 		if (!domains)
 			return NULL;
@@ -129,6 +143,12 @@ handle_to_domain(pkvm_handle_t domain_id)
 		}
 	}
 	return &domains[domain_id % KVM_IOMMU_DOMAINS_PER_PAGE];
+}
+
+static struct kvm_hyp_iommu_domain *
+handle_to_domain(pkvm_handle_t domain_id)
+{
+	return __handle_to_domain(domain_id, true);
 }
 
 static int domain_get(struct kvm_hyp_iommu_domain *domain)
@@ -433,7 +453,71 @@ int kvm_iommu_init_device(struct kvm_hyp_iommu *iommu)
 	return pkvm_init_power_domain(&iommu->power_domain, &iommu_power_ops);
 }
 
+static inline int pkvm_to_iommu_prot(int prot)
+{
+	switch (prot) {
+	case PKVM_HOST_MEM_PROT:
+		return IOMMU_READ | IOMMU_WRITE;
+	case PKVM_HOST_MMIO_PROT:
+		return IOMMU_READ | IOMMU_WRITE | IOMMU_MMIO;
+	case 0:
+		return 0;
+	default:
+		/* We don't understand that, it might cause corruption, so panic. */
+		BUG();
+	}
+
+	return 0;
+}
+
 void kvm_iommu_host_stage2_idmap(phys_addr_t start, phys_addr_t end,
 				 enum kvm_pgtable_prot prot)
 {
+	struct kvm_hyp_iommu_domain *domain;
+
+	if (!kvm_iommu_is_ready())
+		return;
+
+	domain = __handle_to_domain(KVM_IOMMU_DOMAIN_IDMAP_ID, false);
+
+	kvm_iommu_ops->host_stage2_idmap(domain, start, end, pkvm_to_iommu_prot(prot));
+}
+
+static int __snapshot_host_stage2(const struct kvm_pgtable_visit_ctx *ctx,
+				  enum kvm_pgtable_walk_flags visit)
+{
+	u64 start = ctx->addr;
+	kvm_pte_t pte = *ctx->ptep;
+	u32 level = ctx->level;
+	struct kvm_hyp_iommu_domain *domain = ctx->arg;
+	u64 end = start + kvm_granule_size(level);
+	int prot = IOMMU_READ | IOMMU_WRITE;
+
+	if (!addr_is_memory(start))
+		prot |= IOMMU_MMIO;
+
+	if (!pte || kvm_pte_valid(pte))
+		kvm_iommu_ops->host_stage2_idmap(domain, start, end, prot);
+
+	return 0;
+}
+
+int kvm_iommu_snapshot_host_stage2(struct kvm_hyp_iommu_domain *domain)
+{
+	int ret;
+	struct kvm_pgtable_walker walker = {
+		.cb	= __snapshot_host_stage2,
+		.flags	= KVM_PGTABLE_WALK_LEAF,
+		.arg = domain,
+	};
+	struct kvm_pgtable *pgt = &host_mmu.pgt;
+
+	hyp_spin_lock(&host_mmu.lock);
+	ret = kvm_pgtable_walk(pgt, 0, BIT(pgt->ia_bits), &walker);
+	/* Start receiving calls to host_stage2_idmap. */
+	if (!ret)
+		kvm_iommu_idmap_init_done();
+	hyp_spin_unlock(&host_mmu.lock);
+
+	return ret;
 }
