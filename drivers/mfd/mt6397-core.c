@@ -20,6 +20,7 @@
 #include <linux/mfd/mt6357/registers.h>
 #include <linux/mfd/mt6358/registers.h>
 #include <linux/mfd/mt6359/registers.h>
+#include <linux/mfd/mt6359p/registers.h>
 #include <linux/mfd/mt6397/registers.h>
 
 #define MT6323_RTC_BASE		0x8000
@@ -86,6 +87,10 @@ static const struct resource mt6357_keys_resources[] = {
 static const struct resource mt6397_keys_resources[] = {
 	DEFINE_RES_IRQ_NAMED(MT6397_IRQ_PWRKEY, "powerkey"),
 	DEFINE_RES_IRQ_NAMED(MT6397_IRQ_HOMEKEY, "homekey"),
+};
+
+static const struct resource mt6359p_auxadc_resources[] = {
+	DEFINE_RES_IRQ_NAMED(MT6359_IRQ_AUXADC_IMP, "imp"),
 };
 
 static const struct resource mt6323_pwrc_resources[] = {
@@ -170,6 +175,16 @@ static const struct mfd_cell mt6359_devs[] = {
 		.num_resources = ARRAY_SIZE(mt6359_keys_resources),
 		.resources = mt6359_keys_resources,
 		.of_compatible = "mediatek,mt6359-keys"
+	},
+	{
+		.name = "mt635x-auxadc",
+		.of_compatible = "mediatek,mt6359p-auxadc",
+		.num_resources = ARRAY_SIZE(mt6359p_auxadc_resources),
+		.resources = mt6359p_auxadc_resources,
+	},
+	{
+		.name = "mt6359p-efuse",
+		.of_compatible = "mediatek,mt6359p-efuse",
 	},
 };
 
