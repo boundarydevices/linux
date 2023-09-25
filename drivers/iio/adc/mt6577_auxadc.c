@@ -59,6 +59,16 @@ static const struct mtk_auxadc_compatible mt6765_compat = {
 	.check_global_idle = false,
 };
 
+static const struct mtk_auxadc_compatible mt8188_compat = {
+	.sample_data_cali = false,
+	.check_global_idle = false,
+};
+
+static const struct mtk_auxadc_compatible mt8195_compat = {
+	.sample_data_cali = false,
+	.check_global_idle = false,
+};
+
 #define MT6577_AUXADC_CHANNEL(idx) {				      \
 		.type = IIO_VOLTAGE,				      \
 		.indexed = 1,					      \
@@ -265,6 +275,7 @@ static int mt6577_auxadc_probe(struct platform_device *pdev)
 
 	adc_dev = iio_priv(indio_dev);
 	indio_dev->name = dev_name(&pdev->dev);
+	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->info = &mt6577_auxadc_info;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = mt6577_auxadc_iio_channels;
@@ -346,6 +357,8 @@ static const struct of_device_id mt6577_auxadc_of_match[] = {
 	{ .compatible = "mediatek,mt7622-auxadc", .data = &mt8173_compat},
 	{ .compatible = "mediatek,mt8173-auxadc", .data = &mt8173_compat},
 	{ .compatible = "mediatek,mt6765-auxadc", .data = &mt6765_compat},
+	{ .compatible = "mediatek,mt8188-auxadc", .data = &mt8188_compat},
+	{ .compatible = "mediatek,mt8195-auxadc", .data = &mt8195_compat},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, mt6577_auxadc_of_match);
