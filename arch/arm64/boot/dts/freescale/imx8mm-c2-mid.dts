@@ -234,19 +234,6 @@
 		>;
 	};
 
-	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio5 28 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_UART4_RXD_GPIO5_IO28, 0x100)	/* J8, pin 11, J8_GPIO2 */
-		>;
-	};
-
-	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
-			MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, 0x100)	/* J8, pin8, J8_GPIO1 */
-		>;
-	};
-
 	pinctrl_pwm1: pwm1grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_SPDIF_EXT_CLK_PWM1_OUT, 0x16)
