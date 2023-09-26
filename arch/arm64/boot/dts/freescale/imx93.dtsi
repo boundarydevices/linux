@@ -394,6 +394,8 @@
 				interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_LPUART1_GATE>;
 				clock-names = "ipg";
+				dmas = <&edma1 17 0 1>, <&edma1 16 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -403,8 +405,8 @@
 				interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_LPUART2_GATE>;
 				clock-names = "ipg";
-				dmas = <&edma1 18 0 0>, <&edma1 19 0 1>;
-				dma-names = "tx","rx";
+				dmas = <&edma1 19 0 1>, <&edma1 18 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -854,8 +856,8 @@
 				interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_LPUART3_GATE>;
 				clock-names = "ipg";
-				dmas = <&edma2 17 0 0>, <&edma2 18 0 1>;
-				dma-names = "tx","rx";
+				dmas = <&edma2 18 0 1>, <&edma2 17 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -865,8 +867,8 @@
 				interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_LPUART4_GATE>;
 				clock-names = "ipg";
-				dmas = <&edma2 19 0 0>, <&edma2 20 0 1>;
-				dma-names = "tx","rx";
+				dmas = <&edma2 20 0 1>, <&edma2 19 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -876,8 +878,8 @@
 				interrupts = <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_LPUART5_GATE>;
 				clock-names = "ipg";
-				dmas = <&edma2 21 0 0>, <&edma2 22 0 1>;
-				dma-names = "tx","rx";
+				dmas = <&edma2 22 0 1>, <&edma2 21 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -887,8 +889,8 @@
 				interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_LPUART6_GATE>;
 				clock-names = "ipg";
-				dmas = <&edma2 23 0 0>, <&edma2 24 0 1>;
-				dma-names = "tx","rx";
+				dmas = <&edma2 24 0 1>, <&edma2 23 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -982,8 +984,8 @@
 				interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_LPUART7_GATE>;
 				clock-names = "ipg";
-				dmas = <&edma2 87 0 0>, <&edma2 88 0 1>;
-				dma-names = "tx","rx";
+				dmas = <&edma2 88 0 1>, <&edma2 87 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -993,8 +995,8 @@
 				interrupts = <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_LPUART8_GATE>;
 				clock-names = "ipg";
-				dmas = <&edma2 89 0 0>, <&edma2 90 0 1>;
-				dma-names = "tx","rx";
+				dmas =  <&edma2 90 0 1>, <&edma2 89 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
