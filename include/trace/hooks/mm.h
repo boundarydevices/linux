@@ -68,6 +68,10 @@ DECLARE_HOOK(android_vh_calc_alloc_flags,
 	TP_PROTO(gfp_t gfp_mask, unsigned int *alloc_flags,
 		bool *bypass),
 	TP_ARGS(gfp_mask, alloc_flags, bypass));
+
+DECLARE_HOOK(android_vh_slab_folio_alloced,
+	TP_PROTO(unsigned int order, gfp_t flags),
+	TP_ARGS(order, flags));
 #endif /* _TRACE_HOOK_MM_H */
 
 /* This part must be outside protection */
