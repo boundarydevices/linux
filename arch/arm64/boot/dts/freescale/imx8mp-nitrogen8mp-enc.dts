@@ -182,6 +182,7 @@
 };
 
 &pcie_phy {
+	clocks = <&hsio_blk_ctrl>;
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
 };
 
