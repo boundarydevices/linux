@@ -212,6 +212,98 @@
 		num-channels = <2>;
 		wakeup-delay-ms = <30>;
 	};
+
+	pmic_temp: pmic-temp {
+		compatible = "mediatek,mt6359-pmic-temp";
+		io-channels =
+			<&pmic_auxadc AUXADC_CHIP_TEMP>,
+			<&pmic_auxadc AUXADC_VCORE_TEMP>,
+			<&pmic_auxadc AUXADC_VPROC_TEMP>,
+			<&pmic_auxadc AUXADC_VGPU_TEMP>;
+		io-channel-names =
+			"pmic_chip_temp",
+			"pmic_buck1_temp",
+			"pmic_buck2_temp",
+			"pmic_buck3_temp";
+
+		#thermal-sensor-cells = <1>;
+		nvmem-cells = <&thermal_efuse_data1>;
+		nvmem-cell-names = "e_data1";
+	};
+
+	tboard_thermistor1: tboard-thermistor1 {
+		compatible = "generic-adc-thermal";
+		#thermal-sensor-cells = <0>;
+		io-channels = <&auxadc 0>;
+		io-channel-names = "sensor-channel";
+		temperature-lookup-table = <    (-5000) 985
+						0 860
+						5000 740
+						10000 629
+						15000 530
+						20000 442
+						25000 367
+						30000 304
+						35000 251
+						40000 207
+						45000 171
+						50000 141
+						55000 117
+						60000 97
+						65000 81
+						70000 67
+						75000 56
+						80000 47
+						85000 40
+						90000 34
+						95000 29
+						100000 25
+						105000 21
+						110000 18
+						115000 15
+						120000 13
+						125000 12>;
+	};
+};
+
+&thermal_zones {
+	ap-ntc {
+		polling-delay = <1000>; /* milliseconds */
+		polling-delay-passive = <0>; /* milliseconds */
+		thermal-sensors = <&tboard_thermistor1>;
+	};
+	pmic-temp {
+		polling-delay = <1000>; /* milliseconds */
+		polling-delay-passive = <1000>; /* milliseconds */
+		thermal-sensors = <&pmic_temp 0>;
+
+		trips {
+			pmic_temp_crit: pmic-temp-crit@0 {
+				temperature = <130000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+		};
+	};
+	pmic-vcore {
+		polling-delay = <0>; /* milliseconds */
+		polling-delay-passive = <0>; /* milliseconds */
+		thermal-sensors = <&pmic_temp 1>;
+	};
+	pmic-vproc {
+		polling-delay = <0>; /* milliseconds */
+		polling-delay-passive = <0>; /* milliseconds */
+		thermal-sensors = <&pmic_temp 2>;
+	};
+	pmic-vgpu {
+		polling-delay = <0>; /* milliseconds */
+		polling-delay-passive = <0>; /* milliseconds */
+		thermal-sensors = <&pmic_temp 3>;
+	};
+};
+
+&auxadc {
+	status = "okay";
 };
 
 &afe {
