@@ -421,6 +421,7 @@ void vsi_convertROI(struct vsi_v4l2_ctx *ctx);
 void vsi_convertIPCM(struct vsi_v4l2_ctx *ctx);
 int vsiv4l2_verifycrop(struct v4l2_selection *s);
 void vsi_v4l2_update_ctrlcfg(struct v4l2_ctrl_config *cfg);
+int get_fmtprofile(struct vsi_v4l2_mediacfg *pcfg);
 
 static inline int isencoder(struct vsi_v4l2_ctx *ctx)
 {
