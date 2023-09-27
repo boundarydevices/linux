@@ -764,13 +764,25 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	cmd->comps = comps;
 	cmd->num_comps = num_comp;
 
-	if (cmd->user == MDP_CMDQ_USER_CAP &&
-	    cap_ctx->cap_status != CAP_STATUS_START) {
+	if (cmd->user == MDP_CMDQ_USER_M2M)
+		goto prepare_done;
+
+	/*
+	 * The mutex/clk should only be enabled in 1st frame and released when streaming
+	 * is stopped. There is no need for any additional allocation to comp in the process,
+	 * which prevents memory leaks.
+	 */
+	if (cap_ctx->cap_status != CAP_STATUS_START) {
 		cap_ctx->num_comps = num_comp;
 		cap_ctx->comps[pp_idx] = comps;
 		cap_ctx->mutex[pp_idx] = mutex;
+	} else {
+		kfree(cmd->comps);
+		cmd->comps = NULL;
+		cmd->num_comps = 0;
 	}
 
+prepare_done:
 	kfree(path);
 	return cmd;
 
