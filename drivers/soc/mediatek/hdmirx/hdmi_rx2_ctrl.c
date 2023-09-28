@@ -526,9 +526,9 @@ hdmi2_rx_var_init(struct MTK_HDMI *myhdmi)
 	myhdmi->u1TxEdidReadyOld = HDMI_PLUG_IDLE;
 	myhdmi->_fg2chPcmOnly = TRUE;
 
-	myhdmi->video_notify = 0;
-	myhdmi->audio_notify = 0;
-	myhdmi->hdmi_plugin = 0;
+	myhdmi->video_notify = HDMI_RX_TIMING_UNLOCK;
+	myhdmi->audio_notify = HDMI_RX_AUD_UNLOCK;
+	myhdmi->hdmi_plugin = HDMI_RX_PLUG_OUT;
 
 	memset(&myhdmi->aud_caps, 0, sizeof(struct AUDIO_CAPS));
 	memset(&myhdmi->aud_s, 0, sizeof(struct AUDIO_INFO));
