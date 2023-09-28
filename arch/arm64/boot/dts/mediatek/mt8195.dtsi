@@ -281,9 +281,9 @@
 	thermal_zones: thermal-zones {
 		soc_max {
 			polling-delay = <1000>; /* milliseconds */
-			polling-delay-passive = <1000>; /* milliseconds */
+			polling-delay-passive = <100>; /* milliseconds */
 			thermal-sensors = <&lvts 0>;
-			sustainable-power = <1500>;
+			sustainable-power = <5000>;
 
 			trips {
 				threshold: trip-point {
