@@ -126,9 +126,6 @@ static void mtk_plane_update_new_state(struct drm_plane_state *new_state,
 	pitch = fb->pitches[0];
 	format = fb->format->format;
 
-	addr += (new_state->src.x1 >> 16) * fb->format->cpp[0];
-	addr += (new_state->src.y1 >> 16) * pitch;
-
 	mtk_plane_state->pending.enable = true;
 	mtk_plane_state->pending.pitch = pitch;
 	mtk_plane_state->pending.format = format;
