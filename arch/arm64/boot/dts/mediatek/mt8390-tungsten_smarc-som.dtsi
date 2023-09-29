@@ -585,12 +585,8 @@
 		power-off-time-sec = <0>;
 
 		power-key{
-			linux,keycodes = <116>;
+			linux,keycodes = <KEY_POWER>;
 			wakeup-source;
-		};
-
-		home-key{
-			linux,keycodes = <114>;
 		};
 	};
 };
@@ -754,6 +750,7 @@
 &pciephy {
 	status = "okay";
 };
+#endif
 
 &ssusb {
 	maximum-speed = "high-speed";
@@ -762,6 +759,7 @@
 	wakeup-source;
 };
 
+#ifndef UBOOT
 &spi0 {
 	mediatek,pad-select = <0>;
 };
@@ -769,6 +767,7 @@
 &spi1 {
 	mediatek,pad-select = <0>;
 };
+#endif
 
 &u2port0 {
 	status = "okay";
@@ -809,6 +808,7 @@
 	vbus-supply = <&reg_hub>;
 };
 
+#ifndef UBOOT
 &ssusb2 {
 	dr_mode = "host";
 	maximum-speed = "high-speed";
@@ -860,7 +860,9 @@
 		};
 	};
 };
+#endif
 
+#ifndef UBOOT
 &mfg0 {
 	domain-supply = <&mt6359_vproc2_buck_reg>;
 };
@@ -1047,9 +1049,7 @@
 #define UP_SM_GPIO13			bias-pull-up;
 
 /* J2E */
-#ifndef UBOOT
 #define SM_USBOTG_DWC			ssusb
-#endif
 #define GP_SM_USB0_IDDIG(a)		<&GPIO 83 GPIO_ACTIVE_HIGH>
 #define PD_SM_USB0_IDDIG(a)		PINMUX_GPIO83__FUNC_B_GPIO83		/* USB0_IDDIG */
 #define DN_SM_USB0_IDDIG		bias-pull-down;
@@ -1270,7 +1270,7 @@
 #define PD_SM_GPIO9(a)			PINMUX_GPIO43__FUNC_B_GPIO43		/* KPCOL1 */
 #define GP_SM_GPIO10(a)			<&GPIO 44 a>
 #define PD_SM_GPIO10(a)			PINMUX_GPIO44__FUNC_B_GPIO44		/* KPROW0 */
-#define GP_SM_GPIO11(a)			<&GPIO 45 a>
+#define GP_SM_GPIO11(a)			<&pio 45 a>
 #define PD_SM_GPIO11(a)			PINMUX_GPIO45__FUNC_B_GPIO45		/* KPROW1 */
 #define DN_SM_GPIO11			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
 #define UP_SM_GPIO11			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
