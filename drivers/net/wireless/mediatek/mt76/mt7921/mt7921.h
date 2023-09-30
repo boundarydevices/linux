@@ -579,6 +579,7 @@ int mt7921_mcu_uni_add_beacon_offload(struct mt7921_dev *dev,
 int mt7921_init_acpi_sar(struct mt7921_dev *dev);
 int mt7921_init_acpi_sar_power(struct mt7921_phy *phy, bool set_default);
 u8 mt7921_acpi_get_flags(struct mt7921_phy *phy);
+u8 mt7921_acpi_get_mtcl_conf(struct mt7921_phy *phy, char *alpha2);
 #else
 static inline int
 mt7921_init_acpi_sar(struct mt7921_dev *dev)
@@ -596,6 +597,11 @@ static inline u8
 mt7921_acpi_get_flags(struct mt7921_phy *phy)
 {
 	return 0;
+}
+
+static inline u8 mt7921_acpi_get_mtcl_conf(struct mt7921_phy *phy, char *alpha2)
+{
+	return 0xf;
 }
 #endif
 int mt7921_set_tx_sar_pwr(struct ieee80211_hw *hw,
