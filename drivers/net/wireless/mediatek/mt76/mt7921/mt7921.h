@@ -35,6 +35,8 @@
 #define MT7921_FW_TAG_FEATURE		4
 #define MT7921_FW_CAP_CNM		BIT(7)
 
+#define MT7921_CHIP_CAP_CLC_EVT_EN BIT(0)
+
 #define MT7921_FIRMWARE_WM		"mediatek/WIFI_RAM_CODE_MT7961_1.bin"
 #define MT7921_ROM_PATCH		"mediatek/WIFI_MT7961_patch_mcu_1_2_hdr.bin"
 
@@ -57,6 +59,7 @@
 #define MT7921_SDIO_HDR_PKT_TYPE	GENMASK(17, 16)
 
 #define MCU_UNI_EVENT_ROC  0x27
+#define MCU_UNI_EVENT_CLC  0x80
 
 enum {
 	UNI_ROC_ACQUIRE,
@@ -254,6 +257,7 @@ struct mt7921_phy {
 
 	u8 sta_work_count;
 
+	u8 clc_chan_conf;
 	enum mt7921_reg_power_type power_type;
 	struct sk_buff_head scan_event_list;
 	struct delayed_work scan_work;
@@ -262,6 +266,7 @@ struct mt7921_phy {
 #endif
 
 	struct mt7921_clc *clc[MT7921_CLC_MAX_NUM];
+	u64 chip_cap;
 
 	struct work_struct roc_work;
 	struct timer_list roc_timer;
