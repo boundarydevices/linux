@@ -209,6 +209,14 @@ enum {
 	MT7921_CLC_MAX_NUM,
 };
 
+enum mt7921_reg_power_type {
+	MT_AP_UNSET = 0,
+	MT_AP_DEFAULT,
+	MT_AP_LPI,
+	MT_AP_SP,
+	MT_AP_VLP,
+};
+
 struct mt7921_clc_rule {
 	u8 alpha2[2];
 	u8 type[2];
@@ -246,6 +254,7 @@ struct mt7921_phy {
 
 	u8 sta_work_count;
 
+	enum mt7921_reg_power_type power_type;
 	struct sk_buff_head scan_event_list;
 	struct delayed_work scan_work;
 #ifdef CONFIG_ACPI
