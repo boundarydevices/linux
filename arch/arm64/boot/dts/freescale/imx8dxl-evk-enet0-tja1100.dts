@@ -57,6 +57,10 @@
 	};
 };
 
+&enet0_reset {
+	status = "disabled";
+};
+
 &max7322 {
 	status = "disabled";
 };
