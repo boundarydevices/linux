@@ -1611,4 +1611,9 @@ void kvm_set_vm_id_reg(struct kvm *kvm, u32 reg, u64 val);
 	(system_supports_fpmr() &&			\
 	 kvm_has_feat((k), ID_AA64PFR2_EL1, FPMR, IMP))
 
+/* Allocator interface IDs. */
+#define HYP_ALLOC_MGT_HEAP_ID		0
+
+unsigned long __pkvm_reclaim_hyp_alloc_mgt(unsigned long nr_pages);
+
 #endif /* __ARM64_KVM_HOST_H__ */
