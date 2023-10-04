@@ -993,6 +993,11 @@ hdmi_rx_power_off(struct MTK_HDMI *myhdmi)
 	}
 
 	RX_DEF_LOG("[RX]%s\n", __func__);
+
+	hdmirx_state_callback(myhdmi, HDMI_RX_TIMING_UNLOCK);
+	hdmirx_state_callback(myhdmi, HDMI_RX_AUD_UNLOCK);
+	hdmirx_state_callback(myhdmi, HDMI_RX_PWR_5V_CHANGE);
+
 	hdmi_rx_task_uninit(myhdmi);
 
 	for (temp = 0; temp < 10; temp++) {
@@ -1007,10 +1012,6 @@ hdmi_rx_power_off(struct MTK_HDMI *myhdmi)
 	}
 
 	myhdmi->power_on = 0;
-
-	hdmirx_state_callback(myhdmi, HDMI_RX_TIMING_UNLOCK);
-	hdmirx_state_callback(myhdmi, HDMI_RX_AUD_UNLOCK);
-	hdmirx_state_callback(myhdmi, HDMI_RX_PWR_5V_CHANGE);
 }
 
 void
