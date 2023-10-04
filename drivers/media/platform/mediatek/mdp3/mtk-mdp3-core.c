@@ -405,17 +405,15 @@ static int __maybe_unused mdp_suspend(struct device *dev)
 
 	atomic_set(&mdp->suspended, 1);
 
-	for (i = 0; i < MDP_CMDQ_USER_MAX; i++) {
-		if (atomic_read(&mdp->job_count[i])) {
-			ret = wait_event_timeout(mdp->callback_wq,
-						 !atomic_read(&mdp->job_count[i]),
-						 2 * HZ);
-			if (ret == 0) {
-				dev_err(dev,
-					"flushed cmdq task incomplete, user=%d, count=%d\n",
-					i, atomic_read(&mdp->job_count[i]));
-				return -EBUSY;
-			}
+	if (atomic_read(&mdp->job_count[MDP_CMDQ_USER_M2M])) {
+		ret = wait_event_timeout(mdp->callback_wq,
+					 !atomic_read(&mdp->job_count[MDP_CMDQ_USER_M2M]),
+					 2 * HZ);
+		if (ret == 0) {
+			dev_err(dev,
+				"flushed cmdq task incomplete, user=%d, count=%d\n",
+				i, atomic_read(&mdp->job_count[i]));
+			return -EBUSY;
 		}
 	}
 
