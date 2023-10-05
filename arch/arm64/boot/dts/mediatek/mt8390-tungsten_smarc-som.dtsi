@@ -73,54 +73,6 @@
 		};
 	};
 
-	pinctrl_aud_i2s0_master_in: aud-i2s0-master-ingrp {
-		pins-i2s0-in {
-			pinmux = <
-				PINMUX_GPIO107__FUNC_I0_SPLIN_MCK	/* I2SIN_MCK */
-				PINMUX_GPIO119__FUNC_B_GPIO119		/* I2SO2_D2 */
-				PINMUX_GPIO108__FUNC_I0_SPLIN_LRCK	/* I2SIN_BCK */
-				PINMUX_GPIO112__FUNC_B_GPIO112		/* I2SIN_D2 */
-				PINMUX_GPIO109__FUNC_I0_SPLIN_BCK	/* I2SIN_WS */
-				PINMUX_GPIO120__FUNC_B_GPIO120		/* I2SO2_D3 */
-				PINMUX_GPIO110__FUNC_I0_SPLIN_D0	/* I2SIN_D0 */
-			>;
-		};
-	};
-
-	pinctrl_aud_i2s0_master_out: aud-i2s0-master-outgrp {
-		pins-i2s0-master-out {
-			pinmux = <
-				PINMUX_GPIO107__FUNC_B_GPIO107		/* I2SIN_MCK */
-				PINMUX_GPIO119__FUNC_O_I2SO1_MCK	/* I2SO2_D2 */
-				PINMUX_GPIO108__FUNC_B_GPIO108		/* I2SIN_BCK */
-				PINMUX_GPIO112__FUNC_O_I2SO1_WS		/* I2SIN_D2 */
-				PINMUX_GPIO109__FUNC_B_GPIO109		/* I2SIN_WS */
-				PINMUX_GPIO120__FUNC_O_I2SO1_BCK	/* I2SO2_D3 */
-				PINMUX_GPIO113__FUNC_O_I2SO1_D0		/* I2SIN_D3 */
-			>;
-		};
-	};
-
-	pinctrl_aud_i2s2_master_in: aud-i2s2-master-ingrp {
-		pins-i2s2-in {
-			pinmux = <
-				PINMUX_GPIO116__FUNC_B0_I2SIN_WS	/* I2SO2_WS */
-				PINMUX_GPIO115__FUNC_B0_I2SIN_BCK	/* I2SO2_BCK */
-				PINMUX_GPIO118__FUNC_I0_I2SIN_D1	/* I2SO2_D1 */
-			>;
-		};
-	};
-
-	pinctrl_aud_i2s2_master_out: aud-i2s2-master-outgrp {
-		pins-i2s2-master-out {
-			pinmux = <
-				PINMUX_GPIO116__FUNC_B0_I2SO2_WS	/* I2SO2_WS */
-				PINMUX_GPIO115__FUNC_B0_I2SO2_BCK	/* I2SO2_BCK */
-				PINMUX_GPIO117__FUNC_O_I2SO2_D0		/* I2SO2_D0 */
-			>;
-		};
-	};
-
 	pinctrl_dptx: dptxgrp {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO46__FUNC_I0_DP_TX_HPD>;
@@ -196,30 +148,6 @@
 			bias-disable;
 		};
 	};
-
-	pinctrl_eth_gpio_rx: eth-gpio-rxgrp {
-		pins-rx-low {
-			pinmux =
-#define GP_PHY_RX_CTL		<&GPIO 141 GPIO_ACTIVE_HIGH>
-				<PINMUX_GPIO141__FUNC_B_GPIO141>;
-			output-low;
-		};
-		pins-rx-high {
-			pinmux =
-#define GP_PHY_RD0		<&GPIO 135 GPIO_ACTIVE_HIGH>
-				<PINMUX_GPIO135__FUNC_B_GPIO135>,
-#define GP_PHY_RD1		<&GPIO 136 GPIO_ACTIVE_HIGH>
-				<PINMUX_GPIO136__FUNC_B_GPIO136>,
-#define GP_PHY_RD2		<&GPIO 137 GPIO_ACTIVE_HIGH>
-				<PINMUX_GPIO137__FUNC_B_GPIO137>,
-#define GP_PHY_RD3		<&GPIO 138 GPIO_ACTIVE_HIGH>
-				<PINMUX_GPIO138__FUNC_B_GPIO138>,
-#define GP_PHY_RXC		<&GPIO 140 GPIO_ACTIVE_HIGH>
-				<PINMUX_GPIO140__FUNC_B_GPIO140>;
-			output-high;
-		};
-	};
-
 
 	pinctrl_hog: hoggrp {
 		pins-hog {
@@ -508,10 +436,9 @@
 	mediatek,mac-wol;
 	phy-mode ="rgmii-rxid";
 	phy-handle = <&ethernet_phy0>;
-	pinctrl-names = "default", "sleep", "gpio-rx";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_eth_default>;
 	pinctrl-1 = <&pinctrl_eth_sleep>;
-	pinctrl-2 = <&pinctrl_eth_gpio_rx>;
 	status = "okay";
 
 	mdio {
