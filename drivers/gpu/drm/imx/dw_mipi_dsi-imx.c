@@ -62,7 +62,7 @@ __dw_mipi_dsi_imx_mode_valid(void *priv_data,
 
 	ret = phy_mipi_dphy_get_default_config(mode->clock * MSEC_PER_SEC,
 					       bpp, dsi->lanes,
-					       &phy_cfg->mipi_dphy);
+					       &phy_cfg->mipi_dphy, 0, 0, 0);
 	if (ret < 0) {
 		DRM_DEV_DEBUG(dev, "failed to get default phy cfg %d\n", ret);
 		return MODE_ERROR;
@@ -180,7 +180,7 @@ dw_mipi_dsi_get_lane_mbps(void *priv_data, const struct drm_display_mode *mode,
 
 	ret = phy_mipi_dphy_get_default_config(mode->clock * MSEC_PER_SEC,
 					       bpp, lanes,
-					       &dsi->phy_cfg.mipi_dphy);
+					       &dsi->phy_cfg.mipi_dphy, 0, 0, 0);
 	if (ret < 0) {
 		DRM_DEV_ERROR(dev, "failed to get default phy cfg %d\n", ret);
 		return ret;
