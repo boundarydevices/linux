@@ -42,6 +42,15 @@
 		)
 	};
 
+#ifdef PD_SM_GPIO6
+	pinctrl2(mux9546, gp) {
+		pins_group(reset,
+			PD_SM_GPIO6(PAD_PULLDN),
+			DN_SM_GPIO6
+		)
+	};
+#endif
+
 #ifdef PD_SM_GPIO13
 	pinctrl2(mux9546, lcd) {
 		pins_group(reset,
@@ -659,8 +668,14 @@
 
 	mux9546-gp@73 {
 		compatible = "nxp,pca9546";
+#ifdef PD_SM_GPIO6
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ref2(mux9546, gp)>;
+#endif
 		reg = <0x73>;
+#ifdef GP_SM_GPIO6
 		reset-gpios = GP_SM_GPIO6(GPIO_ACTIVE_LOW);
+#endif
 		#address-cells = <1>;
 		#size-cells = <0>;
 
