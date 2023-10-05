@@ -1256,6 +1256,8 @@
 #define PD_SM_GPIO5(a)			PINMUX_GPIO10__FUNC_B_GPIO10		/* GPIO10 */
 #define GP_SM_GPIO6(a)			<&GPIO 6 a>
 #define PD_SM_GPIO6(a)			PINMUX_GPIO6__FUNC_B_GPIO6		/* GPIO06 */
+#define DN_SM_GPIO6			bias-pull-down;
+#define UP_SM_GPIO6			bias-pull-up;
 #define GP_SM_GPIO7(a)			<&GPIO 7 a>
 #define PD_SM_GPIO7(a)			PINMUX_GPIO7__FUNC_B_GPIO7		/* GPIO07 */
 #define DN_SM_GPIO7			bias-pull-down;
