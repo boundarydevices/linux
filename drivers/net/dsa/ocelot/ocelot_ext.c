@@ -60,7 +60,6 @@ static const struct felix_info vsc7512_info = {
 	.num_tx_queues			= OCELOT_NUM_TC,
 	.port_modes			= vsc7512_port_modes,
 	.phylink_mac_config		= ocelot_phylink_mac_config,
-	.configure_serdes		= ocelot_port_configure_serdes,
 };
 
 static int ocelot_ext_probe(struct platform_device *pdev)
