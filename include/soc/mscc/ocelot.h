@@ -11,6 +11,8 @@
 #include <linux/regmap.h>
 #include <net/dsa.h>
 
+struct phy;
+
 /* Port Group IDs (PGID) are masks of destination ports.
  *
  * For L2 forwarding, the switch performs 3 lookups in the PGID table for each
@@ -1026,6 +1028,7 @@ struct ocelot_port {
 	struct tc_taprio_qopt_offload	*taprio;
 
 	phy_interface_t			phy_mode;
+	struct phy			*serdes;
 
 	unsigned int			ptp_skbs_in_flight;
 	struct sk_buff_head		tx_skbs;
@@ -1380,9 +1383,6 @@ int ocelot_sb_occ_tc_port_bind_get(struct ocelot *ocelot, int port,
 				   unsigned int sb_index, u16 tc_index,
 				   enum devlink_sb_pool_type pool_type,
 				   u32 *p_cur, u32 *p_max);
-
-int ocelot_port_configure_serdes(struct ocelot *ocelot, int port,
-				 struct device_node *portnp);
 
 void ocelot_phylink_mac_config(struct ocelot *ocelot, int port,
 			       unsigned int link_an_mode,
