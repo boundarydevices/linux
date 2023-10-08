@@ -14,6 +14,7 @@
 		startup-delay-us = <0>;
 		off-on-delay-us  = <1000>;
 		gpio = <&pca9538 0 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&reg_rpi_3v3>;
 		enable-active-high;
 	};
 
@@ -25,6 +26,7 @@
 		startup-delay-us = <200>;
 		off-on-delay-us  = <500>;
 		gpio = <&pca9538 1 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&reg_rpi_3v3>;
 		enable-active-high;
 	};
 
@@ -36,6 +38,7 @@
 		startup-delay-us = <500>;
 		off-on-delay-us  = <200>;
 		gpio = <&pca9538 2 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&reg_rpi_3v3>;
 		enable-active-high;
 	};
 
@@ -149,6 +152,7 @@
 		reg = <0x70>;
 		gpio-controller;
 		#gpio-cells = <2>;
+		vcc-supply = <&reg_rpi_3v3>;
 		status = "okay";
 	};
 
