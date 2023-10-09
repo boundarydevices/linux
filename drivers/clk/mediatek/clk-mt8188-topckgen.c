@@ -3,6 +3,7 @@
 // Copyright (c) 2022 MediaTek Inc.
 // Author: Garmin Chang <garmin.chang@mediatek.com>
 
+#include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <dt-bindings/clock/mediatek,mt8188-clk.h>
@@ -1334,4 +1335,14 @@ static struct platform_driver clk_mt8188_topck_drv = {
 		.of_match_table = of_match_clk_mt8188_topck,
 	},
 };
-builtin_platform_driver(clk_mt8188_topck_drv);
+static int __init clk_mt8188_topck_driver_init(void)
+{
+	return platform_driver_register(&clk_mt8188_topck_drv);
+}
+subsys_initcall(clk_mt8188_topck_driver_init);
+
+static void __exit clk_mt8188_topck_driver_exit(void)
+{
+	platform_driver_unregister(&clk_mt8188_topck_drv);
+}
+module_exit(clk_mt8188_topck_driver_exit);
