@@ -5090,7 +5090,7 @@ static int lan78xx_reset_resume(struct usb_interface *intf)
 		struct phy_device *phydev = dev->net->phydev;
 
 		if (phydev->state == PHY_READY || phydev->state == PHY_HALTED)
-			phy_start(dev->net->phydev);
+			phy_start(phydev);
 	}
 
 	ret = lan78xx_resume(intf);
