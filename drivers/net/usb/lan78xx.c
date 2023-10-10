@@ -5076,7 +5076,12 @@ static int lan78xx_reset_resume(struct usb_interface *intf)
 	if (ret < 0)
 		return ret;
 
-	phy_start(dev->net->phydev);
+	if (test_bit(EVENT_DEV_OPEN, &dev->flags)) {
+		struct phy_device *phydev = dev->net->phydev;
+
+		if (phydev->state == PHY_READY || phydev->state == PHY_HALTED)
+			phy_start(phydev);
+	}
 
 	ret = lan78xx_resume(intf);
 
