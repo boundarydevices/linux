@@ -190,6 +190,8 @@ static irqreturn_t mtk_pmic_keys_irq_handler_thread(int irq, void *data)
 
 	pressed = !key_deb;
 
+	if (info->wakeup && !pressed)
+		pm_wakeup_event(info->keys->dev, 0);
 	input_report_key(info->keys->input_dev, info->keycode, pressed);
 	input_sync(info->keys->input_dev);
 
@@ -310,6 +312,7 @@ static int mtk_pmic_keys_probe(struct platform_device *pdev)
 	struct input_dev *input_dev;
 	const struct of_device_id *of_id =
 		of_match_device(of_mtk_pmic_keys_match_tbl, &pdev->dev);
+	int wakeup = 0;
 
 	keys = devm_kzalloc(&pdev->dev, sizeof(*keys), GFP_KERNEL);
 	if (!keys)
@@ -362,8 +365,10 @@ static int mtk_pmic_keys_probe(struct platform_device *pdev)
 			return error;
 		}
 
-		if (of_property_read_bool(child, "wakeup-source"))
+		if (of_property_read_bool(child, "wakeup-source")) {
 			keys->keys[index].wakeup = true;
+			wakeup = 1;
+		}
 
 		error = mtk_pmic_key_setup(keys, &keys->keys[index]);
 		if (error) {
@@ -385,6 +390,7 @@ static int mtk_pmic_keys_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, keys);
 
+	device_init_wakeup(&pdev->dev, wakeup);
 	return 0;
 }
 
