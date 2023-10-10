@@ -49,7 +49,7 @@
 #define ENETC_RSS_CFGE_DATA_SIZE(n)	(n)
 
 #define NTMP_REQ_RESP_LEN(req, resp)	(((req) << 20 & NTMP_REQ_LEN_MASK) | \
-					 ((resp) & NTMP_REQ_LEN_MASK))
+					 ((resp) & NTMP_RESP_LEN_MASK))
 
 static inline u32 netc_cbdr_read(void __iomem *reg)
 {
@@ -161,14 +161,8 @@ static int netc_xmit_ntmp_cmd(struct netc_cbdr *cbdr, union netc_cbd *cbd)
 
 	spin_lock_irqsave(&cbdr->ring_lock, flags);
 
-	if (unlikely(!netc_get_free_cbd_num(cbdr))) {
+	if (unlikely(!netc_get_free_cbd_num(cbdr)))
 		netc_clean_cbdr(cbdr);
-		/* Check again */
-		if (unlikely(!netc_get_free_cbd_num(cbdr))) {
-			err = -ENOSPC;
-			goto err_unlock;
-		}
-	}
 
 	i = cbdr->next_to_use;
 	ring_cbd = netc_get_cbd(cbdr, i);
@@ -188,14 +182,14 @@ static int netc_xmit_ntmp_cmd(struct netc_cbdr *cbdr, union netc_cbd *cbd)
 		goto err_unlock;
 	}
 
-	netc_clean_cbdr(cbdr);
-
 	/* Check the writeback error status */
 	status = le16_to_cpu(ring_cbd->ntmp_resp_hdr.error_rr) & NTMP_RESP_HDR_ERR;
 	if (unlikely(status)) {
 		dev_err(cbdr->dma_dev, "Command BD error: 0x%04x\n", status);
 		err = -EIO;
 	}
+
+	netc_clean_cbdr(cbdr);
 
 err_unlock:
 	spin_unlock_irqrestore(&cbdr->ring_lock, flags);
