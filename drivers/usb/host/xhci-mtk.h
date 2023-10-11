@@ -161,6 +161,8 @@ struct xhci_hcd_mtk {
 	int u3p_dis_msk;
 	struct regulator *vusb33;
 	struct regulator *vbus;
+	struct regulator *vdd1p2;
+	struct gpio_desc *reset;
 	struct clk_bulk_data clks[BULK_CLKS_NUM];
 	unsigned int has_ippc:1;
 	unsigned int lpm_support:1;
