@@ -8,6 +8,7 @@
  */
 
 #include <linux/dma-mapping.h>
+#include <linux/gpio/consumer.h>
 #include <linux/iopoll.h>
 #include <linux/kernel.h>
 #include <linux/mfd/syscon.h>
@@ -448,8 +449,10 @@ static int xhci_mtk_ldos_enable(struct xhci_hcd_mtk *mtk)
 
 static void xhci_mtk_ldos_disable(struct xhci_hcd_mtk *mtk)
 {
+	gpiod_set_value_cansleep(mtk->reset, 1);
 	regulator_disable(mtk->vbus);
 	regulator_disable(mtk->vusb33);
+	regulator_disable(mtk->vdd1p2);
 }
 
 static void xhci_mtk_quirks(struct device *dev, struct xhci_hcd *xhci)
@@ -526,6 +529,7 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 	struct device_node *node = dev->of_node;
 	struct xhci_hcd_mtk *mtk;
 	const struct hc_driver *driver;
+	struct gpio_desc *reset;
 	struct xhci_hcd *xhci;
 	struct resource *res;
 	struct usb_hcd *usb3_hcd;
@@ -543,6 +547,10 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mtk->dev = dev;
+	reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(reset))
+		return PTR_ERR(reset);
+
 	mtk->vbus = devm_regulator_get(dev, "vbus");
 	if (IS_ERR(mtk->vbus)) {
 		dev_err(dev, "fail to get vbus\n");
@@ -574,8 +582,11 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 			if (ret) {
 				dev_err(dev, "%s: vdd1p2 regulator_enable %d\n", __func__, ret);
 			}
+			mtk->vdd1p2 = vdd1p2;
 		}
 	}
+	gpiod_set_value_cansleep(reset, 0);
+	mtk->reset = reset;
 	ret = xhci_mtk_clks_get(mtk);
 	if (ret)
 		return ret;
