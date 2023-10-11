@@ -1825,6 +1825,9 @@ static const struct of_device_id mtk_seninf_of_match[] = {
 		.compatible = "mediatek,mt8365-seninf",
 		.data = &seninf_8365_conf,
 	},
+	{
+		/* Sentinel */
+	},
 };
 MODULE_DEVICE_TABLE(of, mtk_seninf_of_match);
 
