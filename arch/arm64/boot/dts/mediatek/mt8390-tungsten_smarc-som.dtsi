@@ -820,7 +820,6 @@
 	mediatek,force-vbus;
 	pinctrl-0 = <&pinctrl_ssusb2>;
 	pinctrl-names = "default";
-	reset-gpios = GP_SSUSB2_RESET;
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	wakeup-source;
@@ -838,6 +837,7 @@
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	vdd1p2-supply = <&mt6315_6_vbuck4>;
+	reset-gpios = GP_SSUSB2_RESET;
 	#address-cells = <1>;
 	#size-cells = <0>;
 
