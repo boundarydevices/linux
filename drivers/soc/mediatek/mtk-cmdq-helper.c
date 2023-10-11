@@ -792,7 +792,7 @@ int cmdq_pkt_poll_timeout(struct cmdq_pkt *pkt, u32 value, u8 subsys,
 	if (cnt_end_addr_mark) {
 		inst = (struct cmdq_instruction *)(pkt->va_base + cnt_end_addr_mark);
 		if (inst && inst->op == CMDQ_CODE_JUMP)
-			inst = (struct cmdq_instruction *)((u32)inst + CMDQ_INST_SIZE);
+			inst = (struct cmdq_instruction *)((uintptr_t)inst + CMDQ_INST_SIZE);
 		shift_pa = (pkt->cmd_buf_size - cnt_end_addr_mark - CMDQ_INST_SIZE) >> shift_bits;
 		if (inst) {
 			inst->arg_b = CMDQ_GET_ARG_B(shift_pa);
