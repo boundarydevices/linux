@@ -293,6 +293,7 @@ struct fman_mac {
 	struct phylink_pcs *sgmii_pcs;
 	struct phylink_pcs *qsgmii_pcs;
 	struct phylink_pcs *xfi_pcs;
+	struct phylink_pcs *c73_pcs;
 	bool allmulti_enabled;
 	bool rgmii_no_half_duplex;
 };
@@ -623,9 +624,11 @@ static u32 memac_if_mode(phy_interface_t interface)
 		return IF_MODE_GMII | IF_MODE_RGMII;
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_1000BASEX:
+	case PHY_INTERFACE_MODE_1000BASEKX:
 	case PHY_INTERFACE_MODE_QSGMII:
 		return IF_MODE_GMII;
 	case PHY_INTERFACE_MODE_10GBASER:
+	case PHY_INTERFACE_MODE_10GKR:
 		return IF_MODE_10G;
 	default:
 		WARN_ON_ONCE(1);
@@ -637,6 +640,9 @@ static struct phylink_pcs *memac_select_pcs(struct phylink_config *config,
 					    phy_interface_t iface)
 {
 	struct fman_mac *memac = fman_config_to_mac(config)->fman_mac;
+
+	if (phylink_autoneg_c73(config->cfg_link_an_mode))
+		return memac->c73_pcs;
 
 	switch (iface) {
 	case PHY_INTERFACE_MODE_SGMII:
@@ -657,6 +663,12 @@ static void memac_mac_config(struct phylink_config *config, unsigned int mode,
 	struct mac_device *mac_dev = fman_config_to_mac(config);
 	struct memac_regs __iomem *regs = mac_dev->fman_mac->regs;
 	u32 tmp = ioread32be(&regs->if_mode);
+
+	/* state->interface is only known at mac_link_up() time with C73
+	 * autoneg, so delay programming the IF_MODE register
+	 */
+	if (phylink_autoneg_c73(mode))
+		return;
 
 	tmp &= ~(IF_MODE_MASK | IF_MODE_RGMII);
 	tmp |= memac_if_mode(state->interface);
@@ -940,6 +952,7 @@ static int memac_free(struct fman_mac *memac)
 {
 	free_init_resources(memac);
 
+	pcs_put(memac->c73_pcs);
 	pcs_put(memac->sgmii_pcs);
 	pcs_put(memac->qsgmii_pcs);
 	pcs_put(memac->xfi_pcs);
@@ -1102,6 +1115,11 @@ int memac_initialization(struct mac_device *mac_dev,
 	if (err)
 		goto _return_fm_mac_free;
 
+	err = memac_get_optional_pcs(mac_dev, mac_node, &memac->c73_pcs,
+				     "c73", serdes);
+	if (err)
+		goto _return_fm_mac_free;
+
 	/* For compatibility, if pcs-handle-names is missing, we assume this
 	 * phy is the first one in pcsphy-handle
 	 */
@@ -1125,12 +1143,6 @@ int memac_initialization(struct mac_device *mac_dev,
 	if (mac_dev->phy_if == PHY_INTERFACE_MODE_XGMII)
 		mac_dev->phy_if = PHY_INTERFACE_MODE_10GBASER;
 
-	/* TODO: The following interface modes are supported by (some) hardware
-	 * but not by this driver:
-	 * - 1000BASE-KX
-	 * - 10GBASE-KR
-	 * - XAUI/HiGig
-	 */
 	supported = mac_dev->phylink_config.supported_interfaces;
 
 	/* Note that half duplex is only supported on 10/100M interfaces. */
@@ -1153,7 +1165,13 @@ int memac_initialization(struct mac_device *mac_dev,
 						  mac_dev->phy_if,
 						  supported);
 
-	if (!memac->sgmii_pcs && !memac->qsgmii_pcs && !memac->xfi_pcs) {
+	if (memac->c73_pcs)
+		lynx_pcs_set_supported_interfaces(memac->c73_pcs,
+						  mac_dev->phy_if,
+						  supported);
+
+	if (!memac->sgmii_pcs && !memac->qsgmii_pcs && !memac->xfi_pcs &&
+	    !memac->c73_pcs) {
 		phy_interface_set_rgmii(supported);
 		__set_bit(PHY_INTERFACE_MODE_MII, supported);
 	}
