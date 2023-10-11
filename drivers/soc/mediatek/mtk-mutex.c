@@ -1108,9 +1108,9 @@ void mtk_mutex_cross_sys_config(struct mtk_mutex *mutex0, struct mtk_mutex *mute
 	unsigned int offset;
 	int i;
 
-	if ((mtx0->data->mutex_cross_sys_config_num) && (mtx0->data->mutex_cross_sys_config))
-		for (i = 0; i < mtx0->data->mutex_cross_sys_config_num; i++)
-			if (mtx0->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid0)
+	if ((mtx0->data->mutex_cross_sys_config_num) && (mtx0->data->mutex_cross_sys_config)) {
+		for (i = 0; i < mtx0->data->mutex_cross_sys_config_num; i++) {
+			if (mtx0->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid0) {
 				if (mtx0->data->mutex_cross_sys_config[i].mod_id < 32) {
 					offset = DISP_REG_MUTEX_MOD(mtx0->data->mutex_mod_reg,
 								    mutex0->id);
@@ -1124,10 +1124,13 @@ void mtk_mutex_cross_sys_config(struct mtk_mutex *mutex0, struct mtk_mutex *mute
 					1 << (mtx0->data->mutex_cross_sys_config[i].mod_id - 32);
 					writel_relaxed(reg, mtx0->regs + offset);
 				}
+			}
+		}
+	}
 
-	if ((mtx1->data->mutex_cross_sys_config_num) && (mtx1->data->mutex_cross_sys_config))
-		for (i = 0; i < mtx1->data->mutex_cross_sys_config_num; i++)
-			if (mtx1->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid1)
+	if ((mtx1->data->mutex_cross_sys_config_num) && (mtx1->data->mutex_cross_sys_config)) {
+		for (i = 0; i < mtx1->data->mutex_cross_sys_config_num; i++) {
+			if (mtx1->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid1) {
 				if (mtx1->data->mutex_cross_sys_config[i].mod_id < 32) {
 					offset = DISP_REG_MUTEX_MOD(mtx1->data->mutex_mod_reg,
 								    mutex1->id);
@@ -1141,6 +1144,9 @@ void mtk_mutex_cross_sys_config(struct mtk_mutex *mutex0, struct mtk_mutex *mute
 					1 << (mtx1->data->mutex_cross_sys_config[i].mod_id - 32);
 					writel_relaxed(reg, mtx1->regs + offset);
 				}
+			}
+		}
+	}
 
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_cross_sys_config);
@@ -1158,9 +1164,9 @@ void mtk_mutex_cross_sys_deconfig(struct mtk_mutex *mutex0, struct mtk_mutex *mu
 	unsigned int offset;
 	int i;
 
-	if ((mtx0->data->mutex_cross_sys_config_num) && (mtx0->data->mutex_cross_sys_config))
-		for (i = 0; i < mtx0->data->mutex_cross_sys_config_num; i++)
-			if (mtx0->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid0)
+	if ((mtx0->data->mutex_cross_sys_config_num) && (mtx0->data->mutex_cross_sys_config)) {
+		for (i = 0; i < mtx0->data->mutex_cross_sys_config_num; i++) {
+			if (mtx0->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid0) {
 				if (mtx0->data->mutex_cross_sys_config[i].mod_id < 32) {
 					offset = DISP_REG_MUTEX_MOD(mtx0->data->mutex_mod_reg,
 								    mutex0->id);
@@ -1174,10 +1180,13 @@ void mtk_mutex_cross_sys_deconfig(struct mtk_mutex *mutex0, struct mtk_mutex *mu
 					~(1 << (mtx0->data->mutex_cross_sys_config[i].mod_id - 32));
 					writel_relaxed(reg, mtx0->regs + offset);
 				}
+			}
+		}
+	}
 
-	if ((mtx1->data->mutex_cross_sys_config_num) && (mtx1->data->mutex_cross_sys_config))
-		for (i = 0; i < mtx1->data->mutex_cross_sys_config_num; i++)
-			if (mtx1->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid1)
+	if ((mtx1->data->mutex_cross_sys_config_num) && (mtx1->data->mutex_cross_sys_config)) {
+		for (i = 0; i < mtx1->data->mutex_cross_sys_config_num; i++) {
+			if (mtx1->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid1) {
 				if (mtx1->data->mutex_cross_sys_config[i].mod_id < 32) {
 					offset = DISP_REG_MUTEX_MOD(mtx1->data->mutex_mod_reg,
 								    mutex1->id);
@@ -1191,6 +1200,9 @@ void mtk_mutex_cross_sys_deconfig(struct mtk_mutex *mutex0, struct mtk_mutex *mu
 					~(1 << (mtx1->data->mutex_cross_sys_config[i].mod_id - 32));
 					writel_relaxed(reg, mtx1->regs + offset);
 				}
+			}
+		}
+	}
 
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_cross_sys_deconfig);
