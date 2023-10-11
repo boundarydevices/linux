@@ -782,6 +782,7 @@ int mtk_cam_video_register(struct mtk_cam_dev *cam)
 
 	/* Initialize miscellaneous variables */
 	mutex_init(&cam_vdev->vdev_lock);
+	mutex_init(&cam->protect_mutex);
 	INIT_LIST_HEAD(&cam->buf_list);
 
 	ret = video_register_device(vdev, VFL_TYPE_VIDEO, -1);
@@ -803,6 +804,7 @@ int mtk_cam_video_register(struct mtk_cam_dev *cam)
 fail_vdev_ureg:
 	video_unregister_device(vdev);
 fail_vb2_rel:
+	mutex_destroy(&cam->protect_mutex);
 	mutex_destroy(&cam_vdev->vdev_lock);
 	vb2_queue_release(vbq);
 fail_media_clean:
@@ -813,9 +815,12 @@ fail_media_clean:
 
 void mtk_cam_video_unregister(struct mtk_cam_video_device *vdev)
 {
+	struct mtk_cam_dev *cam = video_get_drvdata(&vdev->vdev);
+
 	video_unregister_device(&vdev->vdev);
 	vb2_queue_release(&vdev->vbq);
 	media_entity_cleanup(&vdev->vdev.entity);
+	mutex_destroy(&cam->protect_mutex);
 	mutex_destroy(&vdev->vdev_lock);
 	vb2_dma_contig_clear_max_seg_size(&vdev->vdev.dev);
 }
