@@ -45,7 +45,7 @@ struct mtk_cam_dev_buffer {
 	struct vb2_v4l2_buffer v4l2_buf;
 	struct list_head list;
 	dma_addr_t daddr;
-	dma_addr_t fhaddr;
+	void *vaddr;
 };
 
 struct mtk_cam_sparams {

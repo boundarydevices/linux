@@ -278,11 +278,8 @@ static int mtk_cam_vb2_buf_prepare(struct vb2_buffer *vb)
 		vb2_set_plane_payload(vb, i, size);
 	}
 
-	if (buf->daddr == 0ULL) {
+	if (buf->daddr == 0ULL)
 		buf->daddr = vb2_dma_contig_plane_dma_addr(vb, 0);
-		if (cam->conf->enableFH)
-			buf->fhaddr = vb2_dma_contig_plane_dma_addr(vb, 1);
-	}
 
 	return 0;
 }
@@ -406,10 +403,10 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 
 	/* Create dummy buffer */
 	cam->dummy_size = fmt->plane_fmt[0].sizeimage;
-	cam->dummy.fhaddr = dma_alloc_coherent(cam->dev,
-					       cam->dummy_size,
-					       &cam->dummy.daddr, GFP_KERNEL);
-	if (!cam->dummy.fhaddr) {
+	cam->dummy.vaddr = dma_alloc_coherent(cam->dev,
+					      cam->dummy_size,
+					      &cam->dummy.daddr, GFP_KERNEL);
+	if (!cam->dummy.vaddr) {
 		dev_err(cam->dev, "can't allocate dummy buffer\n");
 		ret = -ENOMEM;
 		goto fail_no_buffer;
@@ -465,9 +462,9 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	}
 
 	/* Destroy dummy buffer */
-	if (cam->dummy.fhaddr) {
+	if (cam->dummy.vaddr) {
 		dma_free_coherent(cam->dev, cam->dummy_size,
-				  cam->dummy.fhaddr,
+				  cam->dummy.vaddr,
 				  cam->dummy.daddr);
 		memset(&cam->dummy, 0, sizeof(cam->dummy));
 		cam->dummy_size = 0;
