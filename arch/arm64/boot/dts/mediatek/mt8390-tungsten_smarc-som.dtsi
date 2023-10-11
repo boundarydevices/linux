@@ -371,6 +371,13 @@
 			output-low;
 		};
 	};
+
+	pinctrl_watchdog: watchdoggrp {
+		watchdog-pin {
+			pinmux = <PINMUX_GPIO100__FUNC_O_WATCHDOG>;	/* PMIC_WATCHDOG */
+			bias-pull-up;
+		};
+	};
 };
 
 / {
@@ -703,10 +710,6 @@
 };
 #endif
 
-&mt6359_vcn18_ldo_reg {
-	regulator-always-on;
-};
-
 #ifndef UBOOT
 &spmi {
 	#address-cells = <2>;
@@ -966,6 +969,11 @@
 	domain-supply = <&mt6359_vproc1_buck_reg>;
 };
 #endif
+
+&watchdog {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_watchdog>;
+};
 
 #define MEDIATEK
 #define IOMUX pio
