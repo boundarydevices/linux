@@ -212,9 +212,17 @@ static const struct mt9m114_reg mt9m114_init[] = {
 	/* PLL settings */
 	{ MT9M114_LOGICAL_ADDRESS_ACCESS,                0x1000, 2 },
 	{ MT9M114_CAM_SYSCTL_PLL_ENABLE,                 0x01,   1 },
-	{ MT9M114_CAM_SYSCTL_PLL_DIVIDER_M_N,            0x0120, 2 },
-	{ MT9M114_CAM_SYSCTL_PLL_DIVIDER_P,              0x0700, 2 },
-	{ MT9M114_CAM_SENSOR_CFG_PIXCLK,                 0x2DC6C00, 4 },
+
+	/*
+	 * R0xC980 [13:8]: PLL N divider value
+	 *         [7:0] : PLL M divider value
+	 * R0xC982 [13:8]: PLL P divider and word clock divider
+	 *
+	 * Fout = (fin*2*m)/((N+1)*(P+1))
+	 */
+	{ MT9M114_CAM_SYSCTL_PLL_DIVIDER_M_N,            0x0218, 2 },
+	{ MT9M114_CAM_SYSCTL_PLL_DIVIDER_P,              0x0500, 2 },
+	{ MT9M114_CAM_SENSOR_CFG_PIXCLK,                 0x2255100, 4 },
 
 	/* Sensor optimization */
 	{ 0x316A, 0x8270, 2 },
@@ -266,6 +274,9 @@ static const struct mt9m114_reg mt9m114_init[] = {
 	{ MT9M114_CAM_STAT_AE_INITIAL_WINDOW_YSTART, 0x0000, 2},
 	{ MT9M114_PAD_SLEW, 0x0777, 2},
 	{ MT9M114_CAM_OUTPUT_FORMAT_YUV, 0x0038, 2},
+
+	/* cam_sensor_cfg_line_length_pck will increase by 0.625*fv_to_lv_pck */
+	{ 0xC986, 0x00F0, 2 },
 };
 
 static const struct mt9m114_reg mt9m114_regs_qvga[] = {
