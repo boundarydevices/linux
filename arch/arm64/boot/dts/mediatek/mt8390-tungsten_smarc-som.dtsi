@@ -626,6 +626,10 @@
 	regulator-always-on;
 };
 
+&mt6359_vemc_1_ldo_reg {
+	regulator-always-on;
+};
+
 &mt6359_vgpu11_buck_reg {
 	regulator-always-on;
 };
