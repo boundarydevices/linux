@@ -322,7 +322,7 @@ void mtk_mmsys_cross_sys_unprepare(struct device *dev_main_sys,
 {
 	struct mtk_mmsys *main_mmsys = dev_get_drvdata(dev_main_sys);
 	struct mtk_mmsys *cross_mmsys = dev_get_drvdata(dev_cross_sys);
-	int i, ret;
+	int i;
 
 	for (i = 0; i < MAX_CROSS_SYS_ASYNC_NUM; i++) {
 		clk_disable_unprepare(main_mmsys->async_clk[i]);
