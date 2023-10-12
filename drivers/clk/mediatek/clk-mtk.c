@@ -534,6 +534,7 @@ struct clk_hw *mtk_clk_fixup_divider(const char *name, const char *parent,
 	struct clk_fixup_div *fixup_div;
 	struct clk_hw *hw;
 	struct clk_init_data init;
+	int ret;
 
 	fixup_div = kzalloc(sizeof(*fixup_div), GFP_KERNEL);
 	if (!fixup_div)
@@ -554,9 +555,13 @@ struct clk_hw *mtk_clk_fixup_divider(const char *name, const char *parent,
 	fixup_div->divider.hw.init = &init;
 	fixup_div->ops = &clk_divider_ops;
 
-	hw = clk_hw_register(NULL, &fixup_div->divider.hw);
-	if (IS_ERR(hw))
+	hw = &fixup_div->divider.hw;
+
+	ret = clk_hw_register(NULL, hw);
+	if (ret) {
 		kfree(fixup_div);
+		return ERR_PTR(ret);
+	}
 
 	return hw;
 }
