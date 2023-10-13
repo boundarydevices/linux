@@ -29,6 +29,46 @@
 #define PDM_SEL			0x318
 #define SAI_PLL_GNRL_CTL	0x400
 
+#define AUDIOMIX_SAI1_IPG            0
+#define AUDIOMIX_SAI1_MCLK1          1
+#define AUDIOMIX_SAI1_MCLK2          2
+#define AUDIOMIX_SAI1_MCLK3          3
+#define AUDIOMIX_SAI2_IPG            4
+#define AUDIOMIX_SAI2_MCLK1          5
+#define AUDIOMIX_SAI2_MCLK2          6
+#define AUDIOMIX_SAI2_MCLK3          7
+#define AUDIOMIX_SAI3_IPG            8
+#define AUDIOMIX_SAI3_MCLK1          9
+#define AUDIOMIX_SAI3_MCLK2          10
+#define AUDIOMIX_SAI3_MCLK3          11
+#define AUDIOMIX_SAI5_IPG            12
+#define AUDIOMIX_SAI5_MCLK1          13
+#define AUDIOMIX_SAI5_MCLK2          14
+#define AUDIOMIX_SAI5_MCLK3          15
+#define AUDIOMIX_SAI6_IPG            16
+#define AUDIOMIX_SAI6_MCLK1          17
+#define AUDIOMIX_SAI6_MCLK2          18
+#define AUDIOMIX_SAI6_MCLK3          19
+#define AUDIOMIX_SAI7_IPG            20
+#define AUDIOMIX_SAI7_MCLK1          21
+#define AUDIOMIX_SAI7_MCLK2          22
+#define AUDIOMIX_SAI7_MCLK3          23
+#define AUDIOMIX_ASRC_IPG            24
+#define AUDIOMIX_PDM_IPG             25
+#define AUDIOMIX_SDMA2_ROOT          26
+#define AUDIOMIX_SDMA3_ROOT          27
+#define AUDIOMIX_SPBA2_ROOT          28
+#define AUDIOMIX_DSP_ROOT            29
+#define AUDIOMIX_DSPDBG_ROOT         30
+#define AUDIOMIX_EARC_IPG            31
+#define AUDIOMIX_OCRAMA_IPG          32
+#define AUDIOMIX_AUD2HTX_IPG         33
+#define AUDIOMIX_EDMA_ROOT           34
+#define AUDIOMIX_AUDPLL_ROOT         35
+#define AUDIOMIX_MU2_ROOT            36
+#define AUDIOMIX_MU3_ROOT            37
+#define AUDIOMIX_EARC_PHY            38
+
 #define SAIn_MCLK1_PARENT(n)						\
 static const struct clk_parent_data					\
 clk_imx8mp_audiomix_sai##n##_mclk1_parents[] = {			\
@@ -94,8 +134,8 @@ static int shared_count_pdm;
 		gname"_cg",						\
 		IMX8MP_CLK_AUDIOMIX_##cname,				\
 		{ .fw_name = "ahb", .name = "ahb" }, NULL, 1,		\
-		CLKEN0 + 4 * !!(IMX8MP_CLK_AUDIOMIX_##cname / 32),	\
-		1, IMX8MP_CLK_AUDIOMIX_##cname % 32			\
+		CLKEN0 + 4 * !!(AUDIOMIX_##cname / 32),	\
+		1, AUDIOMIX_##cname % 32			\
 	}
 
 #define CLK_GATE_SHARED(gname, cname, pname, reg, width, shift, shcount)\
@@ -111,8 +151,8 @@ static int shared_count_pdm;
 		gname"_cg",						\
 		IMX8MP_CLK_AUDIOMIX_##cname,				\
 		{ .fw_name = pname, .name = pname }, NULL, 1,		\
-		CLKEN0 + 4 * !!(IMX8MP_CLK_AUDIOMIX_##cname / 32),	\
-		1, IMX8MP_CLK_AUDIOMIX_##cname % 32			\
+		CLKEN0 + 4 * !!(AUDIOMIX_##cname / 32),	\
+		1, AUDIOMIX_##cname % 32			\
 	}
 
 #define CLK_SAIn(n)							\
@@ -132,7 +172,7 @@ static int shared_count_pdm;
 		"sai"__stringify(n)"_ipg_cg",				\
 		IMX8MP_CLK_AUDIOMIX_SAI##n##_IPG,			\
 		{ .fw_name = "ahb", .name = "ahb" }, NULL, 1,		\
-		CLKEN0, 1, IMX8MP_CLK_AUDIOMIX_SAI##n##_IPG		\
+		CLKEN0, 1, AUDIOMIX_SAI##n##_IPG		\
 	}, {								\
 		"sai"__stringify(n)"_mclk1_cg",				\
 		IMX8MP_CLK_AUDIOMIX_SAI##n##_MCLK1,			\
@@ -140,7 +180,7 @@ static int shared_count_pdm;
 			.fw_name = "sai"__stringify(n)"_mclk1_sel",	\
 			.name = "sai"__stringify(n)"_mclk1_sel"		\
 		}, NULL, 1,						\
-		CLKEN0, 1, IMX8MP_CLK_AUDIOMIX_SAI##n##_MCLK1		\
+		CLKEN0, 1, AUDIOMIX_SAI##n##_MCLK1		\
 	}, {								\
 		"sai"__stringify(n)"_mclk2_cg",				\
 		IMX8MP_CLK_AUDIOMIX_SAI##n##_MCLK2,			\
@@ -148,7 +188,7 @@ static int shared_count_pdm;
 			.fw_name = "sai"__stringify(n)"_mclk2_sel",	\
 			.name = "sai"__stringify(n)"_mclk2_sel"		\
 		}, NULL, 1,						\
-		CLKEN0, 1, IMX8MP_CLK_AUDIOMIX_SAI##n##_MCLK2		\
+		CLKEN0, 1, AUDIOMIX_SAI##n##_MCLK2		\
 	}, {								\
 		"sai"__stringify(n)"_mclk3_cg",				\
 		IMX8MP_CLK_AUDIOMIX_SAI##n##_MCLK3,			\
@@ -156,7 +196,7 @@ static int shared_count_pdm;
 			.fw_name = "sai_pll_out_div2",			\
 			.name = "sai_pll_out_div2"			\
 		}, NULL, 1,						\
-		CLKEN0, 1, IMX8MP_CLK_AUDIOMIX_SAI##n##_MCLK3		\
+		CLKEN0, 1, AUDIOMIX_SAI##n##_MCLK3		\
 	}
 
 #define CLK_PDM								\
@@ -212,8 +252,8 @@ struct clk_imx8mp_audiomix_shared_gate {
 };
 
 static struct clk_imx8mp_audiomix_shared_gate pdms[] = {
-	CLK_GATE_SHARED("pdm_ipg_clk", PDM_IPG, "audio_ahb_root", 0, 1, 25, &shared_count_pdm),
-	CLK_GATE_SHARED("pdm_root_clk", PDM_ROOT, "pdm_sel", 0, 1, 25, &shared_count_pdm),
+	CLK_GATE_SHARED("pdm_ipg_clk", PDM_IPG, "audio_ahb_root", 0, 1, AUDIOMIX_PDM_IPG, &shared_count_pdm),
+	CLK_GATE_SHARED("pdm_root_clk", PDM_ROOT, "pdm_sel", 0, 1, AUDIOMIX_PDM_IPG, &shared_count_pdm),
 };
 
 struct pm_safekeep_info {
