@@ -923,8 +923,9 @@ disable_clk:
 	clk_bulk_disable_unprepare(BULK_CLKS_NUM, mtk->clks);
 
 disable_ldos:
-	regulator_disable(mtk->vdd1p2);
 	regulator_bulk_disable(BULK_VREGS_NUM, mtk->supplies);
+	if (mtk->vdd1p2)
+		regulator_disable(mtk->vdd1p2);
 
 disable_pm:
 	pm_runtime_put_noidle(dev);
@@ -959,8 +960,9 @@ static int xhci_mtk_remove(struct platform_device *pdev)
 
 	gpiod_set_value_cansleep(mtk->reset, 1);
 	clk_bulk_disable_unprepare(BULK_CLKS_NUM, mtk->clks);
-	regulator_disable(mtk->vdd1p2);
 	regulator_bulk_disable(BULK_VREGS_NUM, mtk->supplies);
+	if (mtk->vdd1p2)
+		regulator_disable(mtk->vdd1p2);
 	xhci_mtk_procfs_exit(mtk);
 
 	pm_runtime_disable(dev);
