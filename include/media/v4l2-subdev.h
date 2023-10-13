@@ -732,6 +732,7 @@ struct v4l2_subdev_krouting {
  * struct v4l2_subdev_state - Used for storing subdev state information.
  *
  * @lock: mutex for the state
+ * @sd: the sub-device which the state is related to
  * @pads: &struct v4l2_subdev_pad_config array
  * @routing: routing table for the subdev
  * @stream_configs: stream configurations (only for V4L2_SUBDEV_FL_MULTIPLEXED)
@@ -742,6 +743,7 @@ struct v4l2_subdev_krouting {
  */
 struct v4l2_subdev_state {
 	struct mutex lock;
+	struct v4l2_subdev *sd;
 	struct v4l2_subdev_pad_config *pads;
 	struct v4l2_subdev_krouting routing;
 	struct v4l2_subdev_stream_configs stream_configs;
