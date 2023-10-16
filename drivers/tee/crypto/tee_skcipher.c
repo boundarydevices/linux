@@ -30,7 +30,7 @@ struct tee_crypt_priv_data {
 	uuid_t uuid;
 	struct tee_context *ctx;
 	u32 session_id;
-	uintptr_t shm_pool_paddr;
+	uint64_t shm_pool_paddr;
 	u8 *shm_pool;
 };
 
@@ -58,8 +58,8 @@ struct tc_aes_ctx {
 };
 
 static int skcipher_alloc_shm(struct tee_crypt_priv_data *tc_prv_ctx,
-			      size_t length,
-			      uintptr_t *pa)
+			      uint64_t length,
+			      uint64_t *pa)
 {
 	int ret;
 	struct tee_ioctl_invoke_arg inv_arg;
@@ -95,7 +95,7 @@ static int skcipher_alloc_shm(struct tee_crypt_priv_data *tc_prv_ctx,
 }
 
 static int skcipher_free_shm(struct tee_crypt_priv_data *tc_prv_ctx,
-			     uintptr_t pa)
+			     uint64_t pa)
 {
 	int ret;
 	struct tee_ioctl_invoke_arg inv_arg;
@@ -239,7 +239,7 @@ static inline int tc_sk_crypt(struct tc_aes_ctx *ctx,
 	phys_addr_t iv;
 	phys_addr_t srcdata;
 	phys_addr_t dstdata;
-	unsigned long key_param;
+	uint64_t key_param;
 	unsigned long smc_cmd;
 
 	if (!tc_prv_ctx || !ctx || !out_len || !in_len || !iv_len)
