@@ -255,6 +255,7 @@ struct ssusb_mtk {
 	/* common power & clock */
 	struct regulator *vusb33;
 	struct gpio_desc *reset;
+	int bulk_clks_enabled;
 	struct clk_bulk_data clks[BULK_CLKS_CNT];
 	/* otg */
 	struct otg_switch_mtk otg_switch;
