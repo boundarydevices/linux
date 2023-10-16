@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/nvmem/mt635x-efuse.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek mt635x-efuse Device Tree Bindings
+
+description: |
+  This binding is intended to represent mt635x-efuse which is found in most MediaTek SOCs.
+
+
+properties:
+  compatible:
+    enum:
+      - mediatek,mt6359p-efuse
+
+examples:
+  - |
+      pmic_efuse: pmic-efuse {
+        compatible = "mediatek,mt6359p-efuse";
+        #address-cells = <1>;
+        #size-cells = <1>;
+        thermal_efuse_data1: e-data1 {
+          reg = <0x3e 10>;
+        };
+      };
+
+...
