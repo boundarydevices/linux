@@ -168,6 +168,28 @@ static void ssusb_phy_power_off(struct ssusb_mtk *ssusb)
 		phy_power_off(ssusb->phys[i]);
 }
 
+
+static int ssusb_bulk_clk_enable(struct ssusb_mtk *ssusb)
+{
+	int ret = 0;
+
+	if (!ssusb->bulk_clks_enabled) {
+		ret = clk_bulk_prepare_enable(BULK_CLKS_CNT, ssusb->clks);
+		if (!ret)
+			ssusb->bulk_clks_enabled = 1;
+	}
+	return ret;
+}
+
+static int ssusb_bulk_clk_disable(struct ssusb_mtk *ssusb)
+{
+	if (ssusb->bulk_clks_enabled) {
+		ssusb->bulk_clks_enabled = 0;
+		clk_bulk_disable_unprepare(BULK_CLKS_CNT, ssusb->clks);
+	}
+	return 0;
+}
+
 static int ssusb_rscs_init(struct ssusb_mtk *ssusb)
 {
 	int ret = 0;
@@ -178,7 +200,7 @@ static int ssusb_rscs_init(struct ssusb_mtk *ssusb)
 		goto vusb33_err;
 	}
 
-	ret = clk_bulk_prepare_enable(BULK_CLKS_CNT, ssusb->clks);
+	ret = ssusb_bulk_clk_enable(ssusb);
 	if (ret)
 		goto clks_err;
 
@@ -199,7 +221,7 @@ static int ssusb_rscs_init(struct ssusb_mtk *ssusb)
 phy_err:
 	ssusb_phy_exit(ssusb);
 phy_init_err:
-	clk_bulk_disable_unprepare(BULK_CLKS_CNT, ssusb->clks);
+	ssusb_bulk_clk_disable(ssusb);
 clks_err:
 	regulator_disable(ssusb->vusb33);
 vusb33_err:
@@ -208,7 +230,7 @@ vusb33_err:
 
 static void ssusb_rscs_exit(struct ssusb_mtk *ssusb)
 {
-	clk_bulk_disable_unprepare(BULK_CLKS_CNT, ssusb->clks);
+	ssusb_bulk_clk_disable(ssusb);
 	regulator_disable(ssusb->vusb33);
 	ssusb_phy_power_off(ssusb);
 	ssusb_phy_exit(ssusb);
@@ -565,7 +587,7 @@ static int mtu3_suspend_common(struct device *dev, pm_message_t msg)
 		goto sleep_err;
 
 	ssusb_phy_power_off(ssusb);
-	clk_bulk_disable_unprepare(BULK_CLKS_CNT, ssusb->clks);
+	ssusb_bulk_clk_disable(ssusb);
 	ssusb_wakeup_set(ssusb, true);
 	return 0;
 
@@ -583,7 +605,7 @@ static int mtu3_resume_common(struct device *dev, pm_message_t msg)
 	dev_dbg(dev, "%s\n", __func__);
 
 	ssusb_wakeup_set(ssusb, false);
-	ret = clk_bulk_prepare_enable(BULK_CLKS_CNT, ssusb->clks);
+	ret = ssusb_bulk_clk_enable(ssusb);
 	if (ret)
 		goto clks_err;
 
@@ -594,7 +616,7 @@ static int mtu3_resume_common(struct device *dev, pm_message_t msg)
 	return resume_ip_and_ports(ssusb, msg);
 
 phy_err:
-	clk_bulk_disable_unprepare(BULK_CLKS_CNT, ssusb->clks);
+	ssusb_bulk_clk_disable(ssusb);
 clks_err:
 	return ret;
 }
