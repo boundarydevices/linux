@@ -18,6 +18,8 @@
 struct mt6315_regulator_info {
 	struct regulator_desc desc;
 	u32 status_reg;
+	u32 sleep_volt_reg;
+	u32 sleep_volt_cache;
 	u32 lp_mode_mask;
 	u32 lp_mode_shift;
 };
@@ -51,6 +53,7 @@ struct mt6315_chip {
 		.of_map_mode = mt6315_map_mode,			\
 	},							\
 	.status_reg = _bid##_DBG4,				\
+	.sleep_volt_reg = _bid##_CON1,				\
 	.lp_mode_mask = BIT(_bid),				\
 	.lp_mode_shift = _bid,					\
 }
@@ -175,12 +178,34 @@ static int mt6315_get_status(struct regulator_dev *rdev)
 	return (regval & BIT(0)) ? REGULATOR_STATUS_ON : REGULATOR_STATUS_OFF;
 }
 
+static int mt6315_set_suspend_voltage(struct regulator_dev *rdev, int uV)
+{
+	struct mt6315_regulator_info *info;
+	int ret;
+
+	pr_info("%s:uV=%d\n", __func__, uV);
+	info = container_of(rdev->desc, struct mt6315_regulator_info, desc);
+	if (info->sleep_volt_cache == uV)
+		return 0;
+	ret = regulator_map_voltage_linear_range(rdev, uV, uV);
+	if (ret < 0)
+		return ret;
+	ret = regmap_update_bits(rdev->regmap, info->sleep_volt_reg,
+				 0xff, ret);
+	if (ret < 0)
+		return ret;
+	info->sleep_volt_cache = uV;
+
+	return 0;
+}
+
 static const struct regulator_ops mt6315_volt_range_ops = {
 	.list_voltage = regulator_list_voltage_linear_range,
 	.map_voltage = regulator_map_voltage_linear_range,
 	.set_voltage_sel = regulator_set_voltage_sel_regmap,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_voltage_time_sel = regulator_set_voltage_time_sel,
+	.set_suspend_voltage = mt6315_set_suspend_voltage,
 	.enable = regulator_enable_regmap,
 	.disable = regulator_disable_regmap,
 	.is_enabled = regulator_is_enabled_regmap,
