@@ -5,7 +5,7 @@
 
 /dts-v1/;
 
-#include "imx8ulp-tag-som.dtsi"
+#include "imx8ulp-nitrogen-som.dtsi"
 
 &iomuxc1 {
 	pinctrl-0 = <&pinctrl_hog_som>, <&pinctrl_hog>;

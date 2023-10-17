@@ -3,7 +3,7 @@
  * Copyright 2022 Boundary Devices
  */
 
-#include "imx8ulp-tag-test.dts"
+#include "imx8ulp-nitrogen-som.dts"
 #include "imx8ulp-rpmsg.dtsi"
 
 #define GPIO_KEYS_J15P3		<&rpmsg_gpioc 8 GPIO_ACTIVE_HIGH>
@@ -76,8 +76,8 @@
 #define GPIO_LEDS_J6P14		<&rpmsg_gpioc 22 GPIO_ACTIVE_HIGH>
 
 / {
-	model = "NXP i.MX 8ULP tag-test - m33";
-	compatible = "boundary,imx8ulp-tag-test-m33", "fsl,imx8ulp";
+	model = "Boundary Devices Nitrogen 8ULP SOM + M33";
+	compatible = "boundary,imx8ulp-nitrogen-som-m33", "fsl,imx8ulp";
 
 	gpio-keys-j15 {
 		compatible = "gpio-keys";
