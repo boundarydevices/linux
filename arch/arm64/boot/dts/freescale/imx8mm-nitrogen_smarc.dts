@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2023 Boundary Devices
+ */
+
+/dts-v1/;
+#ifdef CONFIG_DEFCONFIG
+#define UBOOT
+#endif
+#define IMX8MM
+
+#define MX8MMN(a, b)	MX8MM_##a b
+#define IMX8MMN(a)	IMX8MM_##a
+
+#include "imx8mm-nitrogen_smarc-som.dtsi"
+#ifdef UBOOT
+#include "bd-universal-smarc-carrier.dtsi"
+#else
+#include "../bd-universal-smarc-carrier.dtsi"
+#endif
+/ {
+	model = "Boundary i.MX8MM nitrogen_smarc board";
+	compatible = "boundary,imx8mm-nitrogen-smarc", "fsl,imx8mm";
+
+	aliases {
+		rtc1 = &snvs_rtc;
+	};
+};
