@@ -5,7 +5,7 @@
 
 /dts-v1/;
 
-#include "imx8ulp-tag-som.dtsi"
+#include "imx8ulp-nitrogen-som.dtsi"
 
 &iomuxc1 {
 	pinctrl_backlight_mipi: backlight_mipigrp{
@@ -233,8 +233,8 @@
 #include "../panel-q035-014.dtsi"
 
 / {
-	model = "NXP i.MX 8ULP tag test";
-	compatible = "boundary,imx8ulp-tag", "fsl,imx8ulp";
+	model = "Boundary Devices Nitrogen 8ULP SOM";
+	compatible = "boundary,imx8ulp-nitrogen-som", "fsl,imx8ulp";
 
 	aliases {
 		backlight_mipi = &backlight_mipi;
