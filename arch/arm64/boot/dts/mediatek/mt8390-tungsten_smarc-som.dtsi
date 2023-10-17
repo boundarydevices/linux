@@ -751,6 +751,11 @@
 				regulator-enable-ramp-delay = <256>;
 				regulator-allowed-modes = <0 1 2>;
 				regulator-always-on;
+
+				regulator-state-mem {
+					regulator-on-in-suspend;
+					regulator-suspend-microvolt = <1193750>;
+				};
 			};
 		};
 	};
