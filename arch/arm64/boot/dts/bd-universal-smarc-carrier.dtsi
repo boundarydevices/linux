@@ -35,9 +35,11 @@
 #ifdef PD_SM_ENET1_SDP
 			PD_SM_ENET1_SDP(PAD_PULLDN)
 #endif
-			PD_SM_GPIO12(PAD_PULLDN)
 			PD_SM_CSI1_MCK(PAD_PULLDN)
-			PD_SM_LCD1_VDD_EN(PAD_PULLDN),
+#ifdef PD_SM_LCD1_VDD_EN
+			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
+#endif
+			PD_SM_GPIO12(PAD_PULLDN),
 			DN_SM_LCD1_VDD_EN
 		)
 	};
@@ -196,6 +198,7 @@
 		)
 	};
 
+#ifdef PD_SM_I2C_LCD_CK_I2C
 	pinctrl(SM_I2C_LCD) {
 		pins_group(i2c,
 			PD_SM_I2C_LCD_CK_I2C(PAD_I2C)
@@ -213,6 +216,7 @@
 			drive-strength-microamp = <1000>;
 		)
 	};
+#endif
 
 	pinctrl(SM_I2C_PM) {
 		pins_group(i2c,
@@ -240,7 +244,7 @@
 			PD_SM_I2S0_CK_I2S(PAD_I2S)
 			PD_SM_I2S0_SDIN_I2S(PAD_I2S)
 			PD_SM_I2S0_SDOUT_I2S(PAD_I2S)
-			PD_SM_AUDIO_MCK_I2S(PAD_I2S)
+			PD_SM_AUDIO_MCK_I2S(PAD_I2S),
 		)
 	};
 #endif
@@ -470,7 +474,7 @@
 	};
 #endif
 
-#ifdef SM_I2C_CSI0
+#if defined(SM_I2C_CSI0) || defined(SM_I2C_CSI1)
 	csi0_mclk: csi0-mclk {
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
@@ -772,11 +776,13 @@
 
 &SM_I2C_LCD {
 	clock-frequency = <100000>;
+#ifdef PD_SM_I2C_LCD_CK_I2C
 	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_ref(SM_I2C_LCD)>;
 	pinctrl-1 = <&pinctrl_ref2(SM_I2C_LCD, 1)>;
 	scl-gpios = GP_SM_I2C_LCD_CK(GPIO_OPEN_DRAIN);
 	sda-gpios = GP_SM_I2C_LCD_DAT(GPIO_OPEN_DRAIN);
+#endif
 	status = "okay";
 
 	mux9546-lcd@73 {
