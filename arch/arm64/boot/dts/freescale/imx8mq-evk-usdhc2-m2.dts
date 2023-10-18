@@ -12,8 +12,24 @@
 
 	usdhc2_pwrseq: usdhc2_pwrseq {
 		compatible = "mmc-pwrseq-simple";
-		reset-gpios = <&gpio5 10 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usdhc2_pwrseq>;
+		reset-gpios = <&gpio2 19 GPIO_ACTIVE_LOW>;
 	};
+};
+
+&iomuxc {
+	pinctrl_usdhc2_pwrseq: usdhc2pwrseq {
+		fsl,pins = <
+			MX8MQ_IOMUXC_SD2_RESET_B_GPIO2_IO19		0x46
+		>;
+	};
+};
+
+&pinctrl_reg_usdhc2 {
+	fsl,pins = <
+		MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10             0x46
+	>;
 };
 
 &pinctrl_usdhc2 {
@@ -25,7 +41,6 @@
 		MX8MQ_IOMUXC_SD2_DATA2_USDHC2_DATA2		0xc3
 		MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc3
 		MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4               0x49
-		MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10             0x46
 		MX8MQ_IOMUXC_SD2_WP_GPIO2_IO20			0x41
 	>;
 };
@@ -39,7 +54,6 @@
 		MX8MQ_IOMUXC_SD2_DATA2_USDHC2_DATA2		0xc5
 		MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc5
 		MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4               0x49
-		MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10             0x46
 		MX8MQ_IOMUXC_SD2_WP_GPIO2_IO20			0x41
 	>;
 };
@@ -53,7 +67,6 @@
 		MX8MQ_IOMUXC_SD2_DATA2_USDHC2_DATA2		0xc7
 		MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc7
 		MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4               0x49
-		MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10             0x46
 		MX8MQ_IOMUXC_SD2_WP_GPIO2_IO20			0x41
 	>;
 };
@@ -69,6 +82,11 @@
 &pcie1{
 	status = "disabled";
 	/delete-node/ wifi_wake_host;
+};
+
+&reg_usdhc2_vmmc {
+	gpio = <&gpio5 10 GPIO_ACTIVE_HIGH>;
+	/delete-property/ off-on-delay-us;
 };
 
 &usdhc2 {

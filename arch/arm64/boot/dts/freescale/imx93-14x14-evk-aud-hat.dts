@@ -159,6 +159,7 @@
 	assigned-clocks = <&clk IMX93_CLK_SAI3>;
 	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>;
 	assigned-clock-rates = <12288000>;
+	fsl,sai-mclk-direction-output;
 	fsl,sai-asynchronous;
 	status = "okay";
 };

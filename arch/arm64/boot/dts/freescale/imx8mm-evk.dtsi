@@ -620,6 +620,7 @@
 	assigned-clocks = <&clk IMX8MM_CLK_SAI2>;
 	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
 	assigned-clock-rates = <24576000>;
+	fsl,sai-mclk-direction-output;
 	status = "okay";
 };
 
@@ -636,6 +637,7 @@
 		<&clk IMX8MM_AUDIO_PLL2_OUT>;
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3", "pll8k", "pll11k";
 	fsl,sai-multi-lane;
+	fsl,sai-mclk-direction-output;
 	fsl,dataline = <0 0xff 0xff 2 0xff 0x11>;
 	dmas = <&sdma2 0 25 0>, <&sdma2 1 25 0>;
 	status = "okay";
@@ -647,6 +649,7 @@
 	assigned-clocks = <&clk IMX8MM_CLK_SAI3>;
 	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
 	assigned-clock-rates = <24576000>;
+	fsl,sai-mclk-direction-output;
 	status = "okay";
 };
 
@@ -663,6 +666,7 @@
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3", "pll8k", "pll11k";
 	fsl,sai-asynchronous;
 	fsl,sai-multi-lane;
+	fsl,sai-mclk-direction-output;
 	dmas = <&sdma2 8 25 0>, <&sdma2 9 25 0>;
 	status = "disabled";
 };
@@ -1026,12 +1030,6 @@
 			MX8MM_IOMUXC_ECSPI1_MOSI_UART3_DCE_TX           0x140
 			MX8MM_IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B         0x140
 			MX8MM_IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B        0x140
-		>;
-	};
-
-	pinctrl_usdhc1_gpio: usdhc1grpgpio {
-		fsl,pins = <
-			MX8MM_IOMUXC_SD1_RESET_B_GPIO2_IO10	0x41
 		>;
 	};
 

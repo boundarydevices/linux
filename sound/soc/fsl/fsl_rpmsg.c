@@ -237,10 +237,6 @@ static int fsl_rpmsg_probe(struct platform_device *pdev)
 			if (of_device_is_compatible(np, "fsl,imx8mm-rpmsg-audio"))
 				dai_drv->capture.formats = SNDRV_PCM_FMTBIT_S16_LE;
 		}
-		/* constrain rates of wm8524 codec */
-		of_property_read_string(np, "model", &model_string);
-		if (!strcmp("wm8524-audio", model_string))
-			dai_drv->playback.rates = SNDRV_PCM_RATE_8000_192000;
 
 		of_property_read_string(np, "model", &model_string);
 		if(!strcmp("pcm512x-audio", model_string)) {

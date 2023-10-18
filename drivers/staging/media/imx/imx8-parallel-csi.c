@@ -426,7 +426,7 @@ static int get_interface_ctrl_reg1_param(struct mxc_parallel_csi_dev *pcsidev,
 		*vsync_pulse = pcsidev->format.width << 1;
 		break;
 	case PI_V2:
-		*pixel_width = 10;
+		*pixel_width = pcsidev->format.width << 3;
 		*vsync_pulse = pcsidev->format.width - 1;
 		break;
 	default:
