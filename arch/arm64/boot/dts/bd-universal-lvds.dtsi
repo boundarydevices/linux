@@ -29,12 +29,15 @@
 
 	pinctrl(LVDS_PWM) {
 		pins_group(pulldn,
+#if defined(PD_LVDS2_PWM) && (VAL(LVDS2_PWM) == VAL(LVDS_PWM))
+			PD_LVDS2_PWM(PAD_PULLDN)
+#endif
 			PD_LVDS_PWM(PAD_PULLDN),
 			DN_LVDS_PWM
 		)
 	};
 
-#if VAL(LVDS2_PWM) != VAL(LVDS_PWM)
+#if defined(PD_LVDS2_PWM) && (VAL(LVDS2_PWM) != VAL(LVDS_PWM))
 	pinctrl(LVDS2_PWM) {
 		pins_group(pulldn,
 			PD_LVDS2_PWM(PAD_PULLDN),
@@ -86,19 +89,33 @@
 
 / {
 	aliases {
+#ifdef MIPI_TO_LVDS
+		backlight_mipi_alt = &backlight_lvds;
+#else
 		backlight_lvds = &backlight_lvds;
-#if (VAL(LVDS2_PWM) != VAL(LVDS_PWM)) || defined(PD_LVDS2_BACKLIGHT)
+#endif
+#if (defined(LVDS2_PWM) && (VAL(LVDS2_PWM) != VAL(LVDS_PWM))) || defined(PD_LVDS2_BACKLIGHT)
 		backlight_lvds2 = &backlight_lvds2;
 #endif
 		fb_lvds = &LVDS_DISPLAY;
 		fb_lvds2 = &LVDS_DISPLAY;
+#ifndef MIPI_TO_LVDS
 		ldb = &ldb;
 		ldb_chan = &ldb_chan;
 		ldb_chan2 = &ldb_chan2;
+#endif
+#ifdef MIPI_TO_LVDS
+		pwm_mipi_alt = &LVDS_PWM;
+#else
 		pwm_lvds = &LVDS_PWM;
+#endif
+#ifdef LVDS2_PWM
 		pwm_lvds2 = &LVDS2_PWM;
+#endif
+#ifndef MIPI_TO_LVDS
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
+#endif
 		ts_lvds_atmel_mt = &ts_lvds_atmel_mt;
 		ts_lvds_egalax = &ts_lvds_egalax;
 		ts_lvds_ft5x06 = &ts_lvds_ft5x06;
@@ -112,7 +129,15 @@
 	backlight_lvds: backlight-lvds {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
+#ifdef MIPI_TO_LVDS
+		/*
+		 * panel-common takes cares of backlight,
+		 * skip old style blank/unblank
+		 */
+		display = <&backlight_lvds>;
+#else
 		display = <&LVDS_DISPLAY>;
+#endif
 		default-brightness-level = <8>;
 		enable-gpios = GP_LVDS_BACKLIGHT(GPIO_ACTIVE_HIGH);
 		pinctrl-names = "default";
@@ -121,7 +146,7 @@
 		status = "disabled";
 	};
 
-#if (VAL(LVDS2_PWM) != VAL(LVDS_PWM)) || defined(PD_LVDS2_BACKLIGHT)
+#if (defined(LVDS2_PWM) && (VAL(LVDS2_PWM) != VAL(LVDS_PWM))) || defined(PD_LVDS2_BACKLIGHT)
 	backlight_lvds2: backlight-lvds2 {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
@@ -212,6 +237,7 @@
 	};
 };
 
+#ifndef MIPI_TO_LVDS
 &ldb {
 	lvds-channel@0 {
 		backlight = <&backlight_lvds>;
@@ -235,7 +261,7 @@
 	};
 
 	lvds-channel@1 {
-#if (VAL(LVDS2_PWM) != VAL(LVDS_PWM)) || defined(PD_LVDS2_BACKLIGHT)
+#if (defined(LVDS2_PWM) && (VAL(LVDS2_PWM) != VAL(LVDS_PWM))) || defined(PD_LVDS2_BACKLIGHT)
 		backlight = <&backlight_lvds2>;
 #endif
 		fsl,data-mapping = "spwg";
@@ -261,6 +287,7 @@
 &ldb_phy {
 	status = "okay";
 };
+#endif
 
 &LVDS_PWM {
 	pinctrl-names = "default";
@@ -268,7 +295,7 @@
 	status = "okay";
 };
 
-#if VAL(LVDS2_PWM) != VAL(LVDS_PWM)
+#if defined(PD_LVDS2_PWM) && (VAL(LVDS2_PWM) != VAL(LVDS_PWM))
 &LVDS2_PWM {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ref(LVDS2_PWM)>;
