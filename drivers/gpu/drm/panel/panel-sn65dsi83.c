@@ -110,7 +110,7 @@ static void sn_disable_gp(struct panel_sn65dsi83 *sn)
 		gp_en = sn->gp_en[i];
 		if (!gp_en)
 			break;
-		gpiod_set_value(gp_en, 0);
+		gpiod_set_value_cansleep(gp_en, 0);
 	}
 }
 
@@ -133,7 +133,7 @@ static void sn_enable_gp(struct panel_sn65dsi83 *sn)
 	for (i = 0; i < ARRAY_SIZE(sn->gp_en); i++) {
 		if (!sn->gp_en[i])
 			break;
-		gpiod_set_value(sn->gp_en[i], 1);
+		gpiod_set_value_cansleep(sn->gp_en[i], 1);
 	}
 	msleep(12);	/* enabled for at least 10 ms before i2c writes */
 }
@@ -604,8 +604,10 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 
 	dev_info(dev, "%s: start\n", __func__);
 	i2c_node = of_parse_phandle(np, "i2c-bus", 0);
-	if (!i2c_node)
+	if (!i2c_node){
+		dev_err(dev, "%s: invalid i2c-bus\n", __func__);
 		return 0;
+	}
 
 	i2c = of_find_i2c_adapter_by_node(i2c_node);
 	of_node_put(i2c_node);
@@ -626,28 +628,29 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 		return -ENODEV;
 	}
 
+	/* pinctrl is optional as GPIO expanders may not have it */
 	pinctrl = devm_pinctrl_get(dev);
-	if (IS_ERR(pinctrl)) {
-		ret = PTR_ERR(pinctrl);
-		dev_dbg(sn->dev, "%s:devm_pinctrl_get %d\n", __func__, ret);
-		return ret;
-	}
-	pins = pinctrl_lookup_state(pinctrl, "sn65dsi83");
-	if (IS_ERR(pins)) {
-		ret = PTR_ERR(pins);
-		dev_dbg(sn->dev, "%s:pinctrl_lookup_state %d\n", __func__, ret);
-		return ret;
-	}
-	ret = pinctrl_select_state(pinctrl, pins);
-	if (ret) {
-		dev_dbg(sn->dev, "%s:pinctrl_select_state %d\n", __func__, ret);
-		return ret;
+	if (!IS_ERR(pinctrl)) {
+
+		pins = pinctrl_lookup_state(pinctrl, "sn65dsi83");
+		if (IS_ERR(pins)) {
+			ret = PTR_ERR(pins);
+			dev_err(sn->dev, "%s:pinctrl_lookup_state %d\n", __func__, ret);
+			return ret;
+		}
+		ret = pinctrl_select_state(pinctrl, pins);
+		if (ret) {
+			dev_err(sn->dev, "%s:pinctrl_select_state %d\n", __func__, ret);
+			return ret;
+		}
+	} else {
+		dev_info(dev, "%s: no pinctrl\n", __func__);
 	}
 
 	pixel_clk = devm_clk_get(dev, "pixel_clock");
 	if (IS_ERR(pixel_clk)) {
 		ret = PTR_ERR(pixel_clk);
-		dev_dbg(sn->dev, "%s:devm_clk_get pixel_clk  %d\n", __func__, ret);
+		dev_err(sn->dev, "%s:devm_clk_get pixel_clk  %d\n", __func__, ret);
 		pixel_clk = NULL;
 	}
 
@@ -679,6 +682,8 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 		dev_info(dev, "i2c read failed\n");
 		ret = -ENODEV;
 		goto exit1;
+	} else {
+		dev_info(dev, "%s: i2c read OK\n", __func__);
 	}
 
 	sn->dev = dev;
@@ -745,14 +750,14 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 				NULL, sn_irq_handler,
 				IRQF_ONESHOT, client_name, sn);
 		if (ret)
-			pr_info("%s: request_irq failed, irq:%i\n", client_name, sn->irq);
+			dev_err(dev, "%s: request_irq failed, irq:%i\n", client_name, sn->irq);
 	}
 
 	ret = device_create_file(dev, &dev_attr_sn65dsi83_enable);
 	ret = device_create_file(dev, &dev_attr_sn65dsi83_reg);
 	if (ret < 0)
 		pr_warn("failed to add sn65dsi83 sysfs files\n");
-	dev_info(dev, "succeeded\n");
+	dev_info(dev, "%s: succeeded\n", __func__);
 	return 0;
 exit1:
 	for (i = 0; i < ARRAY_SIZE(sn->gp_en); i++) {
