@@ -28,8 +28,6 @@ struct dpaa2_mac {
 	struct fwnode_handle *fw_node;
 
 	struct phy *serdes_phy;
-	struct phy *retimer_phy;
-
 	int phy_req_state;
 };
 
