@@ -106,6 +106,15 @@
 	};
 #endif
 
+	pinctrl_mipi_sn65dsi83_alt: mipi-sn65dsi83-altgrp {
+		fsl,pins = <
+#define GPIRQ_SN65_ALT	<&gpio3 20 IRQ_TYPE_LEVEL_HIGH>
+			MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, PAD_PULLDNIRQ)
+#define GP_SN65_ALT_EN	<&gpio3 25 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI5_MCLK_GPIO3_IO25, PAD_PULLDN)
+		>;
+	};
+
 	pinctrl_reg_wlan_vmmc: reg-wlan-vmmcgrp {
 		fsl,pins = <
 #define GP_REG_WLAN_VMMC	<&gpio4 21 GPIO_ACTIVE_HIGH>
@@ -242,6 +251,10 @@
 };
 
 / {
+	aliases {
+		mipi_to_lvds_alt = &mipi_to_lvds_alt;
+	};
+
 	gpio_keys_batt: gpio-keys-batt {
 		compatible = "gpio-keys";
 #ifdef PD_SM_BAT_LOW
@@ -464,11 +477,11 @@
 		};
 	};
 
-	i2cmux9546@72 {
+	i2cmux9546@71 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_pca9546>;
 		compatible = "nxp,pca9546";
-		reg = <0x70>;
+		reg = <0x71>;
 		reset-gpios = GP_I2C1_PCA9546_RESET;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -527,6 +540,19 @@
 
 &lcdif {
 	status = "disabled";
+};
+
+&mipi_dsi {
+	mipi_fb: panel@0 {
+		mipi_to_lvds_alt: mipi-to-lvds-altgrp {
+			alias = <&mipi_to_lvds_alt>;
+			enable-gpios = GP_SN65_ALT_EN;
+			i2c-address = <0x2c>;
+			i2c-bus = <&i2c1c>;
+			interrupts-extended = GPIRQ_SN65_ALT;
+			status = "okay";
+		};
+	};
 };
 
 #ifndef UBOOT
@@ -786,6 +812,8 @@
 #define GP_SM_LCD0_VDD_EN(a)		<&gpio1 3 a>
 #define PD_SM_LCD0_VDD_EN(a)		MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, a)
 
+#define SM_FB_LVDS			lcdif
+#define MIPI_TO_LVDS
 #define SM_PWM_LCD0			pwm1
 #define GP_SM_LCD0_BKLT_PWM(a)		<&gpio5 5 a>
 #define PD_SM_LCD0_BKLT_PWM(a)		MX8MMN(IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5, a)
@@ -966,7 +994,7 @@
 
 #define SM_ESPI				flexspi
 #define GP_SM_ESPI_CS0(a)		<&gpio5 13 a>
-#define PD_SM_ESPI_CS0(a)		MX8MMN(IOMUXC_ECSPI2_SS0_GPIO5_IO13, a)
+#define PD_SM_ESPI_CS0(a)		MX8MMN(IOMUXC_NAND_CE0_B_GPIO3_IO1, a)
 #define PD_SM_ESPI_CS0_ESPI(a)		MX8MMN(IOMUXC_NAND_CE0_B_QSPI_A_SS0_B, a)
 #define GP_SM_ESPI_CS1(a)		<&gpio1 6 a>
 #define PD_SM_ESPI_CS1(a)		MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, a)

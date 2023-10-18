@@ -26,3 +26,7 @@
 		rtc1 = &snvs_rtc;
 	};
 };
+
+&mipi_dsi {
+	pinctrl-0 = <&pinctrl_mipi_sn65dsi83>, <&pinctrl_mipi_sn65dsi83_alt>;
+};
