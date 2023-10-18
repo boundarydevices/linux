@@ -196,11 +196,14 @@ EXPORT_SYMBOL(fman_get_pause_cfg);
 	| SUPPORTED_10baseT_Full \
 	| SUPPORTED_100baseT_Half \
 	| SUPPORTED_100baseT_Full \
+	| SUPPORTED_1000baseKX_Full \
+	| SUPPORTED_10000baseKR_Full \
 	| SUPPORTED_Autoneg \
 	| SUPPORTED_Pause \
 	| SUPPORTED_Asym_Pause \
 	| SUPPORTED_FIBRE \
-	| SUPPORTED_MII)
+	| SUPPORTED_MII \
+	| SUPPORTED_Backplane)
 
 static DEFINE_MUTEX(eth_lock);
 
@@ -216,7 +219,8 @@ static const u16 phy2speed[] = {
 	[PHY_INTERFACE_MODE_RGMII_TXID]	= SPEED_1000,
 	[PHY_INTERFACE_MODE_RTBI]		= SPEED_1000,
 	[PHY_INTERFACE_MODE_QSGMII]		= SPEED_1000,
-	[PHY_INTERFACE_MODE_XGMII]		= SPEED_10000
+	[PHY_INTERFACE_MODE_XGMII]		= SPEED_10000,
+	[PHY_INTERFACE_MODE_10GKR]		= SPEED_10000,
 };
 
 static struct platform_device *dpaa_eth_add_device(int fman_id,
