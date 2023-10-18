@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/iio/adc/mediatek-mt635x-auxadc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek mt635x-auxadc Device Tree Bindings
+
+description: |
+  This binding is intended to represent mt635x-auxadc which is found in most MediaTek SOCs.
+
+
+properties:
+  compatible:
+    enum:
+      - mediatek,mt6359p-auxadc
+
+examples:
+  - |
+      pmic_auxadc: pmic-auxadc {
+        compatible = "mediatek,mt6359p-auxadc";
+        #io-channel-cells = <1>;
+
+        batadc {
+          channel = <AUXADC_BATADC>;
+          resistance-ratio = <7 2>;
+          avg-num = <128>;
+        };
+        bat-temp {
+          channel = <AUXADC_BAT_TEMP>;
+          resistance-ratio = <5 2>;
+        };
+        chip-temp {
+          channel = <AUXADC_CHIP_TEMP>;
+        };
+        vcore-temp {
+          channel = <AUXADC_VCORE_TEMP>;
+        };
+        vproc-temp {
+          channel = <AUXADC_VPROC_TEMP>;
+        };
+        vgpu-temp {
+          channel = <AUXADC_VGPU_TEMP>;
+        };
+        accdet {
+          channel = <AUXADC_ACCDET>;
+        };
+        dcxo-volt {
+          channel = <AUXADC_VDCXO>;
+          resistance-ratio = <3 2>;
+        };
+        tsx-temp {
+          channel = <AUXADC_TSX_TEMP>;
+          avg-num = <128>;
+        };
+        hpofs-cal {
+          channel = <AUXADC_HPOFS_CAL>;
+          avg-num = <256>;
+        };
+        dcxo-temp {
+          channel = <AUXADC_DCXO_TEMP>;
+          avg-num = <16>;
+        };
+        vbif {
+          channel = <AUXADC_VBIF>;
+          resistance-ratio = <5 2>;
+        };
+        imp {
+          channel = <AUXADC_IMP>;
+          resistance-ratio = <7 2>;
+          avg-num = <128>;
+        };
+      };
+
+...
