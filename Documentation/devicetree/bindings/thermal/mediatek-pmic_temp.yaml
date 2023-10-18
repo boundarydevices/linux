@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/nvmem/mediatek-pmic_temp.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek pmic_temp Device Tree Bindings
+
+description: |
+  This binding is intended to represent pmic_temp which is found in most MediaTek SOCs.
+
+
+properties:
+  compatible:
+    enum:
+      - mediatek,mt6359-pmic-temp
+      - mediatek,mt6363-pmic-temp
+      - mediatek,mt6366-pmic-temp
+      - mediatek,mt6368-pmic-temp
+      - mediatek,mt6369-pmic-temp
+      - mediatek,mt6373-pmic-temp
+      - mediatek,mt6338-pmic-temp
+
+examples:
+  - |
+      pmic_temp: pmic-temp {
+        compatible = "mediatek,mt6359-pmic-temp";
+        io-channels =
+          <&pmic_auxadc AUXADC_CHIP_TEMP>,
+          <&pmic_auxadc AUXADC_VCORE_TEMP>,
+          <&pmic_auxadc AUXADC_VPROC_TEMP>,
+          <&pmic_auxadc AUXADC_VGPU_TEMP>;
+        io-channel-names =
+          "pmic_chip_temp",
+          "pmic_buck1_temp",
+          "pmic_buck2_temp",
+          "pmic_buck3_temp";
+
+        #thermal-sensor-cells = <1>;
+        nvmem-cells = <&thermal_efuse_data1>;
+        nvmem-cell-names = "e_data1";
+      };
+
+...
