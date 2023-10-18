@@ -40,6 +40,9 @@ struct mtk_pwm_data {
 
 	unsigned int bls_debug;
 	u32 bls_debug_mask;
+
+	bool support_polarity_inversed;
+	u32 polarity_mask;
 };
 
 struct mtk_disp_pwm {
@@ -76,7 +79,8 @@ static int mtk_disp_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	u64 div, rate;
 	int err;
 
-	if (state->polarity != PWM_POLARITY_NORMAL)
+	if (state->polarity != PWM_POLARITY_NORMAL &&
+		mdp->data->support_polarity_inversed == false)
 		return -EINVAL;
 
 	if (!state->enabled) {
@@ -164,6 +168,11 @@ static int mtk_disp_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 					 mdp->data->con0_sel,
 					 mdp->data->con0_sel);
 	}
+
+	if (state->polarity == PWM_POLARITY_INVERSED)
+		mtk_disp_pwm_update_bits(mdp, mdp->data->con0,
+				 mdp->data->polarity_mask,
+				 mdp->data->polarity_mask);
 
 	mtk_disp_pwm_update_bits(mdp, DISP_PWM_EN, mdp->data->enable_mask,
 				 mdp->data->enable_mask);
@@ -294,6 +303,8 @@ static const struct mtk_pwm_data mt8183_pwm_data = {
 	.has_commit = false,
 	.bls_debug = 0x80,
 	.bls_debug_mask = 0x3,
+	.support_polarity_inversed = true,
+	.polarity_mask = BIT(2),
 };
 
 static const struct of_device_id mtk_disp_pwm_of_match[] = {
