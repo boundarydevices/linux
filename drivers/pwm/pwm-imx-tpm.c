@@ -399,11 +399,10 @@ static int __maybe_unused pwm_imx_tpm_suspend(struct device *dev)
 	if (tpm->enable_count > 0)
 		return -EBUSY;
 
-	/* force 'real_period' to be zero to force
-	 * period update code can be executed after
-	 * system resume back, since suspend causes
-	 * the period related registers to become
-	 * their reset values.
+	/*
+	 * Force 'real_period' to be zero to force period update code
+	 * can be executed after system resume back, since suspend causes
+	 * the period related registers to become their reset values.
 	 */
 	tpm->real_period = 0;
 

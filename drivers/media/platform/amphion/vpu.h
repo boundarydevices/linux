@@ -411,6 +411,9 @@ void vpu_core_driver_exit(void);
 void copy_wrapper(struct vpu_inst *inst, void *src_virt, void *dst_virt, u32 size);
 void memset_wrapper(struct vpu_inst *inst, void *dst_virt, u32 offset, u32 value, u32 size);
 
+const char *vpu_id_name(u32 id);
+const char *vpu_codec_state_name(enum vpu_codec_state state);
+
 extern bool debug;
 #define vpu_trace(dev, fmt, arg...)					\
 	do {								\
