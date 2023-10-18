@@ -1127,16 +1127,24 @@
 #define LVDS_DISPLAY		SM_FB_LVDS
 #define LVDS_I2C_BUS		SM_I2C_PM
 #define LVDS_PWM		SM_PWM_LCD0
+#ifdef SM_PWM_LCD1
 #define LVDS2_PWM		SM_PWM_LCD1
+#endif
 /* J21 pin 20 LVDS display, J22 pin 20 LVDS2 display */
 #define PD_LVDS_PWM(a)		PD_SM_LCD0_BKLT_PWM_OUT(a) /* Pin 20, S141 */
+#ifdef PD_SM_LCD1_BKLT_PWM_OUT
 #define PD_LVDS2_PWM(a)		PD_SM_LCD1_BKLT_PWM_OUT(a) /* Pin 20, S122 */
+#endif
 
 #define GP_LVDS_BACKLIGHT(a)	GP_SM_LCD0_BKLT_EN(a)
 #define PD_LVDS_BACKLIGHT(a)	PD_SM_LCD0_BKLT_EN(a)	/* Pin 19, S127 */
 
+#ifdef GP_SM_LVDS1_BACKLIGHT_EN
 #define GP_LVDS2_BACKLIGHT(a)	GP_SM_LVDS1_BACKLIGHT_EN(a)
+#endif
+#ifdef PD_SM_LVDS1_BACKLIGHT_EN
 #define PD_LVDS2_BACKLIGHT(a)	PD_SM_LVDS1_BACKLIGHT_EN(a) /* Pin 19, S107 */
+#endif
 
 #define GP_LVDS_TS_IRQ(a)	GP_SM_SMB_ALERT(a)
 #define PD_LVDS_TS_IRQ(a)	PD_SM_SMB_ALERT(a)	/* J23 Pin 4, P1 */
