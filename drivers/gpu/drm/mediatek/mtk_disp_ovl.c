@@ -328,7 +328,7 @@ void mtk_ovl_layer_config(struct device *dev, unsigned int idx,
 	unsigned int bpp = (fmt == DRM_FORMAT_YUYV || fmt == DRM_FORMAT_UYVY) ? 2 : 4;
 	unsigned int clip = 0;
 
-	if (!pending->enable) {
+	if ((!pending->enable) || (!pending->width) || (!pending->height)) {
 		mtk_ovl_layer_off(dev, idx, cmdq_pkt);
 		return;
 	}
