@@ -1003,6 +1003,15 @@
 			status = "disabled";
 		};
 
+		auxadc: adc@11002000 {
+			compatible = "mediatek,mt8188-auxadc";
+			reg = <0 0x11002000 0 0x1000>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_AUXADC>;
+			clock-names = "main";
+			#io-channel-cells = <1>;
+			status = "disabled";
+		};
+
 		pericfg_ao: syscon@11003000 {
 			compatible = "mediatek,mt8188-pericfg_ao", "syscon";
 			reg = <0 0x11003000 0 0x1000>;
