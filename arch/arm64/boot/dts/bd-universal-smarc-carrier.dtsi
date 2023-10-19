@@ -35,21 +35,14 @@
 #ifdef PD_SM_ENET1_SDP
 			PD_SM_ENET1_SDP(PAD_PULLDN)
 #endif
-			PD_SM_GPIO12(PAD_PULLDN)
 			PD_SM_CSI1_MCK(PAD_PULLDN)
-			PD_SM_LCD1_VDD_EN(PAD_PULLDN),
+#ifdef PD_SM_LCD1_VDD_EN
+			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
+#endif
+			PD_SM_GPIO12(PAD_PULLDN),
 			DN_SM_LCD1_VDD_EN
 		)
 	};
-
-#ifdef PD_SM_GPIO6
-	pinctrl2(mux9546, gp) {
-		pins_group(reset,
-			PD_SM_GPIO6(PAD_PULLDN),
-			DN_SM_GPIO6
-		)
-	};
-#endif
 
 #ifdef PD_SM_GPIO13
 	pinctrl2(mux9546, lcd) {
@@ -205,6 +198,7 @@
 		)
 	};
 
+#ifdef PD_SM_I2C_LCD_CK_I2C
 	pinctrl(SM_I2C_LCD) {
 		pins_group(i2c,
 			PD_SM_I2C_LCD_CK_I2C(PAD_I2C)
@@ -222,6 +216,7 @@
 			drive-strength-microamp = <1000>;
 		)
 	};
+#endif
 
 	pinctrl(SM_I2C_PM) {
 		pins_group(i2c,
@@ -249,7 +244,7 @@
 			PD_SM_I2S0_CK_I2S(PAD_I2S)
 			PD_SM_I2S0_SDIN_I2S(PAD_I2S)
 			PD_SM_I2S0_SDOUT_I2S(PAD_I2S)
-			PD_SM_AUDIO_MCK_I2S(PAD_I2S)
+			PD_SM_AUDIO_MCK_I2S(PAD_I2S),
 		)
 	};
 #endif
@@ -479,7 +474,7 @@
 	};
 #endif
 
-#ifdef SM_I2C_CSI0
+#if defined(SM_I2C_CSI0) || defined(SM_I2C_CSI1)
 	csi0_mclk: csi0-mclk {
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
@@ -668,14 +663,8 @@
 
 	mux9546-gp@73 {
 		compatible = "nxp,pca9546";
-#ifdef PD_SM_GPIO6
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ref2(mux9546, gp)>;
-#endif
 		reg = <0x73>;
-#ifdef GP_SM_GPIO6
 		reset-gpios = GP_SM_GPIO6(GPIO_ACTIVE_LOW);
-#endif
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -787,11 +776,13 @@
 
 &SM_I2C_LCD {
 	clock-frequency = <100000>;
+#ifdef PD_SM_I2C_LCD_CK_I2C
 	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_ref(SM_I2C_LCD)>;
 	pinctrl-1 = <&pinctrl_ref2(SM_I2C_LCD, 1)>;
 	scl-gpios = GP_SM_I2C_LCD_CK(GPIO_OPEN_DRAIN);
 	sda-gpios = GP_SM_I2C_LCD_DAT(GPIO_OPEN_DRAIN);
+#endif
 	status = "okay";
 
 	mux9546-lcd@73 {
@@ -1136,16 +1127,24 @@
 #define LVDS_DISPLAY		SM_FB_LVDS
 #define LVDS_I2C_BUS		SM_I2C_PM
 #define LVDS_PWM		SM_PWM_LCD0
+#ifdef SM_PWM_LCD1
 #define LVDS2_PWM		SM_PWM_LCD1
+#endif
 /* J21 pin 20 LVDS display, J22 pin 20 LVDS2 display */
 #define PD_LVDS_PWM(a)		PD_SM_LCD0_BKLT_PWM_OUT(a) /* Pin 20, S141 */
+#ifdef PD_SM_LCD1_BKLT_PWM_OUT
 #define PD_LVDS2_PWM(a)		PD_SM_LCD1_BKLT_PWM_OUT(a) /* Pin 20, S122 */
+#endif
 
 #define GP_LVDS_BACKLIGHT(a)	GP_SM_LCD0_BKLT_EN(a)
 #define PD_LVDS_BACKLIGHT(a)	PD_SM_LCD0_BKLT_EN(a)	/* Pin 19, S127 */
 
+#ifdef GP_SM_LVDS1_BACKLIGHT_EN
 #define GP_LVDS2_BACKLIGHT(a)	GP_SM_LVDS1_BACKLIGHT_EN(a)
+#endif
+#ifdef PD_SM_LVDS1_BACKLIGHT_EN
 #define PD_LVDS2_BACKLIGHT(a)	PD_SM_LVDS1_BACKLIGHT_EN(a) /* Pin 19, S107 */
+#endif
 
 #define GP_LVDS_TS_IRQ(a)	GP_SM_SMB_ALERT(a)
 #define PD_LVDS_TS_IRQ(a)	PD_SM_SMB_ALERT(a)	/* J23 Pin 4, P1 */
