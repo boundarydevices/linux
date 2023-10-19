@@ -112,7 +112,7 @@
 / {
 	aliases {
 		dsi(backlight_mipi) = &mipi_ref(backlight);
-		dsi(backlight_mipi2) = &mipi_ref(backlight2);
+		dsi(backlight_mipi_alt) = &mipi_ref2(backlight, alt);
 		dsi1(fb_mipi) = &mipi_ref(fb);
 		dsi(lcdif) = &_MIPI_(DISPLAY);
 		dsi1(mipi) = &mipi_ref(fb);
@@ -147,8 +147,8 @@
 };
 
 &_MIPI_(I2C_BUS) {
-	mipi_ref_grp(backlight2)@66 {
-		alias = <&mipi_ref(backlight2)>;
+	mipi_ref_grp2(backlight, alt)@66 {
+		alias = <&mipi_ref2(backlight, alt)>;
 		compatible = "rohm,bd2606";
 		default-brightness = <32>;	/* 63 is max */
 		display = <&_MIPI_(SUBSYSTEM)>;
