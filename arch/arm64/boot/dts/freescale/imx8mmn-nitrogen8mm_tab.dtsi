@@ -496,7 +496,7 @@
 		mipi = &fb_mipi;
 		mipi_dsi = &mipi_dsi;
 		pwm_mipi = &pwm2;
-		pwm_mipi2 = &pwm1;
+		pwm_mipi_alt = &pwm1;
 		t_mipi = &t_mipi;
 		ts_goodix = &ts_goodix;
 	};
