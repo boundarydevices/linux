@@ -498,7 +498,6 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 
 	/* Wait until the complete message is received on the MU. */
 	err = wait_event_interruptible(dev_ctx->wq, dev_ctx->pending_hdr != 0);
-
 	if (err) {
 		dev_err(ele_mu_priv->dev,
 			"%s: Err[0x%x]:Interrupted by signal.\n",
