@@ -266,12 +266,6 @@
 		};
 	};
 
-	pcie0_refclk: pcie0-refclk {
-		compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <100000000>;
-	};
-
 	reg_vref_1v8: regulator-vref-1v8 {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-1v8";
@@ -752,9 +746,14 @@
 };
 
 &pcie_phy {
-	fsl,clkreq-unsupported;
-	clocks = <&pcie0_refclk>;
+	clocks = <&hsio_blk_ctrl>;
 	clock-names = "ref";
+	fsl,clkreq-unsupported;
+#if 0
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
+#else
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+#endif
 };
 
 #ifndef UBOOT
