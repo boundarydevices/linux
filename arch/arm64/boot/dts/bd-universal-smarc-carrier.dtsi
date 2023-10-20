@@ -31,7 +31,6 @@
 
 	pinctrl2(hog, carrier) {
 		pins_group(hog,
-			PD_SM_ENET0_SDP(PAD_PULLDN)
 #ifdef PD_SM_ENET1_SDP
 			PD_SM_ENET1_SDP(PAD_PULLDN)
 #endif
@@ -39,7 +38,7 @@
 #ifdef PD_SM_LCD1_VDD_EN
 			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
 #endif
-			PD_SM_GPIO12(PAD_PULLDN),
+			PD_SM_ENET0_SDP(PAD_PULLDN),
 			DN_SM_LCD1_VDD_EN
 		)
 	};
@@ -76,6 +75,13 @@
 			PD_SM_USB0_EN_OC_USB(PAD_PULLUPIRQ),
 			UP_SM_USB0_EN_OC
 			input-enable;
+		)
+	};
+
+	pinctrl(rv3028) {
+		pins_group(irq,
+			PD_SM_GPIO12(PAD_PULLUP),
+			UP_SM_GPIO12
 		)
 	};
 
@@ -707,6 +713,8 @@
 
 &i2c_gp_a {
 	rv3028: rtc@52 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ref(rv3028)>;
 		backup-switchover-dsm;
 		#clock-cells = <0>;
 		compatible = "microcrystal,rv3028";
@@ -926,7 +934,6 @@
 
 #ifdef SM_PCIE_PHY
 &SM_PCIE_PHY {
-	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
 	status = "okay";
 };
 #endif
