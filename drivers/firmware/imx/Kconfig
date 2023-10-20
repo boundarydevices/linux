@@ -39,23 +39,3 @@ config IMX_SECO_MU
 	  SAB protocol via the shared Messaging Unit. This driver exposes these
 	  interfaces via a set of file descriptors allowing to configure shared
 	  memory, send and receive messages.
-
-config IMX_EL_ENCLAVE
-	tristate "i.MX Embedded EdgeLock Enclave support."
-	depends on IMX_MBOX
-	default m if ARM64
-
-	help
-	  It is possible to use APIs exposed by the iMX EdgeLock Enclave like base, HSM &
-	  SHE using the SAB protocol via the shared Messaging Unit. This driver exposes
-	  these interfaces via a set of file descriptors allowing to configure shared
-	  memory, send and receive messages.
-
-config IMX_ELE_TRNG
-	tristate "i.MX ELE True Random Number Generator"
-	default y
-	select CRYPTO_RNG
-	select HW_RANDOM
-	help
-	  This driver provides kernel-side support for the Random Number
-	  Generator with ELE TRNG.
