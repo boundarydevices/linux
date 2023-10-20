@@ -58,6 +58,9 @@
 #define mipi_ref2(a, b)	mipi_ref(c_(a, b))
 #define mipi_ref_grp2(a, b) mipi_ref2(a, b): mipi-a-b
 
+#define mipi_ref3(a, b, c)	mipi_ref(c_(c_(a, b), c))
+#define mipi_ref_grp3(a, b, c)	mipi_ref3(a, b, c): mipi-a-b-c
+
 #if defined(IMX8MM) || defined(IMX8MN) || defined(IMX8MP) || defined(IMX8MQ)
 #define IMX
 #define IOMUX iomuxc
