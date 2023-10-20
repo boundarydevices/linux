@@ -319,7 +319,7 @@ static int imx8_pcie_phy_probe(struct platform_device *pdev)
 	else
 		imx8_phy->clkreq_unused = false;
 
-	imx8_phy->clk = devm_clk_get(dev, "ref");
+	imx8_phy->clk = devm_clk_get_optional(dev, "ref");
 	if (IS_ERR(imx8_phy->clk)) {
 		dev_err(dev, "failed to get imx pcie phy clock\n");
 		return PTR_ERR(imx8_phy->clk);
