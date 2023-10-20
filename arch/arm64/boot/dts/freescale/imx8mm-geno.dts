@@ -249,6 +249,8 @@
 };
 
 &pcie_phy {
+	clocks = <&clk IMX8MM_CLK_PCIE1_PHY>;
+	clock-names = "ref";
 	fsl,clkreq-unsupported;
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
 	fsl,tx-deemph-gen1 = <0x2d>;
