@@ -437,6 +437,9 @@
 #ifdef SM_FB_HDMI
 		fb_hdmi = &SM_FB_HDMI;
 #endif
+#ifdef SM_PCIE_PHY
+		pcie-phy = &SM_PCIE_PHY;
+#endif
 		rtc0 = &rv3028;
 #ifdef SM_USBOTG_DWC
 		usb_mux = &usb_mux;
