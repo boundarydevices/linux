@@ -11,8 +11,9 @@
 
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
-
+#include "imx8mm.dtsi"
 #include "imx8mm-nitrogen_smarc-som.dtsi"
+
 #ifdef UBOOT
 #include "bd-universal-smarc-carrier.dtsi"
 #else
