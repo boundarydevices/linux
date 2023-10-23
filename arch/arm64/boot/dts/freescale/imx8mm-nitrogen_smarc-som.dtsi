@@ -5,7 +5,6 @@
 
 #include <dt-bindings/phy/phy-imx8-pcie.h>
 #include <dt-bindings/usb/pd.h>
-#include "imx8mm.dtsi"
 
 #define PAD_NOPULL		0x0
 #define PAD_PULLDN		0x100
@@ -13,7 +12,7 @@
 #define PAD_PULLDNIRQ		0x180
 #define PAD_PULLUPIRQ		0x1c0
 
-#ifdef MX8MN
+#ifdef IMX8MN
 #define GP_SM_BAT_LOW(a)	<&mcp23018 2 (a | GPIO_PULL_UP)>
 #else
 #define GP_SM_BAT_LOW(a)	<&gpio4 18 a>
@@ -95,7 +94,7 @@
 		>;
 	};
 
-#ifdef MX8MN
+#ifdef IMX8MN
 	pinctrl_i2c1_mcp23018: i2c1-mcp23018grp {
 		fsl,pins = <
 #define GPIRQ_I2C1_MCP23018	<&gpio4 29 IRQ_TYPE_LEVEL_LOW>
@@ -354,6 +353,7 @@
 };
 
 #ifndef UBOOT
+#ifdef IMX8MM
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -364,6 +364,7 @@
 		};
 	};
 };
+#endif
 
 &gpu {
 	status = "okay";
@@ -511,7 +512,7 @@
 		};
 	};
 
-#ifdef MX8MN
+#ifdef IMX8MN
 	mcp23018: gpio@20 {
 		compatible = "microchip,mcp23018";
 		gpio-controller;
@@ -556,6 +557,7 @@
 };
 
 #ifndef UBOOT
+#ifdef IMX8MM
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -578,10 +580,12 @@
 	};
 };
 #endif
+#endif
 
+#ifdef IMX8MM
 &pcie0 {
-	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
-			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
+	assigned-clocks = <&clk IMX8MMN(CLK_PCIE1_AUX)>,
+			  <&clk IMX8MMN(CLK_PCIE1_CTRL)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL2_50M)>,
 				 <&clk IMX8MMN(SYS_PLL2_250M)>;
 	assigned-clock-rates = <10000000>, <250000000>;
@@ -604,6 +608,7 @@
 	fsl,tx-deemph-gen2 = <0xf>;
 	status = "okay";
 };
+#endif
 
 #ifndef UBOOT
 &sai3 {
@@ -657,6 +662,7 @@
 	status = "okay";
 };
 
+#ifdef IMX8MM
 &usbotg2 {
 	dr_mode = "host";
 	disable-over-current;
@@ -666,6 +672,7 @@
 	reset-gpios = GP_OTG2_HUB_RESET;
 	status = "okay";
 };
+#endif
 
 &usdhc1 {
 	bus-width = <8>;
@@ -722,8 +729,10 @@
 #if 0	/* only CSI1(4 lanes) is used, CSI0 is 2 lanes */
 #define SM_I2C_CSI0			i2c1a
 #endif
+#ifdef IMX8MM
 #define SM_I2C_CSI1			i2c2
 #define SM_PWM_CSI1			pwm4
+#endif
 #endif
 #define GP_SM_I2C_CSI1_CK(a)		<&gpio5 16 a>
 #define PD_SM_I2C_CSI1_CK(a)		MX8MMN(IOMUXC_I2C2_SCL_GPIO5_IO16, a)
@@ -833,15 +842,15 @@
 #define PD_SM_LCD0_BKLT_PWM_OUT(a)	MX8MMN(IOMUXC_SPDIF_EXT_CLK_PWM1_OUT, a)
 
 /* J2H */
-#ifndef MX8MN
+#ifndef IMX8MN
 #define SM_PCIE				pcie0
 #ifndef UBOOT
 #define SM_PCIE_PHY			pcie_phy
 #endif
 #define GP_SM_PCIE_A_RST(a)		<&gpio3 2 a>
 #define PD_SM_PCIE_A_RST(a)		MX8MMN(IOMUXC_NAND_CE1_B_GPIO3_IO2, a)
-#define GP_SM_PCIE_WAKE(a)		<&gpio5 3 a>
-#define PD_SM_PCIE_WAKE(a)		MX8MMN(IOMUXC_SPDIF_TX_GPIO5_IO3, a)
+#define GP_SM_PCIE_WAKE(a)		<&gpio4 20 a>
+#define PD_SM_PCIE_WAKE(a)		MX8MMN(IOMUXC_SAI1_MCLK_GPIO4_IO20, a)
 #define GP_SM_PCIE_CLK_REQ(a)		<&gpio4 29 a>
 #define PD_SM_PCIE_CLK_REQ(a)		MX8MMN(IOMUXC_SAI3_RXC_GPIO4_IO29, a)
 #endif
@@ -870,6 +879,7 @@
 #define PD_SM_I2S0_CK(a)		MX8MMN(IOMUXC_SAI2_TXC_GPIO4_IO25, a)
 #define PD_SM_I2S0_CK_I2S(a)		MX8MMN(IOMUXC_SAI2_TXC_SAI2_TX_BCLK, a)
 
+#ifdef IMX8MM
 #define SM_I2S2				sai1
 #define GP_SM_I2S2_LRCK(a)		<&gpio4 10 a>
 #define PD_SM_I2S2_LRCK(a)		MX8MMN(IOMUXC_SAI1_TXFS_GPIO4_IO10, a)
@@ -886,6 +896,7 @@
 #define GP_SM_I2S2_CK(a)		<&gpio4 11 a>
 #define PD_SM_I2S2_CK(a)		MX8MMN(IOMUXC_SAI1_TXC_GPIO4_IO11, a)
 #define PD_SM_I2S2_CK_I2S(a)		MX8MMN(IOMUXC_SAI1_TXC_SAI1_TX_BCLK, a)
+#endif
 #define PAD_I2S				0xd6
 #endif
 
@@ -896,7 +907,7 @@
 #define PD_SM_WDT_TIMEOUT(a)		MX8MMN(IOMUXC_GPIO1_IO02_GPIO1_IO02, a)
 #define PD_SM_WDT_TIMEOUT_WDT(a)	MX8MMN(IOMUXC_GPIO1_IO02_WDOG1_WDOG_B, a)
 
-#ifdef MX8MN
+#ifdef IMX8MN
 #define GP_SM_LID(a)			<&mcp23018 5 (a | GPIO_PULL_UP)>
 #define PD_SM_LID(a)
 #define GP_SM_SLEEP(a)			<&mcp23018 7 (a | GPIO_PULL_UP)>
@@ -931,7 +942,7 @@
 #define GP_SM_GPIO0(a)			<&gpio3 21 a>
 #define PD_SM_GPIO0(a)			MX8MMN(IOMUXC_SAI5_RXD0_GPIO3_IO21, a)
 
-#ifdef MX8MN
+#ifdef IMX8MN
 #define GP_SM_GPIO1(a)			<&mcp23018 1 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO1(a)
 #define GP_SM_GPIO2(a)			<&mcp23018 0 (a | GPIO_PULL_UP)>
@@ -954,7 +965,7 @@
 #define GP_SM_GPIO5(a)			<&gpio5 2 a>
 #define PD_SM_GPIO5(a)			MX8MMN(IOMUXC_SAI3_MCLK_GPIO5_IO2, a)
 
-#ifdef MX8MN
+#ifdef IMX8MN
 #define GP_SM_GPIO6(a)			<&mcp23018 13 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO6(a)
 #define GP_SM_GPIO7(a)			<&mcp23018 12 (a | GPIO_PULL_UP)>
@@ -1001,8 +1012,8 @@
 #define GP_SM_SPI0_DO(a)		<&gpio5 11 a>
 #define PD_SM_SPI0_DO(a)		MX8MMN(IOMUXC_ECSPI2_MOSI_GPIO5_IO11, a)
 #define PD_SM_SPI0_DO_SPI(a)		MX8MMN(IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI, a)
-#define GP_SM_SPI0_CS1(a)		<&gpio4 20 a>
-#define PD_SM_SPI0_CS1(a)		MX8MMN(IOMUXC_SAI1_MCLK_GPIO4_IO20, a)
+#define GP_SM_SPI0_CS1(a)		<&gpio5 3 a>
+#define PD_SM_SPI0_CS1(a)		MX8MMN(IOMUXC_SPDIF_TX_GPIO5_IO3, a)
 #define PAD_SPI0			0x82
 
 #define SM_ESPI				flexspi
