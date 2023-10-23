@@ -174,6 +174,18 @@
 		status = "disabled";
 	};
 
+	usbphynop1: usbphynop1 {
+		compatible = "usb-nop-xceiv";
+		clocks = <&clk IMX93_CLK_USB_PHY_BURUNIN>;
+		clock-names = "main_clk";
+	};
+
+	usbphynop2: usbphynop2 {
+		compatible = "usb-nop-xceiv";
+		clocks = <&clk IMX93_CLK_USB_PHY_BURUNIN>;
+		clock-names = "main_clk";
+	};
+
 	soc@0 {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -435,12 +447,6 @@
 				clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 				dmas = <&edma1 22 0 1>, <&edma1 21 0 0>;
 				dma-names = "rx", "tx";
-				status = "disabled";
-			};
-
-			mqs1: mqs1 {
-				compatible = "fsl,imx93-mqs";
-				gpr = <&aonmix_ns_gpr>;
 				status = "disabled";
 			};
 
@@ -947,12 +953,6 @@
 				clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 				dmas = <&edma2 61 0 1>, <&edma2 60 0 0>;
 				dma-names = "rx", "tx";
-				status = "disabled";
-			};
-
-			mqs2: mqs2 {
-				compatible = "fsl,imx93-mqs";
-				gpr = <&wakeupmix_gpr>;
 				status = "disabled";
 			};
 
@@ -1483,52 +1483,6 @@
 			};
 		};
 
-		ldb: ldb-display-controller {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			compatible = "fsl,imx93-ldb";
-			clocks = <&clk IMX93_CLK_LVDS_GATE>;
-			clock-names = "ldb";
-			assigned-clocks = <&clk IMX93_CLK_MEDIA_LDB>;
-			assigned-clock-parents = <&clk IMX93_CLK_VIDEO_PLL>;
-			gpr = <&media_blk_ctrl>;
-			power-domains = <&mediamix>;
-			status = "disabled";
-
-			lvds-channel@0 {
-				#address-cells = <1>;
-				#size-cells = <0>;
-				reg = <0>;
-				phys = <&ldb_phy1>;
-				phy-names = "ldb_phy";
-				status = "disabled";
-
-				port@0 {
-					reg = <0>;
-
-					ldb_ch0: endpoint {
-						remote-endpoint = <&lcdif_to_ldb>;
-					};
-				};
-			};
-		};
-
-		ldb_phy: ldb-phy {
-			compatible = "fsl,imx93-lvds-phy";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			gpr = <&media_blk_ctrl>;
-			clocks = <&clk IMX93_CLK_MEDIA_APB>;
-			clock-names = "apb";
-			power-domains = <&mediamix>;
-			status = "disabled";
-
-			ldb_phy1: port@0 {
-				reg = <0>;
-				#phy-cells = <0>;
-			};
-		};
-
 		dsi: dsi@4ae10000 {
 			compatible = "fsl,imx93-mipi-dsi";
 			reg = <0x4ae10000 0x4000>;
@@ -1605,12 +1559,6 @@
 			};
 		};
 
-		usbphynop1: usbphynop1 {
-			compatible = "usb-nop-xceiv";
-			clocks = <&clk IMX93_CLK_USB_PHY_BURUNIN>;
-			clock-names = "main_clk";
-		};
-
 		usbotg1: usb@4c100000 {
 			compatible = "fsl,imx8mm-usb", "fsl,imx7d-usb";
 			reg = <0x4c100000 0x200>;
@@ -1630,12 +1578,6 @@
 			compatible = "fsl,imx8mm-usbmisc", "fsl,imx7d-usbmisc";
 			#index-cells = <1>;
 			reg = <0x4c100200 0x200>;
-		};
-
-		usbphynop2: usbphynop2 {
-			compatible = "usb-nop-xceiv";
-			clocks = <&clk IMX93_CLK_USB_PHY_BURUNIN>;
-			clock-names = "main_clk";
 		};
 
 		usbotg2: usb@4c200000 {
@@ -1668,6 +1610,64 @@
 	display-subsystem {
 		compatible = "fsl,imx-display-subsystem";
 		ports = <&lcdif_disp>;
+	};
+
+	mqs1: mqs1 {
+		compatible = "fsl,imx93-mqs";
+		gpr = <&aonmix_ns_gpr>;
+		status = "disabled";
+	};
+
+	mqs2: mqs2 {
+		compatible = "fsl,imx93-mqs";
+		gpr = <&wakeupmix_gpr>;
+		status = "disabled";
+	};
+
+	ldb: ldb-display-controller {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "fsl,imx93-ldb";
+		clocks = <&clk IMX93_CLK_LVDS_GATE>;
+		clock-names = "ldb";
+		assigned-clocks = <&clk IMX93_CLK_MEDIA_LDB>;
+		assigned-clock-parents = <&clk IMX93_CLK_VIDEO_PLL>;
+		gpr = <&media_blk_ctrl>;
+		power-domains = <&mediamix>;
+		status = "disabled";
+
+		lvds-channel@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			phys = <&ldb_phy1>;
+			phy-names = "ldb_phy";
+			status = "disabled";
+
+			port@0 {
+				reg = <0>;
+
+				ldb_ch0: endpoint {
+					remote-endpoint = <&lcdif_to_ldb>;
+				};
+			};
+		};
+	};
+
+	ldb_phy: ldb-phy {
+		compatible = "fsl,imx93-lvds-phy";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		gpr = <&media_blk_ctrl>;
+		clocks = <&clk IMX93_CLK_MEDIA_APB>;
+		clock-names = "apb";
+		power-domains = <&mediamix>;
+		status = "disabled";
+
+		ldb_phy1: port@0 {
+			reg = <0>;
+			#phy-cells = <0>;
+		};
 	};
 
 	lpm: imx93-lpm {

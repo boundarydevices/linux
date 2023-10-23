@@ -9,14 +9,16 @@
 /delete-node/ &usb3_lpcg;
 /delete-node/ &usb3_phy;
 
-&conn_subsys {
+/ {
 	conn_enet0_root_clk: clock-conn-enet0-root {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <250000000>;
 		clock-output-names = "conn_enet0_root_clk";
 	};
+};
 
+&conn_subsys {
 	eqos: ethernet@5b050000 {
 		compatible = "nxp,imx8dxl-dwmac-eqos", "snps,dwmac-5.10a";
 		reg = <0x5b050000 0x10000>;

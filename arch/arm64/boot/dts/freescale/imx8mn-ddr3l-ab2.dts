@@ -13,10 +13,7 @@
 	cpu-supply = <&buck1>;
 };
 
-&aips4 {
-	/delete-node/ display-subsystem;
-};
-
+/delete-node/ &{/display-subsystem};
 /delete-node/ &gpu;
 /delete-node/ &lcdif;
 /delete-node/ &mipi_dsi;

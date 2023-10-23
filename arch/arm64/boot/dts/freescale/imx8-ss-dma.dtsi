@@ -7,18 +7,53 @@
 #include <dt-bindings/clock/imx8-lpcg.h>
 #include <dt-bindings/firmware/imx/rsrc.h>
 
+dma_ipg_clk: clock-dma-ipg {
+	compatible = "fixed-clock";
+	#clock-cells = <0>;
+	clock-frequency = <120000000>;
+	clock-output-names = "dma_ipg_clk";
+};
+
+i2c_rpbus_0: i2c-rpbus-0 {
+	compatible = "fsl,i2c-rpbus";
+	status = "disabled";
+};
+
+i2c_rpbus_1: i2c-rpbus-1 {
+	compatible = "fsl,i2c-rpbus";
+	status = "disabled";
+};
+
+i2c_rpbus_5: i2c-rpbus-5 {
+	compatible = "fsl,i2c-rpbus";
+	status = "disabled";
+};
+
+i2c_rpbus_12: i2c-rpbus-12 {
+	compatible = "fsl,i2c-rpbus";
+	status = "disabled";
+};
+
+i2c_rpbus_13: i2c-rpbus-13 {
+	compatible = "fsl,i2c-rpbus";
+	status = "disabled";
+};
+
+i2c_rpbus_14: i2c-rpbus-14 {
+	compatible = "fsl,i2c-rpbus";
+	status = "disabled";
+};
+
+i2c_rpbus_15: i2c-rpbus-15 {
+	compatible = "fsl,i2c-rpbus";
+	status = "disabled";
+};
+
 dma_subsys: bus@5a000000 {
 	compatible = "simple-bus";
 	#address-cells = <1>;
 	#size-cells = <1>;
 	ranges = <0x5a000000 0x0 0x5a000000 0x1000000>;
-
-	dma_ipg_clk: clock-dma-ipg {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <120000000>;
-		clock-output-names = "dma_ipg_clk";
-	};
 
 	lpspi0: spi@5a000000 {
 		compatible = "fsl,imx7ulp-spi";
@@ -602,41 +637,6 @@ dma_subsys: bus@5a000000 {
 				     "edma3-chan2", "edma3-chan3",
 				     "edma3-chan4", "edma3-chan5",
 				     "edma3-chan6", "edma3-chan7";
-		status = "disabled";
-	};
-
-	i2c_rpbus_0: i2c-rpbus-0 {
-		compatible = "fsl,i2c-rpbus";
-		status = "disabled";
-	};
-
-	i2c_rpbus_1: i2c-rpbus-1 {
-		compatible = "fsl,i2c-rpbus";
-		status = "disabled";
-	};
-
-	i2c_rpbus_5: i2c-rpbus-5 {
-		compatible = "fsl,i2c-rpbus";
-		status = "disabled";
-	};
-
-	i2c_rpbus_12: i2c-rpbus-12 {
-		compatible = "fsl,i2c-rpbus";
-		status = "disabled";
-	};
-
-	i2c_rpbus_13: i2c-rpbus-13 {
-		compatible = "fsl,i2c-rpbus";
-		status = "disabled";
-	};
-
-	i2c_rpbus_14: i2c-rpbus-14 {
-		compatible = "fsl,i2c-rpbus";
-		status = "disabled";
-	};
-
-	i2c_rpbus_15: i2c-rpbus-15 {
-		compatible = "fsl,i2c-rpbus";
 		status = "disabled";
 	};
 

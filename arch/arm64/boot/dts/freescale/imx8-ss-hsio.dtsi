@@ -5,6 +5,41 @@
  */
 #include <dt-bindings/phy/phy-imx8-pcie.h>
 
+xtal100m: clock-xtal100m {
+	compatible = "fixed-clock";
+	#clock-cells = <0>;
+	clock-frequency = <100000000>;
+	clock-output-names = "xtal_100MHz";
+};
+
+hsio_refa_clk: clock-hsio-refa {
+	compatible = "gpio-gate-clock";
+	clocks = <&xtal100m>;
+	#clock-cells = <0>;
+	enable-gpios = <&lsio_gpio4 27 GPIO_ACTIVE_LOW>;
+};
+
+hsio_refb_clk: clock-hsio-refb {
+	compatible = "gpio-gate-clock";
+	clocks = <&xtal100m>;
+	#clock-cells = <0>;
+	enable-gpios = <&lsio_gpio4 1 GPIO_ACTIVE_LOW>;
+};
+
+hsio_axi_clk: clock-hsio-axi {
+	compatible = "fixed-clock";
+	#clock-cells = <0>;
+	clock-frequency = <400000000>;
+	clock-output-names = "hsio_axi_clk";
+};
+
+hsio_per_clk: clock-hsio-per {
+	compatible = "fixed-clock";
+	#clock-cells = <0>;
+	clock-frequency = <133333333>;
+	clock-output-names = "hsio_per_clk";
+};
+
 hsio_subsys: bus@5f000000 {
 	compatible = "simple-bus";
 	#address-cells = <1>;
@@ -12,41 +47,6 @@ hsio_subsys: bus@5f000000 {
 	/* Only supports up to 32bits DMA, map all possible DDR as inbound ranges */
 	dma-ranges = <0x80000000 0 0x80000000 0x80000000>;
 	ranges = <0x5f000000 0x0 0x5f000000 0x21000000>;
-
-	xtal100m: clock-xtal100m {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <100000000>;
-		clock-output-names = "xtal_100MHz";
-	};
-
-	hsio_refa_clk: clock-hsio-refa {
-		compatible = "gpio-gate-clock";
-		clocks = <&xtal100m>;
-		#clock-cells = <0>;
-		enable-gpios = <&lsio_gpio4 27 GPIO_ACTIVE_LOW>;
-	};
-
-	hsio_refb_clk: clock-hsio-refb {
-		compatible = "gpio-gate-clock";
-		clocks = <&xtal100m>;
-		#clock-cells = <0>;
-		enable-gpios = <&lsio_gpio4 1 GPIO_ACTIVE_LOW>;
-	};
-
-	hsio_axi_clk: clock-hsio-axi {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <400000000>;
-		clock-output-names = "hsio_axi_clk";
-	};
-
-	hsio_per_clk: clock-hsio-per {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <133333333>;
-		clock-output-names = "hsio_per_clk";
-	};
 
 	pcieb_lpcg: clock-controller@5f060000 {
 		compatible = "fsl,imx8qxp-lpcg";

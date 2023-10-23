@@ -220,6 +220,17 @@
 		compatible = "fsl,imx-rpmsg-rtc";
 	};
 
+	ele_mu: ele-mu {
+		compatible = "fsl,imx-ele";
+		mboxes = <&s4muap 0 0 &s4muap 1 0>;
+		mbox-names = "tx", "rx";
+		fsl,ele_mu_did = <7>;
+		fsl,ele_mu_id = <2>;
+		fsl,ele_mu_max_users = <4>;
+		status = "okay";
+		sram-pool = <&sram0>;
+	};
+
 	soc: soc@0 {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -1096,7 +1107,7 @@
 					};
 				};
 
-				mipi_csi0: csi@2dad0000 {
+				mipi_csi0: csi@2daf0000 {
 					compatible = "fsl,imx8ulp-mipi-csi2", "fsl,mxc-mipi-csi2";
 					reg = <0x2daf0000 0x10000>,
 					      <0x2dad0000 0x10000>;
