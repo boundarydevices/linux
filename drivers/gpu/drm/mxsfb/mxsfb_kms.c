@@ -673,7 +673,8 @@ static void mxsfb_plane_primary_atomic_update(struct drm_plane *plane,
 			bridge_state =
 				drm_atomic_get_new_bridge_state(state,
 								mxsfb->bridge);
-			bus_format = bridge_state->input_bus_cfg.format;
+			if (!IS_ERR_OR_NULL(bridge_state))
+				bus_format = bridge_state->input_bus_cfg.format;
 		}
 
 		/* If there is no bridge, use bus format from connector */
