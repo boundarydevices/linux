@@ -49,7 +49,7 @@
 		mipi-dsi-multiple = <26000000>;	/* needed for display port, but we don't use */
 #endif
 		i2c-address = <0x68>;
-		/* fixme, should be fb_mipi node */
+		/* fixme, should be in fb_mipi node */
 		i2c-bus = <&mipi_ref(tc358767_bus)>;
 		i2c-cmds-enable = /bits/ 8 <
 #if 0
