@@ -733,7 +733,9 @@
 #define SM_I2C_CSI0			i2c1a
 #endif
 #define SM_I2C_CSI1			i2c2
+#if 0	/* imx219 has on board crystal */
 #define SM_PWM_CSI1			pwm4
+#endif
 #endif
 #define GP_SM_I2C_CSI1_CK(a)		<&gpio5 16 a>
 #define PD_SM_I2C_CSI1_CK(a)		MX8MMN(IOMUXC_I2C2_SCL_GPIO5_IO16, a)
