@@ -923,7 +923,6 @@
 
 #ifdef SM_PCIE
 &SM_PCIE {
-	ext_osc = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ref(SM_PCIE)>;
 #ifndef PD_SM_PCIE_A_RST_OUT
@@ -935,7 +934,6 @@
 
 #ifdef SM_PCIE_PHY
 &SM_PCIE_PHY {
-	ext_osc = <1>;
 	status = "okay";
 };
 #endif
