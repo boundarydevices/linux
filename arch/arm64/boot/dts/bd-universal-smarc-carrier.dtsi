@@ -34,7 +34,9 @@
 #ifdef PD_SM_ENET1_SDP
 			PD_SM_ENET1_SDP(PAD_PULLDN)
 #endif
+#ifndef SM_PWM_CSI1
 			PD_SM_CSI1_MCK(PAD_PULLDN)
+#endif
 #ifdef PD_SM_LCD1_VDD_EN
 			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
 #endif
@@ -290,6 +292,14 @@
 	};
 #endif
 
+#ifdef SM_PWM_CSI1
+	pinctrl(SM_PWM_CSI1) {
+		pins_group(pwm,
+			PD_SM_CSI1_MCK_PWM(PAD_PULLUP),
+			UP_SM_CSI1_MCK
+		)
+	};
+#endif
 	pinctrl(SM_SDIO) {
 #ifdef IMX
 		pins_group(sdio,
@@ -486,8 +496,14 @@
 #if defined(SM_I2C_CSI0) || defined(SM_I2C_CSI1)
 	csi0_mclk: csi0-mclk {
 		#clock-cells = <0>;
-		compatible = "fixed-clock";
 		clock-frequency = <24000000>;
+#ifdef SM_PWM_CSI1
+		clock-output-names = "mipi_mclk";
+		compatible = "pwm-clock";
+		pwms = <&SM_PWM_CSI1 0 42 0>; /* 1 / 45 ns = 23.8 MHz */
+#else
+		compatible = "fixed-clock";
+#endif
 	};
 #endif
 
@@ -870,8 +886,8 @@
 		reg = <0x10>;
 		clocks = <&csi0_mclk>;
 		csi_id = <0>;
-		pwn-gpios = GP_SM_GPIO5(GPIO_ACTIVE_HIGH);
-		rst-gpios = GP_SM_GPIO0(GPIO_ACTIVE_LOW);
+		pwn-gpios = GP_SM_GPIO5(GPIO_ACTIVE_HIGH);	/* imx219 driver doesn't use */
+		reset-gpios = GP_SM_GPIO0(GPIO_ACTIVE_HIGH);	/* driver expects HIGH active */
 		status = "okay";
 
 		port {
@@ -904,8 +920,8 @@
 		reg = <0x10>;
 		clocks = <&csi0_mclk>;
 		csi_id = <1>;
-		pwn-gpios = GP_SM_CSI1_MCK(GPIO_ACTIVE_HIGH);
-		rst-gpios = GP_SM_GPIO3(GPIO_ACTIVE_LOW);
+		pwn-gpios = GP_SM_CSI1_MCK(GPIO_ACTIVE_HIGH);	/* imx219 driver doesn't use */
+		reset-gpios = GP_SM_GPIO3(GPIO_ACTIVE_HIGH);	/* driver expects HIGH active */
 		status = "okay";
 
 		port {
@@ -934,6 +950,14 @@
 
 #ifdef SM_PCIE_PHY
 &SM_PCIE_PHY {
+	status = "okay";
+};
+#endif
+
+#ifdef SM_PWM_CSI1
+&SM_PWM_CSI1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ref(SM_PWM_CSI1)>;
 	status = "okay";
 };
 #endif
