@@ -1066,11 +1066,6 @@ static int se_probe_cleanup(struct platform_device *pdev)
 	if (priv->rx_chan)
 		mbox_free_channel(priv->rx_chan);
 
-	if (priv->flags & RESERVED_DMA_POOL) {
-		of_reserved_mem_device_release(dev);
-		priv->flags &= (~RESERVED_DMA_POOL);
-	}
-
 	/* free the buffer in ele-mu remove, previously allocated
 	 * in ele-mu probe to store encrypted IMEM
 	 */
@@ -1091,6 +1086,11 @@ static int se_probe_cleanup(struct platform_device *pdev)
 	}
 
 	__list_del_entry(&priv->priv_data);
+
+	if (priv->flags & RESERVED_DMA_POOL) {
+		of_reserved_mem_device_release(dev);
+		priv->flags &= (~RESERVED_DMA_POOL);
+	}
 
 	devm_kfree(dev, priv);
 	return ret;
