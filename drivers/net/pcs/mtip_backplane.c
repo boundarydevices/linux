@@ -596,7 +596,7 @@ static void mtip_run_irqpoll_once(struct mtip_backplane *priv)
 
 	irqpoll->run_once = true;
 	schedule_delayed_work(&irqpoll->work, 0);
-	mtip_stop_irqpoll(priv);
+	flush_delayed_work(&irqpoll->work);
 }
 
 int mtip_backplane_suspend(struct mtip_backplane *priv)
