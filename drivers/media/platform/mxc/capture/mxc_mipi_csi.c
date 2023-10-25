@@ -342,6 +342,10 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
 		.data_alignment = 10,
 	}, {
+		.code = MEDIA_BUS_FMT_SRGGB10_1X10,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
+		.data_alignment = 10,
+	}, {
 		.code = MEDIA_BUS_FMT_Y10_1X10,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
 		.data_alignment = 10,
