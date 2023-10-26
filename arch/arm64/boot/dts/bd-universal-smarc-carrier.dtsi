@@ -592,8 +592,16 @@
 	};
 
 	reg_vref_sdio: regulator-vref-sdio {
+#if 0
+		/* This is for a slow clock on the M.2 connector, not needed for sd card
+		 * If this is enabled, the rv3028 driver should be built-in, so that you can
+		 * boot from sd card without an initrd.
+		 */
 		clocks = <&rv3028>;
 		compatible = "regulator-fixed-clock";
+#else
+		compatible = "regulator-fixed";
+#endif
 		regulator-always-on;
 		regulator-name = "vref-3v3";
 		regulator-min-microvolt = <3300000>;
