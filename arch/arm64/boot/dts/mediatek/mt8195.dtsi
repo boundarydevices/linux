@@ -286,19 +286,19 @@
 			sustainable-power = <1500>;
 
 			trips {
-				threshold: trip-point@0 {
+				threshold: trip-point {
 					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
-				target: target@1 {
+				target: target {
 					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
-				soc_max_crit: soc_max_crit@0 {
+				soc_max_crit: soc-max-crit {
 					temperature = <115000>;
 					hysteresis = <2000>;
 					type = "critical";
