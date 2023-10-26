@@ -1014,7 +1014,6 @@
 #define DN_SM_I2C_CSI1_DAT		bias-pull-down = <MTK_PULL_SET_RSEL_011>;
 #define UP_SM_I2C_CSI1_DAT		bias-pull-up = <MTK_PULL_SET_RSEL_011>;
 
-#define SM_PWM_CSI1			pwm3
 #define GP_SM_CSI1_MCK(a)		<&GPIO 23 a>
 #define PD_SM_CSI1_MCK(a)		PINMUX_GPIO23__FUNC_B_GPIO23	/* CMMCLK1 */
 #define PD_SM_CSI1_MCK_CLK(a)		PINMUX_GPIO23__FUNC_O_CMMCLK1
