@@ -4,6 +4,7 @@
 #ifndef _FSL_LYNX_XGKR_ALGORITHM_H
 #define _FSL_LYNX_XGKR_ALGORITHM_H
 
+#include <linux/phy/phy.h>
 #include <linux/types.h>
 
 struct lynx_xgkr_algorithm;
@@ -42,6 +43,6 @@ lynx_xgkr_algorithm_create(struct phy *phy,
 			   const struct lynx_xgkr_algorithm_ops *ops);
 void lynx_xgkr_algorithm_destroy(struct lynx_xgkr_algorithm *algorithm);
 int lynx_xgkr_algorithm_configure(struct lynx_xgkr_algorithm *algorithm,
-				  struct phy_configure_opts_xgkr *xgkr);
+				  struct phy_configure_opts_ethernet *opts);
 
 #endif

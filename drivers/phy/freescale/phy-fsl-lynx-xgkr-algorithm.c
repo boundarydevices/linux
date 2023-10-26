@@ -77,10 +77,12 @@ struct lynx_xgkr_remote_tx_status {
 	struct c72_coef_status prev_bin_long_status;
 	enum coef_status last_updated_status_cop1;
 	enum coef_status last_updated_status_coz;
+	int num_steps;
 };
 
 struct lynx_xgkr_local_tx_status {
 	struct lynx_xgkr_tx_eq tuned_tx_eq;
+	int num_steps;
 };
 
 struct lynx_xgkr_algorithm {
@@ -90,6 +92,14 @@ struct lynx_xgkr_algorithm {
 	struct lynx_xgkr_local_tx_status lts;
 	struct lynx_xgkr_tx_eq default_tx_eq;
 };
+
+static int lynx_xgkr_remote_tx_request(struct lynx_xgkr_remote_tx_status *rts,
+				       enum lynx_xgkr_update_requester requester)
+{
+	rts->num_steps++;
+	rts->last_update_requester = requester;
+	return 0;
+}
 
 static void lynx_xgkr_move_back_to_prev(struct lynx_xgkr_algorithm *algorithm,
 					struct c72_coef_update *update)
@@ -105,7 +115,7 @@ static void lynx_xgkr_move_back_to_prev(struct lynx_xgkr_algorithm *algorithm,
 
 static int
 lynx_xgkr_process_bad_state(struct lynx_xgkr_algorithm *algorithm,
-			    struct xgkr_phy_configure_remote_tx *remote_tx,
+			    struct c72_phy_configure_remote_tx *remote_tx,
 			    enum lynx_xgkr_bad_state_reason reason)
 {
 	struct lynx_xgkr_remote_tx_status *rts = &algorithm->rts;
@@ -117,9 +127,7 @@ lynx_xgkr_process_bad_state(struct lynx_xgkr_algorithm *algorithm,
 			 "Bad state detected (%s) while LP is still at INIT, trying PRESET\n",
 			 bad_state_reason_strings[reason]);
 		update->preset = true;
-		rts->last_update_requester = UPDATE_REQUESTER_PRESET;
-
-		return 0;
+		return lynx_xgkr_remote_tx_request(rts, UPDATE_REQUESTER_PRESET);
 	}
 
 	if (rts->last_update_requester != UPDATE_REQUESTER_PRESET) {
@@ -128,9 +136,7 @@ lynx_xgkr_process_bad_state(struct lynx_xgkr_algorithm *algorithm,
 			 bad_state_reason_strings[reason]);
 		/* Move back to previous C-, C0, C+ and HOLD */
 		lynx_xgkr_move_back_to_prev(algorithm, update);
-		rts->last_update_requester = UPDATE_REQUESTER_MOVE_BACK_TO_PREV;
-
-		return 0;
+		return lynx_xgkr_remote_tx_request(rts, UPDATE_REQUESTER_MOVE_BACK_TO_PREV);
 	}
 
 	dev_warn(&phy->dev,
@@ -252,7 +258,7 @@ static bool lynx_xgkr_is_rx_happy(struct lynx_xgkr_algorithm *algorithm)
 
 	if (!rx_happy) {
 		dev_info(&phy->dev,
-			 "Rx NOT happy: cond 2: Offset Bin must NOT be 10 of the same value");
+			 "RX not happy: offset Bin must not be 10 of the same value\n");
 		return false;
 	}
 
@@ -286,7 +292,7 @@ static bool lynx_xgkr_is_rx_happy(struct lynx_xgkr_algorithm *algorithm)
 		rx_happy = false;
 	if (!rx_happy) {
 		dev_info(&phy->dev,
-			 "Rx NOT happy: cond 3: Offset status must dither (+/-2) around MidRange value");
+			 "RX not happy: offset status must dither (+/-2) around mid range value\n");
 		return false;
 	}
 
@@ -304,7 +310,7 @@ static bool lynx_xgkr_is_rx_happy(struct lynx_xgkr_algorithm *algorithm)
 	if (rx_happy)
 		return true;
 
-	dev_info(&phy->dev, "Rx NOT Happy: No happy condition met");
+	dev_info(&phy->dev, "RX not happy: No happy condition met\n");
 
 	return false;
 }
@@ -519,7 +525,7 @@ static void lynx_xgkr_remote_tx_cb(void *priv, int err,
 
 static int
 lynx_xgkr_train_remote_tx(struct lynx_xgkr_algorithm *algorithm,
-			  struct xgkr_phy_configure_remote_tx *remote_tx)
+			  struct c72_phy_configure_remote_tx *remote_tx)
 {
 	struct lynx_xgkr_remote_tx_status *rts = &algorithm->rts;
 	struct c72_coef_update *update = &remote_tx->update;
@@ -540,9 +546,7 @@ lynx_xgkr_train_remote_tx(struct lynx_xgkr_algorithm *algorithm,
 	 */
 	if (rts->last_update_requester == UPDATE_REQUESTER_NONE) {
 		update->init = true;
-		rts->last_update_requester = UPDATE_REQUESTER_INIT;
-
-		return 0;
+		return lynx_xgkr_remote_tx_request(rts, UPDATE_REQUESTER_INIT);
 	}
 
 	for (i = 0; i < TIMEOUT_RX_HAPPY; i++) {
@@ -569,11 +573,9 @@ lynx_xgkr_train_remote_tx(struct lynx_xgkr_algorithm *algorithm,
 								   BAD_STATE_BIN_LONG);
 
 			/* We have a request coming from BinLong, so send it */
-			if (!coef_update_is_all_hold(update)) {
-				rts->last_update_requester = UPDATE_REQUESTER_BIN_LONG;
-
-				return 0;
-			}
+			if (!coef_update_is_all_hold(update))
+				return lynx_xgkr_remote_tx_request(rts,
+								   UPDATE_REQUESTER_BIN_LONG);
 		}
 
 		rts->bin_long_stop = true;
@@ -588,11 +590,9 @@ lynx_xgkr_train_remote_tx(struct lynx_xgkr_algorithm *algorithm,
 								   BAD_STATE_BIN_M1);
 
 			/* We have a request coming from BinM1, so send it */
-			if (!coef_update_is_all_hold(update)) {
-				rts->last_update_requester = UPDATE_REQUESTER_BIN_M1;
-
-				return 0;
-			}
+			if (!coef_update_is_all_hold(update))
+				return lynx_xgkr_remote_tx_request(rts,
+								   UPDATE_REQUESTER_BIN_M1);
 		}
 
 		rts->bin_m1_stop = true;
@@ -679,67 +679,105 @@ static void lynx_xgkr_read_default_tx_eq(struct lynx_xgkr_algorithm *algorithm)
  * Maintaining the following relationships limit the transmit equalization to
  * reasonable levels compliant with the 10GBaseKR specification.
  *
- * These restrictions are visually documented in trac ticket #900 'KR Training'
- * comment 16: http://trac.nxp.com/lx2160/ticket/900#comment:16
+ * These restrictions are:
  *
- * 1. 6'd26 <= tx_ratio_preq[3:0] + tx_adpt_eq[5:0] + tx_ratio_post1q[4:0] <= 6'd48
- * 2. 4'b0000 <= tx_ratio_preq[3:0] <= 4'b1000
- * 3. 5'b0_0000 <= tx_ratio_post1q[4:0] <= 5'b1_0000
- * 4. 6'b01_1010 <= tx_adpt_eq[5:0] <= 6'b11_0000
- * 5. tx_ratio_post1q[4:0] >= tx_ratio_preq[3:0]
- * 6. (tx_adpt_eq[5:0] + tx_ratio_preq[3:0] + tx_ratio_post1q[4:0]) /
- *    (tx_adpt_eq[5:0] - tx_ratio_preq[3:0] - tx_ratio_post1q[4:0]) < 4.25
+ * 1. 6'd26 <= ratio_preq[3:0] + adpt_eq[5:0] + ratio_post1q[4:0] <= 6'd48
+ * 2. 4'b0000 <= ratio_preq[3:0] <= 4'b1000
+ * 3. 5'b0_0000 <= ratio_post1q[4:0] <= 5'b1_0000
+ * 4. 6'b01_1010 <= adpt_eq[5:0] <= 6'b11_0000
+ * 5. ratio_post1q[4:0] >= ratio_preq[3:0]
+ * 6. (adpt_eq[5:0] + ratio_preq[3:0] + ratio_post1q[4:0]) /
+ *    (adpt_eq[5:0] - ratio_preq[3:0] - ratio_post1q[4:0]) < 4.25
  */
-static bool lynx_check_tx_hw_restrictions(u32 ratio_post1q, u32 adapt_eq,
-					  u32 ratio_preq)
+static bool lynx_check_tx_hw_restrictions(struct phy *phy, s32 ratio_post1q,
+					  s32 adapt_eq, s32 ratio_preq)
 {
+	struct device *dev = &phy->dev;
+
 	/* Basic HW restrictions first.
-	 * 2. 4'b0000 <= tx_ratio_preq[3:0] <= 4'b1000
+	 * 2. 4'b0000 <= ratio_preq[3:0] <= 4'b1000
 	 */
-	if (ratio_preq > PRE_COE_MIN)
+	if (ratio_preq > PRE_COE_MIN) {
+		dev_dbg(dev, "RATIO_PREQ(%d) would exceed PRE_COE_MIN(%d)\n",
+			ratio_preq, PRE_COE_MIN);
 		return false;
+	}
 
-	/* 3. 5'b0_0000 <= tx_ratio_post1q[4:0] <= 5'b1_0000 */
-	if (ratio_post1q > POST_COE_MIN)
+	if (ratio_preq < PRE_COE_MAX) {
+		dev_dbg(dev, "RATIO_PREQ(%d) would go below PRE_COE_MAX(%d)\n",
+			ratio_preq, PRE_COE_MAX);
 		return false;
+	}
 
-	/* 4. 6'b01_1010 <= tx_adpt_eq[5:0] <= 6'b11_0000 */
-	if (adapt_eq < ZERO_COE_MIN)
+	/* 3. 5'b0_0000 <= ratio_post1q[4:0] <= 5'b1_0000 */
+	if (ratio_post1q > POST_COE_MIN) {
+		dev_dbg(dev, "RATIO_POST1Q(%d) would exceed POST_COE_MIN(%d)\n",
+			ratio_post1q, POST_COE_MIN);
 		return false;
-	if (adapt_eq > ZERO_COE_MAX)
-		return false;
+	}
 
-	/* 5. tx_ratio_post1q[4:0] >= tx_ratio_preq[3:0] */
-	if (ratio_post1q < ratio_preq)
+	if (ratio_post1q < POST_COE_MAX) {
+		dev_dbg(dev, "RATIO_POST1Q(%d) would go below POST_COE_MAX(%d)\n",
+			ratio_post1q, POST_COE_MAX);
 		return false;
+	}
+
+	/* 4. 6'b01_1010 <= adpt_eq[5:0] <= 6'b11_0000 */
+	if (adapt_eq < ZERO_COE_MIN) {
+		dev_dbg(dev, "ADAPT_EQ(%d) would go below ZERO_COE_MIN(%d)\n",
+			adapt_eq, ZERO_COE_MIN);
+		return false;
+	}
+
+	if (adapt_eq > ZERO_COE_MAX) {
+		dev_dbg(dev, "ADAPT_EQ(%d) would exceed ZERO_COE_MAX(%d)\n",
+			adapt_eq, ZERO_COE_MAX);
+		return false;
+	}
+
+	/* 5. ratio_post1q[4:0] >= ratio_preq[3:0] */
+	if (ratio_post1q < ratio_preq) {
+		dev_dbg(dev, "RATIO_POST1Q(%d) would exceed RATIO_PREQ(%d)\n",
+			ratio_post1q, ratio_preq);
+		return false;
+	}
 
 	/* Additional HW restrictions.
-	 * 1. 6'd26 <= tx_ratio_preq[3:0] + tx_adpt_eq[5:0] + tx_ratio_post1q[4:0] <= 6'd48
+	 * 1. 6'd26 <= ratio_preq[3:0] + adpt_eq[5:0] + ratio_post1q[4:0] <= 6'd48
 	 */
-	if ((ratio_preq + ratio_post1q + adapt_eq) < 26)
+	if ((ratio_preq + ratio_post1q + adapt_eq) < 26) {
+		dev_dbg(dev, "RATIO_PREQ(%d) + RATIO_POST1Q(%d) + ADAPT_EQ(%d) would go below 26\n",
+			ratio_preq, ratio_post1q, adapt_eq);
 		return false;
+	}
 
-	if ((ratio_preq + ratio_post1q + adapt_eq) > 48)
+	if ((ratio_preq + ratio_post1q + adapt_eq) > 48) {
+		dev_dbg(dev, "RATIO_PREQ(%d) + RATIO_POST1Q(%d) + ADAPT_EQ(%d) would exceed 48\n",
+			ratio_preq, ratio_post1q, adapt_eq);
 		return false;
+	}
 
-	/* 6. (tx_adpt_eq[5:0] + tx_ratio_preq[3:0] + tx_ratio_post1q[4:0] ) /
-	 *    (tx_adpt_eq[5:0] - tx_ratio_preq[3:0] - tx_ratio_post1q[4:0] ) < 4.25 = 17/4
+	/* 6. (adpt_eq[5:0] + ratio_preq[3:0] + ratio_post1q[4:0] ) /
+	 *    (adpt_eq[5:0] - ratio_preq[3:0] - ratio_post1q[4:0] ) < 4.25 = 17/4
 	 */
 	if (((ratio_post1q + adapt_eq + ratio_preq) * 4) >=
-	    ((adapt_eq - ratio_post1q - ratio_preq) * 17))
+	    ((adapt_eq - ratio_post1q - ratio_preq) * 17)) {
+		dev_dbg(dev, "Ratio between RATIO_PREQ(%d), RATIO_POST1Q(%d) and ADAPT_EQ(%d) exceeds 17/4\n",
+			ratio_preq, ratio_post1q, adapt_eq);
 		return false;
+	}
 
-	return 0;
+	return true;
 }
 
 static enum coef_status
 lynx_xgkr_inc_dec_one(struct lynx_xgkr_algorithm *algorithm,
 		      enum coef_field field, enum coef_update request)
 {
-	u32 ld_limit[COEF_FIELD_MAX], ld_coe[COEF_FIELD_MAX], step[COEF_FIELD_MAX];
 	struct lynx_xgkr_local_tx_status *lts = &algorithm->lts;
+	s32 ld_coe[COEF_FIELD_MAX], step[COEF_FIELD_MAX];
 	struct lynx_xgkr_tx_eq new_tx_eq = {};
-	u32 prev_coe;
+	struct phy *phy = algorithm->phy;
 	bool passes;
 
 	ld_coe[COEF_FIELD_COP1] = lts->tuned_tx_eq.ratio_post1q;
@@ -750,31 +788,15 @@ lynx_xgkr_inc_dec_one(struct lynx_xgkr_algorithm *algorithm,
 	step[COEF_FIELD_COZ] = +1;
 	step[COEF_FIELD_COM1] = -1;
 
-	prev_coe = ld_coe[field];
-
 	/* IEEE 802.3 72.6.10.2.5 Coefficient update process
 	 * Upon execution of a received increment or decrement request,
 	 * the status is reported as updated, maximum, or minimum.
 	 */
 	switch (request) {
 	case COEF_UPD_INC:
-		ld_limit[COEF_FIELD_COP1] = POST_COE_MAX;
-		ld_limit[COEF_FIELD_COZ] = ZERO_COE_MAX;
-		ld_limit[COEF_FIELD_COM1] = PRE_COE_MAX;
-
-		if (ld_coe[field] == ld_limit[field])
-			return COEF_STAT_MAX;
-
 		ld_coe[field] += step[field];
 		break;
 	case COEF_UPD_DEC:
-		ld_limit[COEF_FIELD_COP1] = POST_COE_MIN;
-		ld_limit[COEF_FIELD_COZ] = ZERO_COE_MIN;
-		ld_limit[COEF_FIELD_COM1] = PRE_COE_MIN;
-
-		if (ld_coe[field] == ld_limit[field])
-			return COEF_STAT_MIN;
-
 		ld_coe[field] -= step[field];
 		break;
 	case COEF_UPD_HOLD:
@@ -784,7 +806,7 @@ lynx_xgkr_inc_dec_one(struct lynx_xgkr_algorithm *algorithm,
 		return COEF_STAT_NOT_UPDATED;
 	}
 
-	passes = lynx_check_tx_hw_restrictions(ld_coe[COEF_FIELD_COP1],
+	passes = lynx_check_tx_hw_restrictions(phy, ld_coe[COEF_FIELD_COP1],
 					       ld_coe[COEF_FIELD_COZ],
 					       ld_coe[COEF_FIELD_COM1]);
 	if (!passes) {
@@ -820,10 +842,13 @@ static int lynx_xgkr_inc_dec_coef(struct lynx_xgkr_algorithm *algorithm,
 }
 
 static int lynx_xgkr_train_local_tx(struct lynx_xgkr_algorithm *algorithm,
-				    struct xgkr_phy_configure_local_tx *local_tx)
+				    struct c72_phy_configure_local_tx *local_tx)
 {
 	const struct c72_coef_update *update = &local_tx->update;
+	struct lynx_xgkr_local_tx_status *lts = &algorithm->lts;
 	struct c72_coef_status *status = &local_tx->status;
+
+	lts->num_steps++;
 
 	if (update->preset)
 		return lynx_xgkr_preset(algorithm, status);
@@ -835,25 +860,28 @@ static int lynx_xgkr_train_local_tx(struct lynx_xgkr_algorithm *algorithm,
 
 static int lynx_xgkr_lt_done(struct lynx_xgkr_algorithm *algorithm)
 {
+	struct lynx_xgkr_remote_tx_status *rts = &algorithm->rts;
 	struct lynx_xgkr_local_tx_status *lts = &algorithm->lts;
 	struct phy *phy = algorithm->phy;
 
-	dev_info(&phy->dev, "Link trained, Tx equalization: RATIO_PREQ = 0x%x, RATIO_PST1Q = 0x%x, ADPT_EQ = 0x%x\n",
-		 lts->tuned_tx_eq.ratio_preq, lts->tuned_tx_eq.ratio_post1q,
-		 lts->tuned_tx_eq.adapt_eq);
+	dev_info(&phy->dev, "Link trained after %d local and %d remote steps, TX equalization: RATIO_PREQ = %d, RATIO_PST1Q = %d, ADPT_EQ = %d\n",
+		 lts->num_steps, rts->num_steps, lts->tuned_tx_eq.ratio_preq,
+		 lts->tuned_tx_eq.ratio_post1q, lts->tuned_tx_eq.adapt_eq);
+
+	memset(&algorithm->rts, 0, sizeof(algorithm->rts));
 
 	return 0;
 }
 
 int lynx_xgkr_algorithm_configure(struct lynx_xgkr_algorithm *algorithm,
-				  struct phy_configure_opts_xgkr *xgkr)
+				  struct phy_configure_opts_ethernet *opts)
 {
-	switch (xgkr->type) {
-	case XGKR_CONFIGURE_LOCAL_TX:
-		return lynx_xgkr_train_local_tx(algorithm, &xgkr->local_tx);
-	case XGKR_CONFIGURE_REMOTE_TX:
-		return lynx_xgkr_train_remote_tx(algorithm, &xgkr->remote_tx);
-	case XGKR_CONFIGURE_LT_DONE:
+	switch (opts->type) {
+	case C72_LOCAL_TX:
+		return lynx_xgkr_train_local_tx(algorithm, &opts->local_tx);
+	case C72_REMOTE_TX:
+		return lynx_xgkr_train_remote_tx(algorithm, &opts->remote_tx);
+	case C72_LT_DONE:
 		return lynx_xgkr_lt_done(algorithm);
 	default:
 		return -EOPNOTSUPP;

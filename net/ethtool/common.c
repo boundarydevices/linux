@@ -597,3 +597,9 @@ ethtool_params_from_link_mode(struct ethtool_link_ksettings *link_ksettings,
 	link_ksettings->base.duplex = link_info->duplex;
 }
 EXPORT_SYMBOL_GPL(ethtool_params_from_link_mode);
+
+const char *ethtool_link_mode_str(enum ethtool_link_mode_bit_indices link_mode)
+{
+	return link_mode_names[link_mode];
+}
+EXPORT_SYMBOL(ethtool_link_mode_str);

@@ -551,7 +551,20 @@ int phy_validate(struct phy *phy, enum phy_mode mode, int submode,
 }
 EXPORT_SYMBOL_GPL(phy_validate);
 
-int phy_check_cdr_lock(struct phy *phy, bool *cdr_locked)
+/**
+ * phy_get_status() - Query various parameters of a PHY
+ * @phy: the phy returned by phy_get()
+ * @type: type of the status being queried
+ * @opts: pointer to union of status structures, determined by type
+ *
+ * phy_init() must have been called on the phy. The status is relative to the
+ * current phy mode, that can be changed using phy_set_mode(). Not all status
+ * types may be relevant to all phy modes.
+ *
+ * Return: %0 if successful, a negative error code otherwise
+ */
+int phy_get_status(struct phy *phy, enum phy_status_type type,
+		   union phy_status_opts *opts)
 {
 	int ret = 0;
 
@@ -559,19 +572,19 @@ int phy_check_cdr_lock(struct phy *phy, bool *cdr_locked)
 		return -EINVAL;
 
 #ifndef CONFIG_IMX_GKI_FIX
-	if (!phy->ops->check_cdr_lock)
+	if (!phy->ops->get_status)
 		return -EOPNOTSUPP;
 #endif
 
 	mutex_lock(&phy->mutex);
 #ifndef CONFIG_IMX_GKI_FIX
-	ret = phy->ops->check_cdr_lock(phy, cdr_locked);
+	ret = phy->ops->get_status(phy, type, opts);
 #endif
 	mutex_unlock(&phy->mutex);
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(phy_check_cdr_lock);
+EXPORT_SYMBOL_GPL(phy_get_status);
 
 /**
  * _of_phy_get() - lookup and obtain a reference to a phy by phandle
@@ -900,6 +913,36 @@ struct phy *devm_of_phy_get(struct device *dev, struct device_node *np,
 	return phy;
 }
 EXPORT_SYMBOL_GPL(devm_of_phy_get);
+
+/**
+ * devm_of_phy_optional_get() - lookup and obtain a reference to an optional
+ * phy.
+ * @dev: device that requests this phy
+ * @np: node containing the phy
+ * @con_id: name of the phy from device's point of view
+ *
+ * Gets the phy using of_phy_get(), and associates a device with it using
+ * devres. On driver detach, release function is invoked on the devres data,
+ * then, devres data is freed.  This differs to devm_of_phy_get() in
+ * that if the phy does not exist, it is not considered an error and
+ * -ENODEV will not be returned. Instead the NULL phy is returned,
+ * which can be passed to all other phy consumer calls.
+ */
+struct phy *devm_of_phy_optional_get(struct device *dev, struct device_node *np,
+				     const char *con_id)
+{
+	struct phy *phy = devm_of_phy_get(dev, np, con_id);
+
+	if (PTR_ERR(phy) == -ENODEV)
+		phy = NULL;
+
+	if (IS_ERR(phy))
+		dev_err_probe(dev, PTR_ERR(phy), "failed to get PHY %pOF:%s",
+			      np, con_id);
+
+	return phy;
+}
+EXPORT_SYMBOL_GPL(devm_of_phy_optional_get);
 
 /**
  * devm_of_phy_get_by_index() - lookup and obtain a reference to a phy by index.
