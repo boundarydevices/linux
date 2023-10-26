@@ -907,7 +907,9 @@
 #ifndef UBOOT
 #define SM_I2C_CSI0			i2c6a
 #define SM_I2C_CSI1			i2c6b
+#if 0	/* imx219 has on board crystal */
 #define SM_PWM_CSI1			pwm4
+#endif
 #endif
 #define GP_SM_CSI1_MCK(a)		<&gpio1 15 a>
 #define PD_SM_CSI1_MCK(a)		MX8MP_IOMUXC_GPIO1_IO15__GPIO1_IO15 a
