@@ -903,12 +903,9 @@
 };
 
 &mipi_csi {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
 
-	port@0 {
-		reg = <0>;
+	port {
 		mipi_csi_ep: endpoint {
 			remote-endpoint = <&ar1302_mipi_ep>;
 			data-lanes = <2>;
