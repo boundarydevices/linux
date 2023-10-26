@@ -326,6 +326,13 @@ _IMX_IN_TREE_MODULES = [
     "net/mac80211/mac80211.ko",
     "drivers/gpu/drm/imx/display-imx-rpmsg.ko",
     "drivers/cpufreq/cpufreq-dt-platdev.ko",
+    "drivers/soc/imx/soc-imx9.ko",
+    "drivers/iio/accel/fxls8962af-i2c.ko",
+    "drivers/staging/media/imx/hdmirx/cdns_mhdp_hdmirx.ko",
+    "drivers/leds/leds-pca995x.ko",
+    "drivers/i2c/muxes/i2c-mux-gpio.ko",
+    "drivers/iio/accel/fxls8962af-core.ko",
+    "drivers/i2c/i2c-mux.ko",
 ]
 
 def define_imx():
@@ -348,4 +355,5 @@ def define_imx():
         kernel_build = ":imx",
         kernel_modules = _IMX_EXT_MODULES,
         module_grouping = False,
+        kmi_symbol_list_add_only = True,
     )
