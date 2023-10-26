@@ -116,11 +116,11 @@
 		>;
 	};
 
-	pinctrl_i2c6c_mcp23018: i2c6c-mcp23018grp {
+	pinctrl_i2c6_mcp23018: i2c6-mcp23018grp {
 		fsl,pins = <
-#define GPIRQ_I2C6C_MCP23018	<&gpio4 22 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_I2C6_MCP23018	<&gpio4 22 IRQ_TYPE_LEVEL_LOW>
 			MX8MP_IOMUXC_SAI2_RXC__GPIO4_IO22		0x1c0
-#define GP_I2C6C_MCP23018_RESET	<&gpio4 27 GPIO_ACTIVE_LOW>
+#define GP_I2C6_MCP23018_RESET	<&gpio4 27 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27		0x100
 		>;
 	};
@@ -622,14 +622,14 @@
 		compatible = "microchip,mcp23018";
 		gpio-controller;
 		#gpio-cells = <0x2>;
-		interrupts-extended = GPIRQ_I2C6C_MCP23018;
+		interrupts-extended = GPIRQ_I2C6_MCP23018;
 		interrupt-controller;
 		#interrupt-cells = <0x2>;
 		microchip,irq-mirror;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c6c_mcp23018>, <&mcp_pullups>;
+		pinctrl-0 = <&pinctrl_i2c6_mcp23018>, <&mcp_pullups>;
 		reg = <0x20>;
-		reset-gpios = GP_I2C6C_MCP23018_RESET;
+		reset-gpios = GP_I2C6_MCP23018_RESET;
 
 		mcp_pullups: pinmux {
 			/* gpio1 & gpio4 have external pullup */
