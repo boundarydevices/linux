@@ -90,7 +90,7 @@
 		};
 	};
 
-	edp_panel_fixed_3v3: regulator@0 {
+	edp_panel_fixed_3v3: edp-panel-fixed-3v3 {
 		compatible = "regulator-fixed";
 		regulator-name = "edp_panel_3v3";
 		regulator-min-microvolt = <3300000>;
@@ -101,7 +101,7 @@
 		pinctrl-0 = <&edp_panel_3v3_en_pins>;
 	};
 
-	edp_panel_fixed_12v: regulator@1 {
+	edp_panel_fixed_12v: edp-panel-fixed-12v {
 		compatible = "regulator-fixed";
 		regulator-name = "edp_backlight_12v";
 		regulator-min-microvolt = <12000000>;
@@ -322,7 +322,7 @@
 					#address-cells = <1>;
 					#size-cells = <0>;
 
-					port@0 {};
+					port0 {};
 				};
 			};
 
