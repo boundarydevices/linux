@@ -1236,8 +1236,8 @@
 /* J2J */
 #define GP_SM_GPIO12(a)			<&pio 42 a>
 #define PD_SM_GPIO12(a)			PINMUX_GPIO42__FUNC_B_GPIO42		/* KPCOL0 */
-#define DN_SM_GPIO12			bias-pull-down;
-#define UP_SM_GPIO12			bias-pull-up;
+#define DN_SM_GPIO12			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+#define UP_SM_GPIO12			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 #define GP_SM_WDT_TIMEOUT(a)		<&GPIO 100 a>
 #define PD_SM_WDT_TIMEOUT(a)		PINMUX_GPIO100__FUNC_B_GPIO100
 #define PD_SM_WDT_TIMEOUT_WDT(a)	PINMUX_GPIO100__FUNC_O_WATCHDOG		/* PMIC_WATCHDOG */
