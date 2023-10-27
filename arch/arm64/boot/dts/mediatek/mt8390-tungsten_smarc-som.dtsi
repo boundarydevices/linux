@@ -618,6 +618,10 @@
 	regulator-always-on;
 };
 
+&mt6359_vcn33_1_bt_ldo_reg {
+	regulator-always-on;
+};
+
 &mt6359_vcn33_2_bt_ldo_reg {
 	regulator-always-on;
 };
