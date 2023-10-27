@@ -735,7 +735,8 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 		vdd1p2 = devm_regulator_get_optional(dev, "vdd1p2");
 		if (IS_ERR(vdd1p2)) {
 			ret = PTR_ERR(vdd1p2);
-			dev_err(dev, "fail to get vdd1p2 %d\n", ret);
+			if (ret != -ENODEV)
+				dev_err(dev, "fail to get vdd1p2 %d\n", ret);
 			if (ret == -EPROBE_DEFER)
 				return ret;
 			vdd1p2 = NULL;
