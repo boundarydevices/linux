@@ -519,11 +519,11 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethernet_phy0: ethernet-phy@7 {
+		ethernet_phy0: ethernet-phy {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			eee-broken-1000t;
 			interrupts-extended = GPIRQ_EQOS_PHY;
-			reg = <0x7>;
+			reg-mask = <0xf0>;
 #ifdef GP_EQOS_RESET
 			reset-gpios = GP_EQOS_RESET;
 #endif
