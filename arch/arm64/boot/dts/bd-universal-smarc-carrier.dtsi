@@ -603,7 +603,7 @@
 		compatible = "regulator-fixed";
 #endif
 		regulator-always-on;
-		regulator-name = "vref-3v3";
+		regulator-name = "vref-sdio-3v3";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 #ifdef GP_SM_SDIO_PWR_EN
