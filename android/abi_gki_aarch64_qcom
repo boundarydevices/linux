@@ -73,6 +73,7 @@
   bin2hex
   bio_endio
   bio_end_io_acct_remapped
+  bio_split
   bio_start_io_acct
   bitmap_allocate_region
   __bitmap_and
@@ -739,6 +740,22 @@
   divider_recalc_rate
   divider_ro_round_rate_parent
   divider_round_rate_parent
+  dm_bufio_client_create
+  dm_bufio_client_destroy
+  dm_bufio_mark_buffer_dirty
+  dm_bufio_new
+  dm_bufio_read
+  dm_bufio_release
+  dm_bufio_write_dirty_buffers
+  dm_disk
+  dm_get_device
+  dm_kobject_release
+  dm_read_arg_group
+  dm_register_target
+  dm_shift_arg
+  dm_table_get_md
+  dm_table_get_mode
+  dm_unregister_target
   dma_alloc_attrs
   dma_alloc_noncontiguous
   dma_alloc_pages
@@ -2428,6 +2445,8 @@
   __pm_runtime_use_autosuspend
   __pm_stay_awake
   pm_stay_awake
+  pm_suspend_global_flags
+  pm_suspend_target_state
   pm_system_wakeup
   pm_wakeup_dev_event
   pm_wakeup_ws_event
@@ -3363,11 +3382,13 @@
   __traceiter_android_rvh_update_thermal_stats
   __traceiter_android_rvh_util_est_update
   __traceiter_android_rvh_wake_up_new_task
+  __traceiter_android_vh_alter_mutex_list_add
   __traceiter_android_vh_audio_usb_offload_connect
   __traceiter_android_vh_binder_restore_priority
   __traceiter_android_vh_binder_set_priority
   __traceiter_android_vh_binder_wakeup_ilocked
   __traceiter_android_vh_build_sched_domains
+  __traceiter_android_vh_bus_iommu_probe
   __traceiter_android_vh_check_hibernation_swap
   __traceiter_android_vh_check_uninterrupt_tasks
   __traceiter_android_vh_check_uninterrupt_tasks_done
@@ -3509,11 +3530,13 @@
   __tracepoint_android_rvh_update_thermal_stats
   __tracepoint_android_rvh_util_est_update
   __tracepoint_android_rvh_wake_up_new_task
+  __tracepoint_android_vh_alter_mutex_list_add
   __tracepoint_android_vh_audio_usb_offload_connect
   __tracepoint_android_vh_binder_restore_priority
   __tracepoint_android_vh_binder_set_priority
   __tracepoint_android_vh_binder_wakeup_ilocked
   __tracepoint_android_vh_build_sched_domains
+  __tracepoint_android_vh_bus_iommu_probe
   __tracepoint_android_vh_check_hibernation_swap
   __tracepoint_android_vh_check_uninterrupt_tasks
   __tracepoint_android_vh_check_uninterrupt_tasks_done
