@@ -228,9 +228,9 @@ static int ssusb_extcon_register(struct otg_switch_mtk *otg_sx)
 	ret = extcon_get_state(edev, EXTCON_USB_HOST);
 	dev_dbg(ssusb->dev, "EXTCON_USB_HOST: %d\n", ret);
 
-	/* default as host, switch to none mode if needed */
+	/* default as host, switch to device mode if needed */
 	if (!ret)
-		ssusb_set_mode(otg_sx, USB_ROLE_NONE);
+		ssusb_set_mode(otg_sx, USB_ROLE_DEVICE);
 
 	return 0;
 }
