@@ -623,6 +623,8 @@ static int mtk_dai_dmic_hw_gain_ctrl_put(struct snd_kcontrol *kcontrol,
 		cached = &dmic_priv->gain_on[2];
 	else if (!strcmp(kcontrol->id.name, "DMIC4_HW_GAIN_EN"))
 		cached = &dmic_priv->gain_on[3];
+	else
+		return -EINVAL;
 
 	if (source == *cached)
 		return 0;
