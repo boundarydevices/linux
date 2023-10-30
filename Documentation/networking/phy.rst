@@ -327,6 +327,20 @@ Some of the interface modes are described below:
     This is the Penta SGMII mode, it is similar to QSGMII but it combines 5
     SGMII lines into a single link compared to 4 on QSGMII.
 
+``PHY_INTERFACE_MODE_10G_QXGMII``
+    Represents the 10G-QXGMII PHY-MAC interface as defined by the Cisco USXGMII
+    Multiport Copper Interface document. It supports 4 ports over a 10.3125 GHz
+    SerDes lane, each port having speeds of 2.5G / 1G / 100M / 10M achieved
+    through symbol replication. The PCS expects the standard USXGMII code word.
+
+``PHY_INTERFACE_MODE_25GKR``
+    This is the 25GBASE-R PCS as defined by IEEE 802.3 Clause 107, resolved
+    through Clause 73 autonegotiation.
+
+``PHY_INTERFACE_MODE_40GKR4``
+    This is the 40GBASE-R PCS as defined by IEEE 802.3 Clause 84, resolved
+    through Clause 73 autonegotiation.
+
 Pause frames / flow control
 ===========================
 
