@@ -126,6 +126,19 @@ static int __pkvm_create_hyp_vcpu(struct kvm *host_kvm, struct kvm_vcpu *host_vc
 	return ret;
 }
 
+static bool pkvm_teardown_vm(struct kvm *host_kvm)
+{
+	if (!pkvm_is_hyp_created(host_kvm))
+		return false;
+
+	WARN_ON(kvm_call_hyp_nvhe(__pkvm_teardown_vm,
+				  host_kvm->arch.pkvm.handle));
+
+	host_kvm->arch.pkvm.handle = 0;
+
+	return true;
+}
+
 static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 {
 	struct kvm_pinned_page *ppage, *tmp;
@@ -133,12 +146,7 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 	struct list_head *ppages;
 	unsigned long pages = 0;
 
-	if (pkvm_is_hyp_created(host_kvm)) {
-		WARN_ON(kvm_call_hyp_nvhe(__pkvm_teardown_vm,
-					  host_kvm->arch.pkvm.handle));
-	}
-
-	host_kvm->arch.pkvm.handle = 0;
+	pkvm_teardown_vm(host_kvm);
 	free_hyp_memcache(&host_kvm->arch.pkvm.teardown_mc);
 
 	ppages = &host_kvm->arch.pkvm.pinned_pages;
