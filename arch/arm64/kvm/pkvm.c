@@ -146,7 +146,9 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 	struct list_head *ppages;
 	unsigned long pages = 0;
 
-	pkvm_teardown_vm(host_kvm);
+	if (!pkvm_teardown_vm(host_kvm))
+		return;
+
 	free_hyp_memcache(&host_kvm->arch.pkvm.teardown_mc);
 
 	ppages = &host_kvm->arch.pkvm.pinned_pages;
