@@ -150,10 +150,6 @@
 	};
 
 	pinctrl_hog: hoggrp {
-		pins-hog {
-#define GP_DP0_HPD(a)	<&GPIO 25 a>	/* LCM_RST */
-			pinmux = <PINMUX_GPIO25__FUNC_B_GPIO25>;
-		};
 	};
 
 	pinctrl_mmc0_default: mmc0-defaultgrp {
@@ -1052,11 +1048,6 @@
 #define SM_FB_MIPI			dsi0
 #define SM_FB_MIPI_SUBSYSTEM		dsi0
 #define SM_MIPI_PHY_CLOCK		<&vdosys0 CLK_VDO0_DSI0_DSI>
-
-#define MIPI1_DSI			dsi1
-#define SM_FB_MIPI1			dsi1
-#define SM_FB_MIPI1_SUBSYSTEM		dsi1
-#define SM_MIPI1_PHY_CLOCK		<&vdosys0 CLK_VDO0_DSI1_DSI>
 #endif
 
 #define MIPI_ADD_PORT
@@ -1065,8 +1056,8 @@
 #define DN_SM_LCD0_BKLT_EN		bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
 #define UP_SM_LCD0_BKLT_EN		bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 
-#define GP_SM_LCD0_VDD_EN(a)		<&GPIO 26 a>
-#define PD_SM_LCD0_VDD_EN(a)		PINMUX_GPIO26__FUNC_B_GPIO26		/* DSI0_TE */
+#define GP_SM_LCD0_VDD_EN(a)		<&GPIO 25 a>
+#define PD_SM_LCD0_VDD_EN(a)		PINMUX_GPIO25__FUNC_B_GPIO25		/* LCM_RST */
 #define DN_SM_LCD0_VDD_EN		bias-pull-down;
 #define UP_SM_LCD0_VDD_EN		bias-pull-up;
 
@@ -1077,19 +1068,8 @@
 #define DN_SM_LCD0_BKLT_PWM		bias-pull-down;
 #define UP_SM_LCD0_BKLT_PWM		bias-pull-up;
 
-#define GP_SM_EDP0_HPD(a)		<&GPIO 28 a>
-#define PD_SM_EDP0_HPD(a)		PINMUX_GPIO28__FUNC_B_GPIO28
-#define PD_SM_EDP0_HPD_IN(a)		PINMUX_GPIO28__FUNC_I0_EDP_TX_HPD	/* DSI1_TE */
-#define DN_SM_EDP0_HPD			bias-pull-down;
-#define UP_SM_EDP0_HPD			bias-pull-up;
-
-#define GP_SM_EDP1_HPD(a)		<&GPIO 19 a>
-#define PD_SM_EDP1_HPD(a)		PINMUX_GPIO19__FUNC_B_GPIO19		/* CMMRST0 */
-#define DN_SM_EDP1_HPD			bias-pull-down;
-#define UP_SM_EDP1_HPD			bias-pull-up;
-
-#define GP_SM_LCD1_VDD_EN(a)		<&GPIO 46 a>
-#define PD_SM_LCD1_VDD_EN(a)		PINMUX_GPIO46__FUNC_B_GPIO46		/* DPTX_HPD */
+#define GP_SM_LCD1_VDD_EN(a)		<&GPIO 28 a>
+#define PD_SM_LCD1_VDD_EN(a)		PINMUX_GPIO28__FUNC_B_GPIO28		/* DSI1_TE */
 #define DN_SM_LCD1_VDD_EN		bias-pull-down;
 #define UP_SM_LCD1_VDD_EN		bias-pull-up;
 
@@ -1100,10 +1080,10 @@
 #define DN_SM_LCD1_BKLT_PWM		bias-pull-down;
 #define UP_SM_LCD1_BKLT_PWM		bias-pull-up;
 
-#define GP_SM_LVDS1_BACKLIGHT_EN(a)	<&GPIO 15 a>
-#define PD_SM_LVDS1_BACKLIGHT_EN(a)	PINMUX_GPIO15__FUNC_B_GPIO15		/* GPIO15 */
-#define DN_SM_LVDS1_BACKLIGHT_EN	bias-pull-down;
-#define UP_SM_LVDS1_BACKLIGHT_EN	bias-pull-up;
+#define GP_SM_LCD1_BKLT_EN(a)		<&GPIO 15 a>
+#define PD_SM_LCD1_BKLT_EN(a)		PINMUX_GPIO15__FUNC_B_GPIO15		/* GPIO15 */
+#define DN_SM_LCD1_BKLT_EN		bias-pull-down;
+#define UP_SM_LCD1_BKLT_EN		bias-pull-up;
 
 /* J2H */
 #ifndef UBOOT
