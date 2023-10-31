@@ -689,6 +689,26 @@ hdmi_rx_timer_isr(struct timer_list *t)
 		jiffies + HDMI_RX_TIMER_TICKET / (1000 / HZ));
 }
 
+
+static void hdmi_rx_check_post_notify(struct MTK_HDMI *myhdmi)
+{
+	int ret = 0;
+
+	if (myhdmi->capture_driver &&
+		myhdmi->vid_locked &&
+		(hdmi2_get_state(myhdmi) == rx_is_stable) &&
+		myhdmi->capture_delay_probe == TRUE) {
+
+		ret = myhdmi->capture_driver->ops->probe(&myhdmi->capture_intf);
+		RX_INFO_LOG("[RX] delay probe capture device, ret=%d\n", ret);
+		if (ret < 0) {
+			myhdmi->capture_delay_probe = TRUE;
+		} else {
+			myhdmi->capture_delay_probe = FALSE;
+		}
+	}
+}
+
 static int
 hdmi_rx_main_kthread(void *data)
 {
@@ -737,6 +757,7 @@ hdmi_rx_main_kthread(void *data)
 				}
 				hdmi2_hdcp_service(myhdmi);
 			}
+			hdmi_rx_check_post_notify(myhdmi);
 		} else if (myhdmi->main_state == HDMIRX_EXIT) {
 			hdmi_rx_set_main_state(myhdmi, HDMIRX_IDLE);
 		}
@@ -1060,6 +1081,7 @@ void hdmirx_set_vcore(struct MTK_HDMI *myhdmi, u32 vcore)
 void notify_vid_capture_device(struct MTK_HDMI *myhdmi, enum HDMIRX_NOTIFY_T notify)
 {
 	struct HDMIRX_VID_PARA vid_para;
+	int ret;
 
 	if (myhdmi->capture_driver == NULL) {
 		RX_DEF_LOG("[RX] capture device not registered, skip notify[%d].\n", notify);
@@ -1097,11 +1119,16 @@ void notify_vid_capture_device(struct MTK_HDMI *myhdmi, enum HDMIRX_NOTIFY_T not
 		RX_INFO_LOG("[RX] notify capture device to probe with w/h/cs: [%u/%u/%d].\n",
 					 myhdmi->capture_intf.width, myhdmi->capture_intf.height,
 					 myhdmi->capture_intf.color_space);
-		myhdmi->capture_driver->ops->probe(&myhdmi->capture_intf);
+		ret = myhdmi->capture_driver->ops->probe(&myhdmi->capture_intf);
+		if (ret < 0)
+			myhdmi->capture_delay_probe = TRUE;
+		else
+			myhdmi->capture_delay_probe = FALSE;
 		break;
 	case HDMI_RX_TIMING_UNLOCK:
 		RX_INFO_LOG("[RX] notify capture device to disconnect.\n");
 		myhdmi->capture_driver->ops->disconnect(&myhdmi->capture_intf);
+		myhdmi->capture_delay_probe = FALSE;
 		break;
 	default:
 		RX_DEF_LOG("[RX] unknown notify[%d] to vid_capture_device, skip it\n");

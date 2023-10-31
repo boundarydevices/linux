@@ -2083,6 +2083,7 @@ struct HdmiVRR vrr_emp;
 	/* hdmirx capture driver */
 	struct hdmirx_capture_driver *capture_driver;
 	struct hdmirx_capture_interface capture_intf;
+	bool capture_delay_probe;
 };
 
 #define RX_ADR myhdmi->dig_addr
