@@ -58,6 +58,7 @@ struct scmi_clock_info {
 			u64 step_size;
 		} range;
 	};
+	u32 attributes;
 	int num_parents;
 	u32 *parents;
 };
