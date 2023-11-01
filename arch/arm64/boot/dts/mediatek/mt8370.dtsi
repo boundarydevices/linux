@@ -1521,6 +1521,10 @@
 			gpu_segment_table2: gpu-efuse2 {
 				reg = <0x4c 0x4>;
 			};
+
+			efuse_apu_segment: efuse-apu-segment {
+				reg = <0x1fc 0x4>;
+			};
 		};
 
 		mfgcfg: syscon@13fbf000 {
