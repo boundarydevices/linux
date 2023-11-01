@@ -817,6 +817,9 @@ hdmi2cmd_test_mode(struct MTK_HDMI *myhdmi, char *str_p)
 		RX_DEF_LOG("[RX]sel_edid=%d\n", temp1);
 		myhdmi->sel_edid = temp1;
 		myhdmi->chg_edid = TRUE;
+	} else if (temp == 114) {
+		RX_DEF_LOG("[RX]portswitch=%d\n", temp1);
+		myhdmi->portswitch = (u8)temp1;
 	} else if (temp == 80) {
 		io_get_dev_info(myhdmi, &dev_info);
 	} else if (temp == 81) {
