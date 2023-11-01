@@ -91,7 +91,7 @@
 			edp_pin: edp-pin-default {
 				pins-cmd-dat {
 					pinmux = <PINMUX_GPIO26__FUNC_I0_EDP_TX_HPD>;
-					bias-pull-up;
+					bias-pull-down;
 				};
 			};
 
