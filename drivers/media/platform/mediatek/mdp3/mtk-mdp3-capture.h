@@ -16,6 +16,14 @@
 
 #define MIN_BUF_NEED 8
 
+#define PARSING_CAP_STATUS(x) (					\
+	(x) == MDP_CAP_STATE_DISCONNECTED	? "DISCONNECTED" :	\
+	(x) == MDP_CAP_STATE_PROBED		? "PROBED" :		\
+	(x) == MDP_CAP_STATE_OPENED		? "OPENED" :		\
+	(x) == MDP_CAP_STATE_PLAY		? "PLAY" :		\
+	(x) == MDP_CAP_STATE_DISCONNECTING	? "DISCONNECTING" :	\
+						  "UNKNOWN")
+
 enum {
 	MDP_CAP_SRC = 0,
 	MDP_CAP_DST = 1,
@@ -62,7 +70,7 @@ struct mdp_cap_driver {
 };
 
 int mdp_capture_device_register(struct mdp_dev *mdp);
-void mdp_cap_job_finish(struct mdp_cap_ctx *ctx);
+void mdp_cap_job_finish(struct mdp_cap_ctx *ctx, bool is_timeout);
 int mdp_cap_init(struct mdp_dev *mdp);
 void mdp_cap_deinit(void);
 
