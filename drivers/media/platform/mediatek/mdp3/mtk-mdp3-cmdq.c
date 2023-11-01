@@ -563,8 +563,8 @@ static void mdp_cmdq_release_work(struct mdp_dev *mdp, struct mdp_cmdq_cmd *cmd)
 	if (!(atomic_read(job) % cmd->pp_used)) {
 		if (cmd->user == MDP_CMDQ_USER_M2M)
 			mdp_m2m_job_finish(cmd->mdp_ctx);
-		else if (!atomic_read(&mdp->cap_discard))
-			mdp_cap_job_finish(cmd->mdp_ctx);
+		else
+			mdp_cap_job_finish(cmd->mdp_ctx, cmd->job_timeout);
 	}
 
 	if (cmd->user_cmdq_cb) {
@@ -611,6 +611,8 @@ static void mdp_handle_cmdq_callback(struct mbox_client *cl, void *mssg)
 	cmd = container_of(data->pkt, struct mdp_cmdq_cmd, pkt);
 	cmd->data = data;
 	mdp = cmd->mdp;
+
+	cmd->job_timeout = (cmd->data->sta != 0) ? TRUE : FALSE;
 
 	INIT_WORK(&cmd->auto_release_work, mdp_auto_release_work);
 	if (!queue_work(mdp->clock_wq, &cmd->auto_release_work))
@@ -829,6 +831,7 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 	if (u_id == MDP_CMDQ_USER_M2M ||
 	    cap_ctx->cap_status != CAP_STATUS_START) {
 		for (i = 0; i < pp_used; i++) {
+			mbox_flush(mdp->cmdq_clt[i + pp_ofst]->chan, 0);
 			ret = mdp_comp_clocks_on(&mdp->pdev->dev,
 						 cmd[i]->comps, cmd[i]->num_comps);
 			if (ret)

@@ -311,6 +311,7 @@ static int mdp_probe(struct platform_device *pdev)
 	mutex_init(&mdp->vpu_lock);
 	mutex_init(&mdp->m2m_lock);
 	mutex_init(&mdp->cap_lock);
+	mutex_init(&mdp->cap_run_lock);
 
 	for (i = 0; i < mdp->mdp_data->pp_used; i++) {
 		mdp->cmdq_clt[i] = cmdq_mbox_create(dev, i);

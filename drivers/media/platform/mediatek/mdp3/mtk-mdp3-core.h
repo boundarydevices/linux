@@ -79,6 +79,15 @@ enum mdp_pipe_id {
 	MDP_PIPE_MAX
 };
 
+/* indicate mdp-capture status */
+enum mdp_cap_state {
+	MDP_CAP_STATE_DISCONNECTED,
+	MDP_CAP_STATE_PROBED,
+	MDP_CAP_STATE_OPENED,
+	MDP_CAP_STATE_PLAY,
+	MDP_CAP_STATE_DISCONNECTING,
+};
+
 struct mtk_mdp_driver_data {
 	const int mdp_plat_id;
 	const resource_size_t mdp_con_res;
@@ -138,12 +147,18 @@ struct mdp_dev {
 	atomic_t				suspended;
 	atomic_t				job_count[MDP_CMDQ_USER_MAX];
 
+	struct v4l2_device			cap_v4l2_dev;
 	struct video_device			*cap_vdev;
 	/* It's used in capture device case for HDMI RX */
 	struct mutex				cap_lock;
+	/* It's used to protect capture device's running handle */
+	struct mutex				cap_run_lock;
 	struct mdp_rx_cap_intf			rx_cap_intf;
 	atomic_t				cap_discard;
 	s32					cap_open_count;
+	enum mdp_cap_state			cap_state;
+	struct work_struct			cap_clear_work;
+	wait_queue_head_t			clear_device_wq;
 };
 
 struct mdp_pipe_info {

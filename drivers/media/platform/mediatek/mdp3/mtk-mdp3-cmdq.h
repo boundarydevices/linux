@@ -44,6 +44,7 @@ struct mdp_cmdq_cmd {
 	u8 num_comps;
 	enum mdp_cmdq_user user;
 	u8 pp_used;
+	bool job_timeout;
 };
 
 struct mdp_dev;

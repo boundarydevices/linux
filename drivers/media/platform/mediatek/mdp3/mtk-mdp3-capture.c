@@ -36,7 +36,7 @@ static inline struct mdp_frame *ctx_get_frame(struct mdp_cap_ctx *ctx,
 static int mdp_cap_querycap(struct file *file, void *fh,
 			    struct v4l2_capability *cap)
 {
-	struct video_device *vdev = video_drvdata(file);
+	struct video_device *vdev = video_devdata(file);
 
 	strscpy(cap->driver, MDP_MODULE_NAME, sizeof(cap->driver));
 	strscpy(cap->card, "mdp-capture", sizeof(cap->card));
@@ -177,50 +177,16 @@ static void mdp_cap_buf_queue_ec(struct mdp_cap_ctx *ctx, struct v4l2_cap_buffer
 	spin_unlock_irqrestore(&ctx->slock, flags);
 }
 
-static struct vb2_v4l2_buffer *_mdp_cap_get_next_buffer(struct mdp_cap_ctx *ctx)
+static struct vb2_v4l2_buffer *mdp_cap_buf_remove(struct mdp_cap_ctx *ctx, struct list_head *queue)
 {
 	struct v4l2_cap_buffer *b;
 	unsigned long flags;
 
-	spin_lock_irqsave(&ctx->slock, flags);
-	if (list_empty(&ctx->vb_queue)) {
-		spin_unlock_irqrestore(&ctx->slock, flags);
+	if (list_empty(queue))
 		return NULL;
-	}
-	b = list_first_entry(&ctx->vb_queue, struct v4l2_cap_buffer, list);
-	spin_unlock_irqrestore(&ctx->slock, flags);
-
-	return &b->vb;
-}
-
-static struct vb2_v4l2_buffer *mdp_cap_buf_remove_vb(struct mdp_cap_ctx *ctx)
-{
-	struct v4l2_cap_buffer *b;
-	unsigned long flags;
 
 	spin_lock_irqsave(&ctx->slock, flags);
-	if (list_empty(&ctx->vb_queue)) {
-		spin_unlock_irqrestore(&ctx->slock, flags);
-		return NULL;
-	}
-	b = list_first_entry(&ctx->vb_queue, struct v4l2_cap_buffer, list);
-	list_del(&b->list);
-	spin_unlock_irqrestore(&ctx->slock, flags);
-
-	return &b->vb;
-}
-
-static struct vb2_v4l2_buffer *mdp_cap_buf_remove_ec(struct mdp_cap_ctx *ctx)
-{
-	struct v4l2_cap_buffer *b;
-	unsigned long flags;
-
-	spin_lock_irqsave(&ctx->slock, flags);
-	if (list_empty(&ctx->ec_queue)) {
-		spin_unlock_irqrestore(&ctx->slock, flags);
-		return NULL;
-	}
-	b = list_first_entry(&ctx->ec_queue, struct v4l2_cap_buffer, list);
+	b = list_first_entry(queue, struct v4l2_cap_buffer, list);
 	list_del(&b->list);
 	spin_unlock_irqrestore(&ctx->slock, flags);
 
@@ -232,7 +198,7 @@ static void mdp_cap_process_done(void *priv, int vb_state)
 	struct mdp_cap_ctx *ctx = priv;
 	struct vb2_v4l2_buffer *dst_vbuf;
 
-	dst_vbuf = (struct vb2_v4l2_buffer *)mdp_cap_buf_remove_ec(ctx);
+	dst_vbuf = (struct vb2_v4l2_buffer *)mdp_cap_buf_remove(ctx, &ctx->ec_queue);
 
 	if (!dst_vbuf)/* add to avoid null pointer deference when stop streaming. */
 		return;
@@ -244,9 +210,12 @@ static void mdp_cap_process_done(void *priv, int vb_state)
 	vb2_buffer_done(&dst_vbuf->vb2_buf, vb_state);
 }
 
-void mdp_cap_job_finish(struct mdp_cap_ctx *ctx)
+void mdp_cap_job_finish(struct mdp_cap_ctx *ctx, bool is_timeout)
 {
 	enum vb2_buffer_state vb_state = VB2_BUF_STATE_DONE;
+
+	if (is_timeout)
+		vb_state = VB2_BUF_STATE_ERROR;
 
 	mdp_cap_process_done(ctx, vb_state);
 }
@@ -255,17 +224,21 @@ void mdp_cap_all_buf_remove(struct mdp_cap_ctx *ctx)
 {
 	struct vb2_v4l2_buffer *vb;
 
-	vb = mdp_cap_buf_remove_ec(ctx);
-	while (vb) {
-		v4l2_m2m_buf_done(vb, VB2_BUF_STATE_ERROR);
-		vb = mdp_cap_buf_remove_ec(ctx);
-	}
+	do {
+		vb = mdp_cap_buf_remove(ctx, &ctx->ec_queue);
+		if (vb) {
+			vb->vb2_buf.planes[0].bytesused = 0;
+			v4l2_m2m_buf_done(vb, VB2_BUF_STATE_ERROR);
+		}
+	} while (vb);
 
-	vb = mdp_cap_buf_remove_vb(ctx);
-	while (vb) {
-		v4l2_m2m_buf_done(vb, VB2_BUF_STATE_ERROR);
-		vb = mdp_cap_buf_remove_vb(ctx);
-	}
+	do {
+		vb = mdp_cap_buf_remove(ctx, &ctx->vb_queue);
+		if (vb) {
+			vb->vb2_buf.planes[0].bytesused = 0;
+			v4l2_m2m_buf_done(vb, VB2_BUF_STATE_ERROR);
+		}
+	} while (vb);
 }
 
 static void mdp_cap_device_run(void *priv, struct v4l2_cap_buffer *buf)
@@ -388,14 +361,17 @@ static void mdp_cap_handler(struct mdp_cap_ctx *ctx)
 	if (list_empty(&ctx->vb_queue))
 		return;
 
-	list_for_each_entry_safe(buf, tmp, &ctx->vb_queue, list)
+	list_for_each_entry_safe(buf, tmp, &ctx->vb_queue, list) {
+		mutex_lock(&ctx->mdp_dev->cap_run_lock);
 		if (!atomic_read(&ctx->mdp_dev->cap_discard)) {
-			mdp_cap_buf_remove_vb(ctx);
+			mdp_cap_buf_remove(ctx, &ctx->vb_queue);
 			mdp_cap_buf_queue_ec(ctx, buf);
 
 			mdp_cap_device_run(ctx, buf);
 			ctx->cap_status = CAP_STATUS_START;
 		}
+		mutex_unlock(&ctx->mdp_dev->cap_run_lock);
+	}
 }
 
 static void mdp_cap_wait_done_and_disable(struct mdp_cap_ctx *ctx)
@@ -407,17 +383,18 @@ static void mdp_cap_wait_done_and_disable(struct mdp_cap_ctx *ctx)
 				 !atomic_read(&ctx->mdp_dev->job_count[MDP_CMDQ_USER_CAP]),
 				 2 * HZ);
 	if (ret == 0)
-		dev_err(&ctx->mdp_dev->pdev->dev,
-			"flushed cap_dev cmdq task incomplete, count=%d\n",
-			atomic_read(&ctx->mdp_dev->job_count[MDP_CMDQ_USER_CAP]));
+		dev_warn(&ctx->mdp_dev->pdev->dev,
+			 "flushed cap_dev cmdq task incomplete, count=%d\n",
+			 atomic_read(&ctx->mdp_dev->job_count[MDP_CMDQ_USER_CAP]));
 
-	for (i = 0; i < pp_used; i++) {
-		mtk_mutex_unprepare(ctx->mutex[i]);
-		mdp_comp_clocks_off(&ctx->mdp_dev->pdev->dev, ctx->comps[i],
-				    ctx->num_comps);
-		kfree(ctx->comps[i]);
-		ctx->comps[i] = NULL;
-	}
+	for (i = 0; i < pp_used; i++)
+		if (ctx->comps[i]) {
+			mtk_mutex_unprepare(ctx->mutex[i]);
+			mdp_comp_clocks_off(&ctx->mdp_dev->pdev->dev, ctx->comps[i],
+					    ctx->num_comps);
+			kfree(ctx->comps[i]);
+			ctx->comps[i] = NULL;
+		}
 }
 
 static int mdp_cap_start_streaming(struct vb2_queue *q, unsigned int count)
@@ -458,7 +435,6 @@ static int mdp_cap_start_streaming(struct vb2_queue *q, unsigned int count)
 		mdp_cap_ctx_set_state(ctx, MDP_VPU_INIT);
 	}
 
-	mtk_mmsys_reset_mdp_split_pipe(ctx->mdp_dev->mdp_mmsys2, NULL);
 	mdp_cap_handler(ctx);
 
 	return 0;
@@ -469,11 +445,17 @@ static void mdp_cap_stop_streaming(struct vb2_queue *q)
 	struct mdp_cap_ctx *ctx = vb2_get_drv_priv(q);
 	struct vb2_v4l2_buffer *vb;
 
-	ctx->cap_status = CAP_STATUS_STOP;
-	atomic_set(&ctx->mdp_dev->cap_discard, 1);
+	if (ctx->mdp_dev->cap_state != MDP_CAP_STATE_DISCONNECTING)
+		atomic_set(&ctx->mdp_dev->cap_discard, 1);
 
 	mdp_cap_wait_done_and_disable(ctx);
 	mdp_cap_all_buf_remove(ctx);
+	ctx->cap_status = CAP_STATUS_STOP;
+
+	if (ctx->mdp_dev->cap_state == MDP_CAP_STATE_DISCONNECTING)
+		wake_up(&ctx->mdp_dev->clear_device_wq);
+	else
+		ctx->mdp_dev->cap_state = MDP_CAP_STATE_OPENED;
 }
 
 static void mdp_cap_buf_queue(struct vb2_buffer *vb)
@@ -491,7 +473,8 @@ static void mdp_cap_buf_queue(struct vb2_buffer *vb)
 	spin_unlock_irqrestore(&ctx->slock, flags);
 
 	if (ctx->cap_status == CAP_STATUS_START)
-		mdp_cap_handler(ctx);
+		if (!atomic_read(&ctx->mdp_dev->cap_discard))
+			mdp_cap_handler(ctx);
 }
 
 static const struct vb2_ops mdp_cap_qops = {
@@ -551,6 +534,13 @@ static int mdp_cap_open(struct file *file)
 		return -EBUSY;
 	}
 
+	if (mdp->cap_state != MDP_CAP_STATE_PROBED) {
+		dev_warn(dev, "mdp-cap open with wrong state[%s].\n",
+			 PARSING_CAP_STATUS(mdp->cap_state));
+		mutex_unlock(&mdp->cap_lock);
+		return -EINVAL;
+	}
+
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx) {
 		mutex_unlock(&mdp->cap_lock);
@@ -578,7 +568,7 @@ static int mdp_cap_open(struct file *file)
 	}
 
 	mdp->cap_open_count++;
-	mutex_unlock(&mdp->cap_lock);
+	mdp->cap_state = MDP_CAP_STATE_OPENED;
 
 	/* Default format */
 	default_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -609,6 +599,8 @@ static int mdp_cap_open(struct file *file)
 	default_format.fmt.pix_mp.height = limit->out_limit.hmin;
 	mdp_cap_s_fmt_mplane(file, &ctx->fh, &default_format);
 
+	mutex_unlock(&mdp->cap_lock);
+
 	return 0;
 
 err_release_handler:
@@ -620,13 +612,10 @@ err_release_handler:
 	return ret;
 }
 
-static int mdp_cap_release(struct file *file)
+static void _mdp_cap_release_core(struct mdp_cap_ctx *ctx)
 {
-	struct mdp_cap_ctx *ctx = fh_to_ctx(file->private_data);
-	struct mdp_dev *mdp = video_drvdata(file);
-	struct device *dev = &mdp->pdev->dev;
+	struct mdp_dev *mdp = ctx->mdp_dev;
 
-	mutex_lock(&mdp->cap_lock);
 	if (mdp_cap_ctx_is_state_set(ctx, MDP_VPU_INIT))
 		mdp_vpu_put_locked(mdp);
 
@@ -634,24 +623,80 @@ static int mdp_cap_release(struct file *file)
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 	ida_free(&mdp->mdp_ida, ctx->id);
-	if (--mdp->cap_open_count < 0)
-		mdp->cap_open_count = 0;
-	mutex_unlock(&mdp->cap_lock);
-
 	kfree(ctx);
 
+	if (--mdp->cap_open_count < 0)
+		mdp->cap_open_count = 0;
+
+	if (mdp->cap_state != MDP_CAP_STATE_DISCONNECTING &&
+	    mdp->cap_state != MDP_CAP_STATE_DISCONNECTED)
+		mdp->cap_state = MDP_CAP_STATE_PROBED;
+}
+
+static int mdp_cap_release(struct file *file)
+{
+	struct mdp_cap_ctx *ctx = fh_to_ctx(file->private_data);
+	struct mdp_dev *mdp = video_drvdata(file);
+	struct device *dev = &mdp->pdev->dev;
+
+	mutex_lock(&mdp->cap_lock);
+
+	if (mdp->cap_state == MDP_CAP_STATE_DISCONNECTED) {
+		mutex_unlock(&mdp->cap_lock);
+		return 0;
+	}
+
+	_mdp_cap_release_core(ctx);
+
+	mutex_unlock(&mdp->cap_lock);
+
+	wake_up(&mdp->clear_device_wq);
 	return 0;
 }
 
 static int mdp_cap_streamon(struct file *file, void *priv, enum v4l2_buf_type type)
 {
 	struct video_device *vdev = video_devdata(file);
+	struct mdp_dev *mdp = video_get_drvdata(vdev);
 	struct mdp_cap_ctx *ctx = fh_to_ctx(priv);
 	int ret;
 
+	mutex_lock(&mdp->cap_lock);
+
+	if (mdp->cap_state != MDP_CAP_STATE_OPENED) {
+		dev_warn(&mdp->pdev->dev, "mdp-cap streamon with wrong state[%s].\n",
+			 PARSING_CAP_STATUS(mdp->cap_state));
+		mutex_unlock(&mdp->cap_lock);
+		return -EINVAL;
+	}
 	atomic_set(&ctx->mdp_dev->cap_discard, 0);
 
 	ret = vb2_streamon(vdev->queue, type);
+
+	mdp->cap_state = MDP_CAP_STATE_PLAY;
+
+	mutex_unlock(&mdp->cap_lock);
+
+	return ret;
+}
+
+static int mdp_cap_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
+{
+	struct video_device *vdev = video_devdata(file);
+	struct mdp_dev *mdp = video_get_drvdata(vdev);
+	struct mdp_cap_ctx *ctx = fh_to_ctx(priv);
+	int ret;
+
+	mutex_lock(&mdp->cap_lock);
+
+	if (ctx->mdp_dev->cap_state != MDP_CAP_STATE_PLAY)
+		dev_warn(&ctx->mdp_dev->pdev->dev, "mdp-cap stopped with wrong state[%s].\n",
+			 PARSING_CAP_STATUS(ctx->mdp_dev->cap_state));
+
+	ret = vb2_ioctl_streamoff(file, priv, i);
+
+	mutex_unlock(&mdp->cap_lock);
+
 	return ret;
 }
 
@@ -755,6 +800,58 @@ static int mdp_cap_set_param(struct file *file, void *fh,
 	return 0;
 }
 
+static int mdp_cap_reqbufs(struct file *file, void *priv,
+			   struct v4l2_requestbuffers *p)
+{
+	int ret;
+	struct mdp_cap_ctx *ctx = fh_to_ctx(priv);
+
+	if (ctx->mdp_dev->cap_state != MDP_CAP_STATE_OPENED &&
+	    ctx->mdp_dev->cap_state != MDP_CAP_STATE_PLAY) {
+		dev_warn(&ctx->mdp_dev->pdev->dev, "mdp-cap reqbufs with wrong state[%s].\n",
+			 PARSING_CAP_STATUS(ctx->mdp_dev->cap_state));
+		return -EINVAL;
+	}
+
+	ret = vb2_ioctl_reqbufs(file, priv, p);
+
+	return ret;
+}
+
+static int mdp_cap_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
+{
+	int ret;
+	struct mdp_cap_ctx *ctx = fh_to_ctx(priv);
+
+	if (ctx->mdp_dev->cap_state != MDP_CAP_STATE_OPENED &&
+	    ctx->mdp_dev->cap_state != MDP_CAP_STATE_PLAY) {
+		dev_warn(&ctx->mdp_dev->pdev->dev, "mdp-cap querybuf with wrong state[%s].\n",
+			 PARSING_CAP_STATUS(ctx->mdp_dev->cap_state));
+		return -EINVAL;
+	}
+
+	ret = vb2_ioctl_querybuf(file, priv, p);
+
+	return ret;
+}
+
+static int mdp_cap_create_bufs(struct file *file, void *priv, struct v4l2_create_buffers *p)
+{
+	int ret;
+	struct mdp_cap_ctx *ctx = fh_to_ctx(priv);
+
+	if (ctx->mdp_dev->cap_state != MDP_CAP_STATE_OPENED &&
+	    ctx->mdp_dev->cap_state != MDP_CAP_STATE_PLAY) {
+		dev_warn(&ctx->mdp_dev->pdev->dev, "mdp-cap create bufs with wrong state[%s].\n",
+			 PARSING_CAP_STATUS(ctx->mdp_dev->cap_state));
+		return -EINVAL;
+	}
+
+	ret = vb2_ioctl_create_bufs(file, priv, p);
+
+	return ret;
+}
+
 static const struct v4l2_ioctl_ops mdp_cap_ioctl_ops = {
 	.vidioc_querycap		= mdp_cap_querycap,
 	.vidioc_enum_framesizes		= mdp_cap_enum_framesizes,
@@ -763,14 +860,14 @@ static const struct v4l2_ioctl_ops mdp_cap_ioctl_ops = {
 	.vidioc_g_fmt_vid_cap_mplane	= mdp_cap_g_fmt_mplane,
 	.vidioc_s_fmt_vid_cap_mplane	= mdp_cap_s_fmt_mplane,
 	.vidioc_try_fmt_vid_cap_mplane	= mdp_cap_try_fmt_mplane,
-	.vidioc_reqbufs			= vb2_ioctl_reqbufs,
-	.vidioc_querybuf		= vb2_ioctl_querybuf,
+	.vidioc_reqbufs			= mdp_cap_reqbufs,
+	.vidioc_querybuf		= mdp_cap_querybuf,
 	.vidioc_qbuf			= vb2_ioctl_qbuf,
 	.vidioc_expbuf			= vb2_ioctl_expbuf,
 	.vidioc_dqbuf			= vb2_ioctl_dqbuf,
-	.vidioc_create_bufs		= vb2_ioctl_create_bufs,
+	.vidioc_create_bufs		= mdp_cap_create_bufs,
 	.vidioc_streamon		= mdp_cap_streamon,
-	.vidioc_streamoff		= vb2_ioctl_streamoff,
+	.vidioc_streamoff		= mdp_cap_streamoff,
 	.vidioc_enum_input		= mdp_cap_enum_input,
 	.vidioc_g_input			= mdp_cap_g_input,
 	.vidioc_s_input			= mdp_cap_s_input,
@@ -812,7 +909,15 @@ int mdp_capture_device_register(struct mdp_dev *mdp)
 	mdp->cap_vdev->release = mdp_capture_device_release;
 	mdp->cap_vdev->lock = &mdp->cap_lock;
 	mdp->cap_vdev->vfl_dir = VFL_DIR_RX;
-	mdp->cap_vdev->v4l2_dev = &mdp->v4l2_dev;
+
+	ret = v4l2_device_register(dev, &mdp->cap_v4l2_dev);
+	if (ret) {
+		dev_err(dev, "Failed to register cap v4l2 device\n");
+		ret = -EINVAL;
+		goto err_v4l2_dev_register;
+	}
+
+	mdp->cap_vdev->v4l2_dev = &mdp->cap_v4l2_dev;
 	snprintf(mdp->cap_vdev->name, sizeof(mdp->cap_vdev->name), "%s:cap",
 		 MDP_MODULE_NAME);
 	video_set_drvdata(mdp->cap_vdev, mdp);
@@ -823,11 +928,14 @@ int mdp_capture_device_register(struct mdp_dev *mdp)
 		goto err_video_register;
 	}
 
-	v4l2_info(&mdp->v4l2_dev, "Capture Driver registered as /dev/video%d",
+	v4l2_info(&mdp->cap_v4l2_dev, "Capture Driver registered as /dev/video%d",
 		  mdp->cap_vdev->num);
+
 	return 0;
 
 err_video_register:
+	v4l2_device_unregister(&mdp->cap_v4l2_dev);
+err_v4l2_dev_register:
 	video_device_release(mdp->cap_vdev);
 err_video_alloc:
 
@@ -844,6 +952,8 @@ void mdp_capture_device_unregister(struct mdp_dev *mdp)
 		video_device_release(mdp->cap_vdev);
 		mdp->cap_vdev = NULL;
 	}
+
+	v4l2_device_unregister(&mdp->cap_v4l2_dev);
 }
 
 static int mdp_cap_probe(struct hdmirx_capture_interface *intf)
@@ -853,6 +963,11 @@ static int mdp_cap_probe(struct hdmirx_capture_interface *intf)
 
 	dev_dbg(&mdp->pdev->dev, "w[%u], h[%u], fr[%u], cs[%d]\n",
 		intf->width, intf->height, intf->frame_rate, intf->color_space);
+
+	if (mdp->cap_state != MDP_CAP_STATE_DISCONNECTED)
+		return -EPROBE_DEFER;
+
+	mutex_lock(&mdp->cap_lock);
 
 	atomic_set(&mdp->cap_discard, 0);
 
@@ -865,32 +980,122 @@ static int mdp_cap_probe(struct hdmirx_capture_interface *intf)
 	if (ret)
 		v4l2_err(&mdp->v4l2_dev, "Failed to register cap device, ret=%d\n", ret);
 
+	mdp->cap_state = MDP_CAP_STATE_PROBED;
+
+	mutex_unlock(&mdp->cap_lock);
+
 	return ret;
+}
+
+static void mdp_clear_device(struct mdp_dev *mdp, struct mdp_cap_ctx *ctx)
+{
+	int ret;
+
+	if (!ctx) {
+		dev_warn(&mdp->pdev->dev, "cap ctx is NULL!\n");
+		goto err_dev_unregister;
+	}
+
+	mtk_mmsys_reset_mdp_split_pipe(ctx->mdp_dev->mm_subsys[MDP_MM_SUBSYS_1].mmsys, NULL);
+
+	/* Need wait userspace call release() to release v4l2 handle before unregister device */
+	ret = wait_event_timeout(mdp->clear_device_wq,
+				 mdp->cap_open_count == 0,
+				 16 * HZ);
+
+	mutex_lock(&mdp->cap_lock);
+	/* Remove by driver if wait userspace call release timeout */
+	if (mdp->cap_open_count > 0) {
+		dev_warn(&mdp->pdev->dev, "clear_device force to release\n");
+		_mdp_cap_release_core(ctx);
+	}
+	mutex_unlock(&mdp->cap_lock);
+
+err_dev_unregister:
+	mdp_capture_device_unregister(mdp);
+	mdp->cap_state = MDP_CAP_STATE_DISCONNECTED;
+}
+
+static void mdp_clear_device_work(struct work_struct *work)
+{
+	struct mdp_dev *mdp = NULL;
+	struct mdp_cap_ctx *ctx = NULL;
+	struct vb2_queue *cap_queue;
+
+	mdp = container_of(work, struct mdp_dev, cap_clear_work);
+
+	cap_queue = mdp->cap_vdev->queue;
+	if (cap_queue)
+		ctx = container_of(cap_queue, struct mdp_cap_ctx, cap_q);
+
+	mdp_clear_device(mdp, ctx);
 }
 
 static void mdp_cap_disconnect(struct hdmirx_capture_interface *intf)
 {
 	struct mdp_dev *mdp = (struct mdp_dev *)intf->priv;
-	enum mdp_cmdq_user u_id = MDP_CMDQ_USER_CAP;
-	int ret;
-	struct vb2_queue *cap_queue;
 	struct mdp_cap_ctx *ctx = NULL;
+	u8 pp_used;
+	int i;
 
 	if (!mdp->cap_vdev) {
 		dev_err(&mdp->pdev->dev, "already disconnected! ignore it.\n");
 		return;
 	}
 
-	cap_queue = mdp->cap_vdev->queue;
-	if (cap_queue)
-		ctx = container_of(cap_queue, struct mdp_cap_ctx, cap_q);
+	if (mdp->cap_state == MDP_CAP_STATE_DISCONNECTING) {
+		dev_err(&mdp->pdev->dev, "Already disconnecting..\n");
+		return;
+	}
 
-	/* stop all capture device jobs */
+	mutex_lock(&mdp->cap_lock);
+
+	/* No one use capture device, it can directly unregister device */
+	if (mdp->cap_open_count <= 0) {
+		mdp_capture_device_unregister(mdp);
+		mdp->cap_state = MDP_CAP_STATE_DISCONNECTED;
+		mutex_unlock(&mdp->cap_lock);
+		return;
+	}
+
+	/*
+	 * The HDMI RX sends a notification when there is a disconnect. If the capture device
+	 * is open but not playing, it just needs to change its status to 'disconnecting' and
+	 * then wait for the user to call the release flow in order to finish any remaining tasks.
+	 */
+	if (mdp->cap_state != MDP_CAP_STATE_PLAY)
+		goto clear_device;
+
 	atomic_set(&mdp->cap_discard, 1);
-	if (atomic_read(&mdp->job_count[u_id]))
-		mdp_cap_wait_done_and_disable(ctx);
 
-	mdp_capture_device_unregister(mdp);
+	ctx = container_of(mdp->cap_vdev->queue, struct mdp_cap_ctx, cap_q);
+	if (!ctx) {
+		dev_warn(&mdp->pdev->dev, "cap ctx is NULL!\n");
+		goto clear_device;
+	}
+
+	mutex_lock(&mdp->cap_run_lock);
+
+	pp_used = (ctx->pp_enable) ? MDP_PP_USED_2 : MDP_PP_USED_1;
+	for (i = 0; i < pp_used; i++)
+		mbox_flush(mdp->cmdq_clt[i + MDP_PP_CONS_MAX]->chan, 0);
+
+	mutex_lock(&ctx->ctx_lock);
+	vb2_queue_release(mdp->cap_vdev->queue);
+	mutex_unlock(&ctx->ctx_lock);
+
+	mutex_unlock(&mdp->cap_run_lock);
+
+clear_device:
+	mdp->cap_state = MDP_CAP_STATE_DISCONNECTING;
+	mutex_unlock(&mdp->cap_lock);
+
+	INIT_WORK(&mdp->cap_clear_work, mdp_clear_device_work);
+	if (!queue_work(mdp->job_wq, &mdp->cap_clear_work)) {
+		dev_err(&mdp->pdev->dev, "%s:queue_work fail! state[%s]\n",
+			PARSING_CAP_STATUS(mdp->cap_state));
+		mdp_clear_device(mdp, ctx);
+	}
 }
 
 static const struct hdmirx_capture_ops mdp_cap_driver_ops = {
@@ -924,6 +1129,8 @@ int mdp_cap_init(struct mdp_dev *mdp)
 		dev_err(&mdp->pdev->dev, "find hdmirx pdev failed\n");
 		return -ENODEV;
 	}
+
+	init_waitqueue_head(&mdp->clear_device_wq);
 
 	/* register data for capture device interface */
 	mdp_cap_driver.driver.hdmirx_dev = &hdmirx_pdev->dev;
