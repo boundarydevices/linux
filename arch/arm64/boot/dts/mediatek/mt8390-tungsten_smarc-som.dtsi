@@ -76,7 +76,7 @@
 	pinctrl_dptx: dptxgrp {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO46__FUNC_I0_DP_TX_HPD>;
-			bias-pull-up;
+			bias-pull-down;
 		};
 	};
 
