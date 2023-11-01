@@ -1286,7 +1286,7 @@
 
 &sound {
 	compatible = "mediatek,mt8390-evk";
-	model = "mt8390-evk";
+	model = "mt8370-evk";
 	pinctrl-names = "default";
 	pinctrl-0 = <&aud_pins_default>;
 	audio-routing =
