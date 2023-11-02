@@ -349,6 +349,8 @@ struct vsi_v4l2_ctx {
 
 	u32 out_sequence;
 	u32 cap_sequence;
+
+	bool header_separate;
 };
 
 int vsi_v4l2_release(struct file *filp);
@@ -362,6 +364,7 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg);
 int vsi_v4l2_handle_warningmsg(struct vsi_v4l2_msg *pmsg);
 int vsi_v4l2_handle_streamoffdone(struct vsi_v4l2_msg *pmsg);
 int vsi_v4l2_handle_cropchange(struct vsi_v4l2_msg *pmsg);
+bool vsi_v4l2_is_headers_only(struct vb2_v4l2_buffer *vbuf);
 int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg);
 void vsi_v4l2_sendeos(struct vsi_v4l2_ctx *ctx);
 int vsi_v4l2_handleerror(unsigned long ctxtid, int error);

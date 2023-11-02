@@ -915,6 +915,12 @@ static int vsi_v4l2_dec_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_SECUREMODE:
 		ctx->mediacfg.decparams.io_buffer.securemode_on = ctrl->val;
 		break;
+	case V4L2_CID_MPEG_VIDEO_HEADER_MODE:
+		if (ctrl->val == V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE)
+			ctx->header_separate = true;
+		else
+			ctx->header_separate = false;
+		break;
 	default:
 		return 0;
 	}
@@ -1072,6 +1078,14 @@ static struct v4l2_ctrl_config vsi_v4l2_dec_ctrl_defs[] = {
 		.max = 1,
 		.step = 1,
 		.def = 0,
+	},
+	{
+		.ops = &vsi_dec_ctrl_ops,
+		.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE,
+		.max = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME,
+		.def = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME,
 	},
 };
 
