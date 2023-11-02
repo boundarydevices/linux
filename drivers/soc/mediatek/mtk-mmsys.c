@@ -386,6 +386,24 @@ void mtk_mmsys_vpp_split_out_config(struct device *dev, struct cmdq_pkt *cmdq_pk
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_vpp_split_out_config);
 
+void mtk_mmsys_reset_mdp_split_pipe(struct device *dev, struct cmdq_pkt *cmdq_pkt)
+{
+	/* Reset svpp2/3 */
+	mtk_mmsys_update_bits(dev_get_drvdata(dev),
+			      MT8195_VPP1_SW0_RST_B, 0xFFFFFFFF,
+			      0xCF2FBF0F, cmdq_pkt);
+	mtk_mmsys_update_bits(dev_get_drvdata(dev),
+			      MT8195_VPP1_SW0_RST_B, 0xFFFFFFFF,
+			      0xFFFFFFFF, cmdq_pkt);
+	mtk_mmsys_update_bits(dev_get_drvdata(dev),
+			      MT8195_VPP1_SW1_RST_B, 0xFFFFFFFF,
+			      0xFFFFFCCC, cmdq_pkt);
+	mtk_mmsys_update_bits(dev_get_drvdata(dev),
+			      MT8195_VPP1_SW1_RST_B, 0xFFFFFFFF,
+			      0xFFFFFFFF, cmdq_pkt);
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_reset_mdp_split_pipe);
+
 static int mtk_mmsys_reset_update(struct reset_controller_dev *rcdev, unsigned long id,
 				  bool assert)
 {
