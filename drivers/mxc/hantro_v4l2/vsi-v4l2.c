@@ -531,6 +531,19 @@ void vsi_v4l2_dec_handle_last_empty_buffer(struct vsi_v4l2_ctx *ctx)
 	}
 }
 
+bool vsi_v4l2_is_headers_only(struct vb2_v4l2_buffer *vbuf)
+{
+	bool headers_only = false;
+#ifdef V4L2_BUF_FLAG_HEADERS_ONLY
+	struct vsi_v4l2_ctx *ctx = fh_to_ctx(vbuf->vb2_buf.vb2_queue->drv_priv);
+
+	if (ctx->header_separate)
+		headers_only = (vbuf->flags & V4L2_BUF_FLAG_HEADERS_ONLY) ? true : false;
+#endif
+
+	return headers_only;
+}
+
 int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 {
 	unsigned long ctxid = pmsg->inst_id;
@@ -575,7 +588,8 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 		if (ctx->input_que.streaming && vb->state == VB2_BUF_STATE_ACTIVE) {
 			vbuf = to_vb2_v4l2_buffer(vb);
 			vbuf->sequence = ctx->out_sequence++;
-			if (pmsg->param_type & ERROR_BUFFER_FLAG) {
+			if ((pmsg->param_type & ERROR_BUFFER_FLAG) &&
+			    !vsi_v4l2_is_headers_only(vbuf)) {
 				v4l2_klog(LOGLVL_BRIEF, "got error srcbuf %d\n", inbufidx);
 				vb2_buffer_done(vb, VB2_BUF_STATE_ERROR);
 			} else {
