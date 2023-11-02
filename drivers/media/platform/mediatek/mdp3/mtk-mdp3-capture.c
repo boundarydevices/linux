@@ -458,6 +458,7 @@ static int mdp_cap_start_streaming(struct vb2_queue *q, unsigned int count)
 		mdp_cap_ctx_set_state(ctx, MDP_VPU_INIT);
 	}
 
+	mtk_mmsys_reset_mdp_split_pipe(ctx->mdp_dev->mdp_mmsys2, NULL);
 	mdp_cap_handler(ctx);
 
 	return 0;
