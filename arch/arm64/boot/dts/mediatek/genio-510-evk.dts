@@ -216,6 +216,20 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&dsi0_en_pins_default>;
 	};
+
+	amic_codec: amic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <200>;
+	};
+
+	dmic_codec: dmic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <30>;
+	};
 };
 
 &afe {
@@ -1295,7 +1309,7 @@
 		};
 
 		codec-1 {
-			sound-dai = <&dmic_codec>;
+			sound-dai = <&amic_codec>;
 		};
 	};
 
@@ -1316,6 +1330,16 @@
 
 		codec-0 {
 			sound-dai = <&dp_tx>;
+		};
+	};
+
+	dai-link-3 {
+		sound-dai = <&afe>;
+		dai-link-name = "DMIC_BE";
+		status = "okay";
+
+		codec-0 {
+			sound-dai = <&dmic_codec>;
 		};
 	};
 };
