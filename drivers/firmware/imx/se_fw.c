@@ -465,7 +465,7 @@ static ssize_t ele_mu_fops_write(struct file *fp, const char __user *buf,
 	struct ele_mu_priv *ele_mu_priv = dev_ctx->priv;
 	u32 nb_words = 0;
 	struct mu_hdr header;
-	int err;
+	int err = 0;
 
 	dev_dbg(ele_mu_priv->dev,
 		"%s: write from buf (%p)%zu, ppos=%lld\n",
