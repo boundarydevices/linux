@@ -10,6 +10,6 @@
 #include <linux/types.h>
 
 int it6122_bridge_power_on_off(bool on);
-bool it6122_bridge_enabled(void);
+bool it6122_bridge_probed(void);
 
 #endif /* __ITE_IT6122__ */

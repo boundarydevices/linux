@@ -20,8 +20,7 @@
 #include <linux/of_graph.h>
 #include <linux/of_irq.h>
 
-bool it6122_enabled;
-EXPORT_SYMBOL(it6122_enabled);
+bool it6122_probed;
 
 struct it6122_reg_cfg {
 	u8 reg;
@@ -32,6 +31,7 @@ struct it6122_reg_cfg {
 struct it6122_data {
 	struct device *dev;
 	struct i2c_client *i2c_client;
+	struct regulator *pwr_en;
 	bool power_on;
 	u32 reset_gpio;
 	u32 vio33tp1_gpio;
@@ -58,6 +58,13 @@ static int it6122_parse_dt(struct device *dev,
 		return -EINVAL;
 	}
 	pr_debug("%s: vio33tp1_gpio = %d\n", __func__, it_pdata->vio33tp1_gpio);
+
+	it_pdata->pwr_en = devm_regulator_get(dev, "pwr");
+	if (IS_ERR(it_pdata->pwr_en)) {
+		pr_err("pwr-supply not specified\n");
+		return -EINVAL;
+	}
+	pr_debug("%s: pwr_en = %d\n", __func__, it_pdata->pwr_en);
 
 	return 0;
 };
@@ -321,6 +328,12 @@ static int it6122_power_on_off(struct it6122_data *it_pdata, bool on)
 	pr_debug("%s (set to %d)\n", __func__, on);
 
 	if (on && !it_pdata->power_on) {
+		ret = regulator_enable(it_pdata->pwr_en);
+		if (ret < 0) {
+			pr_err("%s enable pwr_supply fail, %d\n", __func__, ret);
+			return -EINVAL;
+		}
+
 		gpio_direction_output(it_pdata->vio33tp1_gpio, 1);
 		usleep_range(20000, 20100);
 		gpio_direction_output(it_pdata->reset_gpio, 0);
@@ -360,6 +373,7 @@ static int it6122_power_on_off(struct it6122_data *it_pdata, bool on)
 		gpio_direction_output(it_pdata->vio33tp1_gpio, 0);
 		msleep(1000);
 		it_pdata->power_on = false;
+		regulator_disable(it_pdata->pwr_en);
 		pr_debug("it6122 power off(reset gpio = %d)\n", it_pdata->reset_gpio);
 	}
 
@@ -386,11 +400,11 @@ int it6122_bridge_power_on_off(bool on)
 };
 EXPORT_SYMBOL(it6122_bridge_power_on_off);
 
-bool it6122_bridge_enabled(void)
+bool it6122_bridge_probed(void)
 {
-	return it6122_enabled;
+	return it6122_probed;
 };
-EXPORT_SYMBOL(it6122_bridge_enabled);
+EXPORT_SYMBOL(it6122_bridge_probed);
 
 static int it6122_probe(struct i2c_client *client,
 	 const struct i2c_device_id *id)
@@ -422,6 +436,12 @@ static int it6122_probe(struct i2c_client *client,
 		goto err_dt_parse;
 	}
 
+	ret = regulator_enable(it_pdata->pwr_en);
+	if (ret < 0) {
+		pr_err("%s enable pwr_supply fail, %d\n", __func__, ret);
+		return -EINVAL;
+	}
+
 	it_pdata->dev = &client->dev;
 	it_pdata->i2c_client = client;
 	pr_debug("%s: I2C address is 0x%X\n", __func__, client->addr);
@@ -432,6 +452,8 @@ static int it6122_probe(struct i2c_client *client,
 	gpio_direction_output(it_pdata->reset_gpio, 1);
 	usleep_range(20000, 20100);
 	it6122_read_u8(it_pdata, 0x00, &chip_id);
+	regulator_disable(it_pdata->pwr_en);
+
 	pr_debug("it6122 Chip ID:0x%x\n", chip_id);
 	if (chip_id != 0x54) {
 		pr_err("%s error reading config register\n", __func__);
@@ -440,7 +462,7 @@ static int it6122_probe(struct i2c_client *client,
 	}
 	pr_debug("%s: Probe success!\n", __func__);
 
-	it6122_enabled = true;
+	it6122_probed = true;
 	it_pdata_ext = it_pdata;
 
 	return ret;
@@ -456,6 +478,7 @@ static int it6122_remove(struct i2c_client *client)
 	struct it6122_data *it_pdata = i2c_get_clientdata(client);
 
 	devm_kfree(&client->dev, it_pdata);
+	it6122_probed = false;
 	it_pdata_ext = NULL;
 
 	return 0;
