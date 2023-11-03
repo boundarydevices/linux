@@ -53,7 +53,7 @@ struct koe_panel {
 	const struct panel_desc *desc;
 	bool enabled;
 	enum drm_panel_orientation orientation;
-	struct gpio_desc *pwr_en;
+	struct regulator *pwr_en;
 	struct gpio_desc *bl_en;
 	bool prepared_power;
 	bool prepared;
@@ -87,8 +87,8 @@ static int koe_panel_unprepare_power(struct drm_panel *panel)
 	pr_debug("[Kernel/LCM] %s enter\n", __func__);
 
 	if (koe->it6122_attached) {
-		pr_debug("wayT-- check if power off it6122(%d)\n", it6122_bridge_enabled());
-		if (it6122_bridge_enabled()) {
+		pr_debug("wayT-- check if power off it6122(%d)\n", it6122_bridge_probed());
+		if (it6122_bridge_probed()) {
 			ret = it6122_bridge_power_on_off(false);
 			if (ret) {
 				pr_err("failed to power off it6122, rc=%d\n", ret);
@@ -101,7 +101,8 @@ static int koe_panel_unprepare_power(struct drm_panel *panel)
 	gpiod_set_value(koe->bl_en, GPIO_OUT_ZERO);
 	mdelay(5);
 
-	gpiod_set_value(koe->pwr_en, GPIO_OUT_ZERO);
+	regulator_disable(koe->pwr_en);
+
 	mdelay(5);
 
 	koe->prepared_power = false;
@@ -134,15 +135,19 @@ static int koe_panel_prepare_power(struct drm_panel *panel)
 
 	mdelay(100);
 
-	gpiod_set_value(koe->pwr_en, GPIO_OUT_ONE);
+	ret = regulator_enable(koe->pwr_en);
+	if (ret < 0) {
+		dev_err(panel->dev, "Enable pwr_supply fail, %d\n", ret);
+		return ret;
+	}
 	mdelay(5);
 
 	gpiod_set_value(koe->bl_en, GPIO_OUT_ONE);
 	mdelay(5);
 
 	if (koe->it6122_attached) {
-		pr_debug("wayT-- check if power on it6122(%d)\n", it6122_bridge_enabled());
-		if (it6122_bridge_enabled()) {
+		pr_debug("wayT-- check if power on it6122(%d)\n", it6122_bridge_probed());
+		if (it6122_bridge_probed()) {
 			ret = it6122_bridge_power_on_off(true);
 			if (ret) {
 				pr_err("failed to power on it6122, rc=%d\n", ret);
@@ -257,9 +262,9 @@ static int koe_panel_add(struct koe_panel *koe)
 	struct device *dev = &koe->dsi->dev;
 	int ret;
 
-	koe->pwr_en = devm_gpiod_get(dev, "pwr", GPIOD_OUT_HIGH);
+	koe->pwr_en = devm_regulator_get(dev, "pwr");
 	if (IS_ERR(koe->pwr_en)) {
-		dev_err(dev, "cannot get pwr_en-gpios %ld\n", PTR_ERR(koe->pwr_en));
+		dev_err(dev, "cannot get pwr-supply regulator %ld\n", PTR_ERR(koe->pwr_en));
 		return PTR_ERR(koe->pwr_en);
 	}
 
