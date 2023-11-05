@@ -1262,6 +1262,7 @@ int topup_hyp_memcache(struct kvm_hyp_memcache *mc, unsigned long min_pages,
 	return __topup_hyp_memcache(mc, min_pages, hyp_mc_alloc_fn,
 				    kvm_host_pa, (void *)flags, order);
 }
+EXPORT_SYMBOL(topup_hyp_memcache);
 
 int topup_hyp_memcache_gfp(struct kvm_hyp_memcache *mc, unsigned long min_pages,
 			   unsigned long order, gfp_t gfp)
