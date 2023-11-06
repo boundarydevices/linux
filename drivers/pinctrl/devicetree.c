@@ -199,16 +199,13 @@ static int dt_gpio_assert_pinctrl(struct pinctrl *p)
 	struct device_node *np = p->dev->of_node;
 	struct gpio_desc *gpio;
 	int index = 0;
-	int ret;
 
 	if (!of_find_property(np, "pinctrl-assert-gpios", NULL))
 		return 0; /* Missing the property, so nothing to be done */
 
 	for (;; index++) {
-		gpio = devm_gpiod_get_optional(p->dev, "pinctrl-assert",
-					       GPIOD_OUT_HIGH);
-		ret = PTR_ERR(gpio);
-		if (ret < 0) {
+		gpio = devm_gpiod_get_index(p->dev, "pinctrl-assert", index, GPIOD_OUT_HIGH);
+		if (IS_ERR(gpio)) {
 			if (PTR_ERR(gpio) == -EPROBE_DEFER)
 				return -EPROBE_DEFER;
  			break; /* End of the phandle list */
