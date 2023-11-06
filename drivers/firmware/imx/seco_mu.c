@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright 2019-2020 NXP
+ * Copyright 2019-2020, 2023 NXP
  */
 
 /*
@@ -67,6 +67,7 @@
 #include <dt-bindings/firmware/imx/rsrc.h>
 #include <linux/firmware/imx/seco_mu_ioctl.h>
 #include <linux/mailbox_client.h>
+#include <linux/sys_soc.h>
 
 #define MAX_RECV_SIZE 31
 #define MAX_RECV_SIZE_BYTES (MAX_RECV_SIZE * sizeof(u32))
@@ -171,6 +172,21 @@ struct seco_mu_priv {
 
 	int max_ctx;
 	struct seco_mu_device_ctx **ctxs;
+};
+
+static const struct seco_mu_ioctl_get_soc_info imx8dxl_a1_soc_info = {
+	.soc_id = 0xE,
+	.soc_rev = 0xa100,
+};
+
+static const struct seco_mu_ioctl_get_soc_info imx8dxl_b0_soc_info = {
+	.soc_id = 0xE,
+	.soc_rev = 0xb000,
+};
+
+static const struct soc_device_attribute soc_info_matches[] = {
+	{ .soc_id = "i.MX8DXL", .revision = "1.1", .data = &imx8dxl_a1_soc_info},
+	{ .soc_id = "i.MX8DXL", .revision = "1.2", .data = &imx8dxl_b0_soc_info},
 };
 
 /* macro to log operation of a misc device */
@@ -844,6 +860,33 @@ exit:
 	return err;
 }
 
+/* IOCTL to provide SoC information */
+static int seco_mu_ioctl_get_soc_info_handler(struct seco_mu_device_ctx *dev_ctx,
+					      unsigned long arg)
+{
+	const struct soc_device_attribute *imx_soc_match;
+	struct seco_mu_ioctl_get_soc_info *soc_info;
+	int err = -EINVAL;
+
+	imx_soc_match = soc_device_match(soc_info_matches);
+	if (!imx_soc_match || !imx_soc_match->data)
+		goto exit;
+
+	soc_info = (struct seco_mu_ioctl_get_soc_info *)(imx_soc_match->data);
+
+	err = (int)copy_to_user((u8 *)arg,
+				(u8 *)soc_info,
+				sizeof(struct seco_mu_ioctl_get_soc_info));
+	if (err) {
+		devctx_err(dev_ctx, "Failed to copy to user: %d\n", err);
+		err = -EFAULT;
+		goto exit;
+	}
+
+exit:
+	return err;
+}
+
 /* IOCTL entry point of a char device */
 static long seco_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
@@ -875,6 +918,9 @@ static long seco_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		break;
 	case SECO_MU_IOCTL_SIGNED_MESSAGE:
 		err = seco_mu_ioctl_signed_msg_handler(dev_ctx, arg);
+		break;
+	case SECO_MU_IOCTL_GET_SOC_INFO:
+		err = seco_mu_ioctl_get_soc_info_handler(dev_ctx, arg);
 		break;
 	default:
 		err = -EINVAL;
