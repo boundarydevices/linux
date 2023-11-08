@@ -1709,6 +1709,11 @@ static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
 	    !cpupri_find(&rq->rd->cpupri, rq->donor, rq->curr, NULL))
 		return;
 
+	/* No reason to preempt since rq->curr wouldn't change anyway */
+	exec_ctx = find_exec_ctx(rq, p);
+	if (task_current(rq, exec_ctx))
+		return;
+
 	/*
 	 * p is migratable, so let's not schedule it and
 	 * see if it is pushed or pulled somewhere else.
@@ -1911,7 +1916,7 @@ static int find_lowest_rq(struct task_struct *sched_ctx, struct task_struct *exe
 	if (unlikely(!lowest_mask))
 		return -1;
 
-	if (exec_ctx->nr_cpus_allowed == 1)
+	if (exec_ctx && exec_ctx->nr_cpus_allowed == 1)
 		return -1; /* No other targets possible */
 
 	/*
@@ -2002,12 +2007,14 @@ static int find_lowest_rq(struct task_struct *sched_ctx, struct task_struct *exe
 /* Will lock the rq it finds */
 static struct rq *find_lock_lowest_rq(struct task_struct *task, struct rq *rq)
 {
+	struct task_struct *exec_ctx;
 	struct rq *lowest_rq = NULL;
 	int tries;
 	int cpu;
 
 	for (tries = 0; tries < RT_MAX_TRIES; tries++) {
-		cpu = find_lowest_rq(task, task);
+		exec_ctx = find_exec_ctx(rq, task);
+		cpu = find_lowest_rq(task, exec_ctx);
 
 		if ((cpu == -1) || (cpu == rq->cpu))
 			break;
