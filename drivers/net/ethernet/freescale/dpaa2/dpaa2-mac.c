@@ -363,12 +363,18 @@ static int dpaa2_mac_get_phys(struct dpaa2_mac *mac)
 	int err;
 	u32 val;
 
+	err = of_count_phandle_with_args(dn, "phys", "#phy-cells");
+	if (err <= 0) {
+		mac->num_phys = 0;
+		return 0;
+	}
+	mac->num_phys = err;
+
 	if (fwnode_property_read_u32(mac->fw_node, "num-lanes", &val))
 		mac->num_lanes = 1;
 	else
 		mac->num_lanes = val;
 
-	mac->num_phys = of_count_phandle_with_args(dn, "phys", "#phy-cells");
 	mac->phys = devm_kcalloc(dev, mac->num_phys, sizeof(struct phy *),
 				 GFP_KERNEL);
 	if (!mac->phys)
