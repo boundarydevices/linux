@@ -450,6 +450,7 @@ static ssize_t ele_mu_fops_write(struct file *fp, const char __user *buf,
 	 */
 	nb_words = header.size;
 	if (nb_words << 2 != size) {
+		err = -EINVAL;
 		dev_err(ele_mu_priv->dev,
 			"%s: User buffer too small\n",
 				dev_ctx->miscdev.name);
@@ -1048,7 +1049,7 @@ exit:
 
 static int se_probe_cleanup(struct platform_device *pdev)
 {
-	int ret;
+	int ret = 0;
 	int i;
 	struct device *dev = &pdev->dev;
 	struct ele_mu_priv *priv;
