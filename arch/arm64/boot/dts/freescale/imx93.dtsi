@@ -1465,6 +1465,8 @@
 		};
 
 		dsi: dsi@4ae10000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
 			compatible = "fsl,imx93-mipi-dsi";
 			reg = <0x4ae10000 0x4000>;
 			interrupts = <GIC_SPI 177 IRQ_TYPE_LEVEL_HIGH>;
