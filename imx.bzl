@@ -6,7 +6,11 @@ load(
 
 _IMX_EXT_MODULES = [
 	"//nxp-mwifiex/mxm_wifiex/wlan_src:wlan.imx",
-	"//verisilicon_sw_isp_vvcam/vvcam/v4l2:isp.imx",
+	"//verisilicon_sw_isp_vvcam/vvcam/v4l2/sensor/camera-proxy-driver:isp.imx.basler.camera",
+	"//verisilicon_sw_isp_vvcam/vvcam/v4l2/dwe:isp.imx.dwe",
+	"//verisilicon_sw_isp_vvcam/vvcam/v4l2/video:isp.imx.video",
+	"//verisilicon_sw_isp_vvcam/vvcam/v4l2/isp:isp.imx.isp",
+	"//verisilicon_sw_isp_vvcam/vvcam/v4l2/sensor/os08a20:isp.imx.os08a20",
 ]
 
 _IMX_IN_TREE_MODULES = [
