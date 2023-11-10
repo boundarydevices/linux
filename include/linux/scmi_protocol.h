@@ -753,7 +753,7 @@ struct scmi_pinctrl_proto_ops {
 			  u8 config_type, unsigned long *config_value);
 	int (*config_set)(const struct scmi_protocol_handle *ph, u32 selector,
 			  enum scmi_pinctrl_selector_type type,
-			  u8 config_type, unsigned long config_value);
+			  unsigned long *configs, unsigned int num_configs);
 	int (*pin_request)(const struct scmi_protocol_handle *ph, u32 pin);
 	int (*pin_free)(const struct scmi_protocol_handle *ph, u32 pin);
 };
