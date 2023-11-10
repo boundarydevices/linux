@@ -793,12 +793,24 @@ static int phylink_validate(struct phylink *pl, unsigned long *supported,
 {
 	const unsigned long *interfaces = pl->config->supported_interfaces;
 
+	/* We should skip the logic to pick an interface from
+	 * supported_interfaces when state->interface is PHY_INTERFACE_MODE_NA,
+	 * because C73 validation does not depend on a particular
+	 * interface, and we cannot even expect the MAC and/or PCS to set
+	 * supported_interfaces to include the backplane modes. Those are
+	 * primarily ethtool link modes, and the only reason they are
+	 * duplicated in phy_interface_t is for optional phylib PHYs.
+	 */
+	if (phylink_autoneg_c73(pl->cfg_link_an_mode))
+		goto skip_interface_checks;
+
 	if (state->interface == PHY_INTERFACE_MODE_NA)
 		return phylink_validate_mask(pl, supported, state, interfaces);
 
 	if (!test_bit(state->interface, interfaces))
 		return -EINVAL;
 
+skip_interface_checks:
 	return phylink_validate_mac_and_pcs(pl, supported, state);
 }
 
