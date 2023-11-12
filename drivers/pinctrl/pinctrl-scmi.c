@@ -8,6 +8,7 @@
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/seq_file.h>
 #include <linux/scmi_protocol.h>
 #include <linux/slab.h>
@@ -77,13 +78,28 @@ static int pinctrl_scmi_get_group_pins(struct pinctrl_dev *pctldev,
 }
 
 #ifdef CONFIG_OF
+#ifdef CONFIG_PINCTRL_IMX
+extern int imx_scmi_dt_node_to_map(struct pinctrl_dev *pctldev, struct device_node *np,
+				   struct pinctrl_map **map, unsigned int *num_maps);
+#else
+static inline int imx_scmi_dt_node_to_map(struct pinctrl_dev *pctldev,
+					  struct device_node *np,
+					  struct pinctrl_map **map, unsigned int *num_maps)
+{
+	return -EOPNOTSUPP;
+}
+#endif
 static int pinctrl_scmi_dt_node_to_map(struct pinctrl_dev *pctldev,
 				       struct device_node *np_config,
 				       struct pinctrl_map **map,
 				       u32 *num_maps)
 {
+	if ((of_machine_is_compatible("fsl,imx93") || of_machine_is_compatible("fsl,imx95")))
+		return imx_scmi_dt_node_to_map(pctldev, np_config, map, num_maps);
+
 	return pinconf_generic_dt_node_to_map(pctldev, np_config, map, num_maps,
 					      PIN_MAP_TYPE_INVALID);
+
 }
 
 static void pinctrl_scmi_dt_free_map(struct pinctrl_dev *pctldev, struct pinctrl_map *map,
@@ -242,25 +258,15 @@ static int pinctrl_scmi_pinconf_set(struct pinctrl_dev *pctldev,
 				    unsigned long *configs,
 				    unsigned int num_configs)
 {
-	int i, ret;
+	int ret;
 	struct scmi_pinctrl *pmx = pinctrl_dev_get_drvdata(pctldev);
-	enum pin_config_param config_type;
-	unsigned long config_value;
 
 	if (!configs || num_configs == 0)
 		return -EINVAL;
 
-	for (i = 0; i < num_configs; i++) {
-		config_type = pinconf_to_config_param(configs[i]);
-		config_value = pinconf_to_config_argument(configs[i]);
-
-		ret = pinctrl_ops->config_set(pmx->ph, _pin, PIN_TYPE, config_type, config_value);
-		if (ret) {
-			dev_err(pmx->dev, "Error parsing config %ld\n",
-				configs[i]);
-			break;
-		}
-	}
+	ret = pinctrl_ops->config_set(pmx->ph, _pin, PIN_TYPE, configs, num_configs);
+	if (ret)
+		dev_err(pmx->dev, "Error parsing config %d\n", ret);
 
 	return ret;
 }
@@ -270,26 +276,15 @@ static int pinctrl_scmi_pinconf_group_set(struct pinctrl_dev *pctldev,
 					  unsigned long *configs,
 					  unsigned int num_configs)
 {
-	int i, ret;
+	int ret;
 	struct scmi_pinctrl *pmx =  pinctrl_dev_get_drvdata(pctldev);
-	enum pin_config_param config_type;
-	unsigned long config_value;
 
 	if (!configs || num_configs == 0)
 		return -EINVAL;
 
-	for (i = 0; i < num_configs; i++) {
-		config_type = pinconf_to_config_param(configs[i]);
-		config_value = pinconf_to_config_argument(configs[i]);
-
-		ret = pinctrl_ops->config_set(pmx->ph, group, GROUP_TYPE, config_type,
-					      config_value);
-		if (ret) {
-			dev_err(pmx->dev, "Error parsing config = %ld",
-				configs[i]);
-			break;
-		}
-	}
+	ret = pinctrl_ops->config_set(pmx->ph, group, GROUP_TYPE, configs, num_configs);
+	if (ret)
+		dev_err(pmx->dev, "Error parsing config %d", ret);
 
 	return ret;
 };
