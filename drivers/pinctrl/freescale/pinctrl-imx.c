@@ -14,6 +14,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/pinctrl/pinconf-generic.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/seq_file.h>
@@ -32,6 +33,29 @@
 /* The bits in CONFIG cell defined in binding doc*/
 #define IMX_NO_PAD_CTL	0x80000000	/* no pin config need */
 #define IMX_PAD_SION 0x40000000		/* set SION */
+
+/*
+ * Each pin represented in fsl,pins consists of a number of u32 PIN_FUNC_ID
+ * and 1 u32 CONFIG, the total size is PIN_FUNC_ID + CONFIG for each pin.
+ * For generic_pinconf case, there's no extra u32 CONFIG.
+ *
+ * PIN_FUNC_ID format:
+ * Default:
+ *     <mux_reg conf_reg input_reg mux_mode input_val>
+ * SHARE_MUX_CONF_REG:
+ *     <mux_conf_reg input_reg mux_mode input_val>
+ * IMX_USE_SCU:
+ *	<pin_id mux_mode>
+ */
+#define FSL_PIN_SIZE 24
+#define FSL_PIN_SHARE_SIZE 20
+#define FSL_SCU_PIN_SIZE 12
+
+/* SCMI pin control types, aligned with SCMI firmware */
+#define IMX_PIN_TYPE_MUX	192
+#define IMX_PIN_TYPE_CONFIG	193
+#define IMX_PIN_TYPE_DAISY_ID	194
+#define IMX_PIN_TYPE_DAISY_CFG	195
 
 static inline const struct group_desc *imx_pinctrl_find_group_by_name(
 				struct pinctrl_dev *pctldev,
@@ -54,6 +78,95 @@ static void imx_pin_dbg_show(struct pinctrl_dev *pctldev, struct seq_file *s,
 {
 	seq_printf(s, "%s", dev_name(pctldev->dev));
 }
+
+#define IMX_SCMI_NUM_CFG 4
+int imx_scmi_dt_node_to_map(struct pinctrl_dev *pctldev, struct device_node *np,
+			    struct pinctrl_map **map, unsigned int *num_maps)
+{
+	struct pinctrl_map *new_map;
+	const __be32 *list;
+	unsigned long *configs = NULL;
+	unsigned long cfg[IMX_SCMI_NUM_CFG];
+	int map_num, size, pin_size, pin_id, num_pins;
+	int mux_reg, conf_reg, input_reg, mux_val, conf_val, input_val;
+	int i, j;
+	uint32_t ncfg;
+	static uint32_t daisy_off;
+
+	if (!daisy_off) {
+		if (of_machine_is_compatible("fsl,imx93"))
+			daisy_off = 0x360;
+		else if (of_machine_is_compatible("fsl,imx95"))
+			daisy_off = 0x408;
+		else
+			dev_err(pctldev->dev, "platform not support scmi pinctrl\n");
+	}
+
+	list = of_get_property(np, "fsl,pins", &size);
+	if (!list) {
+		dev_err(pctldev->dev, "no fsl,pins property in node %pOF\n", np);
+		return -EINVAL;
+	}
+
+	pin_size = FSL_PIN_SIZE;
+
+	if (!size || size % pin_size) {
+		dev_err(pctldev->dev, "Invalid fsl,pins or pins property in node %pOF\n", np);
+		return -EINVAL;
+	}
+
+	num_pins = size / pin_size;
+	map_num = num_pins;
+
+	new_map = kmalloc_array(map_num, sizeof(struct pinctrl_map),
+				GFP_KERNEL);
+	if (!new_map)
+		return -ENOMEM;
+
+	*map = new_map;
+	*num_maps = map_num;
+
+	/* create config map */
+	for (i = 0; i < num_pins; i++) {
+		j = 0;
+		ncfg = IMX_SCMI_NUM_CFG;
+		mux_reg = be32_to_cpu(*list++);
+		conf_reg = be32_to_cpu(*list++);
+		input_reg = be32_to_cpu(*list++);
+		mux_val = be32_to_cpu(*list++);
+		input_val = be32_to_cpu(*list++);
+		conf_val = be32_to_cpu(*list++);
+		if (conf_val & IMX_PAD_SION)
+			mux_val |= IOMUXC_CONFIG_SION;
+
+		pin_id = mux_reg / 4;
+
+		cfg[j++] = pinconf_to_config_packed(IMX_PIN_TYPE_MUX, mux_val);
+
+		if (!conf_reg || (conf_val & IMX_NO_PAD_CTL))
+			ncfg--;
+		else
+			cfg[j++] = pinconf_to_config_packed(IMX_PIN_TYPE_CONFIG, conf_val);
+
+		if (!input_reg) {
+			ncfg -= 2;
+		} else {
+			cfg[j++] = pinconf_to_config_packed(IMX_PIN_TYPE_DAISY_ID,
+							    (input_reg - daisy_off) / 4);
+			cfg[j++] = pinconf_to_config_packed(IMX_PIN_TYPE_DAISY_CFG, input_val);
+		}
+
+		configs = kmemdup(cfg, ncfg * sizeof(unsigned long), GFP_KERNEL);
+
+		new_map[i].type = PIN_MAP_TYPE_CONFIGS_PIN;
+		new_map[i].data.configs.group_or_pin = pin_get_name(pctldev, pin_id);
+		new_map[i].data.configs.configs = configs;
+		new_map[i].data.configs.num_configs = ncfg;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(imx_scmi_dt_node_to_map);
 
 static int imx_dt_node_to_map(struct pinctrl_dev *pctldev,
 			struct device_node *np,
@@ -440,22 +553,6 @@ static const struct pinconf_ops imx_pinconf_ops = {
 	.pin_config_dbg_show = imx_pinconf_dbg_show,
 	.pin_config_group_dbg_show = imx_pinconf_group_dbg_show,
 };
-
-/*
- * Each pin represented in fsl,pins consists of a number of u32 PIN_FUNC_ID
- * and 1 u32 CONFIG, the total size is PIN_FUNC_ID + CONFIG for each pin.
- *
- * PIN_FUNC_ID format:
- * Default:
- *     <mux_reg conf_reg input_reg mux_mode input_val>
- * SHARE_MUX_CONF_REG:
- *     <mux_conf_reg input_reg mux_mode input_val>
- * IMX_USE_SCU:
- *	<pin_id mux_mode>
- */
-#define FSL_PIN_SIZE 24
-#define FSL_PIN_SHARE_SIZE 20
-#define FSL_SCU_PIN_SIZE 12
 
 static void imx_pinctrl_parse_pin_mmio(struct imx_pinctrl *ipctl,
 				       unsigned int *pin_id, struct imx_pin *pin,
