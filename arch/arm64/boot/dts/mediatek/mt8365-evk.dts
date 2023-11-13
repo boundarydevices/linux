@@ -98,6 +98,14 @@
 				sound-dai = <&it66121hdmitx>;
 			};
 		};
+
+		dai-link-dmic {
+			sound-dai = <&afe>;
+			dai-link-name = "DMIC BE";
+			codec-0 {
+				sound-dai = <&dmic_codec>;
+			};
+		};
 	};
 
 	reserved-memory {
@@ -157,6 +165,13 @@
 	mtk_fsource: fsource {
 		compatible = "mtk-fsource";
 		vfsource-supply = <&mt6357_vefuse_reg>;
+	};
+
+	dmic_codec: dmic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <30>;
 	};
 };
 
