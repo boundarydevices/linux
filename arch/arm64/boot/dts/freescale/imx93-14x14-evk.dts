@@ -644,6 +644,10 @@
 	};
 };
 
+&wdog3 {
+	status = "okay";
+};
+
 &iomuxc {
 	pinctrl_flexcan1: flexcan1grp {
 		fsl,pins = <
