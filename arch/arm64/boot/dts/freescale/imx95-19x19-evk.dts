@@ -35,6 +35,10 @@
 			linux,cma-default;
 		};
 
+		vpu_boot: vpu_boot@a0000000 {
+			reg = <0 0xa0000000 0 0x100000>;
+			no-map;
+		};
 	};
 
 	reg_audio_pwr: regulator-audio-pwr {
@@ -735,4 +739,8 @@
 			IMX95_PAD_SD2_VSELECT__USDHC2_VSELECT			0x51e
 		>;
 	};
+};
+
+&vpu {
+	boot = <&vpu_boot>;
 };
