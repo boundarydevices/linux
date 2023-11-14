@@ -636,7 +636,7 @@
 	no-sd;
 	non-removable;
 	vmmc-supply = <&reg_vref_3v3>;
-	vqmmc-supply = <&reg_vref_1v8>;
+	vqmmc-supply = <&mt6359_vcn18_ldo_reg>;
 	mmc-pwrseq = <&wifi_pwrseq>;
 };
 #endif
