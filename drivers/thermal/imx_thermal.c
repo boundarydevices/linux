@@ -6,7 +6,6 @@
 #include <linux/cpufreq.h>
 #include <linux/cpu_cooling.h>
 #include <linux/delay.h>
-#include <linux/device_cooling.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/mfd/syscon.h>
@@ -205,7 +204,7 @@ struct imx_thermal_data {
 	struct device *dev;
 	struct cpufreq_policy *policy;
 	struct thermal_zone_device *tz;
-	struct thermal_cooling_device *cdev[2];
+	struct thermal_cooling_device *cdev;
 	struct regmap *tempmon;
 	u32 c1, c2; /* See formula in imx_init_calib() */
 	int temp_max;
@@ -595,9 +594,9 @@ static int imx_thermal_register_legacy_cooling(struct imx_thermal_data *data)
 	np = of_get_cpu_node(data->policy->cpu, NULL);
 
 	if (!np || !of_property_present(np, "#cooling-cells")) {
-		data->cdev[0] = cpufreq_cooling_register(data->policy);
-		if (IS_ERR(data->cdev[0])) {
-			ret = PTR_ERR(data->cdev[0]);
+		data->cdev = cpufreq_cooling_register(data->policy);
+		if (IS_ERR(data->cdev)) {
+			ret = PTR_ERR(data->cdev);
 			cpufreq_cpu_put(data->policy);
 		}
 	}
@@ -606,25 +605,13 @@ static int imx_thermal_register_legacy_cooling(struct imx_thermal_data *data)
 	if (ret)
 		return ret;
 
-	data->cdev[1] = device_cooling_register();
-	if (IS_ERR(data->cdev[1])) {
-		ret = PTR_ERR(data->cdev[1]);
-		if (ret != -EPROBE_DEFER) {
-			pr_err("failed to register cpufreq cooling device: %d\n",
-				ret);
-			cpufreq_cooling_unregister(data->cdev[0]);
-		}
-		return ret;
-	}
-
 	return 0;
 }
 
 static void imx_thermal_unregister_legacy_cooling(struct imx_thermal_data *data)
 {
-	cpufreq_cooling_unregister(data->cdev[0]);
+	cpufreq_cooling_unregister(data->cdev);
 	cpufreq_cpu_put(data->policy);
-	device_cooling_unregister(data->cdev[1]);
 }
 
 #else

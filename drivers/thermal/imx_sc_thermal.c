@@ -4,7 +4,6 @@
  */
 
 #include <dt-bindings/firmware/imx/rsrc.h>
-#include <linux/device_cooling.h>
 #include <linux/err.h>
 #include <linux/firmware/imx/sci.h>
 #include <linux/module.h>
@@ -23,7 +22,6 @@ static struct imx_sc_ipc *thermal_ipc_handle;
 struct imx_sc_sensor {
 	struct thermal_zone_device *tzd;
 	u32 resource_id;
-	struct thermal_cooling_device *cdev;
 	int temp_passive;
 	int temp_critical;
 };
@@ -192,27 +190,6 @@ static int imx_sc_thermal_probe(struct platform_device *pdev)
 			}
 		}
 
-		sensor->cdev = device_cooling_register();
-		if (IS_ERR(sensor->cdev)) {
-			dev_err(&pdev->dev,
-				"failed to register devfreq cooling device: %d\n",
-				ret);
-			return ret;
-		}
-
-		ret = thermal_zone_bind_cooling_device(sensor->tzd,
-			IMX_TRIP_PASSIVE,
-			sensor->cdev,
-			THERMAL_NO_LIMIT,
-			THERMAL_NO_LIMIT,
-			THERMAL_WEIGHT_DEFAULT);
-		if (ret) {
-			dev_err(&sensor->tzd->device,
-				"binding zone %s with cdev %s failed:%d\n",
-				sensor->tzd->type, sensor->cdev->type, ret);
-			device_cooling_unregister(sensor->cdev);
-			return ret;
-		}
 	}
 
 	return 0;

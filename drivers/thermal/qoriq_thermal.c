@@ -4,7 +4,6 @@
 // Copyright 2022 NXP
 
 #include <linux/clk.h>
-#include <linux/device_cooling.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -76,7 +75,6 @@ struct qoriq_sensor {
 	struct thermal_zone_device	*tzd;
 	int				temp_passive;
 	int				temp_critical;
-	struct thermal_cooling_device	*cdev;
 };
 
 struct qoriq_tmu_data {
@@ -225,28 +223,6 @@ static int qoriq_tmu_register_tmu_zone(struct device *dev,
 
 		/* first thermal zone takes care of system-wide device cooling */
 		if (id == 0) {
-			sensor->cdev = device_cooling_register();
-			if (IS_ERR(sensor->cdev)) {
-				ret = PTR_ERR(sensor->cdev);
-				pr_err("failed to register devfreq cooling device: %d\n",
-					ret);
-				return ret;
-			}
-
-			ret = thermal_zone_bind_cooling_device(sensor->tzd,
-				TMU_TRIP_PASSIVE,
-				sensor->cdev,
-				THERMAL_NO_LIMIT,
-				THERMAL_NO_LIMIT,
-				THERMAL_WEIGHT_DEFAULT);
-			if (ret) {
-				pr_err("binding zone %s with cdev %s failed:%d\n",
-					sensor->tzd->type,
-					sensor->cdev->type,
-					ret);
-				device_cooling_unregister(sensor->cdev);
-				return ret;
-			}
 
 			for (i = 0; i < thermal_zone_get_num_trips(sensor->tzd); i++) {
 				ret = thermal_zone_get_trip(sensor->tzd, i, &trip);
