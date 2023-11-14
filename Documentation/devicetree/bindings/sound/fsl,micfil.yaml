@@ -15,10 +15,17 @@ description: |
 
 properties:
   compatible:
-    enum:
-      - fsl,imx8mm-micfil
-      - fsl,imx8mp-micfil
-      - fsl,imx93-micfil
+    oneOf:
+      - items:
+          - enum:
+              - fsl,imx95-micfil
+          - const: fsl,imx93-micfil
+
+      - items:
+          - enum:
+              - fsl,imx8mm-micfil
+              - fsl,imx8mp-micfil
+              - fsl,imx93-micfil
 
   reg:
     maxItems: 1
