@@ -977,6 +977,8 @@
 				interrupts = <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_LPUART3>;
 				clock-names = "ipg";
+				dmas = <&edma2 18 0 1>, <&edma2 17 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -987,6 +989,8 @@
 				interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_LPUART4>;
 				clock-names = "ipg";
+				dmas = <&edma2 20 0 1>, <&edma2 19 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -997,6 +1001,8 @@
 				interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_LPUART5>;
 				clock-names = "ipg";
+				dmas = <&edma2 22 0 1>, <&edma2 21 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -1007,6 +1013,8 @@
 				interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_LPUART6>;
 				clock-names = "ipg";
+				dmas = <&edma2 24 0 1>, <&edma2 23 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -1046,6 +1054,8 @@
 				interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_LPUART7>;
 				clock-names = "ipg";
+				dmas = <&edma2 88 0 1>, <&edma2 87 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -1056,6 +1066,8 @@
 				interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_LPUART8>;
 				clock-names = "ipg";
+				dmas = <&edma2 90 0 1>, <&edma2 89 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -1535,6 +1547,8 @@
 				interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_LPUART1>;
 				clock-names = "ipg";
+				dmas = <&edma1 21 0 1>, <&edma1 20 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -1545,6 +1559,8 @@
 				interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_LPUART2>;
 				clock-names = "ipg";
+				dmas = <&edma1 23 0 1>, <&edma1 22 0 0>;
+				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
