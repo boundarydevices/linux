@@ -2299,6 +2299,12 @@
 			reg-names = "ierb_base", "prb_base";
 			power-domains = <&scmi_devpd IMX95_PD_NETC>;
 		};
+
+		ddr-pmu@4e090dc0 {
+			compatible = "fsl,imx95-ddr-pmu";
+			reg = <0x0 0x4e090dc0 0x0 0x200>;
+			interrupts = <GIC_SPI 91 IRQ_TYPE_LEVEL_HIGH>;
+		};
 	};
 
 	ele_fw2: se-fw2 {
