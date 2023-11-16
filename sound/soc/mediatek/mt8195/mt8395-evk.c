@@ -84,13 +84,12 @@ static const struct snd_soc_ops mt8195_etdm_ops = {
 
 static int mt8195_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_component *cmpnt_afe =
-		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct snd_soc_component *cmpnt_afe;
 	struct snd_soc_component *cmpnt_codec =
 		asoc_rtd_to_codec(rtd, 0)->component;
-	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt_afe);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	struct mtkaif_param *param = &afe_priv->mtkaif_params;
+	struct mtk_base_afe *afe;
+	struct mt8195_afe_private *afe_priv;
+	struct mtkaif_param *param;
 	int phase;
 	unsigned int monitor = 0;
 	int mtkaif_calibration_num_phase;
@@ -103,6 +102,14 @@ static int mt8195_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	int mtkaif_chosen_phase[MT8195_MTKAIF_MISO_NUM];
 	int mtkaif_phase_cycle[MT8195_MTKAIF_MISO_NUM];
 	int i;
+
+	cmpnt_afe = snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	if (!cmpnt_afe)
+		return -EINVAL;
+
+	afe = snd_soc_component_get_drvdata(cmpnt_afe);
+	afe_priv = afe->platform_priv;
+	param = &afe_priv->mtkaif_params;
 
 	dev_info(afe->dev, "%s(), start\n", __func__);
 

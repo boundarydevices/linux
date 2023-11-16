@@ -83,12 +83,21 @@ static int mt8195_memif_fs(struct snd_pcm_substream *substream,
 			   unsigned int rate)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_component *component =
-			snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
-	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct snd_soc_component *component;
+	struct mtk_base_afe *afe;
+	struct mtk_base_afe_memif *memif;
 	int id = asoc_rtd_to_cpu(rtd, 0)->id;
-	struct mtk_base_afe_memif *memif = &afe->memif[id];
 	int fs = mt8195_afe_fs_timing(rate);
+
+	if (id < 0)
+		return -EINVAL;
+
+	component = snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	if (!component)
+		return -EINVAL;
+
+	afe = snd_soc_component_get_drvdata(component);
+	memif = &afe->memif[id];
 
 	switch (memif->data->id) {
 	case MT8195_AFE_MEMIF_DL10:
