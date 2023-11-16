@@ -553,7 +553,8 @@
 			reg = <0x0 0x42000000 0x0 0x800000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
-			ranges = <0x42000000 0x0 0x42000000 0x8000000>;
+			ranges = <0x42000000 0x0 0x42000000 0x8000000>,
+				 <0x28000000 0x0 0x28000000 0x10000000>;
 
 			edma2: dma-controller@42000000 {
 				compatible = "fsl,imx95-edma";
