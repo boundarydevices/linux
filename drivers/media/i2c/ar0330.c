@@ -47,6 +47,10 @@
 #define AR0330_HBLANK_DEF			192
 #define AR0330_VBLANK_DEF			60
 
+#define AR0330_PIXEL_RATE_1LANE_MAX		(76 * 1000 * 1000)
+#define AR0330_PIXEL_RATE_2LANE_MAX		(98 * 1000 * 1000)
+#define AR0330_PIXEL_RATE_4LANE_MAX		(196 * 1000 * 1000)
+
 #define AR0330_CHIP_VERSION				0x3000
 #define		AR0330_CHIP_VERSION_VALUE		0x2604
 #define AR0330_Y_ADDR_START				0x3002
@@ -332,7 +336,7 @@ static int ar0330_pll_init(struct ar0330 *ar0330, unsigned long rate)
 	limits.vt_bk.min_pix_clk_div = 4;
 	limits.vt_bk.max_pix_clk_div = 16;
 	limits.vt_bk.min_pix_clk_freq_hz = 1;
-	limits.vt_bk.max_pix_clk_freq_hz = 98000000;
+	limits.vt_bk.max_pix_clk_freq_hz = AR0330_PIXEL_RATE_2LANE_MAX;
 
 	limits.op_bk.min_sys_clk_div = 1;
 	limits.op_bk.max_sys_clk_div = 1;
@@ -341,7 +345,7 @@ static int ar0330_pll_init(struct ar0330 *ar0330, unsigned long rate)
 	limits.op_bk.min_pix_clk_div = 8;
 	limits.op_bk.max_pix_clk_div = 12;
 	limits.op_bk.min_pix_clk_freq_hz = 1;
-	limits.op_bk.max_pix_clk_freq_hz = 98000000;
+	limits.op_bk.max_pix_clk_freq_hz = AR0330_PIXEL_RATE_2LANE_MAX;
 
 	ar0330->pll.bus_type = CCS_PLL_BUS_TYPE_CSI2_DPHY;
 	ar0330->pll.csi2.lanes = 2;
@@ -373,6 +377,10 @@ static int ar0330_pll_init(struct ar0330 *ar0330, unsigned long rate)
 	 * The sensor has dual pixel readout paths, the pixel rate is equal to
 	 * twice the VT pixel clock frequency.
 	 */
+
+	__v4l2_ctrl_modify_range(ar0330->pixel_rate, 2, AR0330_PIXEL_RATE_4LANE_MAX, 2,
+				 ar0330->pll.vt_bk.pix_clk_freq_hz * 2);
+
 	__v4l2_ctrl_s_ctrl_int64(ar0330->pixel_rate,
 				 ar0330->pll.vt_bk.pix_clk_freq_hz * 2);
 
