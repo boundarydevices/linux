@@ -299,7 +299,8 @@ static int fsl_asoc_card_hw_params(struct snd_pcm_substream *substream,
 						 cpu_priv->slot_width);
 		}
 		/* set cpu DAI configuration */
-		ret = snd_soc_dai_set_fmt(asoc_rtd_to_cpu(rtd, 0), priv->dai_fmt);
+		ret = snd_soc_dai_set_fmt(asoc_rtd_to_cpu(rtd, 0),
+					  snd_soc_daifmt_clock_provider_flipped(priv->dai_fmt));
 		if (ret) {
 			dev_err(dev, "failed to set cpu dai fmt: %d\n", ret);
 			return ret;
