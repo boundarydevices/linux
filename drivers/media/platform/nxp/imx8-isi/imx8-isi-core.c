@@ -530,9 +530,9 @@ static int mxc_isi_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id mxc_isi_of_match[] = {
-	{ .compatible = "fsl,imx8mn-isi", .data = &mxc_imx8mn_data },
-	{ .compatible = "fsl,imx8mp-isi", .data = &mxc_imx8mp_data },
-	{ .compatible = "fsl,imx93-isi", .data = &mxc_imx93_data },
+	{ .compatible = "nxp,imx8mn-isi", .data = &mxc_imx8mn_data },
+	{ .compatible = "nxp,imx8mp-isi", .data = &mxc_imx8mp_data },
+	{ .compatible = "nxp,imx93-isi", .data = &mxc_imx93_data },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, mxc_isi_of_match);
