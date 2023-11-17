@@ -830,3 +830,7 @@
 &vpu {
 	boot = <&vpu_boot>;
 };
+
+&wdog3 {
+	status = "okay";
+};
