@@ -189,6 +189,8 @@ int qbman_init_private_mem(struct device *dev, int idx, dma_addr_t *addr,
 			/* Fill properties here */
 			pr_value = devm_kzalloc(dev, sizeof(u32) * 4,
 						GFP_KERNEL);
+			if (!pr_value)
+				return -ENOMEM;
 			pr_value[0] = upper_32_bits(*addr);
 			pr_value[1] = lower_32_bits(*addr);
 			pr_value[2] = upper_32_bits(*size);
