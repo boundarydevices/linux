@@ -541,8 +541,7 @@
 		compatible = "simple-bus";
 		#address-cells = <2>;
 		#size-cells = <2>;
-		ranges = <0x0 0x0 0x0 0x0 0x0 0x80000000>,
-			 <0x0 0x28000000 0x0 0x28000000 0x0 0x10000000>;
+		ranges;
 
 		imx95_soc: imx95-soc {
 			compatible = "fsl,imx95-soc";
@@ -2117,6 +2116,114 @@
 			#index-cells = <1>;
 			reg = <0x0 0x4c200200 0x0 0x200>,
 			      <0x0 0x4c010014 0x0 0x04>;
+		};
+
+		pcie0: pcie@4c300000 {
+			compatible = "fsl,imx95-pcie";
+			reg = <0 0x4c300000 0 0x10000>,
+			      <0 0x4c360000 0 0x20000>,
+			      <0 0x60100000 0 0xfe00000>;
+			reg-names = "dbi", "atu", "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			device_type = "pci";
+			linux,pci-domain = <0>;
+			msi-parent = <&its>;
+			msi-map = <0x0 &its 0x19 0x1>,
+				  <0x100  &its 0x20 0x8>;
+			msi-map-mask = <0x1ff>; /* Suppose only 1 physic device connect */
+			bus-range = <0x00 0xff>;
+			ranges = <0x81000000 0x0 0x00000000 0x0 0x6ff00000 0 0x00100000>,
+				 <0x82000000 0x0 0x10000000 0x9 0x10000000 0 0x10000000>;
+			num-lanes = <1>;
+			num-viewport = <8>;
+			interrupts = <GIC_SPI 310 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 311 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &gic 0 0 GIC_SPI 309 IRQ_TYPE_LEVEL_HIGH>,
+					<0 0 0 2 &gic 0 0 GIC_SPI 308 IRQ_TYPE_LEVEL_HIGH>,
+					<0 0 0 3 &gic 0 0 GIC_SPI 307 IRQ_TYPE_LEVEL_HIGH>,
+					<0 0 0 4 &gic 0 0 GIC_SPI 306 IRQ_TYPE_LEVEL_HIGH>;
+			fsl,max-link-speed = <3>;
+			clocks = <&scmi_clk IMX95_CLK_HSIO>,
+				 <&scmi_clk IMX95_CLK_HSIOPLL>,
+				 <&scmi_clk IMX95_CLK_HSIOPLL_VCO>,
+				 <&scmi_clk IMX95_CLK_HSIOPCIEAUX>;
+			clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_aux";
+			assigned-clocks =<&scmi_clk IMX95_CLK_HSIOPLL_VCO>,
+					 <&scmi_clk IMX95_CLK_HSIOPLL>,
+					 <&scmi_clk IMX95_CLK_HSIOPCIEAUX>;
+			assigned-clock-rates = <3600000000>, <100000000>, <10000000>;
+			assigned-clock-parents = <0>, <0>,
+						 <&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>;
+			ctrl-ssr = <&serdes0_ssr>;
+			power-domains = <&scmi_devpd IMX95_PD_HSIO_TOP>;
+			power-domain-names = "pd_pcie";
+			/* 0x30~0x37 stream id for pci0 */
+			/*
+			 * iommu-map = <0x000 &apps_smmu 0x30 0x1>,
+			 * <0x100 &apps_smmu 0x31 0x1>;
+			 */
+			status = "disabled";
+		};
+
+		serdes0_ssr: ssr@4c340000 {
+			compatible = "fsl,imx95-serdes-syscfg", "syscon";
+			reg = <0 0x4c340000 0 0x2000>;
+		};
+
+		pcie1: pcie@4c380000 {
+			compatible = "fsl,imx95-pcie";
+			reg = <0 0x4c380000 0 0x10000>,
+			      <0 0x4c3e0000 0 0x20000>,
+			      <8 0x80100000 0 0xfe00000>;
+			reg-names = "dbi", "atu", "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			device_type = "pci";
+			linux,pci-domain = <1>;
+			bus-range = <0x00 0xff>;
+			ranges = <0x81000000 0 0x00000000 0x8 0x8ff00000 0 0x00100000>,
+				 <0x82000000 0 0x10000000 0xa 0x10000000 0 0x10000000>;
+			num-lanes = <1>;
+			num-viewport = <8>;
+			interrupts = <GIC_SPI 316 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 317 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &gic 0 0 GIC_SPI 315 IRQ_TYPE_LEVEL_HIGH>,
+					<0 0 0 2 &gic 0 0 GIC_SPI 314 IRQ_TYPE_LEVEL_HIGH>,
+					<0 0 0 3 &gic 0 0 GIC_SPI 313 IRQ_TYPE_LEVEL_HIGH>,
+					<0 0 0 4 &gic 0 0 GIC_SPI 312 IRQ_TYPE_LEVEL_HIGH>;
+			fsl,max-link-speed = <3>;
+			clocks = <&scmi_clk IMX95_CLK_HSIO>,
+				 <&scmi_clk IMX95_CLK_HSIOPLL>,
+				 <&scmi_clk IMX95_CLK_HSIOPLL_VCO>,
+				 <&scmi_clk IMX95_CLK_HSIOPCIEAUX>;
+			clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_aux";
+			assigned-clocks =<&scmi_clk IMX95_CLK_HSIOPLL_VCO>,
+					 <&scmi_clk IMX95_CLK_HSIOPLL>,
+					 <&scmi_clk IMX95_CLK_HSIOPCIEAUX>;
+			assigned-clock-rates = <3600000000>, <100000000>, <10000000>;
+			assigned-clock-parents = <0>, <0>,
+						 <&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>;
+			ctrl-ssr = <&serdes1_ssr>;
+			power-domains = <&scmi_devpd IMX95_PD_HSIO_TOP>;
+			power-domain-names = "pd_pcie";
+			/* 0x38~0x3F stream id for pci1 */
+			/*
+			 * iommu-map = <0x000 &apps_smmu 0x38 0x1>,
+			 * <0x100 &apps_smmu 0x39 0x1>;
+			 */
+			status = "disabled";
+		};
+
+		serdes1_ssr: ssr@4c3c0000 {
+			compatible = "fsl,imx95-serdes-syscfg", "syscon";
+			reg = <0 0x4c3c0000 0 0x2000>;
 		};
 
 		vpu_blk_ctrl: syscon@4c410000 {

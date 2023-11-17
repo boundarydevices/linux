@@ -184,6 +184,16 @@
 		regulator-always-on;
 	};
 
+	reg_slot_pwr: regulator-slot-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "PCIe slot-power";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&i2c7_pcal6524 14 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
 	cm7: imx95-cm7 {
 		compatible = "fsl,imx95-cm7";
 		mbox-names = "tx", "rx", "rxdb";
@@ -658,6 +668,12 @@
 		>;
 	};
 
+	pinctrl_pcie1: pcie1grp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO35__HSIOMIX_TOP_PCIE2_CLKREQ_B		0x57e
+		>;
+	};
+
 	pinctrl_lpspi7: lpspi7grp {
 		fsl,pins = <
 			IMX95_PAD_GPIO_IO04__GPIO2_IO_BIT4	0x3fe
@@ -915,3 +931,18 @@
 &wdog3 {
 	status = "okay";
 };
+
+&pcie0 {
+	pinctrl-0 = <&pinctrl_pcie0>;
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
+	reset-gpio = <&i2c7_pcal6524 5 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&pcie1 {
+	pinctrl-0 = <&pinctrl_pcie1>;
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
+	reset-gpio = <&i2c7_pcal6524 16 GPIO_ACTIVE_LOW>;
+	status = "disabled";
+};
+
