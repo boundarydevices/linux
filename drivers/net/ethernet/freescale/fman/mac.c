@@ -290,7 +290,7 @@ static int acpi_mac_probe(struct platform_device *pdev)
 	struct mac_priv_s	*priv;
 	u32			val;
 	u8			fman_id;
-	phy_interface_t		phy_if;
+	int			phy_if;
 	struct device		*fman_dev = NULL;
 	struct fwnode_handle	*fman_fwnode = NULL;
 	struct device		*fman_port_dev = NULL;
