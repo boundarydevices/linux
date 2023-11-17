@@ -115,9 +115,36 @@ static const struct imx_info_list imx93_info = {
 	},
 };
 
+static const struct imx_info_list imx95_info = {
+	.num_mu = 1,
+	.info = {
+			{
+				.pdev_name = {"se-fw2", "mu2"},
+				.socdev = false,
+				.mu_did = 3,
+				.max_dev_ctx = 4,
+				.cmd_tag = 0x17,
+				.rsp_tag = 0xe1,
+				.success_tag = 0xd6,
+				.base_api_ver = MESSAGING_VERSION_6,
+				.fw_api_ver = MESSAGING_VERSION_7,
+				.se_name = "ele",
+				.mbox_tx_name = "tx",
+				.mbox_rx_name = "rx",
+				.pool_name = NULL,
+				.reserved_dma_ranges = false,
+				.init_fw = true,
+				.start_rng = true,
+				.enable_ele_trng = false,
+				.imem_mgmt = false,
+			},
+	},
+};
+
 static const struct of_device_id se_fw_match[] = {
 	{ .compatible = "fsl,imx8ulp-se-fw", .data = (void *)&imx8ulp_info},
 	{ .compatible = "fsl,imx93-se-fw", .data = (void *)&imx93_info},
+	{ .compatible = "fsl,imx95-se-fw", .data = (void *)&imx95_info},
 	{},
 };
 
