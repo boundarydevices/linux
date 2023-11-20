@@ -36,3 +36,10 @@ config MTK_DPTX_SUPPORT
 	select PHY_MTK_DP
 	help
 	  DRM/KMS Display Port driver for Mediatek SoCs.
+
+config MTK_LVDS_SUPPORT
+	tristate "DRM LVDS Support for MediaTek SoCs"
+	depends on DRM_MEDIATEK
+	select PHY_MTK_LVDS
+	help
+	  DRM/KMS LVDS driver for MediaTek SoCs.
