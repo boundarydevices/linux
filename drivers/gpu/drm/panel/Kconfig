@@ -847,4 +847,12 @@ config DRM_PANEL_XINPENG_XPP055C272
 	  Say Y here if you want to enable support for the Xinpeng
 	  XPP055C272 controller for 720x1280 LCD panels with MIPI/RGB/SPI
 	  system interfaces.
+
+config DRM_PANEL_AUO_G156XTN010_LVDS
+	tristate "AUO G156XTN010 LVDS panel"
+	depends on OF
+	depends on BACKLIGHT_CLASS_DEVICE
+	select VIDEOMODE_HELPERS
+	help
+	  Say Y here if you want to enable AUO G156XTN010 1366*768 LVDS panel
 endmenu
