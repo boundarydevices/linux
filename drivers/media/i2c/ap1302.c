@@ -18,6 +18,7 @@
 #include <linux/media.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
 
@@ -410,6 +411,8 @@ struct ap1302_device {
 	struct gpio_desc *reset_gpio;
 	struct gpio_desc *standby_gpio;
 	struct clk *clock;
+	struct regmap *regmap16;
+	struct regmap *regmap32;
 	u32 reg_page;
 
 	const struct firmware *fw;
@@ -541,6 +544,24 @@ static const struct ap1302_sensor_info ap1302_sensor_info_tpg = {
 /* -----------------------------------------------------------------------------
  * Register Configuration
  */
+
+static const struct regmap_config ap1302_reg16_config = {
+	.reg_bits = 16,
+	.val_bits = 16,
+	.reg_stride = 2,
+	.reg_format_endian = REGMAP_ENDIAN_BIG,
+	.val_format_endian = REGMAP_ENDIAN_BIG,
+	.cache_type = REGCACHE_NONE,
+};
+
+static const struct regmap_config ap1302_reg32_config = {
+	.reg_bits = 16,
+	.val_bits = 32,
+	.reg_stride = 4,
+	.reg_format_endian = REGMAP_ENDIAN_BIG,
+	.val_format_endian = REGMAP_ENDIAN_BIG,
+	.cache_type = REGCACHE_NONE,
+};
 
 static int __ap1302_write(struct ap1302_device *ap1302, u32 reg, u32 val)
 {
@@ -684,6 +705,60 @@ static int ap1302_read(struct ap1302_device *ap1302, u32 reg, u32 *val)
 
 	return __ap1302_read(ap1302, reg, val);
 }
+
+/* Setup for regmap poll */
+static int __ap1302_poll_param(struct ap1302_device *ap1302, u32 reg,
+		struct regmap **regmap, u16 *addr)
+{
+	int ret;
+
+	if (reg & AP1302_REG_ADV) {
+		u32 page = AP1302_REG_PAGE(reg);
+
+		if (ap1302->reg_page != page) {
+			ret = __ap1302_write(ap1302, AP1302_ADVANCED_BASE,
+					     page);
+			if (ret < 0)
+				return ret;
+
+			ap1302->reg_page = page;
+		}
+
+		reg &= ~AP1302_REG_ADV;
+		reg &= ~AP1302_REG_PAGE_MASK;
+		reg += AP1302_REG_ADV_START;
+	}
+
+	*addr = AP1302_REG_ADDR(reg);
+
+	switch (AP1302_REG_SIZE(reg)) {
+	case 2:
+		*regmap = ap1302->regmap16;
+		break;
+	case 4:
+		*regmap = ap1302->regmap32;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	dev_dbg(ap1302->dev, "%s: R0x%08x -> 0x%04x\n", __func__,
+			reg, *addr);
+
+	return 0;
+}
+
+#define ap1302_poll_timeout(ap1302, reg, val, cond, sleep_us, timeout_us) \
+({ \
+	struct regmap *__regmap; \
+	u16 addr; \
+	int __retpoll; \
+	__retpoll = __ap1302_poll_param(ap1302, reg, &__regmap, &addr); \
+	if (!__retpoll) \
+		__retpoll = regmap_read_poll_timeout(__regmap, addr, val, cond, \
+						     sleep_us, timeout_us); \
+	__retpoll; \
+})
 
 /* -----------------------------------------------------------------------------
  * Sensor Registers Access
@@ -1173,7 +1248,18 @@ static int ap1302_configure(struct ap1302_device *ap1302)
 
 static int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 {
+	u32 value;
 	int ret = 0;
+
+	ret = ap1302_read(ap1302, AP1302_SYS_START, &value);
+	if (ret < 0)
+		return ret;
+
+	if (!!(value & AP1302_SYS_START_STALL_STATUS) == stall) {
+		dev_warn(ap1302->dev,
+			 "Stall status already as requested : %s\n", stall ? "stalled" : "running");
+		return 0;
+	}
 
 	if (stall) {
 		ap1302_write(ap1302, AP1302_SYS_START,
@@ -1189,13 +1275,36 @@ static int ap1302_stall(struct ap1302_device *ap1302, bool stall)
 		if (ret < 0)
 			return ret;
 
-		return 0;
+		/*
+		 * Wait for Stall Status
+		 */
+		ret = ap1302_poll_timeout(ap1302, AP1302_SYS_START, value,
+					  value & AP1302_SYS_START_STALL_STATUS,
+					  10000, 5000000);
+		if (ret) {
+			dev_err(ap1302->dev, "Stall Failed: %d\n", ret);
+			return ret;
+		}
 	} else {
-		return ap1302_write(ap1302, AP1302_SYS_START,
-				    AP1302_SYS_START_PLL_LOCK |
-				    AP1302_SYS_START_STALL_EN |
-				    AP1302_SYS_START_STALL_MODE_DISABLED, NULL);
+		ap1302_write(ap1302, AP1302_SYS_START,
+			     AP1302_SYS_START_PLL_LOCK |
+			     AP1302_SYS_START_STALL_EN |
+			     AP1302_SYS_START_STALL_MODE_DISABLED, &ret);
+		if (ret < 0)
+			return ret;
+
+		/*
+		 * Wait for Stall Status
+		 */
+		ret = ap1302_poll_timeout(ap1302, AP1302_SYS_START, value,
+					  !(value & AP1302_SYS_START_STALL_STATUS),
+					  10000, 5000000);
+		if (ret) {
+			dev_err(ap1302->dev, "Stall Failed: %d\n", ret);
+			return ret;
+		}
 	}
+	return 0;
 }
 
 /* -----------------------------------------------------------------------------
@@ -2728,6 +2837,22 @@ static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *i
 	ap1302->client = client;
 
 	mutex_init(&ap1302->lock);
+
+	ap1302->regmap16 = devm_regmap_init_i2c(client, &ap1302_reg16_config);
+	if (IS_ERR(ap1302->regmap16)) {
+		dev_err(ap1302->dev, "regmap16 init failed: %ld\n",
+			PTR_ERR(ap1302->regmap16));
+		ret = -ENODEV;
+		goto error;
+	}
+
+	ap1302->regmap32 = devm_regmap_init_i2c(client, &ap1302_reg32_config);
+	if (IS_ERR(ap1302->regmap32)) {
+		dev_err(ap1302->dev, "regmap32 init failed: %ld\n",
+			PTR_ERR(ap1302->regmap32));
+		ret = -ENODEV;
+		goto error;
+	}
 
 	ret = ap1302_parse_of(ap1302);
 	if (ret < 0)
