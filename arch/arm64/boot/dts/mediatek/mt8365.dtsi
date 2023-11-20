@@ -29,6 +29,7 @@
 		dither0 = &dither0;
 		dsi0 = &dsi0;
 		dpi0 = &dpi0;
+		lvds = &lvds;
 	};
 
 	cluster0_opp: opp_table0 {
@@ -1059,6 +1060,30 @@
 			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_LOW>;
 			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
 			clocks = <&mmsys CLK_MM_MM_DISP_DITHER0>;
+		};
+
+		lvds: lvds@14019200 {
+			compatible = "mediatek,mt8365-lvds";
+			reg = <0 0x14019200 0 0x100>;
+			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
+			clocks = <&mmsys CLK_MM_LVDSTX_PXL>,
+				 <&mmsys CLK_MM_LVDSTX_CTS>,
+				 <&topckgen CLK_TOP_VPLL_DPIX_EN>,
+				 <&topckgen CLK_TOP_LVDSTX_CLKDIG_EN>;
+			clock-names = "pixel", "clkts", "dpix", "clkdig";
+			phys = <&lvds_tx>;
+			phy-names = "lvds";
+			status = "disabled";
+		};
+
+		lvds_tx: lvds-phy@11c00800 {
+			compatible = "mediatek,mt8365-lvds-tx";
+			reg = <0 0x11c00800 0 0x30>;
+			clocks = <&clk26m>;
+			clock-output-names = "lvds_tx_pll";
+			#clock-cells = <0>;
+			#phy-cells = <0>;
+			status = "disabled";
 		};
 
 		dsi0: dsi0@14014000 {
