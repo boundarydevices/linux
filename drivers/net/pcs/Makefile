@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 # Makefile for Linux PCS drivers
 
-pcs_xpcs-$(CONFIG_PCS_XPCS)	:= pcs-xpcs.o pcs-xpcs-nxp.o pcs-xpcs-wx.o
+pcs_xpcs-$(CONFIG_PCS_XPCS)	:= pcs-xpcs.o pcs-xpcs-nxp.o pcs-xpcs-wx.o pcs-xpcs-phy.o
 
 obj-$(CONFIG_MTIP_BACKPLANE_PHY) += mtip_backplane.o
 obj-$(CONFIG_PCS_XPCS)		+= pcs_xpcs.o
