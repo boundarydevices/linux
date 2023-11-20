@@ -1543,7 +1543,7 @@
 			};
 
 			efuse_apu_segment: efuse-apu-segment {
-				reg = <0x1fc 0x4>;
+				reg = <0x7e0 0x4>;
 			};
 		};
 
