@@ -37,3 +37,10 @@ config DRM_MEDIATEK_HDMI
 	select PHY_MTK_HDMI
 	help
 	  DRM/KMS HDMI driver for Mediatek SoCs
+
+config MTK_LVDS_SUPPORT
+	tristate "DRM LVDS Support for MediaTek SoCs"
+	depends on DRM_MEDIATEK
+	select PHY_MTK_LVDS
+	help
+	  DRM/KMS LVDS driver for MediaTek SoCs.
