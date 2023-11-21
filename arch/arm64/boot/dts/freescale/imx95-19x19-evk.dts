@@ -512,6 +512,10 @@
 	managed = "in-band-status";
 };
 
+&netc_timer {
+	status = "okay";
+};
+
 &netc_emdio {
 	status = "okay";
 
