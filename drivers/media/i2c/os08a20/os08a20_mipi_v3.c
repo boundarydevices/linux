@@ -56,6 +56,11 @@ struct os08a20_capture_properties {
 	__u64 max_data_rate;
 };
 
+struct os08a20_ctrls {
+	struct v4l2_ctrl_handler handler;
+	struct v4l2_ctrl *link_freq;
+};
+
 struct os08a20 {
 	struct i2c_client *i2c_client;
 	struct regulator *io_regulator;
@@ -79,6 +84,7 @@ struct os08a20 {
 	struct mutex lock;
 	u32 stream_status;
 	u32 resume_status;
+	struct os08a20_ctrls ctrls;
 };
 
 static struct vvcam_mode_info_s pos08a20_mode_info[] = {
@@ -702,6 +708,66 @@ static int os08a20_set_test_pattern(struct os08a20 *sensor, void * arg)
 	return ret;
 }
 
+static inline struct v4l2_subdev *ctrl_to_sd(struct v4l2_ctrl *ctrl)
+{
+	return &container_of(ctrl->handler, struct os08a20,
+			     ctrls.handler)->subdev;
+}
+
+static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	return 0;
+}
+
+static const struct v4l2_ctrl_ops os08a20_ctrl_ops = {
+	.s_ctrl = os08a20_s_ctrl,
+};
+
+/*
+ * MIPI CSI-2 link frequencies.
+ * link_freq = (pixel_rate * bpp) / (2 * data_lanes)
+ */
+static const s64 os08a20_csi2_link_freqs[] = {
+	200000000,
+};
+
+/* Link freq for default mode: 1080p RAW10, 4 data lanes 800 Mbps/lane. */
+#define OS08A20_DEFAULT_LINK_FREQ	0
+
+static int os08a20_init_controls(struct os08a20 *sensor)
+{
+	const struct v4l2_ctrl_ops *ops = &os08a20_ctrl_ops;
+	struct os08a20_ctrls *ctrls = &sensor->ctrls;
+	struct v4l2_ctrl_handler *hdl = &ctrls->handler;
+	int ret;
+
+	v4l2_ctrl_handler_init(hdl, 5);
+
+	/* we can use our own mutex for the ctrl lock */
+	hdl->lock = &sensor->lock;
+
+	/* Clock related controls */
+	ctrls->link_freq = v4l2_ctrl_new_int_menu(hdl, ops,
+					V4L2_CID_LINK_FREQ,
+					ARRAY_SIZE(os08a20_csi2_link_freqs) - 1,
+					OS08A20_DEFAULT_LINK_FREQ,
+					os08a20_csi2_link_freqs);
+
+	if (hdl->error) {
+		ret = hdl->error;
+		goto free_ctrls;
+	}
+
+	ctrls->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+
+	sensor->subdev.ctrl_handler = hdl;
+	return 0;
+
+free_ctrls:
+	v4l2_ctrl_handler_free(hdl);
+	return ret;
+}
+
 static int os08a20_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1254,6 +1320,9 @@ static int os08a20_probe(struct i2c_client *client)
 	if (retval)
 		goto probe_err_regulator_disable;
 
+	if (os08a20_init_controls(sensor))
+		goto probe_err_entity_cleanup;
+	
 	/* os08a20 power on*/
 	retval = os08a20_runtime_resume(dev);
 	if (retval) {
@@ -1331,6 +1400,7 @@ static void os08a20_remove(struct i2c_client *client)
 	pm_runtime_set_suspended(dev);
 	v4l2_async_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
+	v4l2_ctrl_handler_free(&sensor->ctrls.handler);
 	os08a20_regulator_disable(sensor);
 	mutex_destroy(&sensor->lock);
 }
