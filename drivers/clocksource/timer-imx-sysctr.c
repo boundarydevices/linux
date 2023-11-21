@@ -133,7 +133,7 @@ static void __init sysctr_clockevent_init(void)
 					0xff, 0x7fffffff);
 }
 
-static int __init sysctr_timer_init(struct device_node *np)
+static int sysctr_timer_init(struct device_node *np)
 {
 	int ret = 0;
 
