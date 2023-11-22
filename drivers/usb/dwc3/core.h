@@ -30,6 +30,7 @@
 #include <linux/ulpi/interface.h>
 
 #include <linux/phy/phy.h>
+#include "../host/xhci-plat.h"
 
 #include <linux/power_supply.h>
 
@@ -175,6 +176,21 @@
 /* Bit fields */
 
 /* Global SoC Bus Configuration INCRx Register 0 */
+#ifdef CONFIG_OF
+#define DWC3_GSBUSCFG0_DATARD_SHIFT	28
+#define DWC3_GSBUSCFG0_DATARD(n)	(((n) & 0xf)		\
+			<< DWC3_GSBUSCFG0_DATARD_SHIFT)
+#define DWC3_GSBUSCFG0_DESCRD_SHIFT	24
+#define DWC3_GSBUSCFG0_DESCRD(n)	(((n) & 0xf)		\
+			<< DWC3_GSBUSCFG0_DESCRD_SHIFT)
+#define DWC3_GSBUSCFG0_DATAWR_SHIFT	20
+#define DWC3_GSBUSCFG0_DATAWR(n)	(((n) & 0xf)		\
+			<< DWC3_GSBUSCFG0_DATAWR_SHIFT)
+#define DWC3_GSBUSCFG0_DESCWR_SHIFT	16
+#define DWC3_GSBUSCFG0_DESCWR(n)	(((n) & 0xf)		\
+			<< DWC3_GSBUSCFG0_DESCWR_SHIFT)
+#endif
+
 #define DWC3_GSBUSCFG0_INCR256BRSTENA	(1 << 7) /* INCR256 burst */
 #define DWC3_GSBUSCFG0_INCR128BRSTENA	(1 << 6) /* INCR128 burst */
 #define DWC3_GSBUSCFG0_INCR64BRSTENA	(1 << 5) /* INCR64 burst */
@@ -968,6 +984,11 @@ struct dwc3_scratchpad_array {
 	__le64	dma_adr[DWC3_MAX_HIBER_SCRATCHBUFS];
 };
 
+struct dwc3_platform_data {
+	struct xhci_plat_priv *xhci_priv;
+	void	(*set_role_post)(struct dwc3 *dwc, u32 role);
+};
+
 /**
  * struct dwc3 - representation of our controller
  * @drd_work: workqueue used for role swapping
@@ -1116,6 +1137,8 @@ struct dwc3_scratchpad_array {
  * @dis_split_quirk: set to disable split boundary.
  * @wakeup_configured: set if the device is configured for remote wakeup.
  * @suspended: set to track suspend event due to U3/L2.
+ * @host_vbus_glitches: set to avoid vbus glitch during
+ *                      xhci reset.
  * @imod_interval: set the interrupt moderation interval in 250ns
  *			increments or 0 to disable.
  * @max_cfg_eps: current max number of IN eps used across all USB configs.
@@ -1157,6 +1180,7 @@ struct dwc3 {
 	struct clk		*ref_clk;
 	struct clk		*susp_clk;
 
+	bool			core_inited;
 	struct reset_control	*reset;
 
 	struct usb_phy		*usb2_phy;
@@ -1328,6 +1352,7 @@ struct dwc3 {
 	unsigned		tx_de_emphasis:2;
 
 	unsigned		dis_metastability_quirk:1;
+	unsigned		host_vbus_glitches:1;
 
 	unsigned		dis_split_quirk:1;
 	unsigned		async_callbacks:1;
