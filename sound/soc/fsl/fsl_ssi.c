@@ -41,6 +41,8 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/dma/imx-dma.h>
+#include <linux/pm_runtime.h>
+#include <linux/busfreq-imx.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -1594,6 +1596,7 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 	}
 
 	dev_set_drvdata(dev, ssi);
+	pm_runtime_enable(&pdev->dev);
 
 	if (ssi->soc->imx) {
 		ret = fsl_ssi_imx_probe(pdev, ssi, iomem);
@@ -1691,6 +1694,20 @@ static void fsl_ssi_remove(struct platform_device *pdev)
 	}
 }
 
+#ifdef CONFIG_PM
+static int fsl_ssi_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+
+static int fsl_ssi_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_PM_SLEEP
 static int fsl_ssi_suspend(struct device *dev)
 {
@@ -1725,6 +1742,8 @@ static int fsl_ssi_resume(struct device *dev)
 
 static const struct dev_pm_ops fsl_ssi_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(fsl_ssi_suspend, fsl_ssi_resume)
+	SET_RUNTIME_PM_OPS(fsl_ssi_runtime_suspend, fsl_ssi_runtime_resume,
+			   NULL)
 };
 
 static struct platform_driver fsl_ssi_driver = {
