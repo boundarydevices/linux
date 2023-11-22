@@ -273,6 +273,10 @@ properties:
     type: boolean
     description: enables off-chip resistor divider for Vbus
 
+  ci-disable-lpm:
+    type: boolean
+    description: Some chipidea hardware need to disable low power mode
+
   samsung,picophy-pre-emp-curr-control:
     description:
       HS Transmitter Pre-Emphasis Current Control. This signal controls
