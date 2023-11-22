@@ -146,6 +146,8 @@
 &enetc_port0 {
 	phy-handle = <&sgmii_phy0>;
 	phy-mode = "sgmii";
+	phys = <&serdes 0>;
+	phy-names = "serdes";
 	managed = "in-band-status";
 	status = "okay";
 };
@@ -189,6 +191,11 @@
 };
 
 &ftm_alarm1 {
+	status = "okay";
+};
+
+&hdptx0 {
+	lane-mapping = <0x4e>;
 	status = "okay";
 };
 
@@ -257,6 +264,8 @@
 	managed = "in-band-status";
 	phy-handle = <&qsgmii_phy0>;
 	phy-mode = "qsgmii";
+	phys = <&serdes 1>;
+	phy-names = "serdes";
 	status = "okay";
 };
 
@@ -265,6 +274,8 @@
 	managed = "in-band-status";
 	phy-handle = <&qsgmii_phy1>;
 	phy-mode = "qsgmii";
+	phys = <&serdes 1>;
+	phy-names = "serdes";
 	status = "okay";
 };
 
@@ -273,6 +284,8 @@
 	managed = "in-band-status";
 	phy-handle = <&qsgmii_phy2>;
 	phy-mode = "qsgmii";
+	phys = <&serdes 1>;
+	phy-names = "serdes";
 	status = "okay";
 };
 
@@ -281,6 +294,8 @@
 	managed = "in-band-status";
 	phy-handle = <&qsgmii_phy3>;
 	phy-mode = "qsgmii";
+	phys = <&serdes 1>;
+	phy-names = "serdes";
 	status = "okay";
 };
 

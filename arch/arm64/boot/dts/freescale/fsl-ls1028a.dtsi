@@ -255,6 +255,12 @@
 			};
 		};
 
+		serdes: phy@1ea0000 {
+			compatible = "fsl,ls1028a-serdes", "fsl,lynx-10g";
+			reg = <0x00 0x1ea0000 0x0 0xffff>;
+			#phy-cells = <1>;
+		};
+
 		scfg: syscon@1fc0000 {
 			compatible = "fsl,ls1028a-scfg", "syscon";
 			reg = <0x0 0x1fc0000 0x0 0x10000>;
@@ -622,6 +628,7 @@
 			snps,dis_rxdet_inp3_quirk;
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			dma-coherent;
 			status = "disabled";
 		};
 
@@ -632,6 +639,7 @@
 			snps,dis_rxdet_inp3_quirk;
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			dma-coherent;
 			status = "disabled";
 		};
 
@@ -872,12 +880,13 @@
 
 			port {
 				dpi0_out: endpoint {
-
+					remote-endpoint = <&dp1_out>;
 				};
 			};
 		};
 
-		gpu: gpu@f0c0000 {
+		/* Remove the upstream node to add node from SDK driver */
+/*		gpu: gpu@f0c0000 {
 			compatible = "vivante,gc";
 			reg = <0x0 0xf0c0000 0x0 0x10000>;
 			interrupts = <GIC_SPI 220 IRQ_TYPE_LEVEL_HIGH>;
@@ -886,6 +895,17 @@
 				 <&clockgen QORIQ_CLK_HWACCEL 2>;
 			clock-names = "core", "shader", "bus";
 			#cooling-cells = <2>;
+		};
+*/
+
+		gpu@f0c0000 {
+			compatible = "fsl,ls1028a-gpu";
+			reg = <0x0 0x0f0c0000 0x0 0x10000>,
+				<0x0 0x80000000 0x0 0x80000000>,
+				<0x0 0x0 0x0 0x3000000>;
+			reg-names = "base", "phys_baseaddr",
+				"contiguous_mem";
+			interrupts = <GIC_SPI 220 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		sai1: audio-controller@f100000 {
@@ -1019,6 +1039,22 @@
 			reg = <0x0 0xf1f0000 0x0 0x10000>;
 			#clock-cells = <0>;
 			clocks = <&osc_27m>;
+		};
+
+		hdptx0: display@f200000 {
+			compatible = "cdn,ls1028a-dp";
+			reg = <0x0 0xf200000 0x0 0xfffff>;
+			interrupts = <0 221 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clockgen 2 2>, <&clockgen 2 2>, <&clockgen 2 2>,
+				 <&clockgen 2 2>, <&clockgen 2 2>, <&dpclk>;
+			clock-names = "clk_core", "pclk", "sclk",
+				      "cclk", "clk_vif", "clk_pxl";
+
+			port {
+				dp1_out: endpoint {
+					remote-endpoint = <&dpi0_out>;
+				};
+			};
 		};
 
 		tmu: tmu@1f80000 {
@@ -1336,5 +1372,4 @@
 			status = "disabled";
 		};
 	};
-
 };
