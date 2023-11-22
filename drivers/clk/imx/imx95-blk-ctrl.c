@@ -156,59 +156,33 @@ static const struct imx95_blk_ctrl_dev_data camblk_dev_data = {
 };
 
 static const struct imx95_blk_ctrl_clk_dev_data lvds_clk_dev_data[] = {
-	[IMX95_CLK_DISPMIX_LVDS_PLL_DIV1_2] = {
-		.name = "lvds_pll_div1_2",
-		.parent_names = (const char *[]){ "lvds_pll", },
-		.num_parents = 1,
-		.reg = 0,
-		.bit_idx = 0,
-		.bit_width = 1,
-		.type = CLK_DIVIDER,
-		.flags2 = CLK_DIVIDER_ONE_BASED | CLK_DIVIDER_ALLOW_ZERO,
-	},
-	[IMX95_CLK_DISPMIX_LVDS_CH0_GATE] = {
-		.name = "lvds_ch0_gate",
+	[IMX95_CLK_DISPMIX_LVDS_CH_GATE] = {
+		.name = "lvds_ch_gate",
 		.parent_names = (const char *[]){ "ldb_pll_div7", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 1,
+		.bit_width = 2,
 		.type = CLK_GATE,
 		.flags = CLK_SET_RATE_PARENT,
 		.flags2 = CLK_GATE_SET_TO_DISABLE,
 	},
-	[IMX95_CLK_DISPMIX_LVDS_CH1_GATE] = {
-		.name = "lvds_ch1_gate",
+
+	[IMX95_CLK_DISPMIX_PIX_DI_GATE] = {
+		.name = "lvds_di_gate",
 		.parent_names = (const char *[]){ "ldb_pll_div7", },
 		.num_parents = 1,
 		.reg = 0,
-		.bit_idx = 2,
-		.type = CLK_GATE,
-		.flags = CLK_SET_RATE_PARENT,
-		.flags2 = CLK_GATE_SET_TO_DISABLE,
-	},
-	[IMX95_CLK_DISPMIX_PIX_DI0_GATE] = {
-		.name = "lvds_di0_gate",
-		.parent_names = (const char *[]){ "disp_engine0_sel", },
-		.num_parents = 1,
-		.reg = 0,
 		.bit_idx = 3,
+		.bit_width = 2,
 		.type = CLK_GATE,
 		.flags = CLK_SET_RATE_PARENT,
 		.flags2 = CLK_GATE_SET_TO_DISABLE,
 	},
-	[IMX95_CLK_DISPMIX_PIX_DI1_GATE] = {
-		.name = "lvds_di1_gate",
-		.parent_names = (const char *[]){ "disp_engine1_sel", },
-		.num_parents = 1,
-		.reg = 0,
-		.bit_idx = 4,
-		.type = CLK_GATE,
-		.flags = CLK_SET_RATE_PARENT,
-		.flags2 = CLK_GATE_SET_TO_DISABLE,
-	},
+
 	[IMX95_CLK_DISPMIX_LVDS_PLL_GATE] = {
 		.name = "lvds_pll_gate",
-		.parent_names = (const char *[]){ "ldb_pll", },
+		.parent_names = (const char *[]){ "LDBPLL", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 5,
