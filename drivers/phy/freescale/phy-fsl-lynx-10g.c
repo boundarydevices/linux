@@ -833,7 +833,6 @@ static int ls1088a_serdes1_get_pccr(enum lynx_lane_mode lane_mode, int lane,
 	switch (lane_mode) {
 	case LANE_MODE_1000BASEX_SGMII:
 	case LANE_MODE_1000BASEKX:
-	case LANE_MODE_2500BASEX:
 		pccr->offset = PCCR8;
 		pccr->width = 4;
 		pccr->shift = SGMII_CFG(lane);
@@ -857,7 +856,7 @@ static int ls1088a_serdes1_get_pccr(enum lynx_lane_mode lane_mode, int lane,
 	case LANE_MODE_10GBASER:
 	case LANE_MODE_10GBASEKR:
 		switch (lane) {
-		case 0:
+		case 2:
 			pccr->shift = XFI_CFG(A);
 			break;
 		case 3:
@@ -882,7 +881,6 @@ static int ls1088a_serdes1_get_pcvt_offset(int lane, enum lynx_lane_mode mode)
 	switch (mode) {
 	case LANE_MODE_1000BASEX_SGMII:
 	case LANE_MODE_1000BASEKX:
-	case LANE_MODE_2500BASEX:
 		return SGMIIaCR0(lane);
 	case LANE_MODE_QSGMII:
 		switch (lane) {
@@ -896,9 +894,8 @@ static int ls1088a_serdes1_get_pcvt_offset(int lane, enum lynx_lane_mode mode)
 		}
 	case LANE_MODE_10GBASER:
 	case LANE_MODE_10GBASEKR:
-		return XFIaCR0(lane);
 		switch (lane) {
-		case 0:
+		case 2:
 			return XFIaCR0(A);
 		case 3:
 			return XFIaCR0(B);
@@ -915,7 +912,6 @@ static bool ls1088a_serdes1_lane_supports_mode(int lane, enum lynx_lane_mode mod
 	switch (mode) {
 	case LANE_MODE_1000BASEX_SGMII:
 	case LANE_MODE_1000BASEKX:
-	case LANE_MODE_2500BASEX:
 		return true;
 	case LANE_MODE_QSGMII:
 		switch (lane) {
@@ -929,7 +925,7 @@ static bool ls1088a_serdes1_lane_supports_mode(int lane, enum lynx_lane_mode mod
 	case LANE_MODE_10GBASER:
 	case LANE_MODE_10GBASEKR:
 		switch (lane) {
-		case 0:
+		case 2:
 		case 3:
 			return true;
 		default:
@@ -1940,6 +1936,21 @@ static int lynx_10g_init(struct phy *phy)
 	return 0;
 }
 
+static int lynx_10g_exit(struct phy *phy)
+{
+	struct lynx_10g_lane *lane = phy_get_drvdata(phy);
+
+	/* The lane returns to the state where it isn't managed by the
+	 * consumer, so we must treat is as if it isn't initialized, and always
+	 * powered on.
+	 */
+	lane->init = false;
+	lane->powered_up = false;
+	lynx_10g_power_on(phy);
+
+	return 0;
+}
+
 static void lynx_10g_check_cdr_lock(struct phy *phy,
 				    struct phy_status_opts_cdr *cdr)
 {
@@ -1991,6 +2002,7 @@ static int lynx_10g_configure(struct phy *phy, union phy_configure_opts *opts)
 
 static const struct phy_ops lynx_10g_ops = {
 	.init		= lynx_10g_init,
+	.exit		= lynx_10g_exit,
 	.power_on	= lynx_10g_power_on,
 	.power_off	= lynx_10g_power_off,
 	.set_mode	= lynx_10g_set_mode,
@@ -2122,11 +2134,19 @@ static void lynx_10g_pll_read_configuration(struct lynx_10g_priv *priv)
 static void lynx_10g_backup_pccr_val(struct lynx_10g_lane *lane)
 {
 	u32 val;
+	int err;
 
 	if (lane->mode == LANE_MODE_UNKNOWN)
 		return;
 
-	lynx_pccr_read(lane, lane->mode, &val);
+	err = lynx_pccr_read(lane, lane->mode, &val);
+	if (err) {
+		dev_warn(&lane->phy->dev,
+			 "The driver doesn't know how to access the PCCR for lane mode %d\n",
+			 lane->mode);
+		lane->mode = LANE_MODE_UNKNOWN;
+		return;
+	}
 
 	lane->default_pccr[lane->mode] = val;
 
@@ -2280,8 +2300,8 @@ static const struct of_device_id lynx_10g_of_match_table[] = {
 	{ .compatible = "fsl,ls1028a-serdes", .data = &lynx_info_ls1028a },
 	{ .compatible = "fsl,ls1046a-serdes1", .data = &lynx_info_ls1046a_serdes1 },
 	{ .compatible = "fsl,ls1046a-serdes2", .data = &lynx_info_ls1046a_serdes2 },
-	{ .compatible = "fsl,ls1088a-serdes1", .data = &lynx_info_ls1088a_serdes1 }, // not tested
-	{ .compatible = "fsl,ls2088a-serdes1", .data = &lynx_info_ls2088a_serdes1 }, // not tested
+	{ .compatible = "fsl,ls1088a-serdes1", .data = &lynx_info_ls1088a_serdes1 },
+	{ .compatible = "fsl,ls2088a-serdes1", .data = &lynx_info_ls2088a_serdes1 },
 	{ .compatible = "fsl,ls2088a-serdes2", .data = &lynx_info_ls2088a_serdes2 },
 	{ },
 };
