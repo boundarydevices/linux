@@ -21,41 +21,33 @@ properties:
       - enum:
           - fsl,vf610-edma
           - fsl,imx7ulp-edma
-          - fsl,imx8qm-adma
-          - fsl,imx8qm-edma
-          - fsl,imx93-edma3
-          - fsl,imx93-edma4
+          - fsl,s32v234-edma
       - items:
           - const: fsl,ls1028a-edma
           - const: fsl,vf610-edma
 
   reg:
-    minItems: 1
+    minItems: 2
     maxItems: 3
 
   interrupts:
-    minItems: 1
-    maxItems: 64
+    minItems: 2
+    maxItems: 17
 
   interrupt-names:
-    minItems: 1
-    maxItems: 64
+    minItems: 2
+    maxItems: 17
 
   "#dma-cells":
-    enum:
-      - 2
-      - 3
+    const: 2
 
   dma-channels:
-    minItems: 1
-    maxItems: 64
+    const: 32
 
   clocks:
-    minItems: 1
     maxItems: 2
 
   clock-names:
-    minItems: 1
     maxItems: 2
 
   big-endian:
@@ -78,52 +70,21 @@ allOf:
       properties:
         compatible:
           contains:
-            enum:
-              - fsl,imx8qm-adma
-              - fsl,imx8qm-edma
-              - fsl,imx93-edma3
-              - fsl,imx93-edma4
-    then:
-      properties:
-        "#dma-cells":
-          const: 3
-        # It is not necessary to write the interrupt name for each channel.
-        # instead, you can simply maintain the sequential IRQ numbers as
-        # defined for the DMA channels.
-        interrupt-names: false
-        clock-names:
-          items:
-            - const: dma
-        clocks:
-          maxItems: 1
-
-  - if:
-      properties:
-        compatible:
-          contains:
             const: fsl,vf610-edma
     then:
       properties:
-        clocks:
-          minItems: 2
         clock-names:
           items:
             - const: dmamux0
             - const: dmamux1
         interrupts:
-          minItems: 2
           maxItems: 2
         interrupt-names:
           items:
             - const: edma-tx
             - const: edma-err
         reg:
-          minItems: 2
           maxItems: 3
-        "#dma-cells":
-          const: 2
-        dma-channels:
-          const: 32
 
   - if:
       properties:
@@ -132,22 +93,14 @@ allOf:
             const: fsl,imx7ulp-edma
     then:
       properties:
-        clock:
-          minItems: 2
         clock-names:
           items:
             - const: dma
             - const: dmamux0
         interrupts:
-          minItems: 2
           maxItems: 17
         reg:
-          minItems: 2
           maxItems: 2
-        "#dma-cells":
-          const: 2
-        dma-channels:
-          const: 32
 
 unevaluatedProperties: false
 
@@ -204,44 +157,22 @@ examples:
 
   - |
     #include <dt-bindings/interrupt-controller/arm-gic.h>
-    #include <dt-bindings/clock/imx93-clock.h>
+    #include <dt-bindings/clock/s32v234-clock.h>
+    edma: dma-controller@40002000 {
+       #dma-cells = <2>;
+       compatible = "fsl,s32v234-edma";
+       reg = <0x0 0x40002000 0x0 0x2000>,
+            <0x0 0x40031000 0x0 0x1000>,
+             <0x0 0x400A1000 0x0 0x1000>;
+       dma-channels = <32>;
+       interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>,
+                    <GIC_SPI 9 IRQ_TYPE_LEVEL_HIGH>,
+                    <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
+       interrupt-names = "edma-tx_0-15",
+                         "edma-tx_16-31",
+                         "edma-err";
+       clock-names = "dmamux0", "dmamux1";
+       clocks = <&clks S32V234_CLK_SYS6>,
+                <&clks S32V234_CLK_SYS6>;
+    }; /* S32V234 */
 
-    dma-controller@44000000 {
-      compatible = "fsl,imx93-edma3";
-      reg = <0x44000000 0x200000>;
-      #dma-cells = <3>;
-      dma-channels = <31>;
-      interrupts = <GIC_SPI 95 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>,
-                   <GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>;
-        clocks = <&clk IMX93_CLK_EDMA1_GATE>;
-        clock-names = "dma";
-    };
