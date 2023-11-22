@@ -6,6 +6,7 @@
  *
  */
 
+#include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/gpio/consumer.h>
 #include <linux/kernel.h>
@@ -21,6 +22,9 @@
 #include <linux/stmmac.h>
 
 #include "stmmac_platform.h"
+
+#include <dt-bindings/firmware/imx/rsrc.h>
+#include <linux/firmware/imx/sci.h>
 
 #define GPR_ENET_QOS_INTF_MODE_MASK	GENMASK(21, 16)
 #define GPR_ENET_QOS_INTF_SEL_MII	(0x0 << 16)
@@ -102,6 +106,37 @@ imx8dxl_set_intf_mode(struct plat_stmmacenet_data *plat_dat)
 	int ret = 0;
 
 	/* TBD: depends on imx8dxl scu interfaces to be upstreamed */
+	struct imx_sc_ipc *ipc_handle;
+	int val;
+
+	ret = imx_scu_get_handle(&ipc_handle);
+	if (ret)
+		return ret;
+
+	switch (plat_dat->mac_interface) {
+	case PHY_INTERFACE_MODE_MII:
+		val = GPR_ENET_QOS_INTF_SEL_MII;
+		break;
+	case PHY_INTERFACE_MODE_RMII:
+		val = GPR_ENET_QOS_INTF_SEL_RMII;
+		break;
+	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
+		val = GPR_ENET_QOS_INTF_SEL_RGMII;
+		break;
+	default:
+		pr_debug("imx dwmac doesn't support %d interface\n",
+			 plat_dat->mac_interface);
+		return -EINVAL;
+	}
+
+	ret = imx_sc_misc_set_control(ipc_handle, IMX_SC_R_ENET_1,
+				      IMX_SC_C_INTF_SEL, val >> 16);
+	ret |= imx_sc_misc_set_control(ipc_handle, IMX_SC_R_ENET_1,
+				       IMX_SC_C_CLK_GEN_EN, 0x1);
+
 	return ret;
 }
 
@@ -152,7 +187,9 @@ static int imx_dwmac_clks_config(void *priv, bool enabled)
 			clk_disable_unprepare(dwmac->clk_mem);
 			return ret;
 		}
+		request_bus_freq(BUS_FREQ_HIGH);
 	} else {
+		release_bus_freq(BUS_FREQ_HIGH);
 		clk_disable_unprepare(dwmac->clk_tx);
 		clk_disable_unprepare(dwmac->clk_mem);
 	}

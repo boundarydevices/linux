@@ -356,6 +356,9 @@ static inline struct dpaa2_faead *dpaa2_get_faead(void *buf_addr, bool swa)
 					 DPAA2_FAS_L3CE		| \
 					 DPAA2_FAS_L4CE)
 
+/* TCP indication in Frame Annotation Parse Results */
+#define DPAA2_FAF_HI_TCP_PRESENT	BIT(23)
+
 /* Time in milliseconds between link state updates */
 #define DPAA2_ETH_LINK_STATE_REFRESH	1000
 
@@ -371,7 +374,7 @@ static inline struct dpaa2_faead *dpaa2_get_faead(void *buf_addr, bool swa)
  * hardware becomes unresponsive, but not give up too easily if
  * the portal really is busy for valid reasons
  */
-#define DPAA2_ETH_SWP_BUSY_RETRIES	1000
+#define DPAA2_ETH_SWP_BUSY_RETRIES	10000
 
 /* Driver statistics, other than those in struct rtnl_link_stats64.
  * These are usually collected per-CPU and aggregated by ethtool.
@@ -636,6 +639,7 @@ struct dpaa2_eth_priv {
 	u32 rx_copybreak;
 
 	struct dpaa2_eth_fds __percpu *fd;
+	bool ceetm_en;
 };
 
 struct dpaa2_eth_devlink_priv {
@@ -781,6 +785,11 @@ static inline bool dpaa2_eth_has_mac(struct dpaa2_eth_priv *priv)
 	lockdep_assert_held(&priv->mac_lock);
 
 	return priv->mac ? true : false;
+}
+
+static inline int dpaa2_eth_ch_count(struct dpaa2_eth_priv *priv)
+{
+	return 1;
 }
 
 int dpaa2_eth_set_hash(struct net_device *net_dev, u64 flags);

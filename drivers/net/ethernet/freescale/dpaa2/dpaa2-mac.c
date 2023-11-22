@@ -5,7 +5,8 @@
 #include <linux/pcs-lynx.h>
 #include <linux/phy/phy.h>
 #include <linux/property.h>
-
+#include <linux/fsl/mc.h>
+#include <linux/msi.h>
 #include "dpaa2-eth.h"
 #include "dpaa2-mac.h"
 
@@ -361,12 +362,18 @@ static int dpaa2_mac_get_phys(struct dpaa2_mac *mac)
 	int err;
 	u32 val;
 
+	err = of_count_phandle_with_args(dn, "phys", "#phy-cells");
+	if (err <= 0) {
+		mac->num_phys = 0;
+		return 0;
+	}
+	mac->num_phys = err;
+
 	if (fwnode_property_read_u32(mac->fw_node, "num-lanes", &val))
 		mac->num_lanes = 1;
 	else
 		mac->num_lanes = val;
 
-	mac->num_phys = of_count_phandle_with_args(dn, "phys", "#phy-cells");
 	mac->phys = devm_kcalloc(dev, mac->num_phys, sizeof(struct phy *),
 				 GFP_KERNEL);
 	if (!mac->phys)
@@ -621,4 +628,26 @@ void dpaa2_mac_get_ethtool_stats(struct dpaa2_mac *mac, u64 *data)
 		}
 		*(data + i) = value;
 	}
+}
+
+void dpaa2_mac_driver_attach(struct fsl_mc_device *dpmac_dev)
+{
+	struct device_driver *drv = driver_find("fsl_dpaa2_mac", &fsl_mc_bus_type);
+	struct device *dev = &dpmac_dev->dev;
+	int err;
+
+	if (dev && dev->driver == NULL && drv) {
+		err = device_attach(dev);
+		if (err && err != -EAGAIN)
+			dev_err(dev, "Error in attaching the fsl_dpaa2_mac driver\n");
+	}
+}
+
+void dpaa2_mac_driver_detach(struct fsl_mc_device *dpmac_dev)
+{
+	struct device_driver *drv = driver_find("fsl_dpaa2_mac", &fsl_mc_bus_type);
+	struct device *dev = &dpmac_dev->dev;
+
+	if (dev && dev->driver == drv)
+		device_release_driver(dev);
 }

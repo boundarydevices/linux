@@ -10,12 +10,14 @@ config FSL_ENETC_CORE
 config FSL_ENETC
 	tristate "ENETC PF driver"
 	depends on PCI_MSI
+	depends on TSN || TSN=n
 	select MDIO_DEVRES
 	select FSL_ENETC_CORE
 	select FSL_ENETC_IERB
 	select FSL_ENETC_MDIO
 	select PHYLINK
 	select PCS_LYNX
+	select PCS_XPCS
 	select DIMLIB
 	help
 	  This driver supports NXP ENETC gigabit ethernet controller PCIe
@@ -23,6 +25,23 @@ config FSL_ENETC
 	  level.
 
 	  If compiled as module (M), the module name is fsl-enetc.
+
+config FSL_ENETC4
+	tristate "ENETC4 PF driver"
+	depends on PCI_MSI && FSL_NETC_PRB_IERB
+	select MDIO_DEVRES
+	select FSL_ENETC_CORE
+	select FSL_ENETC_MDIO
+	select PHYLINK
+	select PCS_LYNX
+	select PCS_XPCS
+	select DIMLIB
+	help
+	  This driver supports the revision 4 of NXP ENETC (Ethernet Controller)
+	  PCIe physical function (PF) devices, managing ENETC Ports at a
+	  privileged level.
+
+	  If compiled as module (M), the module name is fsl-enetc4.
 
 config FSL_ENETC_VF
 	tristate "ENETC VF driver"
@@ -44,6 +63,16 @@ config FSL_ENETC_IERB
 	  LS1028A.
 
 	  If compiled as module (M), the module name is fsl-enetc-ierb.
+
+config FSL_NETC_PRB_IERB
+	tristate "NETC PRB and IERB driver"
+	help
+	  This driver configures Integrated Endpoint Register Block and Privileged
+	  Register Block on NXP i.MX95. The IERB contains registers that are used
+	  for pre-boot initialization, debug, and non-customer configuration. The
+	  PRB controls global reset and global error handling for NETC.
+
+	  If compiled as module (M), the module name is fsl-netc-prb-ierb.
 
 config FSL_ENETC_MDIO
 	tristate "ENETC MDIO driver"
@@ -68,10 +97,26 @@ config FSL_ENETC_PTP_CLOCK
 
 config FSL_ENETC_QOS
 	bool "ENETC hardware Time-sensitive Network support"
-	depends on (FSL_ENETC || FSL_ENETC_VF) && (NET_SCH_TAPRIO || NET_SCH_CBS)
+	depends on (FSL_ENETC || FSL_ENETC4 || FSL_ENETC_VF) && (NET_SCH_TAPRIO || NET_SCH_CBS)
 	help
 	  There are Time-Sensitive Network(TSN) capabilities(802.1Qbv/802.1Qci
 	  /802.1Qbu etc.) supported by ENETC. These TSN capabilities can be set
 	  enable/disable from user space via Qos commands(tc). In the kernel
 	  side, it can be loaded by Qos driver. Currently, it is only support
 	  taprio(802.1Qbv) and Credit Based Shaper(802.1Qbu).
+
+config FSL_NTMP
+	bool "NETC NTMP driver"
+	depends on FSL_ENETC4 || FSL_ENETC_VF
+	help
+	  Some NETC functionality is controlled using control messages
+	  sent to the hardware using BD ring interface with 32 bytes
+	  descriptors similar to the packet Transmit BD ring used on
+	  ENETC. This BD ring interface is referred to as the command
+	  BD ring. This is used to configure functionality where the
+	  underlying resources may be shared between different entities
+	  or being too large to configure using direct registers.
+	  Hence, a messaging protocol called the NETC Table Management
+	  Protocol (NTMP) is provided for exchanging configuration and
+	  management information between the software and the hardware
+	  using the command BD ring interface.
