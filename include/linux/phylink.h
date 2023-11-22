@@ -21,6 +21,7 @@ enum {
 	MLO_AN_PHY = 0,	/* Conventional PHY */
 	MLO_AN_FIXED,	/* Fixed-link mode */
 	MLO_AN_INBAND,	/* In-band protocol */
+	MLO_AN_C73,	/* Clause 73 autoneg selects technology-dependent PCS */
 
 	/* PCS "negotiation" mode.
 	 *  PHYLINK_PCS_NEG_NONE - protocol has no inband capability
@@ -28,8 +29,12 @@ enum {
 	 *  PHYLINK_PCS_NEG_INBAND_DISABLED - inband mode disabled, e.g.
 	 *				      1000base-X with autoneg off
 	 *  PHYLINK_PCS_NEG_INBAND_ENABLED - inband mode enabled
+	 *  PHYLINK_PCS_NEG_C73_DISABLED - forced backplane speed
+	 *				   (clause 73 autoneg off)
+	 *  PHYLINK_PCS_NEG_C73_ENABLED - clause 73 autoneg enabled
 	 * Additionally, this can be tested using bitmasks:
 	 *  PHYLINK_PCS_NEG_INBAND - inband mode selected
+	 *  PHYLINK_PCS_NEG_C73 - clause 73 autoneg mode selected
 	 *  PHYLINK_PCS_NEG_ENABLED - negotiation mode enabled
 	 */
 	PHYLINK_PCS_NEG_NONE = 0,
@@ -39,6 +44,10 @@ enum {
 	PHYLINK_PCS_NEG_INBAND_DISABLED = PHYLINK_PCS_NEG_INBAND,
 	PHYLINK_PCS_NEG_INBAND_ENABLED = PHYLINK_PCS_NEG_INBAND |
 					 PHYLINK_PCS_NEG_ENABLED,
+	PHYLINK_PCS_NEG_C73 = BIT(7),
+	PHYLINK_PCS_NEG_C73_DISABLED = PHYLINK_PCS_NEG_C73,
+	PHYLINK_PCS_NEG_C73_ENABLED = PHYLINK_PCS_NEG_C73 |
+				      PHYLINK_PCS_NEG_ENABLED,
 
 	/* MAC_SYM_PAUSE and MAC_ASYM_PAUSE are used when configuring our
 	 * autonegotiation advertisement. They correspond to the PAUSE and
@@ -98,70 +107,14 @@ static inline bool phylink_autoneg_inband(unsigned int mode)
 	return mode == MLO_AN_INBAND;
 }
 
-/**
- * phylink_pcs_neg_mode() - helper to determine PCS inband mode
- * @mode: one of %MLO_AN_FIXED, %MLO_AN_PHY, %MLO_AN_INBAND.
- * @interface: interface mode to be used
- * @advertising: adertisement ethtool link mode mask
- *
- * Determines the negotiation mode to be used by the PCS, and returns
- * one of:
- *
- * - %PHYLINK_PCS_NEG_NONE: interface mode does not support inband
- * - %PHYLINK_PCS_NEG_OUTBAND: an out of band mode (e.g. reading the PHY)
- *   will be used.
- * - %PHYLINK_PCS_NEG_INBAND_DISABLED: inband mode selected but autoneg
- *   disabled
- * - %PHYLINK_PCS_NEG_INBAND_ENABLED: inband mode selected and autoneg enabled
- *
- * Note: this is for cases where the PCS itself is involved in negotiation
- * (e.g. Clause 37, SGMII and similar) not Clause 73.
- */
-static inline unsigned int phylink_pcs_neg_mode(unsigned int mode,
-						phy_interface_t interface,
-						const unsigned long *advertising)
+static inline bool phylink_autoneg_c73(unsigned int mode)
 {
-	unsigned int neg_mode;
+	return mode == MLO_AN_C73;
+}
 
-	switch (interface) {
-	case PHY_INTERFACE_MODE_SGMII:
-	case PHY_INTERFACE_MODE_QSGMII:
-	case PHY_INTERFACE_MODE_QUSGMII:
-	case PHY_INTERFACE_MODE_USXGMII:
-		/* These protocols are designed for use with a PHY which
-		 * communicates its negotiation result back to the MAC via
-		 * inband communication. Note: there exist PHYs that run
-		 * with SGMII but do not send the inband data.
-		 */
-		if (!phylink_autoneg_inband(mode))
-			neg_mode = PHYLINK_PCS_NEG_OUTBAND;
-		else
-			neg_mode = PHYLINK_PCS_NEG_INBAND_ENABLED;
-		break;
-
-	case PHY_INTERFACE_MODE_1000BASEX:
-	case PHY_INTERFACE_MODE_2500BASEX:
-		/* 1000base-X is designed for use media-side for Fibre
-		 * connections, and thus the Autoneg bit needs to be
-		 * taken into account. We also do this for 2500base-X
-		 * as well, but drivers may not support this, so may
-		 * need to override this.
-		 */
-		if (!phylink_autoneg_inband(mode))
-			neg_mode = PHYLINK_PCS_NEG_OUTBAND;
-		else if (linkmode_test_bit(ETHTOOL_LINK_MODE_Autoneg_BIT,
-					   advertising))
-			neg_mode = PHYLINK_PCS_NEG_INBAND_ENABLED;
-		else
-			neg_mode = PHYLINK_PCS_NEG_INBAND_DISABLED;
-		break;
-
-	default:
-		neg_mode = PHYLINK_PCS_NEG_NONE;
-		break;
-	}
-
-	return neg_mode;
+static inline bool phylink_autoneg_any(unsigned int mode)
+{
+	return phylink_autoneg_inband(mode) || phylink_autoneg_c73(mode);
 }
 
 /**
@@ -210,6 +163,7 @@ enum phylink_op_type {
  * @supported_interfaces: bitmap describing which PHY_INTERFACE_MODE_xxx
  *                        are supported by the MAC/PCS.
  * @mac_capabilities: MAC pause/speed/duplex capabilities.
+ * @cfg_link_an_mode: see %phylink_pcs. Necessary for %mac_select_pcs.
  */
 struct phylink_config {
 	struct device *dev;
@@ -221,6 +175,7 @@ struct phylink_config {
 				struct phylink_link_state *state);
 	DECLARE_PHY_INTERFACE_MASK(supported_interfaces);
 	unsigned long mac_capabilities;
+	unsigned int cfg_link_an_mode;
 };
 
 void phylink_limit_mac_speed(struct phylink_config *config, u32 max_speed);
@@ -399,6 +354,11 @@ int mac_prepare(struct phylink_config *config, unsigned int mode,
  *
  *   Valid state members: interface, an_enabled, pause, advertising.
  *
+ * %MLO_AN_C73:
+ *   The link uses IEEE 802.3 clause 73 auto-negotiation to select a
+ *   PCS according to the common technology resolved with the far end.
+ *   In this mode, state->interface is also not valid.
+ *
  * Implementations are expected to update the MAC to reflect the
  * requested settings - i.o.w., if nothing has changed between two
  * calls, no action is expected.  If only flow control settings have
@@ -412,7 +372,7 @@ void mac_config(struct phylink_config *config, unsigned int mode,
 /**
  * mac_finish() - finish a to change the PHY interface mode
  * @config: a pointer to a &struct phylink_config.
- * @mode: one of %MLO_AN_FIXED, %MLO_AN_PHY, %MLO_AN_INBAND.
+ * @mode: one of %MLO_AN_FIXED, %MLO_AN_PHY, %MLO_AN_INBAND, %MLO_AN_C73.
  * @iface: interface mode to switch to
  *
  * phylink will call this if it called mac_prepare() to allow the MAC to
@@ -481,6 +441,10 @@ struct phylink_pcs_ops;
  * @phylink: pointer to &struct phylink_config
  * @neg_mode: provide PCS neg mode via "mode" argument
  * @poll: poll the PCS for link changes
+ * @cfg_link_an_mode: phylink sets this to the statically configured link
+ *		      autoneg mode (%MLO_AN_FIXED, %MLO_AN_PHY, %MLO_AN_INBAND,
+ *		      %MLO_AN_C73). Note that in some cases, this may change at
+ *		      runtime (from %MLO_AN_INBAND to %MLO_AN_PHY).
  *
  * This structure is designed to be embedded within the PCS private data,
  * and will be passed between phylink and the PCS.
@@ -493,6 +457,7 @@ struct phylink_pcs {
 	struct phylink *phylink;
 	bool neg_mode;
 	bool poll;
+	unsigned int cfg_link_an_mode;
 };
 
 /**
@@ -597,6 +562,10 @@ void pcs_get_state(struct phylink_pcs *pcs,
  * For 1000BASE-X, the advertisement should be programmed into the PCS.
  *
  * For most 10GBASE-R, there is no advertisement.
+ *
+ * For %MLO_AN_C73, the "interface" argument should be ignored, since clause 73
+ * autonegotiation has not started, and thus, it has not resolved a link mode
+ * yet, either.
  *
  * The %neg_mode argument should be tested via the phylink_mode_*() family of
  * functions, or for PCS that set pcs->neg_mode true, should be tested
@@ -714,6 +683,7 @@ static inline int phylink_get_link_timer_ns(phy_interface_t interface)
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
 	case PHY_INTERFACE_MODE_USXGMII:
+	case PHY_INTERFACE_MODE_10G_QXGMII:
 		return 1600000;
 
 	case PHY_INTERFACE_MODE_1000BASEX:
