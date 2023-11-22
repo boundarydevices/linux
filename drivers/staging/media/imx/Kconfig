@@ -48,3 +48,11 @@ config IMX8_MIPI_CSI2_SAM
 
 endmenu
 endif  #VIDEO_IMX_CAPTURE
+
+config DWC_MIPI_CSI2_HOST
+       tristate "IMX93 MIPI CSI2 DWC Controller"
+       depends on VIDEO_DEV && VIDEO_V4L2_SUBDEV_API
+       default y
+       help
+         Enable support for video4linux MIPI CSI2 DWC driver for
+         i.MX93 platform.
