@@ -42,7 +42,7 @@ config SOC_IMX9
 	  If you say yes here, you get support for the NXP i.MX9 family
 
 config IMX8M_BLK_CTRL
-	bool
+	tristate "i.MX8M PM domains blk ctrl"
 	default SOC_IMX8M && IMX_GPCV2_PM_DOMAINS
 	depends on PM_GENERIC_DOMAINS
 	depends on COMMON_CLK
