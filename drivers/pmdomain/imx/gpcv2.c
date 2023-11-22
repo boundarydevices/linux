@@ -10,6 +10,7 @@
 
 #include <linux/clk.h>
 #include <linux/of.h>
+#include <linux/mfd/syscon.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
@@ -17,6 +18,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 #include <linux/sizes.h>
+#include <soc/imx/gpcv2.h>
 #include <dt-bindings/power/imx7-power.h>
 #include <dt-bindings/power/imx8mq-power.h>
 #include <dt-bindings/power/imx8mm-power.h>
@@ -274,9 +276,19 @@ struct imx_pgc_regs {
 	u16 hsk;
 };
 
+#define DOMAIN_MAX_NOC	6
+
+struct imx_pgc_noc_data {
+	u32 off;
+	u32 priority;
+	u32 mode;
+	u32 extctrl;
+};
+
 struct imx_pgc_domain {
 	struct generic_pm_domain genpd;
 	struct regmap *regmap;
+	struct regmap *noc_regmap;
 	const struct imx_pgc_regs *regs;
 	struct regulator *regulator;
 	struct reset_control *reset;
@@ -298,6 +310,7 @@ struct imx_pgc_domain {
 
 	unsigned int pgc_sw_pup_reg;
 	unsigned int pgc_sw_pdn_reg;
+	const struct imx_pgc_noc_data *noc_data[DOMAIN_MAX_NOC];
 };
 
 struct imx_pgc_domain_data {
@@ -311,6 +324,26 @@ static inline struct imx_pgc_domain *
 to_imx_pgc_domain(struct generic_pm_domain *genpd)
 {
 	return container_of(genpd, struct imx_pgc_domain, genpd);
+}
+
+static int imx_pgc_noc_set(struct imx_pgc_domain *domain)
+{
+	const struct imx_pgc_noc_data **data = domain->noc_data;
+	struct regmap *regmap = domain->noc_regmap;
+	int i;
+
+	if (!data || !regmap)
+		return 0;
+
+	for (i = 0; i < DOMAIN_MAX_NOC; i++) {
+		if (!data[i])
+			continue;
+		regmap_write(regmap, data[i]->off + 0x8, data[i]->priority);
+		regmap_write(regmap, data[i]->off + 0xc, data[i]->mode);
+		regmap_write(regmap, data[i]->off + 0x18, data[i]->extctrl);
+	}
+
+	return 0;
 }
 
 static int imx_pgc_power_up(struct generic_pm_domain *genpd)
@@ -344,6 +377,8 @@ static int imx_pgc_power_up(struct generic_pm_domain *genpd)
 		goto out_regulator_disable;
 	}
 
+	raw_notifier_call_chain(&genpd->power_notifiers, IMX_GPCV2_NOTIFY_ON_CLK_ENABLED, NULL);
+
 	/* delays for reset to propagate */
 	udelay(5);
 
@@ -376,6 +411,8 @@ static int imx_pgc_power_up(struct generic_pm_domain *genpd)
 
 	reset_control_deassert(domain->reset);
 
+	raw_notifier_call_chain(&genpd->power_notifiers, IMX_GPCV2_NOTIFY_ON_ADB400, NULL);
+
 	/* request the ADB400 to power up */
 	if (domain->bits.hskreq) {
 		regmap_update_bits(domain->regmap, domain->regs->hsk,
@@ -398,6 +435,8 @@ static int imx_pgc_power_up(struct generic_pm_domain *genpd)
 	/* Disable reset clocks for all devices in the domain */
 	if (!domain->keep_clocks)
 		clk_bulk_disable_unprepare(domain->num_clks, domain->clks);
+
+	imx_pgc_noc_set(domain);
 
 	return 0;
 
@@ -441,6 +480,8 @@ static int imx_pgc_power_down(struct generic_pm_domain *genpd)
 			goto out_clk_disable;
 		}
 	}
+
+	raw_notifier_call_chain(&genpd->power_notifiers, IMX_GPCV2_NOTIFY_OFF_ADB400, NULL);
 
 	if (domain->bits.pxx) {
 		/* enable power control */
@@ -920,6 +961,55 @@ static const struct imx_pgc_domain_data imx8mm_pgc_domain_data = {
 	.pgc_regs = &imx7_pgc_regs,
 };
 
+#define IMX8MP_MLMIX			0
+#define IMX8MP_GPU2D			1
+#define IMX8MP_GPU3D			2
+#define IMX8MP_AUDIO_DSP		3
+#define IMX8MP_AUDIO_SDMA2_PER		4
+#define IMX8MP_AUDIO_SDMA2_BURST	5
+#define IMX8MP_AUDIO_SDMA3_PER		6
+#define IMX8MP_AUDIO_SDMA3_BURST	7
+#define IMX8MP_AUDIO_EDMA3		8
+
+static const struct imx_pgc_noc_data imx8mp_pgc_noc_data[] = {
+	[IMX8MP_MLMIX] = {
+		.off = 0x180,
+		.priority = 0x80000303,
+	},
+	[IMX8MP_GPU2D] = {
+		.off = 0x500,
+		.priority = 0x80000303,
+	},
+	[IMX8MP_GPU3D] = {
+		.off = 0x580,
+		.priority = 0x80000303,
+	},
+	[IMX8MP_AUDIO_DSP] = {
+		.off = 0x200,
+		.priority = 0x80000303,
+	},
+	[IMX8MP_AUDIO_SDMA2_PER] = {
+		.off = 0x280,
+		.priority = 0x80000404,
+	},
+	[IMX8MP_AUDIO_SDMA2_BURST] = {
+		.off = 0x300,
+		.priority = 0x80000404,
+	},
+	[IMX8MP_AUDIO_SDMA3_PER] = {
+		.off = 0x380,
+		.priority = 0x80000404,
+	},
+	[IMX8MP_AUDIO_SDMA3_BURST] = {
+		.off = 0x400,
+		.priority = 0x80000404,
+	},
+	[IMX8MP_AUDIO_EDMA3] = {
+		.off = 0x480,
+		.priority = 0x80000404,
+	},
+};
+
 static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 	[IMX8MP_POWER_DOMAIN_MIPI_PHY1] = {
 		.genpd = {
@@ -946,6 +1036,7 @@ static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 	[IMX8MP_POWER_DOMAIN_USB1_PHY] = {
 		.genpd = {
 			.name = "usb-otg1",
+			.flags = GENPD_FLAG_ACTIVE_WAKEUP,
 		},
 		.bits = {
 			.pxx = IMX8MP_USB1_PHY_Pxx_REQ,
@@ -957,6 +1048,7 @@ static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 	[IMX8MP_POWER_DOMAIN_USB2_PHY] = {
 		.genpd = {
 			.name = "usb-otg2",
+			.flags = GENPD_FLAG_ACTIVE_WAKEUP,
 		},
 		.bits = {
 			.pxx = IMX8MP_USB2_PHY_Pxx_REQ,
@@ -977,6 +1069,9 @@ static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 		},
 		.pgc = BIT(IMX8MP_PGC_MLMIX),
 		.keep_clocks = true,
+		.noc_data = {
+			&imx8mp_pgc_noc_data[IMX8MP_MLMIX],
+		},
 	},
 
 	[IMX8MP_POWER_DOMAIN_AUDIOMIX] = {
@@ -991,6 +1086,14 @@ static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 		},
 		.pgc = BIT(IMX8MP_PGC_AUDIOMIX),
 		.keep_clocks = true,
+		.noc_data = {
+			&imx8mp_pgc_noc_data[IMX8MP_AUDIO_DSP],
+			&imx8mp_pgc_noc_data[IMX8MP_AUDIO_SDMA2_PER],
+			&imx8mp_pgc_noc_data[IMX8MP_AUDIO_SDMA2_BURST],
+			&imx8mp_pgc_noc_data[IMX8MP_AUDIO_SDMA3_PER],
+			&imx8mp_pgc_noc_data[IMX8MP_AUDIO_SDMA3_BURST],
+			&imx8mp_pgc_noc_data[IMX8MP_AUDIO_EDMA3],
+		},
 	},
 
 	[IMX8MP_POWER_DOMAIN_GPU2D] = {
@@ -1002,6 +1105,9 @@ static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 			.map = IMX8MP_GPU2D_A53_DOMAIN,
 		},
 		.pgc = BIT(IMX8MP_PGC_GPU2D),
+		.noc_data = {
+			&imx8mp_pgc_noc_data[IMX8MP_GPU2D],
+		},
 	},
 
 	[IMX8MP_POWER_DOMAIN_GPUMIX] = {
@@ -1041,6 +1147,9 @@ static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 			.map = IMX8MP_GPU3D_A53_DOMAIN,
 		},
 		.pgc = BIT(IMX8MP_PGC_GPU3D),
+		.noc_data = {
+			&imx8mp_pgc_noc_data[IMX8MP_GPU3D],
+		},
 	},
 
 	[IMX8MP_POWER_DOMAIN_MEDIAMIX] = {
@@ -1450,7 +1559,7 @@ static int imx_gpcv2_probe(struct platform_device *pdev)
 	};
 	struct device *dev = &pdev->dev;
 	struct device_node *pgc_np, *np;
-	struct regmap *regmap;
+	struct regmap *regmap, *noc_regmap;
 	void __iomem *base;
 	int ret;
 
@@ -1471,10 +1580,13 @@ static int imx_gpcv2_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	noc_regmap = syscon_regmap_lookup_by_compatible("fsl,imx8m-noc");
+
 	for_each_child_of_node(pgc_np, np) {
 		struct platform_device *pd_pdev;
 		struct imx_pgc_domain *domain;
 		u32 domain_index;
+		int i;
 
 		if (!of_device_is_available(np))
 			continue;
@@ -1513,6 +1625,13 @@ static int imx_gpcv2_probe(struct platform_device *pdev)
 		domain = pd_pdev->dev.platform_data;
 		domain->regmap = regmap;
 		domain->regs = domain_data->pgc_regs;
+		for (i = 0; i < DOMAIN_MAX_NOC; i++)
+			domain->noc_data[i] = domain_data->domains[domain_index].noc_data[i];
+
+		if (!IS_ERR(noc_regmap))
+			domain->noc_regmap = noc_regmap;
+		else
+			domain->noc_regmap = NULL;
 
 		domain->genpd.power_on  = imx_pgc_power_up;
 		domain->genpd.power_off = imx_pgc_power_down;
