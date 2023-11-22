@@ -32,6 +32,22 @@ static struct clk_bulk_data imx8m_dsp_clks[] = {
 	{ .id = "core" },
 };
 
+static struct clk_bulk_data imx8m_aux_clks[] = {
+	{ .id = "sai1_bus" },
+	{ .id = "sai1_mclk0" },
+	{ .id = "sai1_mclk1" },
+	{ .id = "sai1_mclk2" },
+	{ .id = "sai1_mclk3" },
+	{ .id = "sai3_bus" },
+	{ .id = "sai3_mclk0" },
+	{ .id = "sai3_mclk1" },
+	{ .id = "sai3_mclk2" },
+	{ .id = "sai3_mclk3" },
+	{ .id = "sdma3_root" },
+	{ .id = "pdm_ipg_clk"},
+	{ .id = "pdm_ipg_clk_app"},
+};
+
 /* DAP registers */
 #define IMX8M_DAP_DEBUG                0x28800000
 #define IMX8M_DAP_DEBUG_SIZE   (64 * 1024)
@@ -243,7 +259,7 @@ static int imx8m_probe(struct snd_sof_dev *sdev)
 	/* set default mailbox offset for FW ready message */
 	sdev->dsp_box.offset = MBOX_OFFSET;
 
-	priv->regmap = syscon_regmap_lookup_by_compatible("fsl,dsp-ctrl");
+	priv->regmap = syscon_regmap_lookup_by_phandle(sdev->dev->of_node, "fsl,dsp-ctrl");
 	if (IS_ERR(priv->regmap)) {
 		dev_err(sdev->dev, "cannot find dsp-ctrl registers");
 		ret = PTR_ERR(priv->regmap);
@@ -253,6 +269,9 @@ static int imx8m_probe(struct snd_sof_dev *sdev)
 	/* init clocks info */
 	priv->clks->dsp_clks = imx8m_dsp_clks;
 	priv->clks->num_dsp_clks = ARRAY_SIZE(imx8m_dsp_clks);
+
+	priv->clks->aux_clks = imx8m_aux_clks;
+	priv->clks->num_aux_clks = ARRAY_SIZE(imx8m_aux_clks);
 
 	ret = imx8_parse_clocks(sdev, priv->clks);
 	if (ret < 0)
@@ -313,6 +332,13 @@ static struct snd_soc_dai_driver imx8m_dai[] = {
 	.capture = {
 		.channels_min = 1,
 		.channels_max = 32,
+	},
+},
+{
+	.name = "micfil",
+	.capture = {
+		.channels_min = 1,
+		.channels_max = 8,
 	},
 },
 };
@@ -467,6 +493,7 @@ static struct snd_sof_dsp_ops sof_imx8m_ops = {
 		SNDRV_PCM_INFO_MMAP_VALID |
 		SNDRV_PCM_INFO_INTERLEAVED |
 		SNDRV_PCM_INFO_PAUSE |
+		SNDRV_PCM_INFO_BATCH |
 		SNDRV_PCM_INFO_NO_PERIOD_WAKEUP,
 };
 

@@ -9,6 +9,7 @@
 #include <linux/dma/imx-dma.h>
 #include <sound/dmaengine_pcm.h>
 
+#define FAL_SAI_NUM_RATES  20
 #define FSL_SAI_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
 			 SNDRV_PCM_FMTBIT_S20_3LE |\
 			 SNDRV_PCM_FMTBIT_S24_LE |\
@@ -207,6 +208,9 @@
 #define FSL_SAI_REC_SYN		BIT(4)
 #define FSL_SAI_USE_I2S_SLAVE	BIT(5)
 
+#define FSL_FMT_TRANSMITTER	0
+#define FSL_FMT_RECEIVER	1
+
 /* SAI clock sources */
 #define FSL_SAI_CLK_BUS		0
 #define FSL_SAI_CLK_MAST1	1
@@ -276,13 +280,14 @@ struct fsl_sai_dl_cfg {
 struct fsl_sai {
 	struct platform_device *pdev;
 	struct regmap *regmap;
+	struct regmap *regmap_gpr;
 	struct clk *bus_clk;
 	struct clk *mclk_clk[FSL_SAI_MCLK_MAX];
 	struct clk *pll8k_clk;
 	struct clk *pll11k_clk;
 	struct resource *res;
 
-	bool is_consumer_mode;
+	bool is_consumer_mode[2];
 	bool is_lsb_first;
 	bool is_dsp_mode;
 	bool is_pdm_mode;
@@ -291,6 +296,12 @@ struct fsl_sai {
 	struct fsl_sai_dl_cfg *dl_cfg;
 	unsigned int dl_cfg_cnt;
 	bool mclk_direction_output;
+	bool monitor_spdif;
+	bool monitor_spdif_start;
+
+	int gpr_idx;
+
+	unsigned int masterflag[2];
 
 	unsigned int mclk_id[2];
 	unsigned int mclk_streams;
@@ -308,7 +319,11 @@ struct fsl_sai {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pins_state;
 	struct sdma_peripheral_config audio_config[2];
+	struct snd_pcm_hw_constraint_list constraint_rates;
+	unsigned int constraint_rates_list[FAL_SAI_NUM_RATES];
 };
+
+const struct attribute_group *fsl_sai_get_dev_attribute_group(bool monitor_spdif);
 
 #define TX 1
 #define RX 0
