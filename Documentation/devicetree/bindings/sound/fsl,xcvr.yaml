@@ -19,9 +19,16 @@ properties:
     pattern: "^xcvr@.*"
 
   compatible:
-    enum:
-      - fsl,imx8mp-xcvr
-      - fsl,imx93-xcvr
+    oneOf:
+      - items:
+          - enum:
+              - fsl,imx95-xcvr
+          - const: fsl,imx93-xcvr
+
+      - items:
+          - enum:
+              - fsl,imx8mp-xcvr
+              - fsl,imx93-xcvr
 
   reg:
     items:

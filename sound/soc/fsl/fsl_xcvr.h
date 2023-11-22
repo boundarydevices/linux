@@ -8,6 +8,11 @@
 #ifndef __FSL_XCVR_H
 #define __FSL_XCVR_H
 
+#include <linux/regmap.h>
+#include <linux/reset.h>
+#include <sound/dmaengine_pcm.h>
+#include <sound/pcm_iec958.h>
+
 #define FSL_XCVR_MODE_SPDIF	0
 #define FSL_XCVR_MODE_ARC	1
 #define FSL_XCVR_MODE_EARC	2
@@ -290,5 +295,40 @@
 #define FSL_XCVR_RX_CS_BUFF_0		0x80 /* First  RX CS buffer */
 #define FSL_XCVR_RX_CS_BUFF_1		0xA0 /* Second RX CS buffer */
 #define FSL_XCVR_CAP_DATA_STR		0x300 /* Capabilities data structure */
+
+#define FSL_XCVR_CAPDS_SIZE	256
+#define SPDIF_NUM_RATES 7
+
+struct fsl_xcvr_soc_data {
+	const char *fw_name;
+	bool spdif_only;
+	bool use_edma;
+};
+
+struct fsl_xcvr {
+	const struct fsl_xcvr_soc_data *soc_data;
+	struct platform_device *pdev;
+	struct regmap *regmap;
+	struct clk *ipg_clk;
+	struct clk *pll_ipg_clk;
+	struct clk *phy_clk;
+	struct clk *spba_clk;
+	struct clk *pll8k_clk;
+	struct clk *pll11k_clk;
+	struct reset_control *reset;
+	u8 streams;
+	u32 mode;
+	u32 arc_mode;
+	void __iomem *ram_addr;
+	struct snd_dmaengine_dai_dma_data dma_prms_rx;
+	struct snd_dmaengine_dai_dma_data dma_prms_tx;
+	struct snd_aes_iec958 rx_iec958;
+	struct snd_aes_iec958 tx_iec958;
+	u8 cap_ds[FSL_XCVR_CAPDS_SIZE];
+	struct snd_pcm_hw_constraint_list spdif_constr_rates;
+	u32 spdif_constr_rates_list[SPDIF_NUM_RATES];
+};
+
+const struct attribute_group *fsl_xcvr_get_attr_grp(void);
 
 #endif /* __FSL_XCVR_H */
