@@ -354,6 +354,12 @@ config GPIO_ICH
 
 	  If unsure, say N.
 
+config GPIO_IMX_RPMSG
+	tristate "NXP i.MX7ULP RPMSG GPIO support"
+	depends on ARCH_MXC && RPMSG && GPIOLIB
+	help
+	  This driver support i.MX7ULP RPMSG virtual GPIOs.
+
 config GPIO_IMX_SCU
        def_bool y
        depends on IMX_SCU
@@ -691,7 +697,8 @@ config GPIO_UNIPHIER
 	  Say yes here to support UniPhier GPIOs.
 
 config GPIO_VF610
-	def_bool y
+	tristate "Vybrid vf610 GPIO support"
+	default y
 	depends on ARCH_MXC
 	select GPIOLIB_IRQCHIP
 	help
@@ -1172,6 +1179,13 @@ config GPIO_ADP5520
 	help
 	  This option enables support for on-chip GPIO found
 	  on Analog Devices ADP5520 PMICs.
+
+config GPIO_ADP5585
+	tristate "GPIO Support for ADP5585"
+	depends on MFD_ADP5585
+	help
+	  This option enables support for on-chip GPIO found
+	  on Analog Devices ADP5585.
 
 config GPIO_ALTERA_A10SR
 	tristate "Altera Arria10 System Resource GPIO"
@@ -1788,6 +1802,16 @@ config GPIO_LATCH
 	help
 	  Say yes here to enable a driver for GPIO multiplexers based on latches
 	  connected to other GPIOs.
+
+config GPIO_QIXIS_CPLD
+	tristate "NXP QIXIS CPLD GPIO support"
+	depends on MFD_SIMPLE_MFD_I2C || COMPILE_TEST
+	select GPIO_REGMAP
+	help
+	  This enables support for the GPIOs found on the QIXIS CPLD which is
+	  integrated on some NXP Layerscape boards such as LX2160ARDB. The
+	  driver can be build as a module as well which will be names
+	  gpio-qixis-cpld.
 
 config GPIO_MOCKUP
 	tristate "GPIO Testing Driver"
