@@ -1391,6 +1391,23 @@ static bool kvm_vma_mte_allowed(struct vm_area_struct *vma)
 	return vma->vm_flags & VM_MTE_ALLOWED;
 }
 
+static enum kvm_pgtable_prot stage1_to_stage2_pgprot(pgprot_t prot)
+{
+	switch (pgprot_val(prot) & PTE_ATTRINDX_MASK) {
+	case PTE_ATTRINDX(MT_DEVICE_nGnRE):
+	case PTE_ATTRINDX(MT_DEVICE_nGnRnE):
+		return KVM_PGTABLE_PROT_DEVICE;
+	case PTE_ATTRINDX(MT_NORMAL_NC):
+	case PTE_ATTRINDX(MT_NORMAL):
+	case PTE_ATTRINDX(MT_NORMAL_TAGGED):
+		return (pgprot_val(prot) & PTE_SHARED)
+			? KVM_PGTABLE_PROT_DEVICE_SH
+			: KVM_PGTABLE_PROT_DEVICE_NS;
+	}
+
+	return KVM_PGTABLE_PROT_DEVICE;
+}
+
 static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 			  struct kvm_memory_slot *memslot, unsigned long hva,
 			  unsigned long fault_status)
@@ -1576,8 +1593,16 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	if (exec_fault)
 		prot |= KVM_PGTABLE_PROT_X;
 
-	if (device)
-		prot |= KVM_PGTABLE_PROT_DEVICE;
+	if (device) {
+		pte_t *pte;
+		spinlock_t *ptl;
+		enum kvm_pgtable_prot prot_us;
+
+		pte = get_locked_pte(current->mm, memslot->userspace_addr, &ptl);
+		prot_us = stage1_to_stage2_pgprot(__pgprot(pte_val(*pte)));
+		pte_unmap_unlock(pte, ptl);
+		prot |= prot_us;
+	}
 	else if (cpus_have_const_cap(ARM64_HAS_CACHE_DIC))
 		prot |= KVM_PGTABLE_PROT_X;
 
