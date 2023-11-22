@@ -46,4 +46,19 @@ config TYPEC_MUX_NB7VPQ904M
 	  Say Y or M if your system has a On Semiconductor NB7VPQ904M Type-C
 	  redriver chip found on some devices with a Type-C port.
 
+config TYPEC_SWITCH_GPIO
+	tristate "Simple Super Speed Active Switch via GPIO"
+	help
+	  Say Y or M if your system has a typec super speed channel
+	  switch via a simple GPIO control.
+
+config TYPEC_NXP_TCA_MUX
+	tristate "NXP Type-C Assist block for USB SS lane switch"
+	help
+	  Say Y or M if your system has a NXP Type-C Assist block.
+	  Type-C Assist block is a seamless switch between normal plug
+	  orientation and flipped plug orientation for USB SS lane
+	  selection.
+	  If compiled as a module, the module will be named tca-mux.
+
 endmenu
