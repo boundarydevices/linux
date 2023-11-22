@@ -28,6 +28,7 @@ properties:
       - fsl,imx7d-pcie-ep
       - fsl,imx8qm-pcie-ep
       - fsl,imx8qxp-pcie-ep
+      - fsl,imx95-pcie-ep
 
   reg:
     minItems: 2
