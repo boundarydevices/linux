@@ -10,10 +10,12 @@
 #include <linux/clk-provider.h>
 #include <linux/err.h>
 #include <linux/of.h>
+#include <linux/firmware/imx/svc/rm.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <xen/xen.h>
 
 #include "clk-scu.h"
 
@@ -667,7 +669,32 @@ static int imx_clk_scu_attach_pd(struct device *dev, u32 rsrc_id)
 	    rsrc_id == IMX_SC_R_A72)
 		return 0;
 
+	/*
+	 * Temp fix to avoid the uart clk attached pd power off uart_0
+	 */
+	if (rsrc_id == IMX_SC_R_UART_0 && xen_initial_domain())
+			return 0;
+
 	return of_genpd_add_device(&genpdspec, dev);
+}
+
+static bool imx_clk_is_resource_owned(u32 rsrc)
+{
+	/*
+	 * A-core resources are special. SCFW reports they are not "owned" by
+	 * current partition but linux can still adjust them for cpufreq.
+	 *
+	 * So force this to return false when running as a VM guest and always
+	 * true otherwise.
+	 */
+	if (rsrc == IMX_SC_R_A53 || rsrc == IMX_SC_R_A72 ||
+	    rsrc == IMX_SC_R_A35) {
+		if (xen_domain() && !xen_initial_domain())
+			return false;
+		return true;
+	}
+
+	return imx_sc_rm_is_resource_owned(ccm_ipc_handle, rsrc);
 }
 
 struct clk_hw *imx_clk_scu_alloc_dev(const char *name,
@@ -686,6 +713,9 @@ struct clk_hw *imx_clk_scu_alloc_dev(const char *name,
 
 	if (!imx_scu_clk_is_valid(rsrc_id))
 		return ERR_PTR(-EINVAL);
+
+	if (!imx_clk_is_resource_owned(rsrc_id))
+		return NULL;
 
 	pdev = platform_device_alloc(name, PLATFORM_DEVID_NONE);
 	if (!pdev) {
