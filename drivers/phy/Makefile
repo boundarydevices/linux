@@ -36,4 +36,5 @@ obj-y					+= allwinner/	\
 					   sunplus/	\
 					   tegra/	\
 					   ti/		\
-					   xilinx/
+					   xilinx/	\
+					   inphi/

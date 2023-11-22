@@ -481,7 +481,8 @@ static int socfpga_dwmac_probe(struct platform_device *pdev)
 			goto err_dvr_remove;
 		}
 
-		stpriv->hw->lynx_pcs = lynx_pcs_create_mdiodev(pcs_bus, 0);
+		stpriv->hw->lynx_pcs = lynx_pcs_create_mdiodev(pcs_bus, 0,
+							       NULL, 0);
 		if (IS_ERR(stpriv->hw->lynx_pcs)) {
 			ret = PTR_ERR(stpriv->hw->lynx_pcs);
 			goto err_dvr_remove;
