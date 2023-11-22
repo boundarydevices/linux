@@ -4,13 +4,18 @@
 
 #include <linux/interrupt.h>
 #include <linux/clockchips.h>
+#include <linux/module.h>
+#include <linux/platform_device.h>
 
 #include "timer-of.h"
 
 #define CMP_OFFSET	0x10000
+#define RD_OFFSET	0x20000
 
 #define CNTCV_LO	0x8
 #define CNTCV_HI	0xc
+#define CNTCV_LO_IMX95	(RD_OFFSET + 0x8)
+#define CNTCV_HI_IMX95	(RD_OFFSET + 0xc)
 #define CMPCV_LO	(CMP_OFFSET + 0x20)
 #define CMPCV_HI	(CMP_OFFSET + 0x24)
 #define CMPCR		(CMP_OFFSET + 0x2c)
@@ -22,6 +27,8 @@
 
 static void __iomem *sys_ctr_base __ro_after_init;
 static u32 cmpcr __ro_after_init;
+static u32 cntcv_hi = CNTCV_HI;
+static u32 cntcv_lo = CNTCV_LO;
 
 static void sysctr_timer_enable(bool enable)
 {
@@ -43,9 +50,9 @@ static inline u64 sysctr_read_counter(void)
 	u32 cnt_hi, tmp_hi, cnt_lo;
 
 	do {
-		cnt_hi = readl_relaxed(sys_ctr_base + CNTCV_HI);
-		cnt_lo = readl_relaxed(sys_ctr_base + CNTCV_LO);
-		tmp_hi = readl_relaxed(sys_ctr_base + CNTCV_HI);
+		cnt_hi = readl_relaxed(sys_ctr_base + cntcv_hi);
+		cnt_lo = readl_relaxed(sys_ctr_base + cntcv_lo);
+		tmp_hi = readl_relaxed(sys_ctr_base + cntcv_hi);
 	} while (tmp_hi != cnt_hi);
 
 	return  ((u64) cnt_hi << 32) | cnt_lo;
@@ -139,6 +146,11 @@ static int __init sysctr_timer_init(struct device_node *np)
 		to_sysctr.of_clk.rate /= SYS_CTR_CLK_DIV;
 	}
 
+	if (of_device_is_compatible(np, "nxp,imx95-sysctr-timer")) {
+		cntcv_hi = CNTCV_HI_IMX95;
+		cntcv_lo = CNTCV_LO_IMX95;
+	}
+
 	sys_ctr_base = timer_of_base(&to_sysctr);
 	cmpcr = readl(sys_ctr_base + CMPCR);
 	cmpcr &= ~SYS_CTR_EN;
@@ -147,4 +159,32 @@ static int __init sysctr_timer_init(struct device_node *np)
 
 	return 0;
 }
+#ifdef MODULE
+static int sysctr_timer_probe(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+
+	return sysctr_timer_init(np);
+}
+
+static const struct of_device_id sysctr_timer_match_table[] = {
+	{ .compatible = "nxp,sysctr-timer" },
+	{ .compatible = "nxp,imx95-sysctr-timer" },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, sysctr_timer_match_table);
+
+static struct platform_driver sysctr_timer_driver = {
+	.probe		= sysctr_timer_probe,
+	.driver		= {
+		.name	= "sysctr-timer",
+		.of_match_table = sysctr_timer_match_table,
+	},
+};
+module_platform_driver(sysctr_timer_driver);
+
+#else
 TIMER_OF_DECLARE(sysctr_timer, "nxp,sysctr-timer", sysctr_timer_init);
+#endif
+
+MODULE_LICENSE("GPL");
