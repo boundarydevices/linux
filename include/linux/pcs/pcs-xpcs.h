@@ -12,6 +12,7 @@
 
 #define NXP_SJA1105_XPCS_ID		0x00000010
 #define NXP_SJA1110_XPCS_ID		0x00000020
+#define NXP_MX95_XPCS_ID		0x1b3274cd
 
 /* AN mode */
 #define DW_AN_C73			1
@@ -30,11 +31,14 @@ struct xpcs_id;
 
 struct dw_xpcs {
 	struct mdio_device *mdiodev;
+	struct mdio_device *phydev;
 	const struct xpcs_id *id;
 	struct phylink_pcs pcs;
 	phy_interface_t interface;
 	int dev_flag;
 };
+
+#define phylink_pcs_to_xpcs(pl_pcs) container_of((pl_pcs), struct dw_xpcs, pcs)
 
 int xpcs_get_an_mode(struct dw_xpcs *xpcs, phy_interface_t interface);
 void xpcs_link_up(struct phylink_pcs *pcs, unsigned int neg_mode,
@@ -47,5 +51,23 @@ int xpcs_config_eee(struct dw_xpcs *xpcs, int mult_fact_100ns,
 struct dw_xpcs *xpcs_create_mdiodev(struct mii_bus *bus, int addr,
 				    phy_interface_t interface);
 void xpcs_destroy(struct dw_xpcs *xpcs);
+#if IS_ENABLED(CONFIG_PCS_XPCS)
+struct phylink_pcs *xpcs_create_mdiodev_with_phy(struct mii_bus *bus,
+						 int mdioaddr, int phyaddr,
+						 phy_interface_t interface);
+void xpcs_pcs_destroy(struct phylink_pcs *pcs);
+#else
+static inline struct phylink_pcs *xpcs_create_mdiodev_with_phy(struct mii_bus *bus,
+						 int mdioaddr, int phyaddr,
+						 phy_interface_t interface)
+{
+	return ERR_PTR(-EOPNOTSUPP);
+}
+
+static inline void xpcs_pcs_destroy(struct phylink_pcs *pcs)
+{
+	return;
+}
+#endif /* IS_ENABLED(CONFIG_PCS_XPCS) */
 
 #endif /* __LINUX_PCS_XPCS_H */
