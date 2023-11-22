@@ -69,6 +69,14 @@ config VIDEO_MX8_CAPTURE
 
 source "drivers/media/platform/imx8/Kconfig"
 
+config VIDEO_MXC_CAPTURE
+	tristate "MXC Video For Linux Video Capture"
+	depends on VIDEO_DEV
+	help
+	  This is the video4linux2 capture driver based on i.MX video-in module.
+
+source "drivers/media/platform/mxc/capture/Kconfig"
+
 # Platform drivers - Please keep it alphabetically sorted
 source "drivers/media/platform/allegro-dvt/Kconfig"
 source "drivers/media/platform/amlogic/Kconfig"
