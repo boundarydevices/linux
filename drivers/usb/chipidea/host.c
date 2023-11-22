@@ -23,6 +23,7 @@
 
 static struct hc_driver __read_mostly ci_ehci_hc_driver;
 static int (*orig_bus_suspend)(struct usb_hcd *hcd);
+static int (*orig_bus_resume)(struct usb_hcd *hcd);
 
 struct ehci_ci_priv {
 	struct regulator *reg_vbus;
@@ -250,7 +251,7 @@ static int ci_ehci_hub_control(
 	struct ehci_hcd	*ehci = hcd_to_ehci(hcd);
 	unsigned int	ports = HCS_N_PORTS(ehci->hcs_params);
 	u32 __iomem	*status_reg;
-	u32		temp, port_index;
+	u32		temp, port_index, suspend_line_state;
 	unsigned long	flags;
 	int		retval = 0;
 	bool		done = false;
@@ -294,6 +295,17 @@ static int ci_ehci_hub_control(
 			PORT_SUSPEND, 5000))
 			ehci_err(ehci, "timeout waiting for SUSPEND\n");
 
+		if (ci->platdata->flags & CI_HDRC_HOST_SUSP_PHY_LPM) {
+			if (PORT_SPEED_LOW(temp))
+				suspend_line_state = PORTSC_LS_K;
+			else
+				suspend_line_state = PORTSC_LS_J;
+			if (!ehci_handshake(ehci, status_reg, PORTSC_LS,
+					   suspend_line_state, 5000))
+				ci_hdrc_enter_lpm(ci, true);
+		}
+
+
 		if (ci->platdata->flags & CI_HDRC_IMX_IS_HSIC) {
 			if (ci->platdata->notify_event)
 				ci->platdata->notify_event(ci,
@@ -303,6 +315,14 @@ static int ci_ehci_hub_control(
 			temp &= ~(PORT_WKDISC_E | PORT_WKCONN_E);
 			ehci_writel(ehci, temp, status_reg);
 		}
+
+		spin_unlock_irqrestore(&ehci->lock, flags);
+		if (ehci_port_speed(ehci, temp) ==
+				USB_PORT_STAT_HIGH_SPEED && hcd->usb_phy) {
+			/* notify the USB PHY */
+			usb_phy_notify_suspend(hcd->usb_phy, USB_SPEED_HIGH);
+		}
+		spin_lock_irqsave(&ehci->lock, flags);
 
 		set_bit(port_index, &ehci->suspended_ports);
 		goto done;
@@ -317,6 +337,14 @@ static int ci_ehci_hub_control(
 		/* Make sure the resume has finished, it should be finished */
 		if (ehci_handshake(ehci, status_reg, PORT_RESUME, 0, 25000))
 			ehci_err(ehci, "timeout waiting for resume\n");
+
+		temp = ehci_readl(ehci, status_reg);
+
+		if (ehci_port_speed(ehci, temp) ==
+				USB_PORT_STAT_HIGH_SPEED && hcd->usb_phy) {
+			/* notify the USB PHY */
+			usb_phy_notify_resume(hcd->usb_phy, USB_SPEED_HIGH);
+		}
 	}
 
 	spin_unlock_irqrestore(&ehci->lock, flags);
@@ -364,6 +392,15 @@ static int ci_ehci_bus_suspend(struct usb_hcd *hcd)
 			 */
 			usleep_range(150, 200);
 			/*
+			 * If a transaction is in progress, there may be
+			 * a delay in suspending the port. Poll until the
+			 * port is suspended.
+			 */
+			if (test_bit(port, &ehci->bus_suspended) &&
+					ehci_handshake(ehci, reg, PORT_SUSPEND,
+							PORT_SUSPEND, 5000))
+				ehci_err(ehci, "timeout waiting for SUSPEND\n");
+			/*
 			 * Need to clear WKCN and WKOC for imx HSIC,
 			 * otherwise, there will be wakeup event.
 			 */
@@ -373,6 +410,15 @@ static int ci_ehci_bus_suspend(struct usb_hcd *hcd)
 				ehci_writel(ehci, tmp, reg);
 			}
 
+			if (hcd->usb_phy && test_bit(port, &ehci->bus_suspended)
+				&& (ehci_port_speed(ehci, portsc) ==
+					USB_PORT_STAT_HIGH_SPEED))
+				/*
+				 * notify the USB PHY, it is for global
+				 * suspend case.
+				 */
+				usb_phy_notify_suspend(hcd->usb_phy,
+					USB_SPEED_HIGH);
 			break;
 		}
 	}
@@ -472,6 +518,36 @@ static void ci_hdrc_host_resume(struct ci_hdrc *ci, bool power_lost)
 }
 #endif
 
+static int ci_ehci_bus_resume(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int port;
+
+	int ret = orig_bus_resume(hcd);
+
+	if (ret)
+		return ret;
+
+	port = HCS_N_PORTS(ehci->hcs_params);
+	while (port--) {
+		u32 __iomem *reg = &ehci->regs->port_status[port];
+		u32 portsc = ehci_readl(ehci, reg);
+		/*
+		 * Notify PHY after resume signal has finished, it is
+		 * for global suspend case.
+		 */
+		if (hcd->usb_phy
+			&& test_bit(port, &ehci->bus_suspended)
+			&& (portsc & PORT_CONNECT)
+			&& (ehci_port_speed(ehci, portsc) ==
+				USB_PORT_STAT_HIGH_SPEED))
+			/* notify the USB PHY */
+			usb_phy_notify_resume(hcd->usb_phy, USB_SPEED_HIGH);
+	}
+
+	return 0;
+}
+
 int ci_hdrc_host_init(struct ci_hdrc *ci)
 {
 	struct ci_role_driver *rdrv;
@@ -505,6 +581,8 @@ void ci_hdrc_host_driver_init(void)
 {
 	ehci_init_driver(&ci_ehci_hc_driver, &ehci_ci_overrides);
 	orig_bus_suspend = ci_ehci_hc_driver.bus_suspend;
+	orig_bus_resume = ci_ehci_hc_driver.bus_resume;
+	ci_ehci_hc_driver.bus_resume = ci_ehci_bus_resume;
 	ci_ehci_hc_driver.bus_suspend = ci_ehci_bus_suspend;
 	ci_ehci_hc_driver.hub_control = ci_ehci_hub_control;
 }

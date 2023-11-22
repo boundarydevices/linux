@@ -210,7 +210,7 @@ static void ci_hdrc_enter_lpm_common(struct ci_hdrc *ci, bool enable)
 				0);
 }
 
-static void ci_hdrc_enter_lpm(struct ci_hdrc *ci, bool enable)
+void ci_hdrc_enter_lpm(struct ci_hdrc *ci, bool enable)
 {
 	return ci->platdata->enter_lpm(ci, enable);
 }
@@ -523,6 +523,13 @@ static irqreturn_t ci_irq_handler(int irq, void *data)
 	u32 otgsc = 0;
 
 	if (ci->in_lpm) {
+		/*
+		 * If we already have a wakeup irq pending there,
+		 * let's just return to wait resume finished firstly.
+		 */
+		if (ci->wakeup_int)
+			return IRQ_HANDLED;
+
 		disable_irq_nosync(irq);
 		ci->wakeup_int = true;
 		pm_runtime_get(ci->dev);
@@ -608,32 +615,49 @@ static int ci_usb_role_switch_set(struct usb_role_switch *sw,
 				  enum usb_role role)
 {
 	struct ci_hdrc *ci = usb_role_switch_get_drvdata(sw);
-	struct ci_hdrc_cable *cable;
+	struct ci_hdrc_cable *cable = NULL;
+	enum usb_role current_role = ci_role_to_usb_role(ci);
+	enum ci_role ci_role = usb_role_to_ci_role(role);
+	unsigned long flags;
 
-	if (role == USB_ROLE_HOST) {
-		cable = &ci->platdata->id_extcon;
-		cable->changed = true;
-		cable->connected = true;
+	if ((ci_role != CI_ROLE_END && !ci->roles[ci_role]) ||
+	    (current_role == role))
+		return 0;
+
+	pm_runtime_get_sync(ci->dev);
+	/* Stop current role */
+	spin_lock_irqsave(&ci->lock, flags);
+	if (current_role == USB_ROLE_DEVICE)
 		cable = &ci->platdata->vbus_extcon;
-		cable->changed = true;
-		cable->connected = false;
-	} else if (role == USB_ROLE_DEVICE) {
+	else if (current_role == USB_ROLE_HOST)
 		cable = &ci->platdata->id_extcon;
+
+	if (cable) {
 		cable->changed = true;
 		cable->connected = false;
-		cable = &ci->platdata->vbus_extcon;
-		cable->changed = true;
-		cable->connected = true;
-	} else {
-		cable = &ci->platdata->id_extcon;
-		cable->changed = true;
-		cable->connected = false;
-		cable = &ci->platdata->vbus_extcon;
-		cable->changed = true;
-		cable->connected = false;
+		ci_irq(ci);
+		spin_unlock_irqrestore(&ci->lock, flags);
+		if (ci->wq && role != USB_ROLE_NONE)
+			flush_workqueue(ci->wq);
+		spin_lock_irqsave(&ci->lock, flags);
 	}
 
-	ci_irq(ci);
+	cable = NULL;
+
+	/* Start target role */
+	if (role == USB_ROLE_DEVICE)
+		cable = &ci->platdata->vbus_extcon;
+	else if (role == USB_ROLE_HOST)
+		cable = &ci->platdata->id_extcon;
+
+	if (cable) {
+		cable->changed = true;
+		cable->connected = true;
+		ci_irq(ci);
+	}
+	spin_unlock_irqrestore(&ci->lock, flags);
+	pm_runtime_put_sync(ci->dev);
+
 	return 0;
 }
 
@@ -1320,10 +1344,8 @@ static int ci_controller_resume(struct device *dev)
 
 	dev_dbg(dev, "at %s\n", __func__);
 
-	if (!ci->in_lpm) {
-		WARN_ON(1);
+	if (!ci->in_lpm)
 		return 0;
-	}
 
 	ci_hdrc_enter_lpm(ci, false);
 
@@ -1457,10 +1479,8 @@ static int ci_runtime_suspend(struct device *dev)
 
 	dev_dbg(dev, "at %s\n", __func__);
 
-	if (ci->in_lpm) {
-		WARN_ON(1);
+	if (ci->in_lpm)
 		return 0;
-	}
 
 	if (ci_otg_is_fsm_mode(ci))
 		ci_otg_fsm_suspend_for_srp(ci);
