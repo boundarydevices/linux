@@ -84,4 +84,6 @@ source "drivers/staging/vme_user/Kconfig"
 
 source "drivers/staging/fsl_ppfe/Kconfig"
 
+source "drivers/staging/ethosu/Kconfig"
+
 endif # STAGING
