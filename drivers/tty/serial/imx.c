@@ -23,6 +23,7 @@
 #include <linux/ktime.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/rational.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/io.h>
@@ -30,6 +31,8 @@
 
 #include <asm/irq.h>
 #include <linux/dma/imx-dma.h>
+#include <linux/busfreq-imx.h>
+#include <linux/pm_qos.h>
 
 #include "serial_mctrl_gpio.h"
 
@@ -232,6 +235,8 @@ struct imx_port {
 	enum imx_tx_state	tx_state;
 	struct hrtimer		trigger_start_tx;
 	struct hrtimer		trigger_stop_tx;
+
+	struct pm_qos_request   pm_qos_req;
 };
 
 struct imx_port_ucrs {
@@ -1336,6 +1341,9 @@ static void imx_uart_dma_exit(struct imx_port *sport)
 		dma_release_channel(sport->dma_chan_tx);
 		sport->dma_chan_tx = NULL;
 	}
+
+	cpu_latency_qos_remove_request(&sport->pm_qos_req);
+	release_bus_freq(BUS_FREQ_HIGH);
 }
 
 static int imx_uart_dma_init(struct imx_port *sport)
@@ -1343,6 +1351,10 @@ static int imx_uart_dma_init(struct imx_port *sport)
 	struct dma_slave_config slave_config = {};
 	struct device *dev = sport->port.dev;
 	int ret;
+
+	/* request high bus for DMA mode */
+	request_bus_freq(BUS_FREQ_HIGH);
+	cpu_latency_qos_add_request(&sport->pm_qos_req, 0);
 
 	/* Prepare for RX : */
 	sport->dma_chan_rx = dma_request_slave_channel(dev, "rx");
@@ -1401,9 +1413,9 @@ static void imx_uart_enable_dma(struct imx_port *sport)
 
 	imx_uart_setup_ufcr(sport, TXTL_DMA, RXTL_DMA);
 
-	/* set UCR1 */
+	/* set UCR1 except TXDMAEN which would be enabled in imx_uart_dma_tx */
 	ucr1 = imx_uart_readl(sport, UCR1);
-	ucr1 |= UCR1_RXDMAEN | UCR1_TXDMAEN | UCR1_ATDMAEN;
+	ucr1 |= UCR1_RXDMAEN | UCR1_ATDMAEN;
 	imx_uart_writel(sport, ucr1, UCR1);
 
 	sport->dma_is_enabled = 1;
@@ -1429,10 +1441,18 @@ static void imx_uart_disable_dma(struct imx_port *sport)
 static int imx_uart_startup(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
+	struct tty_port *tty_port = &sport->port.state->port;
 	int retval;
 	unsigned long flags;
 	int dma_is_inited = 0;
 	u32 ucr1, ucr2, ucr3, ucr4;
+
+	/* some modem may need reset */
+	if (!tty_port_suspended(tty_port)) {
+		retval = device_reset(sport->port.dev);
+		if (retval && retval != -ENOENT)
+			return retval;
+	}
 
 	retval = clk_prepare_enable(sport->clk_per);
 	if (retval)
@@ -1519,8 +1539,9 @@ static int imx_uart_startup(struct uart_port *port)
 	imx_uart_enable_ms(&sport->port);
 
 	if (dma_is_inited) {
-		imx_uart_enable_dma(sport);
+		/* Note: enable dma request after transfer start! */
 		imx_uart_start_rx_dma(sport);
+		imx_uart_enable_dma(sport);
 	} else {
 		ucr1 = imx_uart_readl(sport, UCR1);
 		ucr1 |= UCR1_RRDYEN;

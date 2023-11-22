@@ -22,6 +22,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/reset.h>
 #include <linux/serial_core.h>
 #include <linux/slab.h>
 #include <linux/tty_flip.h>
@@ -283,6 +284,7 @@ struct lpuart_port {
 	struct scatterlist	rx_sgl, tx_sgl[2];
 	struct circ_buf		rx_ring;
 	int			rx_dma_rng_buf_len;
+	int			rx_dma_periods;
 	int                     last_residue;
 	unsigned int		dma_tx_nents;
 	wait_queue_head_t	dma_wait;
@@ -1398,10 +1400,11 @@ static inline int lpuart_start_rx_dma(struct lpuart_port *sport)
 		return ret;
 	}
 
+	sport->rx_dma_periods = 2;
 	sport->dma_rx_desc = dmaengine_prep_dma_cyclic(chan,
 				 sg_dma_address(&sport->rx_sgl),
 				 sport->rx_sgl.length,
-				 sport->rx_sgl.length / 2,
+				 sport->rx_sgl.length / sport->rx_dma_periods,
 				 DMA_DEV_TO_MEM,
 				 DMA_PREP_INTERRUPT);
 	if (!sport->dma_rx_desc) {
@@ -1875,7 +1878,16 @@ static void lpuart32_hw_setup(struct lpuart_port *sport)
 static int lpuart32_startup(struct uart_port *port)
 {
 	struct lpuart_port *sport = container_of(port, struct lpuart_port, port);
+	struct tty_port *tty_port = &sport->port.state->port;
 	unsigned long temp;
+	int ret;
+
+	/* some modem may need reset */
+	if (!tty_port_suspended(tty_port)) {
+		ret = device_reset(sport->port.dev);
+		if (ret && ret != -ENOENT)
+			return ret;
+	}
 
 	/* determine FIFO size */
 	temp = lpuart32_read(&sport->port, UARTFIFO);
