@@ -942,34 +942,50 @@
 		};
 
 		uart0: serial@21c0000 {
-			compatible = "arm,sbsa-uart","arm,pl011";
+			compatible = "arm,pl011", "arm,primecell";
+			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(8)>,
+				 <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(8)>;
+			clock-names = "uartclk", "apb_pclk";
 			reg = <0x0 0x21c0000 0x0 0x1000>;
 			interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
-			current-speed = <115200>;
 			status = "disabled";
 		};
 
 		uart1: serial@21d0000 {
-			compatible = "arm,sbsa-uart","arm,pl011";
+			compatible = "arm,pl011", "arm,primecell";
+			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(8)>,
+				 <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(8)>;
+			clock-names = "uartclk", "apb_pclk";
 			reg = <0x0 0x21d0000 0x0 0x1000>;
 			interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
-			current-speed = <115200>;
 			status = "disabled";
 		};
 
 		uart2: serial@21e0000 {
-			compatible = "arm,sbsa-uart","arm,pl011";
+			compatible = "arm,pl011", "arm,primecell";
+			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(8)>,
+				 <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(8)>;
+			clock-names = "uartclk", "apb_pclk";
 			reg = <0x0 0x21e0000 0x0 0x1000>;
 			interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
-			current-speed = <115200>;
 			status = "disabled";
 		};
 
 		uart3: serial@21f0000 {
-			compatible = "arm,sbsa-uart","arm,pl011";
+			compatible = "arm,pl011", "arm,primecell";
+			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(8)>,
+				 <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(8)>;
+			clock-names = "uartclk", "apb_pclk";
 			reg = <0x0 0x21f0000 0x0 0x1000>;
 			interrupts = <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
-			current-speed = <115200>;
 			status = "disabled";
 		};
 
@@ -1040,7 +1056,7 @@
 		};
 
 		usb0: usb@3100000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,lx2160a-dwc3", "snps,dwc3";
 			reg = <0x0 0x3100000 0x0 0x10000>;
 			interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
 			dr_mode = "host";
@@ -1048,11 +1064,13 @@
 			usb3-lpm-capable;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
+			dma-coherent;
 			status = "disabled";
 		};
 
 		usb1: usb@3110000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,lx2160a-dwc3", "snps,dwc3";
 			reg = <0x0 0x3110000 0x0 0x10000>;
 			interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
 			dr_mode = "host";
@@ -1060,6 +1078,8 @@
 			usb3-lpm-capable;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
+			dma-coherent;
 			status = "disabled";
 		};
 
@@ -1421,6 +1441,7 @@
 			status = "disabled";
 
 			pcs1: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1434,6 +1455,7 @@
 			status = "disabled";
 
 			pcs2: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1447,6 +1469,7 @@
 			status = "disabled";
 
 			pcs3: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1460,6 +1483,7 @@
 			status = "disabled";
 
 			pcs4: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1473,6 +1497,7 @@
 			status = "disabled";
 
 			pcs5: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1486,6 +1511,7 @@
 			status = "disabled";
 
 			pcs6: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1499,6 +1525,7 @@
 			status = "disabled";
 
 			pcs7: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1512,6 +1539,7 @@
 			status = "disabled";
 
 			pcs8: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1525,6 +1553,7 @@
 			status = "disabled";
 
 			pcs9: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1538,6 +1567,7 @@
 			status = "disabled";
 
 			pcs10: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1551,6 +1581,7 @@
 			status = "disabled";
 
 			pcs11: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1564,6 +1595,7 @@
 			status = "disabled";
 
 			pcs12: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1577,6 +1609,7 @@
 			status = "disabled";
 
 			pcs13: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1590,6 +1623,7 @@
 			status = "disabled";
 
 			pcs14: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1603,6 +1637,7 @@
 			status = "disabled";
 
 			pcs15: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1616,6 +1651,7 @@
 			status = "disabled";
 
 			pcs16: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1629,6 +1665,7 @@
 			status = "disabled";
 
 			pcs17: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
@@ -1642,6 +1679,7 @@
 			status = "disabled";
 
 			pcs18: ethernet-phy@0 {
+				compatible = "fsl,lx2160a-lynx-pcs";
 				reg = <0>;
 			};
 		};
