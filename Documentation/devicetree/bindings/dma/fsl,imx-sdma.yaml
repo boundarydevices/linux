@@ -94,11 +94,17 @@ properties:
           - SAI: 24
           - HDMI Audio: 25
 
-       The third cell: transfer priority ID
-         enum:
-           - High: 0
-           - Medium: 1
-           - Low: 2
+       The third cell: transfer priority ID and software done
+         - items:
+           description: bit[31] sw_done
+         - items:
+           description: bits[8:15] selector
+         - items:
+           description: bits[0:7] priority id
+           enum:
+             - High: 0
+             - Medium: 1
+             - Low: 2
 
   gpr:
     $ref: /schemas/types.yaml#/definitions/phandle
