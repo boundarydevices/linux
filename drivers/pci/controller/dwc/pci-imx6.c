@@ -1366,8 +1366,8 @@ static int imx6_pcie_config_sid(struct imx6_pcie *imx6_pcie)
 		}
 	}
 
-	kfree(smmu_map);
-	kfree(msi_map);
+	devm_kfree(dev, smmu_map);
+	devm_kfree(dev, msi_map);
 
 	return 0;
 }
