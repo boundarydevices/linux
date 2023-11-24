@@ -22,3 +22,4 @@ obj-$(CONFIG_PHY_MTK_MIPI_DSI)		+= phy-mtk-mipi-dsi-drv.o
 
 obj-$(CONFIG_PHY_MTK_CDPHY)		+= phy-mtk-cdphy.o
 obj-$(CONFIG_PHY_MTK_DPHY)		+= phy-mtk-dphy.o
+obj-$(CONFIG_PHY_MTK_LVDS)		+= phy-mtk-lvds.o

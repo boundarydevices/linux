@@ -1,0 +1,110 @@
+/* SPDX-License-Identifier: GPL-2.0
+ *
+ * MediaTek LVDS PHY Driver Header
+ *
+ * Copyright (c) 2023 MediaTek Inc.
+ * Author: Huijuan Xie <huijuan.xie@mediatek.com>
+ */
+
+#ifndef _PHY_MTK_LVDS_H
+#define _PHY_MTK_LVDS_H
+
+#define LVDSTX_ANA00	0x00
+#define LVDSTX_ANA04	0x04
+#define RG_LVDSTX_TVO	(0xf << 0)
+#define RG_LVDSTX_TVCM	(0xf << 4)
+#define RG_LVDSTX_TSTCLK_EN	BIT(8)
+#define RG_LVDSTX_TSTCLKDIV_EN	BIT(9)
+#define RG_LVDSTX_TSTCLK_SEL	(0x3 << 10)
+#define RG_LVDSTX_MPX_SEL	(0x3 << 12)
+#define RG_LVDSTX_TSTCLKDIV_SEL	(0x3 << 14)
+#define RG_LVDSTX_BIAS_SEL	(0x3 << 16)
+#define RG_LVDSTX_R_TERM	(0x3 << 18)
+#define RG_LVDSTX_SEL_CKTST	BIT(20)
+#define RG_LVDSTX_SEL_MERGE	BIT(21)
+#define RG_LVDSTX_LDO_EN	BIT(22)
+#define RG_LVDSTX_BIAS_EN	BIT(23)
+#define RG_LVDSTX_SER_ABIST_EN	BIT(24)
+#define RG_LVDSTX_SER_ABEDG_EN	BIT(25)
+#define RG_LVDSTX_SER_BIST_TOG	BIT(26)
+#define RG_LVDSTX_VOUTABIST_EN	(0x1f << 27)
+
+#define LVDSTX_ANA08	0x08
+#define RG_LVDSTX_EXT_EN	(0x1f << 0)
+#define RG_LVDSTX_DRV_EN	(0x1f << 6)
+#define RG_LVDSTX_SER_DIN_SEL	BIT(11)
+#define RG_LVDSTX_SER_CLKDIG_INV	BIT(12)
+#define RG_LVDSTX_SER_DIN	(0x3ff << 13)
+#define RG_LVDSTX_TSTPAD_EN	BIT(23)
+#define RG_LVDSTX_ABIST_EN	BIT(24)
+#define RG_LVDSTX_MPX_EN	BIT(25)
+#define RG_LVDSTX_LDOLPF_EN	BIT(26)
+
+#define LVDSTX_ANA0C	0x0c
+#define RG_LVDSTX_TEST_BYPASSBUF	BIT(20)
+#define RG_LVDSTX_BIASLPF_EN	BIT(21)
+#define RG_LVDSTX_SER_ABMUX_SEL	(0x7 << 22)
+#define RG_LVDSTX_SER_PEM_EN	BIT(25)
+#define RG_LVDSTX_LVROD	(0x3 << 26)
+
+#define LVDSTX_ANA10	0x10
+#define RG_LVDSTX_INCK_SEL	BIT(0)
+#define RG_LVDSTX_SWITCH_EN	BIT(1)
+#define RG_LVDSTX_INTR_CAL	(0x1f << 2)
+#define RG_LVDSTX_LDO1LPF_EN	BIT(7)
+#define RG_LVDSTX_LDO1_EN	BIT(8)
+#define RG_LVDSTX_LVROD1	(0x3 << 9)
+
+#define VOPLL_ANA14		0x14
+#define RG_LVDSTX_VPLL_TXMUXDIV2_EN	BIT(0)
+#define RG_LVDSTX_VPLL_EN	BIT(2)
+#define RG_LVDSTX_VPLL_DIV3_EN	BIT(3)
+#define RG_LVDSTX_VPLL_PREDIV	(0x3 << 4)
+#define RG_LVDSTX_VPLL_POSDIV	(0x7 << 6)
+#define RG_LVDSTX_VPLL_GLITCH_FREE_EN	BIT(9)
+#define RG_LVDSTX_PLL_BLP	BIT(10)
+#define RG_LVDSTX_VPLL_LDO_VOD_EN	BIT(11)
+#define RG_LVDSTX_VPLL_MONCK_EN	BIT(12)
+#define RG_LVDSTX_VPLL_MONVC_EN	BIT(13)
+#define RG_LVDSTX_VPLL_MONREF_EN	BIT(14)
+#define RG_LVDSTX_VPLL_SDM_FRA_EN	BIT(15)
+
+#define VOPLL_ANA18		0x18
+#define RG_LVDSTX_VPLL_SDM_PCW	(31 << 0)
+
+#define VOPLL_ANA1C		0x1c
+#define RG_LVDSTX_VPLL_SDM_PCW_CHG		BIT(0)
+#define RG_LVDSTX_VPLL_TXDIV1		(0x3 << 1)
+#define RG_LVDSTX_VPLL_TXDIV2		(0x3 << 3)
+#define RG_LVDSTX_VPLL_LVDS_EN		BIT(5)
+#define RG_LVDSTX_VPLL_LVDS_DPIX_DIV2		BIT(6)
+#define RG_LVDSTX_VPLL_TTL_EN		BIT(7)
+#define RG_LVDSTX_VPLL_TTLDIV		(0x3 << 8)
+#define RG_LVDSTX_VPLL_TXDIV5_EN		BIT(11)
+#define RG_LVDSTX_CLOCK_SEL		BIT(12)
+#define RG_LVDSTX_VPLL_SDM_PWR_ON		BIT(13)
+#define RG_LVDSTX_VPLL_SDM_ISO_EN		BIT(14)
+
+#define VOPLL_ANA20		0x20
+#define RG_LVDSTX_21EDG		BIT(0)
+#define RG_LVDSTX_21LEV		BIT(1)
+#define RG_LVDSTX_51EDG		BIT(2)
+#define RG_LVDSTX_51LEV		BIT(3)
+#define RG_LVDSTX_PLL_SDM_PWR_ACK		BIT(4)
+
+#define VOPLL_ANA24		0x24
+#define RG_LVDSTX_VPLL_BW		(0x7 << 0)
+#define RG_LVDSTX_VPLL_FS		(0x3 << 3)
+#define RG_LVDSTX_VPLL_IBIAS		(0x3 << 5)
+#define RG_LVDSTX_VPLL_ICHP		(0x3 << 7)
+#define RG_LVDSTX_VPLL_LVR_REFSEL		(0x3 << 9)
+#define RG_LVDSTX_VPLL_FS_EN		BIT(11)
+#define RG_LVDSTX_VPLL_RST_DLY		(0x3 << 12)
+
+struct mtk_lvds_tx {
+	struct device *dev;
+	void __iomem *regs;
+};
+
+#endif /* _PHY_MTK_LVDS_H */
+
