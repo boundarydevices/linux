@@ -938,10 +938,10 @@ static int pf0900_i2c_probe(struct i2c_client *i2c)
 		struct regulator_dev *rdev;
 		const struct pf0900_regulator_desc *r;
 
-		if (!strcmp(desc->name, "ldo3") && ldo3_stby) {
+		if (!strcmp(regulator_desc[i].desc.name, "ldo3") && ldo3_stby) {
 			r = &regulator_desc[i + 1];
 			i = i + 1;
-		} else if (!strcmp(desc->name, "ldo3")) {
+		} else if (!strcmp(regulator_desc[i].desc.name, "ldo3")) {
 			r = &regulator_desc[i];
 			i = i + 1;
 		} else {
@@ -949,7 +949,6 @@ static int pf0900_i2c_probe(struct i2c_client *i2c)
 		}
 
 		desc = &r->desc;
-
 		config.regmap = pf0900->regmap;
 		config.dev = pf0900->dev;
 
