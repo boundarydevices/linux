@@ -1703,6 +1703,7 @@ int ntmp_isct_operate_entry(struct netc_cbdr *cbdr, u32 entry_id, int cmd,
 	case NTMP_CMD_QUERY:
 		if (!info)
 			return -EINVAL;
+		fallthrough;
 	case NTMP_CMD_DELETE:
 	case NTMP_CMD_UPDATE:
 	case NTMP_CMD_QD:
