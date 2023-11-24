@@ -97,11 +97,6 @@ static inline bool is_imx93(struct ddr_pmu *pmu)
 	return pmu->devtype_data == &imx93_devtype_data;
 }
 
-static inline bool is_imx95(struct ddr_pmu *pmu)
-{
-	return pmu->devtype_data == &imx95_devtype_data;
-}
-
 static ssize_t ddr_perf_identifier_show(struct device *dev,
 					struct device_attribute *attr,
 					char *page)
@@ -479,15 +474,13 @@ static void imx95_ddr_perf_monitor_config(struct ddr_pmu *pmu, int cfg, int cfg1
 	writel(pmcfg1, pmu->base + PMCFG1);
 
 	if (offset) {
+		pmcfg = readl_relaxed(pmu->base + offset);
 		pmcfg &= ~FIELD_PREP(MX95_PMCFG_ID_MASK, 0x3FF);
 		pmcfg |= FIELD_PREP(MX95_PMCFG_ID_MASK, cfg2);
 		pmcfg &= ~FIELD_PREP(MX95_PMCFG_ID, 0x3FF);
 		pmcfg |= FIELD_PREP(MX95_PMCFG_ID, cfg1);
 		writel(pmcfg, pmu->base + offset);
 	}
-
-	pmcfg1 = readl_relaxed(pmu->base + PMCFG1);
-	pmcfg = readl_relaxed(pmu->base + offset);
 }
 
 static void ddr_perf_event_update(struct perf_event *event)
@@ -576,7 +569,7 @@ static int ddr_perf_event_add(struct perf_event *event, int flags)
 	if (is_imx93(pmu)) {
 		/* read trans, write trans, read beat */
 		imx93_ddr_perf_monitor_config(pmu, cfg, cfg1, cfg2);
-	} else if (is_imx95(pmu)) {
+	} else {
 		/* write beat, read beat2, read beat1, read beat */
 		imx95_ddr_perf_monitor_config(pmu, cfg, cfg1, cfg2);
 	}
@@ -704,7 +697,7 @@ static int ddr_perf_add_events(struct ddr_pmu *pmu)
 	if (is_imx93(pmu)) {
 		events = sizeof(imx93_ddr_perf_events_attrs)/sizeof(struct attribute *);
 		attrs = imx93_ddr_perf_events_attrs;
-	} else if (is_imx95(pmu)) {
+	} else {
 		events = sizeof(imx95_ddr_perf_events_attrs)/sizeof(struct attribute *);
 		attrs = imx95_ddr_perf_events_attrs;
 	}
@@ -729,7 +722,7 @@ static void ddr_perf_remove_events(struct ddr_pmu *pmu)
 	if (is_imx93(pmu)) {
 		events = sizeof(imx93_ddr_perf_events_attrs)/sizeof(struct attribute *);
 		attrs = imx93_ddr_perf_events_attrs;
-	} else if (is_imx95(pmu)) {
+	} else {
 		events = sizeof(imx95_ddr_perf_events_attrs)/sizeof(struct attribute *);
 		attrs = imx95_ddr_perf_events_attrs;
 	}
