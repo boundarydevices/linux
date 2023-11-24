@@ -83,7 +83,6 @@ struct netc_timer {
 	void __iomem *base;
 	struct device *dev;
 	struct pci_dev *pci_dev;
-	struct platform_device *ierb_pdev;
 	int irq;
 	char irq_name[64];
 	spinlock_t lock; /* protect regs */
@@ -615,7 +614,6 @@ static void netc_timer_deinit(struct netc_timer *priv)
 static int netc_timer_probe(struct pci_dev *pdev,
 			    const struct pci_device_id *id)
 {
-	struct platform_device *ierb_pdev;
 	struct device *dev = &pdev->dev;
 	struct netc_timer *priv;
 	int err, len, n;
@@ -651,7 +649,6 @@ static int netc_timer_probe(struct pci_dev *pdev,
 	}
 	priv->dev = dev;
 	priv->pci_dev = pdev;
-	priv->ierb_pdev = ierb_pdev;
 	priv->phc_index = -1; /* initialize it as an invalid index */
 
 	len = pci_resource_len(pdev, NETC_TMR_REGS_BAR);
