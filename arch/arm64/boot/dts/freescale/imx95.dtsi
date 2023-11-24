@@ -357,6 +357,11 @@
 		};
 	};
 
+	sram1: sram@20480000 {
+		compatible = "mmio-sram";
+		reg = <0x0 0x20480000 0x0 0x18000>;
+	};
+
 	firmware {
 		scmi {
 			compatible = "arm,scmi";
