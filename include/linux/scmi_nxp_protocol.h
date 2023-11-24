@@ -32,4 +32,12 @@ enum scmi_nxp_notification_events {
 #define SCMI_IMX_BBM_RTC_TIME_GET	0x7
 #define SCMI_IMX_BBM_RTC_ALARM_SET	0x8
 
+struct scmi_imx_bbm_notif_report {
+	bool			is_rtc;
+	bool			is_button;
+	ktime_t			timestamp;
+	unsigned int		rtc_id;
+	unsigned int		rtc_evt;
+};
+
 #endif

@@ -30,6 +30,25 @@ enum scmi_imx_bbm_protocol_cmd {
 	IMX_BBM_BUTTON_NOTIFY = 0xB,
 };
 
+#define BBM_PROTO_ATTR_NUM_RTC(x)  (((x) & 0xFFU) << 16U)
+#define BBM_PROTO_ATTR_NUM_GPR(x)  (((x) & 0xFFFFU) << 0U)
+
+#define GET_RTCS_NR(x)	le32_get_bits((x), GENMASK(23, 16))
+#define GET_GPRS_NR(x)	le32_get_bits((x), GENMASK(15, 0))
+
+#define SCMI_IMX_BBM_NOTIFY_RTC_UPDATED		BIT(2)
+#define SCMI_IMX_BBM_NOTIFY_RTC_ROLLOVER	BIT(1)
+#define SCMI_IMX_BBM_NOTIFY_RTC_ALARM		BIT(0)
+
+#define SCMI_IMX_BBM_RTC_ALARM_ENABLE_FLAG	BIT(0)
+
+#define SCMI_IMX_BBM_NOTIFY_RTC_FLAG	\
+	(SCMI_IMX_BBM_NOTIFY_RTC_UPDATED | \
+	 SCMI_IMX_BBM_NOTIFY_RTC_ROLLOVER | \
+	 SCMI_IMX_BBM_NOTIFY_RTC_ALARM)
+
+#define SCMI_IMX_BBM_EVENT_RTC_ID(x)        (((x) >> 24) & 0xFF)
+
 struct scmi_imx_bbm_info {
 	u32 version;
 	int nr_rtc;
@@ -40,11 +59,37 @@ struct scmi_msg_imx_bbm_protocol_attributes {
 	__le32 attributes;
 };
 
-#define BBM_PROTO_ATTR_NUM_RTC(x)  (((x) & 0xFFU) << 16U)
-#define BBM_PROTO_ATTR_NUM_GPR(x)  (((x) & 0xFFFFU) << 0U)
+struct scmi_imx_bbm_set_time {
+	__le32 id;
+	__le32 flags;
+	__le32 value_low;
+	__le32 value_high;
+};
 
-#define GET_RTCS_NR(x)	le32_get_bits((x), GENMASK(23, 16))
-#define GET_GPRS_NR(x)	le32_get_bits((x), GENMASK(15, 0))
+struct scmi_imx_bbm_get_time {
+	__le32 id;
+	__le32 flags;
+};
+
+struct scmi_imx_bbm_alarm_time {
+	__le32 id;
+	__le32 flags;
+	__le32 value_low;
+	__le32 value_high;
+};
+
+struct scmi_msg_imx_bbm_rtc_notify {
+	__le32 rtc_id;
+	__le32 flags;
+};
+
+struct scmi_msg_imx_bbm_button_notify {
+	__le32 flags;
+};
+
+struct scmi_imx_bbm_notify_payld {
+	__le32 flags;
+};
 
 static int scmi_imx_bbm_attributes_get(const struct scmi_protocol_handle *ph,
 				       struct scmi_imx_bbm_info *pi)
@@ -70,20 +115,6 @@ static int scmi_imx_bbm_attributes_get(const struct scmi_protocol_handle *ph,
 	return ret;
 }
 
-struct scmi_msg_imx_bbm_rtc_notify {
-	__le32 rtc_id;
-	__le32 flags;
-};
-
-struct scmi_msg_imx_bbm_button_notify {
-	__le32 flags;
-};
-
-
-struct scmi_imx_bbm_notify_payld {
-	__le32 flags;
-};
-
 static int scmi_imx_bbm_notify(const struct scmi_protocol_handle *ph,
 			       u32 src_id, int message_id, bool enable)
 {
@@ -98,17 +129,17 @@ static int scmi_imx_bbm_notify(const struct scmi_protocol_handle *ph,
 			return ret;
 
 		rtc_notify = t->tx.buf;
-		/* TODO check flags */
 		rtc_notify->rtc_id = cpu_to_le32(0);
-		rtc_notify->flags = cpu_to_le32(enable ? 0x7 : 0);
+		rtc_notify->flags = cpu_to_le32(enable ? SCMI_IMX_BBM_NOTIFY_RTC_FLAG : 0);
 	} else if (message_id == IMX_BBM_BUTTON_NOTIFY) {
 		ret = ph->xops->xfer_get_init(ph, message_id, sizeof(*button_notify), 0, &t);
 		if (ret)
 			return ret;
 
 		button_notify = t->tx.buf;
-		/* TODO check flags */
 		button_notify->flags = cpu_to_le32(enable ? 1 : 0);
+	} else {
+		return -EINVAL;
 	}
 
 	ret = ph->xops->do_xfer(ph, t);
@@ -139,19 +170,6 @@ static int scmi_imx_bbm_set_notify_enabled(const struct scmi_protocol_handle *ph
 	return ret;
 }
 
-struct scmi_imx_bbm_notif_report {
-	bool			is_rtc;
-	ktime_t			timestamp;
-	unsigned int		rtc_id;
-	unsigned int		rtc_evt;
-};
-
-#define SCMI_IMX_BBM_EVENT_RTC_ID(x)        (((x) >> 24) & 0xFF)
-
-#define SCMI_IMX_BBM_EVENT_RTC_UPDATED(x)   (((x) & 0x1) << 2)
-#define SCMI_IMX_BBM_EVENT_RTC_ROLLOVER(x)  (((x) & 0x1) << 1)
-#define SCMI_IMX_BBM_EVENT_RTC_ALARM(x)     (((x) & 0x1) << 0)
-
 static void *scmi_imx_bbm_fill_custom_report(const struct scmi_protocol_handle *ph,
 					     u8 evt_id, ktime_t timestamp,
 					     const void *payld, size_t payld_sz,
@@ -165,14 +183,18 @@ static void *scmi_imx_bbm_fill_custom_report(const struct scmi_protocol_handle *
 
 	if (evt_id == SCMI_EVENT_IMX_BBM_RTC) {
 		r->is_rtc = true;
+		r->is_button = false;
 		r->timestamp = timestamp;
 		r->rtc_id = SCMI_IMX_BBM_EVENT_RTC_ID(le32_to_cpu(p->flags));
-		/* TODO */
-		r->rtc_evt = le32_to_cpu(p->flags) & 0x7;
-		*src_id = r->rtc_id;
+		r->rtc_evt = le32_to_cpu(p->flags) & SCMI_IMX_BBM_NOTIFY_RTC_FLAG;
+		dev_dbg(ph->dev, "RTC: %d evt: %x\n", r->rtc_id, r->rtc_evt);
+		*src_id = r->rtc_evt;
 	} else if (evt_id == SCMI_EVENT_IMX_BBM_BUTTON) {
-		/*TODO*/
-		return NULL;
+		r->is_rtc = false;
+		r->is_button = true;
+		r->timestamp = timestamp;
+		dev_dbg(ph->dev, "BBM Button\n");
+		*src_id = 0;
 	} else {
 		WARN_ON(1);
 		return NULL;
@@ -183,8 +205,7 @@ static void *scmi_imx_bbm_fill_custom_report(const struct scmi_protocol_handle *
 
 static int scmi_imx_bbm_get_num_sources(const struct scmi_protocol_handle *ph)
 {
-	/* TODO */
-	return 2;
+	return 1;
 }
 
 static const struct scmi_event scmi_imx_bbm_events[] = {
@@ -237,25 +258,6 @@ static int scmi_imx_bbm_protocol_init(const struct scmi_protocol_handle *ph)
 	return ph->set_priv(ph, binfo);
 }
 
-struct scmi_imx_bbm_set_time {
-	__le32 id;
-	__le32 flags;
-	__le32 value_low;
-	__le32 value_high;
-};
-
-struct scmi_imx_bbm_get_time {
-	__le32 id;
-	__le32 flags;
-};
-
-struct scmi_imx_bbm_alarm_time {
-	__le32 id;
-	__le32 flags;
-	__le32 value_low;
-	__le32 value_high;
-};
-
 static int scmi_imx_bbm_rtc_time_set(const struct scmi_protocol_handle *ph,
 				     u32 rtc_id, u64 sec)
 {
@@ -264,10 +266,8 @@ static int scmi_imx_bbm_rtc_time_set(const struct scmi_protocol_handle *ph,
 	struct scmi_xfer *t;
 	int ret;
 
-	if (rtc_id >= pi->nr_rtc) {
-
+	if (rtc_id >= pi->nr_rtc)
 		return -EINVAL;
-	};
 
 	ret = ph->xops->xfer_get_init(ph, SCMI_IMX_BBM_RTC_TIME_SET, sizeof(*cfg), 0, &t);
 	if (ret)
@@ -294,10 +294,8 @@ static int scmi_imx_bbm_rtc_time_get(const struct scmi_protocol_handle *ph,
 	struct scmi_xfer *t;
 	int ret;
 
-	if (rtc_id >= pi->nr_rtc) {
-
+	if (rtc_id >= pi->nr_rtc)
 		return -EINVAL;
-	};
 
 	ret = ph->xops->xfer_get_init(ph, SCMI_IMX_BBM_RTC_TIME_GET, sizeof(*cfg), sizeof(u64), &t);
 	if (ret)
@@ -316,7 +314,6 @@ static int scmi_imx_bbm_rtc_time_get(const struct scmi_protocol_handle *ph,
 	return ret;
 }
 
-#define SCMI_IMX_BBM_RTC_ALARM_ENABLE_FLAG	BIT(0)
 static int scmi_imx_bbm_rtc_alarm_set(const struct scmi_protocol_handle *ph,
 				      u32 rtc_id, u64 sec)
 {
@@ -325,11 +322,8 @@ static int scmi_imx_bbm_rtc_alarm_set(const struct scmi_protocol_handle *ph,
 	struct scmi_xfer *t;
 	int ret;
 
-	if (rtc_id >= pi->nr_rtc) {
-
+	if (rtc_id >= pi->nr_rtc)
 		return -EINVAL;
-	};
-
 
 	ret = ph->xops->xfer_get_init(ph, SCMI_IMX_BBM_RTC_ALARM_SET, sizeof(*cfg), 0, &t);
 	if (ret)
@@ -358,7 +352,6 @@ static const struct scmi_protocol scmi_imx_bbm = {
 	.id = SCMI_PROTOCOL_IMX_BBM,
 	.owner = THIS_MODULE,
 	.instance_init = &scmi_imx_bbm_protocol_init,
-	//.instance_deinit = &scmi_imx_bbm_protocol_deinit,
 	.ops = &scmi_imx_bbm_proto_ops,
 	.events = &scmi_imx_bbm_protocol_events,
 };
