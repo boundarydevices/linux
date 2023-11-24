@@ -214,4 +214,13 @@ config IMX_SCMI_BBM_CONTROL
 
 	  This driver can also be built as a module.
 
+config IMX_SCMI_MISC_CONTROL
+	tristate "i.MX SCMI MISC control driver"
+	depends on ARM_SCMI_PROTOCOL || (COMPILE_TEST && OF)
+	help
+	  This enables i.MX System MISC control logic which supports various
+	  misc control settings.
+
+	  This driver can also be built as a module.
+
 endmenu
