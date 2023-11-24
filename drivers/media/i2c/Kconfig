@@ -1411,6 +1411,22 @@ config VIDEO_S5C73M3
 
 endmenu
 
+menu "Camera ISPs"
+	visible if MEDIA_CAMERA_SUPPORT
+
+config VIDEO_THP7312
+	tristate "THine THP7312 support"
+	depends on I2C
+	select MEDIA_CONTROLLER
+	select V4L2_CCI_I2C
+	select V4L2_FWNODE
+	select VIDEO_V4L2_SUBDEV_API
+	help
+	  This is a Video4Linux2 sensor-level driver for the THine
+	  THP7312 ISP.
+
+endmenu
+
 menu "Lens drivers"
 	visible if MEDIA_CAMERA_SUPPORT
 
@@ -1507,3 +1523,4 @@ config VIDEO_LM3646
 endmenu
 
 endif # VIDEO_V4L2
+

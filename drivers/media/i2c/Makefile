@@ -15,6 +15,7 @@ obj-$(CONFIG_VIDEO_TDA9840) += tda9840.o
 obj-$(CONFIG_VIDEO_TDA1997X) += tda1997x.o
 obj-$(CONFIG_VIDEO_TEA6415C) += tea6415c.o
 obj-$(CONFIG_VIDEO_TEA6420) += tea6420.o
+obj-$(CONFIG_VIDEO_THP7312) += thp7312.o
 obj-$(CONFIG_VIDEO_SAA7110) += saa7110.o
 obj-$(CONFIG_VIDEO_SAA711X) += saa7115.o
 obj-$(CONFIG_VIDEO_SAA717X) += saa717x.o
@@ -136,3 +137,4 @@ obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20.o
 obj-$(CONFIG_VIDEO_RDACM21)	+= rdacm21.o
 obj-$(CONFIG_VIDEO_ST_MIPID02) += st-mipid02.o
 obj-$(CONFIG_SDR_MAX2175) += max2175.o
+
