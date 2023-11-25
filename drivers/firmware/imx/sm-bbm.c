@@ -11,17 +11,17 @@
 #include <linux/scmi_nxp_protocol.h>
 #include <linux/suspend.h>
 
-static struct scmi_imx_bbm_rtc {
+static struct scmi_imx_bbm {
 	struct rtc_device *rtc_dev;
 	struct scmi_protocol_handle *ph;
-} *scmi_imx_bbm_rtc;
+} *scmi_imx_bbm;
 
 static const struct scmi_imx_bbm_proto_ops *imx_bbm_ops;
-struct notifier_block scmi_imx_bbm_rtc_nb;
+struct notifier_block scmi_imx_bbm_nb;
 
-static int scmi_imx_bbm_rtc_read_time(struct device *dev, struct rtc_time *tm)
+static int scmi_imx_bbm_read_time(struct device *dev, struct rtc_time *tm)
 {
-	struct scmi_protocol_handle *ph = scmi_imx_bbm_rtc->ph;
+	struct scmi_protocol_handle *ph = scmi_imx_bbm->ph;
 	u64 val;
 	int ret;
 
@@ -34,9 +34,9 @@ static int scmi_imx_bbm_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	return 0;
 }
 
-static int scmi_imx_bbm_rtc_set_time(struct device *dev, struct rtc_time *tm)
+static int scmi_imx_bbm_set_time(struct device *dev, struct rtc_time *tm)
 {
-	struct scmi_protocol_handle *ph = scmi_imx_bbm_rtc->ph;
+	struct scmi_protocol_handle *ph = scmi_imx_bbm->ph;
 	u64 val;
 	int ret;
 
@@ -56,7 +56,7 @@ static int scmi_imx_bbm_alarm_irq_enable(struct device *dev, unsigned int enable
 
 static int scmi_imx_bbm_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
-	struct scmi_protocol_handle *ph = scmi_imx_bbm_rtc->ph;
+	struct scmi_protocol_handle *ph = scmi_imx_bbm->ph;
 	struct rtc_time *alrm_tm = &alrm->time;
 	u64 val;
 	int ret;
@@ -70,21 +70,21 @@ static int scmi_imx_bbm_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	return 0;
 }
 
-static const struct rtc_class_ops smci_imx_bbm_rtc_ops = {
-	.read_time = scmi_imx_bbm_rtc_read_time,
-	.set_time = scmi_imx_bbm_rtc_set_time,
+static const struct rtc_class_ops smci_imx_bbm_ops = {
+	.read_time = scmi_imx_bbm_read_time,
+	.set_time = scmi_imx_bbm_set_time,
 	.set_alarm = scmi_imx_bbm_set_alarm,
 	.alarm_irq_enable = scmi_imx_bbm_alarm_irq_enable,
 };
 
-static int scmi_imx_bbm_rtc_notifier(struct notifier_block *nb, unsigned long event, void *data)
+static int scmi_imx_bbm_notifier(struct notifier_block *nb, unsigned long event, void *data)
 {
-	rtc_update_irq(scmi_imx_bbm_rtc->rtc_dev, 1, RTC_AF | RTC_IRQF);
+	rtc_update_irq(scmi_imx_bbm->rtc_dev, 1, RTC_AF | RTC_IRQF);
 
 	return 0;
 }
 
-static int scmi_imx_bbm_rtc_probe(struct scmi_device *sdev)
+static int scmi_imx_bbm_probe(struct scmi_device *sdev)
 {
 	const struct scmi_handle *handle = sdev->handle;
 	struct device *dev = &sdev->dev;
@@ -94,8 +94,8 @@ static int scmi_imx_bbm_rtc_probe(struct scmi_device *sdev)
 	if (!handle)
 		return -ENODEV;
 
-	scmi_imx_bbm_rtc = devm_kzalloc(dev, sizeof(struct scmi_imx_bbm_rtc), GFP_KERNEL);
-	if (!scmi_imx_bbm_rtc)
+	scmi_imx_bbm = devm_kzalloc(dev, sizeof(struct scmi_imx_bbm), GFP_KERNEL);
+	if (!scmi_imx_bbm)
 		return -ENOMEM;
 
 	imx_bbm_ops = handle->devm_protocol_get(sdev, SCMI_PROTOCOL_IMX_BBM, &ph);
@@ -104,24 +104,24 @@ static int scmi_imx_bbm_rtc_probe(struct scmi_device *sdev)
 
 	device_init_wakeup(dev, true);
 
-	scmi_imx_bbm_rtc->rtc_dev = devm_rtc_allocate_device(dev);
-	if (IS_ERR(scmi_imx_bbm_rtc->rtc_dev))
-		return PTR_ERR(scmi_imx_bbm_rtc->rtc_dev);
+	scmi_imx_bbm->rtc_dev = devm_rtc_allocate_device(dev);
+	if (IS_ERR(scmi_imx_bbm->rtc_dev))
+		return PTR_ERR(scmi_imx_bbm->rtc_dev);
 
-	scmi_imx_bbm_rtc->ph = ph;
-	scmi_imx_bbm_rtc->rtc_dev->ops = &smci_imx_bbm_rtc_ops;
-	scmi_imx_bbm_rtc->rtc_dev->range_min = 0;
-	scmi_imx_bbm_rtc->rtc_dev->range_max = U32_MAX;
+	scmi_imx_bbm->ph = ph;
+	scmi_imx_bbm->rtc_dev->ops = &smci_imx_bbm_ops;
+	scmi_imx_bbm->rtc_dev->range_min = 0;
+	scmi_imx_bbm->rtc_dev->range_max = U32_MAX;
 
-	ret = devm_rtc_register_device(scmi_imx_bbm_rtc->rtc_dev);
+	ret = devm_rtc_register_device(scmi_imx_bbm->rtc_dev);
 	if (ret)
 		return ret;
 
 	/* TODO pm notifier */
 
-	scmi_imx_bbm_rtc_nb.notifier_call = &scmi_imx_bbm_rtc_notifier;
+	scmi_imx_bbm_nb.notifier_call = &scmi_imx_bbm_notifier;
 	return handle->notify_ops->devm_event_notifier_register(sdev, SCMI_PROTOCOL_IMX_BBM, 0,
-								NULL, &scmi_imx_bbm_rtc_nb);
+								NULL, &scmi_imx_bbm_nb);
 }
 
 static const struct scmi_device_id scmi_id_table[] = {
@@ -130,13 +130,13 @@ static const struct scmi_device_id scmi_id_table[] = {
 };
 MODULE_DEVICE_TABLE(scmi, scmi_id_table);
 
-static struct scmi_driver scmi_imx_bbm_rtc_driver = {
-	.name = "scmi-imx-bbm-rtc",
-	.probe = scmi_imx_bbm_rtc_probe,
+static struct scmi_driver scmi_imx_bbm_driver = {
+	.name = "scmi-imx-bbm",
+	.probe = scmi_imx_bbm_probe,
 	.id_table = scmi_id_table,
 };
-module_scmi_driver(scmi_imx_bbm_rtc_driver);
+module_scmi_driver(scmi_imx_bbm_driver);
 
 MODULE_AUTHOR("Peng Fan <peng.fan@nxp.com>");
-MODULE_DESCRIPTION("IMX SM BBM RTC driver");
+MODULE_DESCRIPTION("IMX SM BBM driver");
 MODULE_LICENSE("GPL");
