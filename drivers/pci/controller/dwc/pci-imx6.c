@@ -126,6 +126,7 @@ struct imx6_pcie_drvdata {
 struct imx6_pcie {
 	struct dw_pcie		*pci;
 	int			reset_gpio;
+	int			host_wake_irq;
 	bool			gpio_active_high;
 	bool			link_is_up;
 	struct clk		*pcie_bus;
@@ -1775,10 +1776,45 @@ static int imx6_pcie_resume_noirq(struct device *dev)
 	return 0;
 }
 
+static int imx6_pcie_suspend(struct device *dev)
+{
+	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
+
+	if (imx6_pcie->host_wake_irq >= 0)
+		enable_irq_wake(imx6_pcie->host_wake_irq);
+
+	return 0;
+}
+
+static int imx6_pcie_resume(struct device *dev)
+{
+	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
+
+	if (imx6_pcie->host_wake_irq >= 0)
+		disable_irq_wake(imx6_pcie->host_wake_irq);
+
+	return 0;
+}
+
 static const struct dev_pm_ops imx6_pcie_pm_ops = {
 	NOIRQ_SYSTEM_SLEEP_PM_OPS(imx6_pcie_suspend_noirq,
 				  imx6_pcie_resume_noirq)
+	SYSTEM_SLEEP_PM_OPS(imx6_pcie_suspend, imx6_pcie_resume)
 };
+
+irqreturn_t host_wake_irq_handler(int irq, void *priv)
+{
+	struct imx6_pcie *imx6_pcie = priv;
+	struct device *dev = imx6_pcie->pci->dev;
+
+	dev_dbg(dev, "%s: host wakeup by pcie", __func__);
+
+	/* Notify PM core we are wakeup source */
+	pm_wakeup_event(dev, 0);
+	pm_system_wakeup();
+
+	return IRQ_HANDLED;
+}
 
 static int imx6_pcie_probe(struct platform_device *pdev)
 {
@@ -1788,6 +1824,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	struct device_node *np;
 	struct resource *dbi_base;
 	struct device_node *node = dev->of_node;
+	struct gpio_desc *host_wake_gpio;
 	int ret;
 	u16 val;
 
@@ -2049,6 +2086,32 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 			val |= PCI_MSI_FLAGS_ENABLE;
 			dw_pcie_writew_dbi(pci, offset + PCI_MSI_FLAGS, val);
 		}
+
+		/* host wakeup support */
+		imx6_pcie->host_wake_irq = -1;
+		host_wake_gpio = devm_gpiod_get_optional(dev, "host-wake", GPIOD_IN);
+		if (IS_ERR(host_wake_gpio))
+			return PTR_ERR(host_wake_gpio);
+
+		if (host_wake_gpio != NULL) {
+			imx6_pcie->host_wake_irq = gpiod_to_irq(host_wake_gpio);
+			ret = devm_request_threaded_irq(dev, imx6_pcie->host_wake_irq, NULL,
+							host_wake_irq_handler,
+							IRQF_ONESHOT | IRQF_TRIGGER_FALLING,
+							"host_wake", imx6_pcie);
+			if (ret) {
+				dev_err(dev, "Failed to request host_wake_irq %d (%d)\n",
+					imx6_pcie->host_wake_irq, ret);
+				imx6_pcie->host_wake_irq = -1;
+				return ret;
+			}
+
+			if (device_init_wakeup(dev, true)) {
+				dev_err(dev, "fail to init host_wake_irq\n");
+				imx6_pcie->host_wake_irq = -1;
+				return ret;
+			}
+		}
 	}
 
 	return 0;
@@ -2057,6 +2120,12 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 static void imx6_pcie_shutdown(struct platform_device *pdev)
 {
 	struct imx6_pcie *imx6_pcie = platform_get_drvdata(pdev);
+
+	if (imx6_pcie->host_wake_irq >= 0) {
+		device_init_wakeup(&pdev->dev, false);
+		disable_irq(imx6_pcie->host_wake_irq);
+		imx6_pcie->host_wake_irq = -1;
+	}
 
 	/* bring down link, so bootloader gets clean state in case of reboot */
 	imx6_pcie_assert_core_reset(imx6_pcie);
