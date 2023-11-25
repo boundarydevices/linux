@@ -88,13 +88,38 @@ static int scmi_imx_bbm_notifier(struct notifier_block *nb, unsigned long event,
 	return 0;
 }
 
+static int scmi_imx_bbm_rtc_init(struct scmi_device *sdev)
+{
+	const struct scmi_handle *handle = sdev->handle;
+	struct device *dev = &sdev->dev;
+	struct scmi_imx_bbm *bbnsm = dev_get_drvdata(dev);
+	int ret;
+
+	bbnsm->rtc_dev = devm_rtc_allocate_device(dev);
+	if (IS_ERR(bbnsm->rtc_dev))
+		return PTR_ERR(bbnsm->rtc_dev);
+
+	bbnsm->rtc_dev->ops = &smci_imx_bbm_rtc_ops;
+	bbnsm->rtc_dev->range_min = 0;
+	bbnsm->rtc_dev->range_max = U32_MAX;
+
+	ret = devm_rtc_register_device(bbnsm->rtc_dev);
+	if (ret)
+		return ret;
+
+	/* TODO pm notifier */
+
+	bbnsm->nb.notifier_call = &scmi_imx_bbm_notifier;
+	return handle->notify_ops->devm_event_notifier_register(sdev, SCMI_PROTOCOL_IMX_BBM, 0,
+								NULL, &bbnsm->nb);
+}
+
 static int scmi_imx_bbm_probe(struct scmi_device *sdev)
 {
 	const struct scmi_handle *handle = sdev->handle;
 	struct device *dev = &sdev->dev;
 	struct scmi_protocol_handle *ph;
 	struct scmi_imx_bbm *bbnsm;
-	int ret;
 
 	if (!handle)
 		return -ENODEV;
@@ -113,24 +138,7 @@ static int scmi_imx_bbm_probe(struct scmi_device *sdev)
 
 	device_init_wakeup(dev, true);
 
-	bbnsm->rtc_dev = devm_rtc_allocate_device(dev);
-	if (IS_ERR(bbnsm->rtc_dev))
-		return PTR_ERR(bbnsm->rtc_dev);
-
-	bbnsm->ph = ph;
-	bbnsm->rtc_dev->ops = &smci_imx_bbm_rtc_ops;
-	bbnsm->rtc_dev->range_min = 0;
-	bbnsm->rtc_dev->range_max = U32_MAX;
-
-	ret = devm_rtc_register_device(bbnsm->rtc_dev);
-	if (ret)
-		return ret;
-
-	/* TODO pm notifier */
-
-	bbnsm->nb.notifier_call = &scmi_imx_bbm_notifier;
-	return handle->notify_ops->devm_event_notifier_register(sdev, SCMI_PROTOCOL_IMX_BBM, 0,
-								NULL, &bbnsm->nb);
+	return scmi_imx_bbm_rtc_init(sdev);
 }
 
 static const struct scmi_device_id scmi_id_table[] = {
