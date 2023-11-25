@@ -627,6 +627,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie1>;
 	reset-gpio = <&gpio5 12 GPIO_ACTIVE_LOW>;
+	host-wake-gpio = <&gpio5 11 GPIO_ACTIVE_LOW>;
 	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
 		 <&pcie0_refclk>,
 		 <&clk IMX8MQ_CLK_PCIE2_PHY>,
@@ -634,13 +635,6 @@
 	vpcie-supply = <&reg_pcie1>;
 	vph-supply = <&vgen5_reg>;
 	status = "okay";
-
-	wifi_wake_host {
-		compatible = "nxp,wifi-wake-host";
-		interrupt-parent = <&gpio5>;
-		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
-		interrupt-names = "host-wake";
-	};
 };
 
 &pgc_gpu {

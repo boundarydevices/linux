@@ -81,7 +81,7 @@
 
 &pcie1{
 	status = "disabled";
-	/delete-node/ wifi_wake_host;
+	/delete-property/ host-wake-gpio;
 };
 
 &reg_usdhc2_vmmc {
