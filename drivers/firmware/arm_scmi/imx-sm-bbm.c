@@ -342,10 +342,29 @@ static int scmi_imx_bbm_rtc_alarm_set(const struct scmi_protocol_handle *ph,
 	return ret;
 }
 
+static int scmi_imx_bbm_button_get(const struct scmi_protocol_handle *ph, u32 *state)
+{
+	struct scmi_xfer *t;
+	int ret;
+
+	ret = ph->xops->xfer_get_init(ph, SCMI_IMX_BBM_BUTTON_GET, 0, sizeof(u32), &t);
+	if (ret)
+		return ret;
+
+	ret = ph->xops->do_xfer(ph, t);
+	if (!ret)
+		*state = get_unaligned_le32(t->rx.buf);
+
+	ph->xops->xfer_put(ph, t);
+
+	return ret;
+}
+
 static const struct scmi_imx_bbm_proto_ops scmi_imx_bbm_proto_ops = {
 	.rtc_time_get = scmi_imx_bbm_rtc_time_get,
 	.rtc_time_set = scmi_imx_bbm_rtc_time_set,
 	.rtc_alarm_set = scmi_imx_bbm_rtc_alarm_set,
+	.button_get = scmi_imx_bbm_button_get,
 };
 
 static const struct scmi_protocol scmi_imx_bbm = {

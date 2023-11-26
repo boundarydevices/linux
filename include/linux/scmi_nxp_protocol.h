@@ -21,6 +21,7 @@ struct scmi_imx_bbm_proto_ops {
 	int (*rtc_time_set)(const struct scmi_protocol_handle *ph, u32 id, uint64_t sec);
 	int (*rtc_time_get)(const struct scmi_protocol_handle *ph, u32 id, u64 *val);
 	int (*rtc_alarm_set)(const struct scmi_protocol_handle *ph, u32 id, u64 sec);
+	int (*button_get)(const struct scmi_protocol_handle *ph, u32 *state);
 };
 
 enum scmi_nxp_notification_events {
@@ -31,6 +32,7 @@ enum scmi_nxp_notification_events {
 #define SCMI_IMX_BBM_RTC_TIME_SET	0x6
 #define SCMI_IMX_BBM_RTC_TIME_GET	0x7
 #define SCMI_IMX_BBM_RTC_ALARM_SET	0x8
+#define SCMI_IMX_BBM_BUTTON_GET		0x9
 
 struct scmi_imx_bbm_notif_report {
 	bool			is_rtc;
