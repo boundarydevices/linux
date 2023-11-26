@@ -11,21 +11,21 @@
 #include <linux/scmi_nxp_protocol.h>
 #include <linux/suspend.h>
 
-static struct scmi_imx_bbm {
+struct scmi_imx_bbm {
 	struct rtc_device *rtc_dev;
 	struct scmi_protocol_handle *ph;
-} *scmi_imx_bbm;
-
-static const struct scmi_imx_bbm_proto_ops *imx_bbm_ops;
-struct notifier_block scmi_imx_bbm_nb;
+	const struct scmi_imx_bbm_proto_ops *ops;
+	struct notifier_block nb;
+};
 
 static int scmi_imx_bbm_read_time(struct device *dev, struct rtc_time *tm)
 {
-	struct scmi_protocol_handle *ph = scmi_imx_bbm->ph;
+	struct scmi_imx_bbm *bbnsm = dev_get_drvdata(dev);
+	struct scmi_protocol_handle *ph = bbnsm->ph;
 	u64 val;
 	int ret;
 
-	ret = imx_bbm_ops->rtc_time_get(ph, 0, &val);
+	ret = bbnsm->ops->rtc_time_get(ph, 0, &val);
 	if (ret)
 		dev_err(dev, "%s: %d\n", __func__, ret);
 
@@ -36,13 +36,14 @@ static int scmi_imx_bbm_read_time(struct device *dev, struct rtc_time *tm)
 
 static int scmi_imx_bbm_set_time(struct device *dev, struct rtc_time *tm)
 {
-	struct scmi_protocol_handle *ph = scmi_imx_bbm->ph;
+	struct scmi_imx_bbm *bbnsm = dev_get_drvdata(dev);
+	struct scmi_protocol_handle *ph = bbnsm->ph;
 	u64 val;
 	int ret;
 
 	val = rtc_tm_to_time64(tm);
 
-	ret = imx_bbm_ops->rtc_time_set(ph, 0, val);
+	ret = bbnsm->ops->rtc_time_set(ph, 0, val);
 	if (ret)
 		dev_err(dev, "%s: %d\n", __func__, ret);
 
@@ -56,21 +57,22 @@ static int scmi_imx_bbm_alarm_irq_enable(struct device *dev, unsigned int enable
 
 static int scmi_imx_bbm_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
-	struct scmi_protocol_handle *ph = scmi_imx_bbm->ph;
+	struct scmi_imx_bbm *bbnsm = dev_get_drvdata(dev);
+	struct scmi_protocol_handle *ph = bbnsm->ph;
 	struct rtc_time *alrm_tm = &alrm->time;
 	u64 val;
 	int ret;
 
 	val = rtc_tm_to_time64(alrm_tm);
 
-	ret = imx_bbm_ops->rtc_alarm_set(ph, 0, val);
+	ret = bbnsm->ops->rtc_alarm_set(ph, 0, val);
 	if (ret)
 		dev_err(dev, "%s: %d\n", __func__, ret);
 
 	return 0;
 }
 
-static const struct rtc_class_ops smci_imx_bbm_ops = {
+static const struct rtc_class_ops smci_imx_bbm_rtc_ops = {
 	.read_time = scmi_imx_bbm_read_time,
 	.set_time = scmi_imx_bbm_set_time,
 	.set_alarm = scmi_imx_bbm_set_alarm,
@@ -79,7 +81,9 @@ static const struct rtc_class_ops smci_imx_bbm_ops = {
 
 static int scmi_imx_bbm_notifier(struct notifier_block *nb, unsigned long event, void *data)
 {
-	rtc_update_irq(scmi_imx_bbm->rtc_dev, 1, RTC_AF | RTC_IRQF);
+	struct scmi_imx_bbm *bbnsm = container_of(nb, struct scmi_imx_bbm, nb);
+
+	rtc_update_irq(bbnsm->rtc_dev, 1, RTC_AF | RTC_IRQF);
 
 	return 0;
 }
@@ -89,39 +93,44 @@ static int scmi_imx_bbm_probe(struct scmi_device *sdev)
 	const struct scmi_handle *handle = sdev->handle;
 	struct device *dev = &sdev->dev;
 	struct scmi_protocol_handle *ph;
+	struct scmi_imx_bbm *bbnsm;
 	int ret;
 
 	if (!handle)
 		return -ENODEV;
 
-	scmi_imx_bbm = devm_kzalloc(dev, sizeof(struct scmi_imx_bbm), GFP_KERNEL);
-	if (!scmi_imx_bbm)
+	bbnsm = devm_kzalloc(dev, sizeof(struct scmi_imx_bbm), GFP_KERNEL);
+	if (!bbnsm)
 		return -ENOMEM;
 
-	imx_bbm_ops = handle->devm_protocol_get(sdev, SCMI_PROTOCOL_IMX_BBM, &ph);
-	if (IS_ERR(imx_bbm_ops))
-		return PTR_ERR(imx_bbm_ops);
+	bbnsm->ops = handle->devm_protocol_get(sdev, SCMI_PROTOCOL_IMX_BBM, &ph);
+	if (IS_ERR(bbnsm->ops))
+		return PTR_ERR(bbnsm->ops);
+
+	bbnsm->ph = ph;
+
+	dev_set_drvdata(dev, bbnsm);
 
 	device_init_wakeup(dev, true);
 
-	scmi_imx_bbm->rtc_dev = devm_rtc_allocate_device(dev);
-	if (IS_ERR(scmi_imx_bbm->rtc_dev))
-		return PTR_ERR(scmi_imx_bbm->rtc_dev);
+	bbnsm->rtc_dev = devm_rtc_allocate_device(dev);
+	if (IS_ERR(bbnsm->rtc_dev))
+		return PTR_ERR(bbnsm->rtc_dev);
 
-	scmi_imx_bbm->ph = ph;
-	scmi_imx_bbm->rtc_dev->ops = &smci_imx_bbm_ops;
-	scmi_imx_bbm->rtc_dev->range_min = 0;
-	scmi_imx_bbm->rtc_dev->range_max = U32_MAX;
+	bbnsm->ph = ph;
+	bbnsm->rtc_dev->ops = &smci_imx_bbm_rtc_ops;
+	bbnsm->rtc_dev->range_min = 0;
+	bbnsm->rtc_dev->range_max = U32_MAX;
 
-	ret = devm_rtc_register_device(scmi_imx_bbm->rtc_dev);
+	ret = devm_rtc_register_device(bbnsm->rtc_dev);
 	if (ret)
 		return ret;
 
 	/* TODO pm notifier */
 
-	scmi_imx_bbm_nb.notifier_call = &scmi_imx_bbm_notifier;
+	bbnsm->nb.notifier_call = &scmi_imx_bbm_notifier;
 	return handle->notify_ops->devm_event_notifier_register(sdev, SCMI_PROTOCOL_IMX_BBM, 0,
-								NULL, &scmi_imx_bbm_nb);
+								NULL, &bbnsm->nb);
 }
 
 static const struct scmi_device_id scmi_id_table[] = {
