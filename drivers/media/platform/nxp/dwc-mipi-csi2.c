@@ -298,7 +298,7 @@ struct dwc_csi_event {
 	unsigned int counter;
 };
 
-static struct dwc_csi_event dwc_events[] = {
+static const struct dwc_csi_event dwc_events[] = {
 	{ CSI2RX_INT_ST_MAIN_FATAL_ERR_IPI, "IPI Interface Fatal Error" },
 	{ CSI2RX_INT_ST_MAIN_ERR_PHY, "PHY Error" },
 	{ CSI2RX_INT_ST_MAIN_ERR_ECC, "Header Single Bit Error" },
@@ -746,6 +746,8 @@ static int dwc_csi_clk_get(struct dwc_csi_device *csidev)
 {
 	int ret;
 
+	memcpy(csidev->clks, dwc_clks, sizeof(dwc_clks));
+
 	ret = devm_clk_bulk_get(csidev->dev, DWC_NUM_CLKS, csidev->clks);
 	if (ret < 0) {
 		dev_err(csidev->dev, "Failed to acquire clocks: %d\n", ret);
@@ -1115,7 +1117,7 @@ sd_stream:
 	 * pattern generator will be from external sensor, so it
 	 * also need to enable external sensor clock.
 	 */
-	v4l2_subdev_call(csidev->sensor_sd, video, s_stream, enable);
+	ret = v4l2_subdev_call(csidev->sensor_sd, video, s_stream, enable);
 	dwc_csi_log_counters(csidev);
 unlocked:
 	mutex_unlock(&csidev->lock);
@@ -1493,6 +1495,7 @@ static int dwc_csi_device_probe(struct platform_device *pdev)
 	spin_lock_init(&csidev->slock);
 
 	csidev->dev = dev;
+	memcpy(csidev->events, dwc_events, sizeof(dwc_events));
 
 	csidev->regs = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(csidev->regs)) {
