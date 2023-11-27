@@ -2404,6 +2404,7 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	unsigned int checksum;
 	unsigned int crc;
 	unsigned int retries;
+	unsigned int value;
 	u8 *buf;
 	int ret;
 
@@ -2460,6 +2461,22 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	ret = ap1302_write(ap1302, AP1302_BOOTDATA_STAGE, 0xffff, NULL);
 	if (ret)
 		goto done;
+
+	usleep_range(10000, 15000);
+
+	/*
+	 * Wait for AP1302_BOOTDATA_STAGE to become 0xFFFF
+	 */
+	ret = ap1302_poll_timeout(ap1302, AP1302_BOOTDATA_STAGE,
+				  value, value == 0xFFFF, 10000, 5000000);
+	if (ret) {
+		dev_err(ap1302->dev,
+			"AP1302_BOOTDATA_STAGE not 0xFFFF : %04X (POLL %d)\n", value, ret);
+		// Dump
+		ap1302_log_status(&ap1302->sd);
+
+		goto done;
+	}
 
 	for (retries = 0; retries < MAX_CHECK_RETRIES; ++retries) {
 		ret = ap1302_read(ap1302, AP1302_BOOTDATA_CHECKSUM, &checksum);
