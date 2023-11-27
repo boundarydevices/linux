@@ -431,11 +431,6 @@
 							reg = <MT8188_POWER_DOMAIN_MFG3>;
 							#power-domain-cells = <0>;
 						};
-
-						mfg4@MT8188_POWER_DOMAIN_MFG4 {
-							reg = <MT8188_POWER_DOMAIN_MFG4>;
-							#power-domain-cells = <0>;
-						};
 					};
 				};
 
