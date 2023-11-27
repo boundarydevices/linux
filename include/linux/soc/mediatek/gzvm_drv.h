@@ -177,6 +177,7 @@ int gzvm_vm_ioctl_arch_enable_cap(struct gzvm *gzvm,
 
 int gzvm_gfn_to_hva_memslot(struct gzvm_memslot *memslot, u64 gfn,
 			    u64 *hva_memslot);
+int gzvm_vm_populate_mem_region(struct gzvm *gzvm, int slot_id);
 
 int gzvm_vm_ioctl_create_vcpu(struct gzvm *gzvm, u32 cpuid);
 int gzvm_arch_vcpu_update_one_reg(struct gzvm_vcpu *vcpu, __u64 reg_id,
