@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC
+ */
+
+#include "imx93-nitrogen-smarc.dts"
+
+/ {
+	model = "Boundary Devices Nitrogen93 SMARC + OV5640 sensor";
+	compatible = "ezurio,imx93-nitrogen-smarc-ov5640", "fsl,imx93";
+
+	csi_mclk: csi-mclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "csi_mclk";
+	};
+};
+
+&i2c_mux_som_csi0 {
+	camera@3c {
+		compatible = "ovti,ov5640";
+		clocks = <&csi_mclk>;
+		clock-names = "xclk";
+		powerdown-gpios = <&gpio3 26 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio2 6 GPIO_ACTIVE_LOW>;
+		reg = <0x3c>;
+		status = "okay";
+
+		port {
+			ov5640_mipi_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&mipi_csi_ep>;
+			};
+		};
+	};
+};
+
+&cameradev {
+	status = "okay";
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+};
+
+&mipi_csi {
+	status = "okay";
+
+	port {
+		mipi_csi_ep: endpoint {
+			remote-endpoint = <&ov5640_mipi_ep>;
+			data-lanes = <2>;
+			cfg-clk-range = <28>;
+			hs-clk-range = <0x16>;
+			bus-type = <4>;
+		};
+	};
+};
