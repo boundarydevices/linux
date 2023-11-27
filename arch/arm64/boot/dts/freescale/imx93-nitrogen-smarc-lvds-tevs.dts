@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 Ezurio LLC
+ */
+
+#include "imx93-nitrogen-smarc-lvds.dts"
+
+/ {
+	model = "Boundary Devices Nitrogen93 SMARC LVDS + TEVS sensor";
+	compatible = "fsl,imx93-nitrogen-smarc-lvds-tevs", "fsl,imx93";
+};
+
+&i2c_mux_som_csi0 {
+	pca9554_a27_0: pca9554@27 {
+		compatible = "nxp,pca9554";
+		pinctrl-names = "default";
+		reg = <0x27>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		status = "okay";
+		gpio-line-names = "EXPOSURE_TRIG_IN0", "FLASH_OUT0",
+				"CAM_SHUTTER0", "XVS0",	"CSI0_PDB",
+				"CSI0_INT", "INFO_TRIG_IN0", "CSI0_RST_N";
+	};
+
+	camera@48 {
+		compatible = "tn,tevs";
+		reg = <0x48>;
+		reset-gpios = <&gpio3 26 GPIO_ACTIVE_HIGH>;
+		standby-gpios = <&pca9554_a27_0 6 GPIO_ACTIVE_HIGH>;
+		data-lanes = <2>;
+		data-frequency = <800>;
+		continuous-clock = <0>;
+		status = "okay";
+
+		port {
+			tevs_0_ep: endpoint {
+				remote-endpoint = <&mipi_csi_ep>;
+			};
+		};
+	};
+};
+
+&cameradev {
+	status = "okay";
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+};
+
+&mipi_csi {
+	status = "okay";
+
+	port {
+		mipi_csi_ep: endpoint {
+			remote-endpoint = <&tevs_0_ep>;
+			data-lanes = <2>;
+			cfg-clk-range = <28>;
+			hs-clk-range = <0x16>;
+			bus-type = <4>;
+		};
+	};
+};

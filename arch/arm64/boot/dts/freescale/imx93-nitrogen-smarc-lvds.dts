@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR MIT)
+/*
+ * Copyright 2024 Boundary Devices
+ */
+
+/dts-v1/;
+
+#include "imx93-nitrogen-smarc.dts"
+
+/ {
+	model = "Boundary Devices Nitrogen93 SMARC LVDS";
+	compatible = "fsl,imx93-nitrogen-smarc", "fsl,imx93";
+
+	lvds_backlight: lvds_backlight {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		display = <&lcdif>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight>;
+		pwms = <&tpm6 1 30000 0>;       /* 33.3 Khz */
+	};
+
+	lvds_panel {
+		/* If you know you are only using the BD070LIC3 then use ...
+		 * compatible = "tianma,tm070jdhg30";
+		 *
+		 * And for the BD101LCC3 use ...
+		 * compatible = "infovision,ivo-m101nwwb";
+		*/
+		compatible = "boundary,bd070-101"; /* For BD070LIC3 and BD101LCC3 */
+		backlight = <&lvds_backlight>;
+
+		port {
+			panel_lvds_in: endpoint {
+				remote-endpoint = <&lvds_out>;
+			};
+		};
+	};
+};
+
+&dsi_backlight {
+	status = "disabled";
+};
+
+&dsi0_sn65dsi84{
+	status = "disabled";
+};
+
+&ts_goodix_dsi {
+	status = "disabled";
+};
+
+&lpi2c1 {
+	ts_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&pcal6534 23 IRQ_TYPE_EDGE_RISING>;
+		interrupt-parent = <&pcal6534>;
+		interrupts = <23 IRQ_TYPE_EDGE_RISING>; // P2_7
+		irq-gpios = <&pcal6534 23 GPIO_ACTIVE_HIGH>;
+		reg = <0x5d>;
+		reset-gpios = <&pcal6534 9 GPIO_ACTIVE_HIGH>; // P1_1
+		status = "okay";
+	};
+
+	ts_goodix_alt: touchscreen@14 {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&pcal6534 23 IRQ_TYPE_EDGE_RISING>;
+		interrupt-parent = <&pcal6534>;
+		interrupts = <23 IRQ_TYPE_EDGE_RISING>; // P2_7
+		irq-gpios = <&pcal6534 23 GPIO_ACTIVE_HIGH>;
+		reg = <0x14>;
+		reset-gpios = <&pcal6534 9 GPIO_ACTIVE_HIGH>; // P1_1
+		status = "disabled";
+	};
+};
+
+&dphy {
+	status = "disabled";
+};
+
+&dsi {
+	status = "disabled";
+};
+
+&lcdif {
+	assigned-clock-rates = <498000000>, <71142857>, <400000000>, <133333333>;
+	status = "okay";
+};
+
+&ldb {
+	status = "okay";
+
+	lvds-channel@0 {
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			lvds_out: endpoint {
+				remote-endpoint = <&panel_lvds_in>;
+			};
+		};
+	};
+
+};
+
+&ldb_phy {
+	status = "okay";
+};
+
+&dphy {
+	status = "disabled"; /* DSI */
+};
+
+&panel_dsi {
+	status = "disabled"; /* DSI panel */
+};
+
+&tpm5 {
+	status = "disabled"; /* DSI backlight */
+};
+
+&tpm6 {
+	status = "okay";
+};
+
+&iomuxc {
+	pinctrl_backlight: backlight {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO23__TPM6_CH1				0x02
+		>;
+	};
+
+	pinctrl_ts_lvds_gt911: tslvds {
+		fsl,pins = <
+			MX93_PAD_CCM_CLKO3__GPIO4_IO28				0x31e
+		>;
+	};
+};

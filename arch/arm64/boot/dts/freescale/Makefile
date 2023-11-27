@@ -792,3 +792,14 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-rpmsg.dtb \
 			  imx8mp-nitrogen_smarc-pivariety.dtb \
 			  imx8mp-nitrogen_smarc-tevs.dtb \
 			  imx8mp-tag.dtb \
+
+dtb-$(CONFIG_ARCH_MXC) += imx93-nitrogen-smarc.dtb \
+			  imx93-nitrogen-smarc-rpmsg.dtb \
+			  imx93-nitrogen-smarc-lvds.dtb \
+			  imx93-nitrogen-smarc-lvds-tevs.dtb \
+			  imx93-nitrogen-smarc-nx611.dtb \
+			  imx93-nitrogen-smarc-ov5640.dtb \
+			  imx93-nitrogen-smarc-spi-slave.dtb \
+			  imx93-nitrogen-smarc-tevs.dtb \
+			  imx93-nitrogen-smarc-ti351.dtb \
+			  imx93-nitrogen-smarc-auo-b080uan01-dsi.dtb \
