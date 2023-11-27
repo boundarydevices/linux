@@ -490,10 +490,10 @@ static void u3_phy_instance_init(struct mtk_tphy *tphy,
 		writel(tmp, u3_banks->chip + U3P_U3_CHIP_GPIO_CTLD);
 
 		tmp = readl(u3_banks->chip + U3P_U3_CHIP_GPIO_CTLE);
-		tmp &= (P3C_RG_SWRST_U3_PHYD_FORCE_EN | P3C_RG_SWRST_U3_PHYD);
+		tmp |= (P3C_RG_SWRST_U3_PHYD_FORCE_EN | P3C_RG_SWRST_U3_PHYD);
 		writel(tmp, u3_banks->chip + U3P_U3_CHIP_GPIO_CTLE);
 
-		udelay(1);
+		udelay(10);
 
 		tmp = readl(u3_banks->chip + U3P_U3_CHIP_GPIO_CTLD);
 		tmp &= ~(P3C_FORCE_IP_SW_RST | P3C_MCU_BUS_CK_GATE_EN);
