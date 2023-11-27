@@ -852,3 +852,12 @@ dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 			  s32v234-sbc.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb \
 			  imx8qm-mek-revd-sof-wm8962.dtb imx8qm-mek-sof.dtb
+
+dtb-$(CONFIG_ARCH_MXC) += imx93-nitrogen-smarc.dtb \
+			  imx93-nitrogen-smarc-rpmsg.dtb \
+			  imx93-nitrogen-smarc-lvds.dtb \
+			  imx93-nitrogen-smarc-lvds-tevs.dtb \
+			  imx93-nitrogen-smarc-ov5640.dtb \
+			  imx93-nitrogen-smarc-spi-slave.dtb \
+			  imx93-nitrogen-smarc-tevs.dtb \
+			  imx93-nitrogen-smarc-auo-b080uan01-dsi.dtb \

@@ -1,0 +1,525 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR MIT)
+/*
+ * Copyright 2024 Boundary Devices
+ *
+ */
+
+/dts-v1/;
+
+#include "imx93-nitrogen-smarc.dtsi"
+
+/ {
+	model = "Boundary Devices Nitrogen93 SMARC DSI(sn65) 7\" or 10\"";
+	compatible = "fsl,imx93-nitrogen-smarc", "fsl,imx93";
+
+	aliases {
+		rtc0 = &rv3028;
+		rtc1 = &bbnsm_rtc;
+	};
+
+	connector {
+		compatible = "usb-c-connector";
+		label = "USB-C";
+		data-role = "dual";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hs_ep: endpoint {
+					remote-endpoint = <&usb_hs_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				ss_ep: endpoint {
+					remote-endpoint = <&hd3ss3220_in_ep>;
+				};
+			};
+		};
+	};
+
+	dsi_backlight: dsi-backlight {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		display = <&lcdif>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_dsi>;
+		pwms = <&tpm5 1 30000 0>; /* 42 = 24MHz  30000 = 3.3 Khz */
+		status = "okay";
+	};
+
+	led-controller {
+		compatible = "gpio-leds";
+
+		led-0 {
+			label = "428A-link-100";
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&pcal6534 30 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			linux,default-trigger = "stmmac-0:03:100Mbps";
+		};
+
+		led-1 {
+			label = "4289-link-100";
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&pcal6534 11 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			linux,default-trigger = "42890000.ethernet-1:03:100Mbps";
+		};
+
+	};
+
+	panel_dsi: panel-dsi {
+		/* If you know you are only using the BD070LIC3 then use ...
+		 * compatible = "tianma,tm070jdhg30";
+		 *
+		 * And for the BD101LCC3 use ...
+		 * compatible = "infovision,ivo-m101nwwb";
+		*/
+		compatible = "boundary,bd070-101"; /* For BD070LIC3 and BD101LCC3 */
+		power-supply = <&reg_vref_1v8>;
+		backlight = <&dsi_backlight>;
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&sn65dsi84_bridge_out>;
+			};
+		};
+	};
+
+	reg_can1_stby: regulator-can0-stby {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_can1_stby>;
+		regulator-name = "can1-stby";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio3 27 GPIO_ACTIVE_HIGH>; /* CCM_CLK02 -> GPIO1 */
+		enable-active-high;
+	};
+
+	reg_can2_stby: regulator-can1-stby {
+		compatible = "regulator-fixed";
+		regulator-name = "can2-stby";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pcal6534 15 GPIO_ACTIVE_HIGH>; /* P1_7 -> GPIO4 */
+		enable-active-high;
+	};
+
+	sound-wm8962 {
+		compatible = "fsl,imx-audio-wm8962";
+		model = "wm8962-audio";
+		audio-cpu = <&sai3>;
+		audio-codec = <&codec>;
+		audio-routing =
+			"Headphone Jack", "HPOUTL",
+			"Headphone Jack", "HPOUTR",
+			"Ext Spk", "SPKOUTL",
+			"Ext Spk", "SPKOUTR",
+			"AMIC", "MICBIAS",
+			"IN3R", "AMIC",
+			"IN1R", "AMIC";
+		codec-master;
+	};
+};
+
+&dphy {
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+
+	ports {
+		port@1 {
+			reg = <1>;
+			dsi_out: endpoint {
+				remote-endpoint = <&sn65dsi84_bridge_in>;
+			};
+		};
+	};
+};
+
+&flexcan1 {
+	status = "okay";
+	xceiver-supply = <&reg_can1_stby>;
+};
+
+&flexcan2 {
+	status = "okay";
+	xceiver-supply = <&reg_can2_stby>;
+};
+
+&i2c_mux_som_lcd { /* LCD I2C */
+	i2c_mux_smarc_lcd@73 { /* On SMARC carrier */
+		pinctrl-names = "default";
+		compatible = "nxp,pca9546";
+		reg = <0x73>;
+		vdd-supply = <&reg_vref_1v8>;
+		reset-gpios = <&pcal6534 29 GPIO_ACTIVE_LOW>; /* P3_5 / GPIO_13 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_mux_lcd_exp1: i2cmuxsmarclcd@exp1 {
+			/* EXP1 I2C */
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_mux_lcd_exp2: i2cmuxsmarclcd@exp2 {
+			/* EXP2 I2C */
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_mux_lcd_dsi0: i2cmuxsmarclcd@dsi0 {
+			/* DSI0 I2C */
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_mux_lcd_dsi1: i2cmuxsmarclcd@dsi1 {
+			/* DSI1 I2C */
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c_mux_lcd_dsi0 {
+	/* 0x5d or 0x14 */
+	ts_goodix_dsi: touchscreen_dsi@14 {
+		compatible = "goodix,gt9271";
+		AVDD28-supply = <&reg_vref_1v8>; /* Real supply is on the display */
+		VDDIO-supply = <&reg_vref_1v8>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&pcal6534 16 IRQ_TYPE_EDGE_RISING>;
+		irq-gpios = <&pcal6534 16 GPIO_ACTIVE_HIGH>; /* P2_0 LCD0_BCKL_EN */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_dsi_gt911>;
+		reg = <0x14>;
+		reset-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	ts_lvds_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = <&pcal6534 16 IRQ_TYPE_EDGE_FALLING>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_dsi_gt911>;
+		reg = <0x38>;
+		reset-gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
+		wakeup-gpios = <&pcal6534 16 GPIO_ACTIVE_LOW>;
+		status = "disabled";
+	};
+
+	dsi0_sn65dsi84: dsi0@2c {
+		compatible = "ti,sn65dsi84";
+		enable-gpios = <&pcal6534 17 GPIO_ACTIVE_HIGH>; /* P2_1 LCD0_VDD_EN */
+		/* This driver does NOT use the interrupt pin */
+		reg = <0x2c>;
+		vcc-supply = <&reg_vref_1v8>;
+		status = "okay";
+
+		ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+
+				sn65dsi84_bridge_in: endpoint {
+					remote-endpoint = <&dsi_out>;
+					data-lanes = <1 2 3 4>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+
+				sn65dsi84_bridge_out: endpoint {
+					remote-endpoint = <&panel_in>;
+				};
+			};
+
+		};
+	};
+};
+
+&lpi2c3 { /* SM_I2C_GP */
+	status = "okay";
+
+	i2c-mux-smarc-gp@73 {
+		compatible = "nxp,pca9546";
+		reg = <0x73>;
+		vdd-supply = <&reg_vref_1v8>;
+		reset-gpios = <&gpio2 2 GPIO_ACTIVE_LOW>; /* SMARC GPIO6*/
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_mux_smarc_gp_rtc: i2cmuxsmarcgp@rtc {
+			/* RTC */
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		 i2c_mux_smarc_gp_usbc: i2cmuxsmarcgp@usb-c{
+			/* USB C */
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		 i2c_mux_smarc_gp_aud: i2cmuxsmarcgp@audio{
+			/* audio */
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		 i2c_mux_smarc_gp_pcie: i2cmuxsmarcgp@pcie{
+			/* pcie */
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c_mux_smarc_gp_aud {
+	codec: wm8962@1a {
+		compatible = "wlf,wm8962";
+		reg = <0x1a>;
+		clocks = <&clk IMX93_CLK_SAI3_GATE>;
+		AVDD-supply = <&reg_vref_1v8>;
+		CPVDD-supply = <&reg_vref_1v8>;
+		DBVDD-supply = <&reg_vdd_3v3>;
+		DCVDD-supply = <&reg_vref_1v8>;
+		MICVDD-supply = <&reg_vdd_3v3>;
+		PLLVDD-supply = <&reg_vref_1v8>;
+		SPKVDD1-supply = <&reg_vref_5v0>;
+		SPKVDD2-supply = <&reg_vref_5v0>;
+		gpio-cfg = <
+			0x0000 /* n/c */
+			0x0000 /* gpio2: */
+			0x0000 /* gpio3: */
+			0x0000 /* n/c */
+			0x8081 /* gpio5:HP detect */
+			0x8095 /* gpio6:Mic detect */
+		>;
+		gpio-line-names = "N/C", "GPIO2",
+			"GPIO3", "N/C",
+			"GPIO5:HP detect",
+			"GPIO6:Mic detect";
+	};
+};
+
+&i2c_mux_smarc_gp_rtc {
+	rv3028: rtc@52 {
+		backup-switchover-dsm;
+		#clock-cells = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_rv3028>;
+		compatible = "microcrystal,rv3028";
+		reg = <0x52>;
+		interrupt-parent = <&gpio2>; /* SMARC GPIO12 */
+		interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
+		wakeup-source;
+	};
+};
+
+&i2c_mux_smarc_gp_usbc {
+	usb_mux: hd3ss3220@60 {
+		compatible = "ti,hd3ss3220";
+		interrupts-extended = <&pcal6534 27 IRQ_TYPE_EDGE_FALLING>; /* P3_3 GPIO_11 */
+		reg = <0x60>;
+
+		ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hd3ss3220_in_ep: endpoint {
+					remote-endpoint = <&ss_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				hd3ss3220_out_ep: endpoint {
+					remote-endpoint = <&usb_role_switch>;
+				};
+			};
+		};
+	};
+};
+
+&lcdif {
+	assigned-clock-rates = <484000000>, <121000000>, <400000000>, <133333333>;
+	status = "okay";
+};
+
+&lpspi1 {
+	status = "okay";
+
+	spi1dev0: spi1@0 {
+		reg = <0>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+
+	spi1dev1: spi1@1 {
+		reg = <1>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+};
+
+&lpspi3 {
+	status = "okay";
+
+	spi0dev0: spi0@0 {
+		reg = <0>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+
+	spi0dev1: spi0@1 {
+		reg = <1>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+};
+
+&media_blk_ctrl {
+	status = "okay";
+};
+
+&mu1 {
+	status = "okay";
+};
+
+&mu2 {
+	status = "okay";
+};
+
+&ocotp {
+	status = "okay";
+};
+
+&sai3 { /* I2S0 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai3>;
+	assigned-clocks = <&clk IMX93_CLK_SAI3>;
+	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>;
+	/* wm8962 needs MCLK 14 - 40 MHz */
+	assigned-clock-rates = <24000000>;
+	fsl,sai-mclk-direction-output;
+	status = "okay";
+};
+
+&tpm5 { /* DSI / DISP_PWM0 Backlight */
+	status = "okay";
+};
+
+&usbotg1 { /* USB-C */
+	dr_mode = "otg";
+	hnp-disable;
+	srp-disable;
+	adp-disable;
+	usb-role-switch;
+	disable-over-current;
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			usb_hs_ep: endpoint {
+				remote-endpoint = <&hs_ep>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			usb_role_switch: endpoint {
+				remote-endpoint = <&hd3ss3220_out_ep>;
+			};
+		};
+	};
+};
+
+&usbotg2 { /* J2 */
+	dr_mode = "host";
+	disable-over-current;
+	samsung,picophy-pre-emp-curr-control = <3>;
+	samsung,picophy-dc-vol-level-adjust = <7>;
+	status = "okay";
+};
+
+&usdhc2 { /* SDIO - SDCARD */
+	vmmc-supply = <&reg_usdhc2_vmmc>;
+	status = "okay";
+	no-sdio;
+	no-mmc;
+};
+
+&iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog>;
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX93_PAD_CCM_CLKO1__GPIO3_IO26                          0x31e
+			MX93_PAD_GPIO_IO06__GPIO2_IO06				0x31e
+		>;
+	};
+
+	pinctrl_backlight_dsi: backlight-dsi {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO22__TPM5_CH1				0x02
+		>;
+	};
+
+	pinctrl_reg_can1_stby: regcan1stbygrp {
+		fsl,pins = <
+			MX93_PAD_CCM_CLKO2__GPIO3_IO27				0x31e
+		>;
+	};
+
+	pinctrl_rv3028: rv3028grp {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO24__GPIO2_IO24				0x31e
+		>;
+	};
+
+	pinctrl_ts_dsi_gt911: tsdsigt911grp {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO03__GPIO2_IO03				0x31e
+		>;
+	};
+};
