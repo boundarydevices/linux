@@ -60,6 +60,8 @@ struct scmi_clock_info {
 	};
 	int num_parents;
 	u32 *parents;
+	u32 attributes;
+	u32 perm;
 };
 
 enum scmi_power_scale {
