@@ -714,6 +714,7 @@
 	};
 };
 
+#ifdef IMX8MM
 &vpu_g1 {
 	status = "okay";
 };
@@ -734,6 +735,7 @@
 	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
 };
+#endif
 
 &wdog1 {
 	pinctrl-names = "default";
