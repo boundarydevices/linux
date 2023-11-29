@@ -17,7 +17,7 @@
 
 / {
 	model = "Boundary i.MX8MM nitrogen_smarc board";
-	compatible = "boundary,imx8mm-nitrogen-smarc", "fsl,imx8mm";
+	compatible = "boundary,imx8mm-nitrogen_smarc", "fsl,imx8mm";
 
 	aliases {
 		rtc1 = &snvs_rtc;
