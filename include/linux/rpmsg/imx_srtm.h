@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright 2022 NXP
+ * Copyright 2022-2023 NXP
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -40,6 +40,7 @@
 
 /* command */
 #define IMX_SRTM_UART_COMMAND_SEND (1)
+#define IMX_SRTM_UART_COMMAND_HELLO (2)
 
 /* priority */
 #define IMX_SRTM_UART_PRIORITY	(0x01)
