@@ -39,8 +39,12 @@
 	pinctrl2(hog, carrier) {
 		PINS_START
 			PD_SM_ENET0_SDP(PAD_PULLDN)
+#ifdef PD_SM_ENET1_SDP
 			PD_SM_ENET1_SDP(PAD_PULLDN)
+#endif
+#ifdef PD_SM_LCD1_VDD_EN
 			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
+#endif
 			PD_SM_GPIO12(PAD_PULLDN)
 			PD_SM_CSI1_MCK(PAD_PULLDN)
 		PINS_END
@@ -67,19 +71,23 @@
 		PINS_END
 	};
 
+#ifdef SM_CAN0
 	pinctrl(SM_CAN0) {
 		PINS_START
 			PD_SM_CAN0_RX_CAN(PAD_CAN)
 			PD_SM_CAN0_TX_CAN(PAD_CAN)
 		PINS_END
 	};
+#endif
 
+#ifdef SM_CAN1
 	pinctrl(SM_CAN1) {
 		PINS_START
 			PD_SM_CAN1_RX_CAN(PAD_CAN)
 			PD_SM_CAN1_TX_CAN(PAD_CAN)
 		PINS_END
 	};
+#endif
 
 	pinctrl(SM_ESPI) {
 		PINS_START
@@ -107,6 +115,7 @@
 		PINS_END
 	};
 
+#ifdef PD_SM_I2C_LCD_CK_I2C
 	pinctrl(SM_I2C_LCD) {
 		PINS_START
 			PD_SM_I2C_LCD_CK_I2C(PAD_I2C)
@@ -120,6 +129,7 @@
 			PD_SM_I2C_LCD_DAT(PAD_I2C)
 		PINS_END
 	};
+#endif
 
 	pinctrl(SM_I2C_PM) {
 		PINS_START
@@ -241,15 +251,20 @@
 
 / {
 	aliases {
+#ifdef SM_FB_HDMI
 		fb_hdmi = &SM_FB_HDMI;
+#endif
 		rtc0 = &rv3028;
+#ifdef SM_USBOTG_DWC
 		usb_mux = &usb_mux;
+#endif
 	};
 
 	chosen {
 		stdout-path = &SM_SER1;
 	};
 
+#ifdef SM_USBOTG_DWC
 	connector {
 		compatible = "usb-c-connector";
 		label = "USB-C";
@@ -274,8 +289,9 @@
 			};
 		};
 	};
+#endif
 
-#ifdef SM_I2C_CSI0
+#if defined(SM_I2C_CSI0) || defined(SM_I2C_CSI1)
 	csi0_mclk: csi0-mclk {
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
@@ -427,19 +443,23 @@
 	};
 };
 
+#ifdef SM_CAN0
 &SM_CAN0 {
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_CAN0);
 	status = "okay";
 	xceiver-supply = <&reg_can0_stby>;
 };
+#endif
 
+#ifdef SM_CAN1
 &SM_CAN1 {
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_CAN1);
 	status = "okay";
 	xceiver-supply = <&reg_can1_stby>;
 };
+#endif
 
 &SM_I2C_GP {
 	clock-frequency = <100000>;
@@ -502,6 +522,7 @@
 	};
 };
 
+#ifdef SM_USBOTG_DWC
 &i2c_gp_b {
 	usb_mux: hd3ss3220@60 {
 		/* tusb320 is compatible with hd3ss3220 */
@@ -529,6 +550,7 @@
 		};
 	};
 };
+#endif
 
 #ifdef SM_I2S0
 &i2c_gp_c {
@@ -558,11 +580,13 @@
 
 &SM_I2C_LCD {
 	clock-frequency = <100000>;
+#ifdef PD_SM_I2C_LCD_CK_I2C
 	pinctrl-names = "default", "gpio";
 	pinctrl-0 = pinctrl_ref(SM_I2C_LCD);
 	pinctrl-1 = pinctrl_ref2(SM_I2C_LCD, 1);
 	scl-gpios = GP_SM_I2C_LCD_CK(GPIO_OPEN_DRAIN);
 	sda-gpios = GP_SM_I2C_LCD_DAT(GPIO_OPEN_DRAIN);
+#endif
 	status = "okay";
 
 	mux9546-lcd@73 {
@@ -736,12 +760,15 @@
 	status = "okay";
 };
 
+#ifdef SM_USBOTG
 &SM_USBOTG {
 	fsl,over-current-active-low;
 	fsl,vbus-oc-combined;
 	status = "okay";
 };
+#endif
 
+#ifdef SM_USBOTG_DWC
 &SM_USBOTG_DWC {
 	dr_mode = "otg";
 	status = "okay";
@@ -767,12 +794,15 @@
 		};
 	};
 };
+#endif
 
+#ifdef SM_USBOTG_PHY
 &SM_USBOTG_PHY {
 	fsl,phy-tx-preemp-amp-tune = <2>;
 	status = "okay";
 	vbus-supply = <&reg_vref_5v0>;
 };
+#endif
 
 /* J11 mipi display */
 #define MIPI_DISPLAY		SM_FB_MIPI
@@ -803,16 +833,24 @@
 #define LVDS_DISPLAY		SM_FB_LVDS
 #define LVDS_I2C_BUS		SM_I2C_PM
 #define LVDS_PWM		SM_PWM_LCD0
+#ifdef SM_PWM_LCD1
 #define LVDS2_PWM		SM_PWM_LCD1
+#endif
 /* J21 pin 20 LVDS display, J22 pin 20 LVDS2 display */
 #define PD_LVDS_PWM(a)		PD_SM_LCD0_BKLT_PWM_OUT(a) /* Pin 20, S141 */
+#ifdef PD_SM_LCD1_BKLT_PWM_OUT
 #define PD_LVDS2_PWM(a)		PD_SM_LCD1_BKLT_PWM_OUT(a) /* Pin 20, S122 */
+#endif
 
 #define GP_LVDS_BACKLIGHT(a)	GP_SM_LCD0_BKLT_EN(a)
 #define PD_LVDS_BACKLIGHT(a)	PD_SM_LCD0_BKLT_EN(a)	/* Pin 19, S127 */
 
+#ifdef GP_SM_LVDS1_BACKLIGHT_EN
 #define GP_LVDS2_BACKLIGHT(a)	GP_SM_LVDS1_BACKLIGHT_EN(a)
+#endif
+#ifdef PD_SM_LVDS1_BACKLIGHT_EN
 #define PD_LVDS2_BACKLIGHT(a)	PD_SM_LVDS1_BACKLIGHT_EN(a) /* Pin 19, S107 */
+#endif
 
 #define GP_LVDS_TS_IRQ(a)	GP_SM_SMB_ALERT(a)
 #define PD_LVDS_TS_IRQ(a)	PD_SM_SMB_ALERT(a)	/* J23 Pin 4, P1 */
