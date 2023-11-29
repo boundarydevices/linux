@@ -295,7 +295,9 @@ static int rpmsg_tty_probe(struct rpmsg_device *rpdev)
 	struct device *tty_dev;
 	struct device_node *np;
 	struct imx_srtm_uart_data_structure *srtm_uart_data = NULL;
+	struct srtm_uart_msg *msg = NULL;
 	int ret;
+	int data_len = 0;
 	char buf[64];
 
 	cport = rpmsg_tty_alloc_cport();
@@ -331,6 +333,27 @@ static int rpmsg_tty_probe(struct rpmsg_device *rpdev)
 	}
 
 	dev_set_drvdata(dev, (void *)cport);
+
+	/* Say hello to remote to acknowleage each other */
+	if (cport->use_srtm_uart_protocol) {
+		data_len = sizeof(struct srtm_uart_msg); /* srtm uart msg header */
+		msg = kmalloc(data_len, GFP_KERNEL);
+		if (!msg)
+			return -ENOMEM;
+
+		memset(msg, 0, data_len);
+		msg->header.common.cate = IMX_SRTM_CATEGORY_UART;
+		msg->header.common.major = IMX_SRTM_VER_UART;
+		msg->header.common.minor = IMX_SRTM_VER_UART >> 8;
+		msg->header.common.type = IMX_SRTM_TYPE_NOTIFY;
+		msg->header.common.cmd = IMX_SRTM_UART_COMMAND_HELLO;
+		msg->header.common.reserved[0] = IMX_SRTM_UART_PRIORITY;
+		msg->header.bus_id = cport->bus_id & 0xFF;
+		msg->header.flags = cport->flags & 0xFFFF;
+
+		rpmsg_send(rpdev->ept, (void *)msg, data_len);
+		kfree(msg);
+	}
 
 	dev_dbg(dev, "New channel: 0x%x -> 0x%x: " RPMSG_TTY_NAME "%d\n",
 		rpdev->src, rpdev->dst, cport->id);
