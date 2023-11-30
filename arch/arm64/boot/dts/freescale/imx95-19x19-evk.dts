@@ -786,13 +786,13 @@
 
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
-			IMX95_PAD_GPIO_IO32__HSIOMIX_TOP_PCIE1_CLKREQ_B		0x57e
+			IMX95_PAD_GPIO_IO32__HSIOMIX_TOP_PCIE1_CLKREQ_B		0x4000031e
 		>;
 	};
 
 	pinctrl_pcie1: pcie1grp {
 		fsl,pins = <
-			IMX95_PAD_GPIO_IO35__HSIOMIX_TOP_PCIE2_CLKREQ_B		0x57e
+			IMX95_PAD_GPIO_IO35__HSIOMIX_TOP_PCIE2_CLKREQ_B		0x4000031e
 		>;
 	};
 
@@ -1080,6 +1080,7 @@
 
 &pcie0 {
 	pinctrl-0 = <&pinctrl_pcie0>;
+	pinctrl-names = "default";
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
 	reset-gpio = <&i2c7_pcal6524 5 GPIO_ACTIVE_LOW>;
 	status = "okay";
@@ -1087,6 +1088,7 @@
 
 &pcie1 {
 	pinctrl-0 = <&pinctrl_pcie1>;
+	pinctrl-names = "default";
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
 	reset-gpio = <&i2c7_pcal6524 16 GPIO_ACTIVE_LOW>;
 	status = "disabled";
