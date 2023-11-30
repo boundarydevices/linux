@@ -274,6 +274,15 @@ static void imx6_pcie_configure_type(struct imx6_pcie *imx6_pcie)
 	}
 
 	regmap_update_bits(imx6_pcie->iomuxc_gpr, addr, mask, val);
+
+	/* On i.MX95 the PCI PM needs to be enabled in order to
+	 * generate the CLKREQ output signal.
+	 */
+	if ((mode == PCI_EXP_TYPE_ROOT_PORT) &&
+	    (imx6_pcie->drvdata->variant == IMX95)) {
+		val = dw_pcie_find_ext_capability(imx6_pcie->pci, PCI_EXT_CAP_ID_L1SS);
+		dw_pcie_writel_dbi(imx6_pcie->pci, val + PCI_L1SS_CTL1, 1<<1);
+	}
 }
 
 static int pcie_phy_poll_ack(struct imx6_pcie *imx6_pcie, bool exp_val)
