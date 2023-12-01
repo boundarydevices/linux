@@ -277,6 +277,7 @@ struct enetc_si {
 	int num_rss; /* number of RSS buckets */
 	unsigned short pad;
 	int hw_features;
+	int pmac_offset; /* Only valid for PSI that supports 802.1Qbu */
 	struct enetc_cbs *ecbs;
 
 	u64 clk_freq;

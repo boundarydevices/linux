@@ -299,6 +299,7 @@
 #define  PISIDCR_KC0EN		BIT(1)
 #define  PISIDCR_KC1EN		BIT(2)
 
+#define ENETC4_PMAC_OFFSET		0x400
 #define ENETC4_PM_CMD_CFG(mac)		(0x5008 + (mac) * 0x400)
 #define  PM_CMD_CFG_TX_EN		BIT(0)
 #define  PM_CMD_CFG_RX_EN		BIT(1)
