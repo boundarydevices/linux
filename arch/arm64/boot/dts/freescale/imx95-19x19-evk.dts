@@ -1052,8 +1052,11 @@
 	};
 };
 
-&vpu {
+&vpu0 {
 	sram = <&sram1>;
+};
+
+&vpuctrl {
 	boot = <&vpu_boot>;
 };
 
