@@ -104,6 +104,7 @@ enum imx_mu_type {
 	IMX_MU_V2 = BIT(1),
 	IMX_MU_V2_S4 = BIT(15),
 	IMX_MU_V2_IRQ = BIT(16),
+	IMX_MU_IMX95_ELE = BIT(17),
 };
 
 struct imx_mu_dcfg {
@@ -334,7 +335,7 @@ static int imx_mu_specific_rx(struct imx_mu_priv *priv, struct imx_mu_con_priv *
 	u32 *data;
 	int i, ret;
 	u32 xsr;
-	u32 size, max_size;
+	u32 size, max_size, num_rr = 4;
 
 	data = (u32 *)priv->msg;
 
@@ -349,20 +350,23 @@ static int imx_mu_specific_rx(struct imx_mu_priv *priv, struct imx_mu_con_priv *
 		max_size = sizeof(struct imx_sc_rpc_msg_max);
 	}
 
-	if (size > max_size / 4) {
+	if (priv->dcfg->type & IMX_MU_IMX95_ELE)
+		num_rr = 8;
+
+	if (size > max_size / num_rr) {
 		dev_err(priv->dev, "Maximal message size (%u bytes) exceeded on RX; got: %i bytes\n", max_size, size << 2);
 		return -EINVAL;
 	}
 
 	for (i = 1; i < size; i++) {
 		ret = readl_poll_timeout(priv->base + priv->dcfg->xSR[IMX_MU_RSR], xsr,
-					 xsr & IMX_MU_xSR_RFn(priv->dcfg->type, i % 4), 0,
+					 xsr & IMX_MU_xSR_RFn(priv->dcfg->type, i % num_rr), 0,
 					 5 * USEC_PER_SEC);
 		if (ret) {
 			dev_err(priv->dev, "timeout read idx %d\n", i);
 			return ret;
 		}
-		*data++ = imx_mu_read(priv, priv->dcfg->xRR + (i % 4) * 4);
+		*data++ = imx_mu_read(priv, priv->dcfg->xRR + (i % num_rr) * 4);
 	}
 
 	imx_mu_xcr_rmw(priv, IMX_MU_RCR, IMX_MU_xCR_RIEn(priv->dcfg->type, 0), 0);
@@ -979,6 +983,17 @@ static const struct imx_mu_dcfg imx_mu_cfg_imx93_s4 = {
 	.xCR	= {0x8, 0x110, 0x114, 0x120, 0x128},
 };
 
+static const struct imx_mu_dcfg imx_mu_cfg_imx95_ele = {
+	.tx	= imx_mu_specific_tx,
+	.rx	= imx_mu_specific_rx,
+	.init	= imx_mu_init_specific,
+	.type	= IMX_MU_V2 | IMX_MU_V2_S4 | IMX_MU_IMX95_ELE,
+	.xTR	= 0x200,
+	.xRR	= 0x280,
+	.xSR	= {0xC, 0x118, 0x124, 0x12C},
+	.xCR	= {0x8, 0x110, 0x114, 0x120, 0x128},
+};
+
 static const struct imx_mu_dcfg imx_mu_cfg_imx8_scu = {
 	.tx	= imx_mu_specific_tx,
 	.rx	= imx_mu_specific_rx,
@@ -1008,6 +1023,7 @@ static const struct of_device_id imx_mu_dt_ids[] = {
 	{ .compatible = "fsl,imx8ulp-mu", .data = &imx_mu_cfg_imx8ulp },
 	{ .compatible = "fsl,imx8ulp-mu-s4", .data = &imx_mu_cfg_imx8ulp_s4 },
 	{ .compatible = "fsl,imx93-mu-s4", .data = &imx_mu_cfg_imx93_s4 },
+	{ .compatible = "fsl,imx95-mu-ele", .data = &imx_mu_cfg_imx95_ele },
 	{ .compatible = "fsl,imx8-mu-scu", .data = &imx_mu_cfg_imx8_scu },
 	{ .compatible = "fsl,imx8-mu-seco", .data = &imx_mu_cfg_imx8_seco },
 	{ },
