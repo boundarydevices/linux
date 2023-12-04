@@ -33,6 +33,11 @@ struct ele_mu_ioctl_signed_message {
 	u32 error_code;
 };
 
+struct ele_mu_ioctl_get_soc_info {
+	u16 soc_id;
+	u16 soc_rev;
+};
+
 /* IO Buffer Flags */
 #define ELE_MU_IO_FLAGS_IS_OUTPUT	(0x00u)
 #define ELE_MU_IO_FLAGS_IS_INPUT	(0x01u)
@@ -70,5 +75,10 @@ struct ele_mu_ioctl_signed_message {
  */
 #define ELE_MU_IOCTL_GET_MU_INFO	_IOR(ELE_MU_IOCTL, 0x04, \
 					struct ele_mu_ioctl_get_mu_info)
+/*
+ * ioctl to get SoC Info from user-space.
+ */
+#define ELE_MU_IOCTL_GET_SOC_INFO      _IOR(ELE_MU_IOCTL, 0x06, \
+					struct ele_mu_ioctl_get_soc_info)
 
 #endif

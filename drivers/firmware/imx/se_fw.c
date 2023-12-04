@@ -30,6 +30,7 @@
 
 #define SOC_ID_OF_IMX8ULP		0x084D
 #define SOC_ID_OF_IMX93			0x9300
+#define SOC_ID_OF_IMX95			0x9500
 #define SOC_VER_MASK			0xFFFF0000
 #define SOC_ID_MASK			0x0000FFFF
 #define RESERVED_DMA_POOL		BIT(1)
@@ -58,6 +59,8 @@ struct imx_info {
 
 struct imx_info_list {
 	uint8_t num_mu;
+	uint16_t soc_id;
+	uint16_t soc_rev;
 	struct imx_info info[];
 };
 
@@ -65,6 +68,7 @@ static LIST_HEAD(priv_data_list);
 
 static const struct imx_info_list imx8ulp_info = {
 	.num_mu = 1,
+	.soc_id = SOC_ID_OF_IMX8ULP,
 	.info = {
 			{
 				.pdev_name = {"se-fw2", "mu2"},
@@ -91,6 +95,7 @@ static const struct imx_info_list imx8ulp_info = {
 
 static const struct imx_info_list imx93_info = {
 	.num_mu = 1,
+	.soc_id = SOC_ID_OF_IMX93,
 	.info = {
 			{
 				.pdev_name = {"se-fw2", "mu2"},
@@ -117,10 +122,11 @@ static const struct imx_info_list imx93_info = {
 
 static const struct imx_info_list imx95_info = {
 	.num_mu = 1,
+	.soc_id = SOC_ID_OF_IMX95,
 	.info = {
 			{
 				.pdev_name = {"se-fw2", "mu2"},
-				.socdev = false,
+				.socdev = true,
 				.mu_did = 3,
 				.max_dev_ctx = 4,
 				.cmd_tag = 0x17,
@@ -284,10 +290,14 @@ static int imx_soc_device_register(struct device *dev,
 {
 	struct soc_device_attribute *attr;
 	struct soc_device *sdev = NULL;
+	const struct of_device_id *of_id = of_match_device(se_fw_match, dev);
+	struct imx_info_list *info_list;
 	phys_addr_t get_info_addr = 0;
 	u32 *get_info_data = NULL;
 	u8 major_ver, minor_ver;
 	int err;
+
+	info_list = (struct imx_info_list *)of_id->data;
 
 	if (info->pool_name) {
 		get_info_addr = get_phy_buf_mem_pool(dev,
@@ -317,6 +327,10 @@ static int imx_soc_device_register(struct device *dev,
 				& SOC_VER_MASK) >> 24;
 		minor_ver = ((get_info_data[GET_INFO_SOC_INFO_WORD_OFFSET]
 				& SOC_VER_MASK) >> 16) & 0xFF;
+		/* SoC revision need to be stored in the info list structure */
+		info_list->soc_rev = (get_info_data[GET_INFO_SOC_INFO_WORD_OFFSET]
+					& SOC_VER_MASK) >> 16;
+
 		if (minor_ver)
 			attr->revision = kasprintf(GFP_KERNEL,
 						   "%x.%x",
@@ -336,6 +350,10 @@ static int imx_soc_device_register(struct device *dev,
 			case SOC_ID_OF_IMX93:
 				attr->soc_id = kasprintf(GFP_KERNEL,
 							 "i.MX93");
+				break;
+			case SOC_ID_OF_IMX95:
+				attr->soc_id = kasprintf(GFP_KERNEL,
+							 "i.MX95");
 				break;
 		}
 	}
@@ -846,6 +864,36 @@ exit:
 	return err;
 }
 
+/* IOCTL to provide SoC information */
+static int ele_mu_ioctl_get_soc_info_handler(struct ele_mu_device_ctx *dev_ctx,
+					     unsigned long arg)
+{
+	const struct of_device_id *of_id = of_match_device(se_fw_match,
+							   dev_ctx->priv->dev);
+	struct imx_info_list *info_list;
+	struct ele_mu_ioctl_get_soc_info soc_info;
+	int err = -EINVAL;
+
+	if (!of_id || !of_id->data)
+		goto exit;
+
+	info_list = (struct imx_info_list *)of_id->data;
+
+	soc_info.soc_id = info_list->soc_id;
+	soc_info.soc_rev = info_list->soc_rev;
+
+	if (copy_to_user((u8 *)arg, (u8 *)(&soc_info), sizeof(soc_info))) {
+		dev_err(dev_ctx->priv->dev,
+			"%s: Failed to copy soc info to user\n",
+			dev_ctx->miscdev.name);
+		err = -EFAULT;
+		goto exit;
+	}
+
+exit:
+	return err;
+}
+
 /* Open a char device. */
 static int ele_mu_fops_open(struct inode *nd, struct file *fp)
 {
@@ -1010,6 +1058,11 @@ static long ele_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	case ELE_MU_IOCTL_SETUP_IOBUF:
 		err = ele_mu_ioctl_setup_iobuf_handler(dev_ctx, arg);
 		break;
+
+	case ELE_MU_IOCTL_GET_SOC_INFO:
+		err = ele_mu_ioctl_get_soc_info_handler(dev_ctx, arg);
+		break;
+
 	default:
 		err = -EINVAL;
 		dev_dbg(ele_mu_priv->dev,
