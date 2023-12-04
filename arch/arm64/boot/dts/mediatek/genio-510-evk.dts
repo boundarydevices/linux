@@ -194,7 +194,6 @@
 		regulator-name = "sdio_card";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&pio 74 0>;
 		enable-active-high;
 		regulator-always-on;
 	};
@@ -699,6 +698,11 @@
 		pins-pcm {
 			pinmux = <PINMUX_GPIO123__FUNC_O_PCM_DO>;
 		};
+
+		wcn-3v3-en {
+			pinmux = <PINMUX_GPIO74__FUNC_B_GPIO74>;
+			output-high;
+		};
 	};
 
 	mmc2_pins_uhs: mmc2uhs {
@@ -739,7 +743,7 @@
 
 	wifi_pins_pwrseq: wifipwrseq {
 		pins-wifi-enable {
-			pinmux = <PINMUX_GPIO127__FUNC_B_GPIO127>;
+			pinmux = <PINMUX_GPIO72__FUNC_B_GPIO72>;
 			output-low;
 		};
 	};
@@ -1082,7 +1086,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&wifi_pins_pwrseq>;
 
-	reset-gpios = <&pio 127 1>;
+	reset-gpios = <&pio 72 1>;
 	post-power-on-delay-ms = <200>;
 };
 
