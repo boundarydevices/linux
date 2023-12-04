@@ -65,6 +65,7 @@ int ele_get_random(struct device *dev,
 	u8 *buf;
 	int ret;
 
+	len = ELE_RNG_MAX_SIZE;
 	buf = dmam_alloc_coherent(priv->dev, len, &dst_dma, GFP_KERNEL);
 	if (!buf) {
 		dev_err(priv->dev, "Failed to map destination buffer memory\n");
@@ -84,7 +85,7 @@ int ele_get_random(struct device *dev,
 	if (ret)
 		goto exit;
 
-	priv->tx_msg->data[0] = 0x0;
+	priv->tx_msg->data[0] = BIT(1);
 	priv->tx_msg->data[1] = dst_dma;
 	priv->tx_msg->data[2] = len;
 	ret = imx_ele_msg_send_rcv(priv);

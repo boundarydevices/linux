@@ -17,7 +17,7 @@
 #define ELE_GET_RANDOM_REQ		0xCD
 #define ELE_GET_RANDOM_REQ_SZ		0x10
 #define ELE_GET_RANDOM_RSP_SZ		0x08
-
+#define ELE_RNG_MAX_SIZE		16
 
 int ele_init_fw(struct device *dev);
 int ele_get_random(struct device *dev, void *data, size_t len);
