@@ -56,6 +56,8 @@ static int enetc4_setup_cbdr(struct device *dev, struct enetc_hw *hw,
 	regs.bar0 = hw->reg + ENETC_SICBDRBAR0;
 	regs.bar1 = hw->reg + ENETC_SICBDRBAR1;
 	regs.lenr = hw->reg + ENETC_SICBDRLENR;
+	regs.sictr0 =  hw->reg + ENETC_SICTR0;
+	regs.sictr1 =  hw->reg + ENETC_SICTR1;
 
 	return netc_setup_cbdr(dev, bd_count, &regs, cbdr);
 }

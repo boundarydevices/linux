@@ -111,6 +111,10 @@ struct netc_cbdr_regs {
 	void __iomem *bar0;
 	void __iomem *bar1;
 	void __iomem *lenr;
+
+	/* station interface current time register */
+	void __iomem *sictr0;
+	void __iomem *sictr1;
 };
 
 struct netc_cbdr {

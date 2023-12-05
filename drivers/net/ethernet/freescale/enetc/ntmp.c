@@ -548,6 +548,23 @@ int ntmp_tgst_delete_admin_gate_list(struct netc_cbdr *cbdr, u32 entry_id)
 }
 EXPORT_SYMBOL_GPL(ntmp_tgst_delete_admin_gate_list);
 
+static u64 ntmp_adjust_base_time(struct netc_cbdr *cbdr, u64 base_time, u32 cycle_time)
+{
+	u64 current_time, delta, n;
+	u32 time_high, time_low;
+
+	time_low = netc_cbdr_read(cbdr->regs.sictr0);
+	time_high = netc_cbdr_read(cbdr->regs.sictr1);
+	current_time = (u64)time_high << 32 | time_low;
+	if (base_time >= current_time)
+		return base_time;
+
+	delta = current_time - base_time;
+	n = DIV_ROUND_UP_ULL(delta, cycle_time);
+
+	return base_time + (n * (u64)cycle_time);
+}
+
 int ntmp_tgst_update_admin_gate_list(struct netc_cbdr *cbdr, u32 entry_id,
 				     struct ntmp_tgst_cfg *cfg)
 {
@@ -557,6 +574,7 @@ int ntmp_tgst_update_admin_gate_list(struct netc_cbdr *cbdr, u32 entry_id,
 	struct tgst_ge *ge;
 	u32 len, data_size;
 	dma_addr_t dma;
+	u64 base_time;
 	int i, err;
 	void *tmp;
 
@@ -574,7 +592,8 @@ int ntmp_tgst_update_admin_gate_list(struct netc_cbdr *cbdr, u32 entry_id,
 	req->crd.update_act = cpu_to_le16(1);
 	req->crd.tbl_ver = 0;
 	req->entry_id = cpu_to_le32(entry_id);
-	cfge->admin_bt = cpu_to_le64(cfg->base_time);
+	base_time = ntmp_adjust_base_time(cbdr, cfg->base_time, cfg->cycle_time);
+	cfge->admin_bt = cpu_to_le64(base_time);
 	cfge->admin_ct = cpu_to_le32(cfg->cycle_time);
 	cfge->admin_ct_ext = cpu_to_le32(cfg->cycle_time_extension);
 	cfge->admin_cl_len = cpu_to_le16(cfg->num_entries);
@@ -1470,6 +1489,7 @@ int ntmp_sgit_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_sgit_cfg *
 	union netc_cbd cbd;
 	u32 data_size, len;
 	dma_addr_t dma;
+	u64 base_time;
 	void *tmp;
 	int err;
 
@@ -1489,7 +1509,8 @@ int ntmp_sgit_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_sgit_cfg *
 	req->crd.update_act = cpu_to_le16(7);
 	req->entry_id = cpu_to_le32(sgi->sgi_eid);
 	req->acfge.admin_sgcl_eid = cpu_to_le32(sgi->admin_sgcl_eid);
-	req->acfge.admin_bt = cpu_to_le64(sgi->admin_bt);
+	base_time = ntmp_adjust_base_time(cbdr, sgi->admin_bt, sgcl->ct);
+	req->acfge.admin_bt = cpu_to_le64(base_time);
 	req->acfge.admin_ct_ext = cpu_to_le32(sgi->admin_ct_ext);
 	/* Specify the gate state to be open before the admin stream
 	 * control list takes affect.
