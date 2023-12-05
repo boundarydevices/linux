@@ -37,11 +37,6 @@
 			compatible = "android,trusty-log-v1";
 		};
 	};
-
-	throttle_devfreq: devfreq {
-		throttle,max_state = <1>;
-		#cooling-cells = <2>;
-	};
 };
 
 &cpus {
@@ -73,43 +68,6 @@
 	cpu@101{
 		dynamic-power-coefficient = <735>;
 		capacity-dmips-mhz = <1024>;
-	};
-};
-
-&thermal_zones {
-	pmic-thermal0{
-		cooling-maps{
-			map0{
-				cooling-device =
-					<&A53_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-					<&A53_1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-					<&A53_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-					<&A53_3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-					<&A72_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-					<&A72_1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-					<&throttle_devfreq 0 1>;
-			};
-		};
-	};
-
-	gpu-thermal0 {
-		cooling-maps {
-			map0 {
-				trip = <&gpu_alert0>;
-				cooling-device =
-				<&throttle_devfreq 0 1>;
-			};
-		};
-	};
-
-	gpu-thermal1 {
-		cooling-maps {
-			map0 {
-				trip = <&gpu_alert1>;
-				cooling-device =
-				<&throttle_devfreq 0 1>;
-			};
-		};
 	};
 };
 

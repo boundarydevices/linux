@@ -66,15 +66,6 @@
 	};
 };
 
-&tmu {
-	throttle-cfgs {
-		throttle_devfreq: devfreq {
-			throttle,max_state = <2>;
-			#cooling-cells = <2>;
-		};
-	};
-};
-
 &cpu_thermal {
 	trips {
 		cpu_alert1: trip1 {
@@ -93,12 +84,12 @@
 		map0 {
 			trip = <&cpu_alert1>;
 			cooling-device =
-				<&throttle_devfreq 0 1>;
+				<&gpu3d 0 1>;
 		};
 		map1 {
 			trip = <&cpu_alert2>;
 			cooling-device =
-				<&throttle_devfreq 0 2>;
+				<&gpu3d 0 2>;
 		};
 	};
 };

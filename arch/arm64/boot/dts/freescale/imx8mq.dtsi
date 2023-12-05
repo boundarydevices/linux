@@ -1666,5 +1666,7 @@
 		assigned-clock-rates = <800000000>, <800000000>, <800000000>, <400000000>;
 		power-domains = <&pgc_gpu>;
 		status = "disabled";
+		throttle,max_state = <2>;
+		#cooling-cells = <2>;
 	};
 };
