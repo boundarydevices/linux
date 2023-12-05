@@ -488,10 +488,9 @@ static int dw_dphy_probe(struct platform_device *pdev)
 	}
 
 	priv->csis_regmap = syscon_regmap_lookup_by_phandle(np, "fsl,csis");
-	if (IS_ERR(priv->csis_regmap)) {
-		dev_err(dev, "failed to get csi controller\n");
-		return PTR_ERR(priv->csis_regmap);
-	}
+	if (IS_ERR(priv->csis_regmap))
+		return dev_err_probe(dev, PTR_ERR(priv->csis_regmap),
+				     "failed to get csi controller\n");
 
 	priv->cfg_clk = devm_clk_get(dev, "phy_cfg");
 	if (IS_ERR(priv->cfg_clk)) {
