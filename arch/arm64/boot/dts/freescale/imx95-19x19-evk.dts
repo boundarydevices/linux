@@ -1057,12 +1057,9 @@
 	};
 };
 
-&vpu0 {
-	sram = <&sram1>;
-};
-
 &vpuctrl {
 	boot = <&vpu_boot>;
+	sram = <&sram1>;
 };
 
 &wdog3 {
