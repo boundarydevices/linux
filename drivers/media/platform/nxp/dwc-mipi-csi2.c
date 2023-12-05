@@ -1504,10 +1504,9 @@ static int dwc_csi_device_probe(struct platform_device *pdev)
 	}
 
 	csidev->phy = devm_phy_get(dev, "dphy-rx");
-	if (IS_ERR(csidev->phy)) {
-		dev_err(dev, "Failed to get DPHY Rx\n");
-		return PTR_ERR(csidev->phy);
-	}
+	if (IS_ERR(csidev->phy))
+		return dev_err_probe(dev, PTR_ERR(csidev->phy),
+				     "Failed to get DPHY Rx\n");
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
