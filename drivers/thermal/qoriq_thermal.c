@@ -4,7 +4,6 @@
 // Copyright 2022 NXP
 
 #include <linux/clk.h>
-#include <linux/device_cooling.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -78,13 +77,6 @@ static const char *const throt_names[] = {
 	[THROTTLE_DEVFREQ] = "devfreq",
 };
 
-struct tmu_throttle_params {
-	const char *name;
-	struct thermal_cooling_device *cdev;
-	int max_state;
-	bool inited;
-};
-
 /*
  * Thermal zone data
  */
@@ -94,7 +86,6 @@ struct qoriq_sensor {
 	int                             *trip_temp;
 	int                             ntrip_temp;
 	int                             temp_delta;
-	struct tmu_throttle_params      throt_cfgs[THROTTLE_NUM];
 };
 
 struct qoriq_tmu_data {
@@ -198,100 +189,6 @@ static const struct thermal_zone_device_ops tmu_tz_ops = {
 	.set_trip_temp = tmu_set_trip_temp,
 };
 
-static struct tmu_throttle_params *
-find_throttle_cfg_by_name(struct qoriq_sensor *sens, const char *name)
-{
-	unsigned int i;
-
-	for (i = 0; sens->throt_cfgs[i].name && i<THROTTLE_NUM; i++)
-		if (!strcmp(sens->throt_cfgs[i].name, name))
-			return &sens->throt_cfgs[i];
-
-	return NULL;
-}
-
-/**
- * tmu_init_throttle_cdev() - Parse the throttle configurations
- * and register them as cooling devices.
- */
-static int tmu_init_throttle_cdev(struct device *dev,
-				  struct qoriq_tmu_data *qdata, int index)
-{
-	struct qoriq_tmu_data *qt = qdata;
-	struct qoriq_sensor *sensor = &qt->sensor[index];
-	struct device_node *np_tc, *np_tcc;
-	struct thermal_cooling_device *tcd;
-	const char *name;
-	u32 val;
-	int i, ret = 0;
-
-	for (i = 0; i < THROTTLE_NUM; i++) {
-		sensor->throt_cfgs[i].name = throt_names[i];
-		sensor->throt_cfgs[i].inited = false;
-	}
-
-	np_tc = of_get_child_by_name(dev->of_node, "throttle-cfgs");
-	if (!np_tc) {
-		dev_info(dev,
-			 "throttle-cfg: no throttle-cfgs"
-			 " - use default devfreq cooling device\n");
-		tcd = device_cooling_register(NULL, 1);
-		if (IS_ERR(tcd)) {
-			ret = PTR_ERR(tcd);
-			if (ret != -EPROBE_DEFER)
-				dev_err(dev, "failed to register"
-					"devfreq cooling device: %d\n",
-					ret);
-			return ret;
-		}
-		return 0;
-	}
-
-	ret = of_property_read_u32(np_tc, "throttle,temp_delta", &val);
-	if (ret) {
-		dev_info(dev,
-			 "throttle-cfg: missing temp_delta parameter,"
-			 "use default 3000 (3C)\n");
-		sensor->temp_delta = 3000;
-	} else {
-		sensor->temp_delta = val;
-	}
-
-	for_each_child_of_node(np_tc, np_tcc) {
-		struct tmu_throttle_params *ttp;
-		name = np_tcc->name;
-		ttp = find_throttle_cfg_by_name(sensor, name);
-		if (!ttp) {
-			dev_err(dev,
-				"throttle-cfg: could not find %s\n", name);
-			continue;
-		}
-
-		ret = of_property_read_u32(np_tcc, "throttle,max_state", &val);
-		if (ret) {
-			dev_info(dev,
-				 "throttle-cfg: %s: missing throttle max state\n", name);
-			continue;
-		}
-		ttp->max_state = val;
-
-		tcd = device_gpu_cooling_register(np_tcc, ttp->max_state);
-		of_node_put(np_tcc);
-		if (IS_ERR(tcd)) {
-			ret = PTR_ERR(tcd);
-			dev_err(dev,
-				"throttle-cfg: %s: failed to register cooling device\n",
-				name);
-			continue;
-		}
-		ttp->cdev = tcd;
-		ttp->inited = true;
-	}
-
-	of_node_put(np_tc);
-	return ret;
-}
-
 static int qoriq_tmu_register_tmu_zone(struct device *dev,
 				       struct qoriq_tmu_data *qdata)
 {
@@ -342,12 +239,6 @@ static int qoriq_tmu_register_tmu_zone(struct device *dev,
 				sensor->trip_temp[i] = trip[i].temperature;
 			}
 			sensor->ntrip_temp = ntrips;
-
-			ret = tmu_init_throttle_cdev(dev, qdata, id);
-			if (ret) {
-				kfree(sensor->trip_temp);
-				return ret;
-			}
 		}
 	}
 
@@ -566,16 +457,13 @@ static int qoriq_tmu_probe(struct platform_device *pdev)
 
 static int qoriq_tmu_remove(struct platform_device *pdev)
 {
-	int i, j;
+	int i;
 	struct qoriq_tmu_data *data = platform_get_drvdata(pdev);
 
 	for (i=0; i<SITES_MAX; i++) {
 		struct qoriq_sensor *sens = &data->sensor[i];
 
 		if (i == 0) {
-			for (j=0; j<THROTTLE_NUM; j++)
-				if (sens->throt_cfgs[j].inited)
-					device_gpu_cooling_unregister(sens->throt_cfgs[j].cdev);
 			if (sens->trip_temp)
 				kfree(sens->trip_temp);
 		}

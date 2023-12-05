@@ -7,7 +7,6 @@
 
 #include <linux/bitfield.h>
 #include <linux/clk.h>
-#include <linux/device_cooling.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -53,12 +52,9 @@ struct tmu_sensor {
 	struct imx8mm_tmu *priv;
 	u32 hw_id;
 	struct thermal_zone_device *tzd;
-	struct thermal_cooling_device *cdev;
 	int temp_passive;
 	int temp_critical;
 };
-
-struct thermal_cooling_device *cdev_gpufreq;
 
 struct imx8mm_tmu {
 	void __iomem *base;
@@ -195,8 +191,6 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 	struct imx8mm_tmu *tmu;
 	int ret;
 	int i;
-	struct device_node *np_cdev;
-	int val;
 
 	data = of_device_get_match_data(&pdev->dev);
 
@@ -225,8 +219,6 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 	/* disable the monitor during initialization */
 	imx8mm_tmu_enable(tmu, false);
 
-	np_cdev = of_find_node_by_name(NULL, "devfreq");
-
 	for (i = 0; i < data->num_sensors; i++) {
 		tmu->sensors[i].priv = tmu;
 		tmu->sensors[i].tzd =
@@ -247,48 +239,6 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 		/* get the thermal trip temp */
 		tmu->sensors[i].temp_passive = trips[0].temperature;
 		tmu->sensors[i].temp_critical = trips[1].temperature;
-
-		if (!np_cdev) {
-			tmu->sensors[i].cdev = device_cooling_register(NULL, 1);
-			if (IS_ERR(tmu->sensors[i].cdev)) {
-				ret = PTR_ERR(tmu->sensors[i].cdev);
-				if (ret != -EPROBE_DEFER)
-					dev_err(&pdev->dev,
-						"failed to register devfreq cooling device %d\n", ret);
-				return ret;
-			}
-
-			ret = thermal_zone_bind_cooling_device(tmu->sensors[i].tzd,
-				IMX_TRIP_PASSIVE,
-				tmu->sensors[i].cdev,
-				THERMAL_NO_LIMIT,
-				THERMAL_NO_LIMIT,
-				THERMAL_WEIGHT_DEFAULT);
-			if (ret) {
-				dev_err(&pdev->dev,
-					"binding zone %s with cdev %s failed:%d\n",
-					tmu->sensors[i].tzd->type, tmu->sensors[i].cdev->type, ret);
-				device_cooling_unregister(tmu->sensors[i].cdev);
-				return ret;
-			}
-		}
-	}
-
-	if (np_cdev) {
-		ret = of_property_read_u32(np_cdev, "throttle,max_state", &val);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"devfreq: missing throttle max state\n");
-			return ret;
-		}
-
-		cdev_gpufreq = device_gpu_cooling_register(np_cdev, val);
-		if (IS_ERR(cdev_gpufreq)) {
-			dev_err(&pdev->dev,
-				"failed to register devfreq cooling device: %d\n",
-				ret);
-			return PTR_ERR(cdev_gpufreq);
-		}
 	}
 
 	platform_set_drvdata(pdev, tmu);
@@ -315,8 +265,6 @@ static int imx8mm_tmu_remove(struct platform_device *pdev)
 	imx8mm_tmu_enable(tmu, false);
 
 	clk_disable_unprepare(tmu->clk);
-	if (cdev_gpufreq)
-		device_gpu_cooling_unregister(cdev_gpufreq);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;
