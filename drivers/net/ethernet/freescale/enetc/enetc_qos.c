@@ -114,6 +114,7 @@ static int enetc4_setup_taprio(struct enetc_ndev_priv *priv,
 	struct enetc_si *si = priv->si;
 	struct enetc_hw *hw = &si->hw;
 	struct ntmp_tgst_cfg *cfg;
+	u64 max_cycle_time;
 	int port, i, err;
 	bool tge_enable;
 	u32 size;
@@ -136,6 +137,12 @@ static int enetc4_setup_taprio(struct enetc_ndev_priv *priv,
 		goto disable_tge;
 
 	if (admin_conf->num_entries > enetc4_get_tgst_free_words(hw)) {
+		err = -EINVAL;
+		goto disable_tge;
+	}
+
+	max_cycle_time = admin_conf->cycle_time + admin_conf->cycle_time_extension;
+	if (max_cycle_time > NTMP_TGST_MAX_CT_PLUS_CT_EXT) {
 		err = -EINVAL;
 		goto disable_tge;
 	}
@@ -1870,6 +1877,7 @@ static int enetc4_psfp_parse_clsflower(struct enetc_ndev_priv *priv,
 	struct action_gate_entry *ge;
 	struct ntmp_ist_cfg *ist_cfg;
 	int i, err, entry_id;
+	u64 max_cycle_time;
 	int sgclt_cfg_size;
 	int priority = -1;
 
@@ -2019,6 +2027,14 @@ static int enetc4_psfp_parse_clsflower(struct enetc_ndev_priv *priv,
 	if (gate_entry->hw_index >= priv->psfp_cap.ntmp.max_sgit_entries) {
 		NL_SET_ERR_MSG_MOD(extack, "No Stream Gate Instance resource!");
 		err = -ENOSPC;
+		goto free_is;
+	}
+
+	max_cycle_time = gate_entry->gate.cycletime + gate_entry->gate.cycletimeext;
+	if (max_cycle_time > NTMP_SGIT_MAX_CT_PLUS_CT_EXT) {
+		NL_SET_ERR_MSG_MOD(extack,
+				   "cycle time + cycle time extension > 0x3ffffff ns.");
+		err = -EINVAL;
 		goto free_is;
 	}
 
