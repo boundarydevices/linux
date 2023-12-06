@@ -38,6 +38,7 @@
 struct imx_info {
 	const uint8_t pdev_name[2][10];
 	bool socdev;
+	uint8_t mu_id;
 	uint8_t mu_did;
 	uint8_t max_dev_ctx;
 	uint8_t cmd_tag;
@@ -73,6 +74,7 @@ static const struct imx_info_list imx8ulp_info = {
 			{
 				.pdev_name = {"se-fw2", "mu2"},
 				.socdev = true,
+				.mu_id = 2,
 				.mu_did = 7,
 				.max_dev_ctx = 4,
 				.cmd_tag = 0x17,
@@ -100,6 +102,7 @@ static const struct imx_info_list imx93_info = {
 			{
 				.pdev_name = {"se-fw2", "mu2"},
 				.socdev = true,
+				.mu_id = 2,
 				.mu_did = 3,
 				.max_dev_ctx = 4,
 				.cmd_tag = 0x17,
@@ -127,6 +130,7 @@ static const struct imx_info_list imx95_info = {
 			{
 				.pdev_name = {"se-fw2", "mu2"},
 				.socdev = true,
+				.mu_id = 2,
 				.mu_did = 3,
 				.max_dev_ctx = 4,
 				.cmd_tag = 0x17,
@@ -704,12 +708,18 @@ static int ele_mu_ioctl_get_mu_info(struct ele_mu_device_ctx *dev_ctx,
 {
 	struct ele_mu_priv *priv = dev_get_drvdata(dev_ctx->dev);
 	struct ele_mu_ioctl_get_mu_info info;
-	int err = -EINVAL;
+	struct imx_info *imx_info = (struct imx_info *)priv->info;
+	int err = 0;
 
-	info.ele_mu_id = 0;
+	info.ele_mu_id = imx_info->mu_id;
 	info.interrupt_idx = 0;
 	info.tz = 0;
-	info.did = priv->ele_mu_did;
+	info.did = imx_info->mu_did;
+	info.cmd_tag = imx_info->cmd_tag;
+	info.rsp_tag = imx_info->rsp_tag;
+	info.success_tag = imx_info->success_tag;
+	info.base_api_ver = imx_info->base_api_ver;
+	info.fw_api_ver = imx_info->fw_api_ver;
 
 	dev_dbg(priv->dev,
 		"%s: info [mu_idx: %d, irq_idx: %d, tz: 0x%x, did: 0x%x]\n",
