@@ -28,6 +28,8 @@
 #include "ele_common.h"
 #include "ele_fw_api.h"
 
+static uint32_t v2x_fw_state;
+
 #define SOC_ID_OF_IMX8ULP		0x084D
 #define SOC_ID_OF_IMX93			0x9300
 #define SOC_ID_OF_IMX95			0x9500
@@ -53,6 +55,7 @@ struct imx_info {
 	bool reserved_dma_ranges;
 	bool init_fw;
 	/* platform specific flag to enable/disable the ELE True RNG */
+	bool v2x_state_check;
 	bool start_rng;
 	bool enable_ele_trng;
 	bool imem_mgmt;
@@ -88,6 +91,7 @@ static const struct imx_info_list imx8ulp_info = {
 				.pool_name = "sram",
 				.reserved_dma_ranges = true,
 				.init_fw = false,
+				.v2x_state_check = false,
 				.start_rng = true,
 				.enable_ele_trng = false,
 				.imem_mgmt = true,
@@ -116,6 +120,7 @@ static const struct imx_info_list imx93_info = {
 				.pool_name = NULL,
 				.reserved_dma_ranges = true,
 				.init_fw = true,
+				.v2x_state_check = false,
 				.start_rng = true,
 				.enable_ele_trng = true,
 				.imem_mgmt = false,
@@ -124,7 +129,7 @@ static const struct imx_info_list imx93_info = {
 };
 
 static const struct imx_info_list imx95_info = {
-	.num_mu = 1,
+	.num_mu = 2,
 	.soc_id = SOC_ID_OF_IMX95,
 	.info = {
 			{
@@ -143,12 +148,35 @@ static const struct imx_info_list imx95_info = {
 				.mbox_rx_name = "rx",
 				.pool_name = NULL,
 				.reserved_dma_ranges = false,
-				.init_fw = true,
-				.start_rng = true,
+				.init_fw = false,
+				.v2x_state_check = true,
+				.start_rng = false,
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 			},
-	},
+			{
+				.pdev_name = {"v2x-fw6", "mu6"},
+				.socdev = false,
+				.mu_id = 6,
+				.mu_did = 0,
+				.max_dev_ctx = 4,
+				.cmd_tag = 0x1a,
+				.rsp_tag = 0xe4,
+				.success_tag = 0xd6,
+				.base_api_ver = 0x2,
+				.fw_api_ver = 0x2,
+				.se_name = "seco",
+				.pool_name = NULL,
+				.mbox_tx_name = "tx",
+				.mbox_rx_name = "rx",
+				.reserved_dma_ranges = false,
+				.init_fw = false,
+				.v2x_state_check = true,
+				.start_rng = false,
+				.enable_ele_trng = false,
+				.imem_mgmt = false,
+			},
+	}
 };
 
 static const struct of_device_id se_fw_match[] = {
@@ -750,6 +778,9 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 	struct ele_shared_mem *shared_mem;
 	int err = 0;
 	u32 pos;
+	u8 *addr;
+
+	struct ele_mu_priv *priv = dev_get_drvdata(dev_ctx->dev);
 
 	if (copy_from_user(&io, (u8 *)arg, sizeof(io))) {
 		dev_err(dev_ctx->priv->dev,
@@ -758,6 +789,10 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 		err = -EFAULT;
 		goto exit;
 	}
+
+	/* Function call to retrieve MU Buffer address */
+	if (io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X)
+		addr = get_mu_buf(priv->tx_chan);
 
 	dev_dbg(dev_ctx->priv->dev,
 			"%s: io [buf: %p(%d) flag: %x]\n",
@@ -776,21 +811,24 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 	}
 
 	/* Select the shared memory to be used for this buffer. */
-	if (io.flags & ELE_MU_IO_FLAGS_USE_SEC_MEM) {
-		/* App requires to use secure memory for this buffer.*/
-		dev_err(dev_ctx->priv->dev,
-			"%s: Failed allocate SEC MEM memory\n",
+	if (!(io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X)) {
+		if (io.flags & ELE_MU_IO_FLAGS_USE_SEC_MEM) {
+			/* App requires to use secure memory for this buffer.*/
+			dev_err(dev_ctx->priv->dev,
+				"%s: Failed allocate SEC MEM memory\n",
 				dev_ctx->miscdev.name);
-		err = -EFAULT;
-		goto exit;
-	} else {
-		/* No specific requirement for this buffer. */
-		shared_mem = &dev_ctx->non_secure_mem;
+			err = -EFAULT;
+			goto exit;
+		} else {
+			/* No specific requirement for this buffer. */
+			shared_mem = &dev_ctx->non_secure_mem;
+		}
 	}
 
 	/* Check there is enough space in the shared memory. */
-	if (shared_mem->size < shared_mem->pos
-			|| io.length >= shared_mem->size - shared_mem->pos) {
+	if (!(io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X) &&
+	     (shared_mem->size < shared_mem->pos
+	      || io.length >= shared_mem->size - shared_mem->pos)) {
 		dev_err(dev_ctx->priv->dev,
 			"%s: Not enough space in shared memory\n",
 				dev_ctx->miscdev.name);
@@ -798,10 +836,14 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 		goto exit;
 	}
 
-	/* Allocate space in shared memory. 8 bytes aligned. */
-	pos = shared_mem->pos;
-	shared_mem->pos += round_up(io.length, 8u);
-	io.ele_addr = (u64)shared_mem->dma_addr + pos;
+	if (!(io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X)) {
+		/* Allocate space in shared memory. 8 bytes aligned. */
+		pos = shared_mem->pos;
+		shared_mem->pos += round_up(io.length, 8u);
+		io.ele_addr = (u64)shared_mem->dma_addr + pos;
+	} else {
+		io.ele_addr = (u64)addr;
+	}
 
 	if ((io.flags & ELE_MU_IO_FLAGS_USE_SEC_MEM) &&
 	    !(io.flags & ELE_MU_IO_FLAGS_USE_SHORT_ADDR)) {
@@ -813,15 +855,23 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 		goto exit;
 	}
 
-	memset(shared_mem->ptr + pos, 0, io.length);
+	if (!(io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X)) {
+		memset(shared_mem->ptr + pos, 0, io.length);
+	}
+
 	if ((io.flags & ELE_MU_IO_FLAGS_IS_INPUT) ||
 	    (io.flags & ELE_MU_IO_FLAGS_IS_IN_OUT)) {
 		/*
 		 * buffer is input:
 		 * copy data from user space to this allocated buffer.
 		 */
-		if (copy_from_user(shared_mem->ptr + pos, io.user_buf,
-				   io.length)) {
+		if (io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X) {
+			err = (int)copy_from_user(addr, io.user_buf, io.length);
+		} else {
+			err = (int)copy_from_user(shared_mem->ptr + pos, io.user_buf, io.length);
+		}
+
+		if (err) {
 			dev_err(dev_ctx->priv->dev,
 				"%s: Failed copy data to shared memory\n",
 				dev_ctx->miscdev.name);
@@ -839,7 +889,10 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 		goto exit;
 	}
 
-	b_desc->shared_buf_ptr = shared_mem->ptr + pos;
+	if (io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X)
+		b_desc->shared_buf_ptr = addr;
+	else
+		b_desc->shared_buf_ptr = shared_mem->ptr + pos;
 	b_desc->usr_buf_ptr = io.user_buf;
 	b_desc->size = io.length;
 
@@ -1239,7 +1292,8 @@ static int se_fw_probe(struct platform_device *pdev)
 			    pdev->name, strlen(pdev->name) + 1);
 
 	if (!info) {
-		dev_err(dev, "Cannot find matching dev-info.\n");
+		dev_err(dev, "Cannot find matching dev-info. %s\n",
+			pdev->name);
 		goto exit;
 	}
 
@@ -1366,9 +1420,25 @@ static int se_fw_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = ele_ping(dev);
-	if (ret)
-		dev_err(dev, "Failed[%d] to ping the fw.\n", ret);
+	/* Assumed v2x_state_check is enabled for i.MX95 only. */
+	if (info->v2x_state_check) {
+		if (v2x_fw_state == V2X_FW_STATE_UNKNOWN &&
+				!memcmp(info->se_name, "ele", 4)) {
+			ret = ele_get_v2x_fw_state(dev, &v2x_fw_state);
+			if (ret)
+				dev_err(dev, "Failed to start ele rng\n");
+		}
+
+		/* Check if it is the V2X MU, but V2X-FW is not
+		 * loaded, then exit.
+		 */
+		if (v2x_fw_state != V2X_FW_STATE_RUNNING &&
+			!memcmp(info->se_name, "seco", 5)) {
+			ret = -1;
+			dev_err(dev, "Failure: V2X FW is not loaded.");
+			goto exit;
+		}
+	}
 
 	/* start ele rng */
 	if (info->start_rng) {

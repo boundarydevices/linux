@@ -57,6 +57,55 @@ exit:
 	return ret;
 }
 
+int ele_get_v2x_fw_state(struct device *dev, uint32_t *state)
+{
+	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+	int ret;
+	unsigned int status;
+	struct mu_hdr *hdr;
+
+	ret = imx_se_alloc_tx_rx_buf(priv);
+	if (ret)
+		return ret;
+
+	hdr = (struct mu_hdr *)&priv->tx_msg->header;
+
+	ret = plat_fill_cmd_msg_hdr(priv,
+				    hdr,
+				    ELE_GET_STATE, ELE_GET_STATE_REQ_SZ,
+				    true);
+	if (ret) {
+		pr_err("Error: plat_fill_cmd_msg_hdr failed.\n");
+		goto exit;
+	}
+
+	ret = imx_ele_msg_send_rcv(priv);
+	if (ret < 0)
+		goto exit;
+
+	ret  = validate_rsp_hdr(priv,
+				priv->rx_msg->header,
+				ELE_GET_STATE,
+				ELE_GET_STATE_RSP_SZ,
+				true);
+	if (ret)
+		goto exit;
+
+	status = RES_STATUS(priv->rx_msg->data[0]);
+	if (status != priv->success_tag) {
+		dev_err(dev, "Command Id[%d], Response Failure = 0x%x",
+			ELE_GET_STATE, status);
+		ret = -1;
+	} else {
+		*state = 0xFF & priv->rx_msg->data[1];
+	}
+exit:
+	imx_se_free_tx_rx_buf(priv);
+	return ret;
+}
+
+
+
 int ele_ping(struct device *dev)
 {
 	struct ele_mu_priv *priv = dev_get_drvdata(dev);

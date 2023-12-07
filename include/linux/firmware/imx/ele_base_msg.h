@@ -64,6 +64,13 @@
 #define OTP_UNIQ_ID			0x01
 #define OTFAD_CONFIG			0x2
 
+#define ELE_GET_STATE			0xB2
+#define ELE_GET_STATE_REQ_SZ		0x04
+#define ELE_GET_STATE_RSP_SZ		0x10
+
+#define V2X_FW_STATE_UNKNOWN		0x00
+#define V2X_FW_STATE_RUNNING		0x15
+
 int ele_get_info(struct device *dev, phys_addr_t addr, u32 data_size);
 int ele_ping(struct device *dev);
 int ele_start_rng(struct device *dev);
@@ -71,6 +78,7 @@ int ele_get_trng_state(struct device *dev);
 int ele_service_swap(struct device *dev,
 		     phys_addr_t addr,
 		     u32 addr_size, u16 flag);
+int ele_get_v2x_fw_state(struct device *dev, uint32_t *state);
 
 int read_common_fuse(struct device *dev,
 		     uint16_t fuse_id, u32 *value);
