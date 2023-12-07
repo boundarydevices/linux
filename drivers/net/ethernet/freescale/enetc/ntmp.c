@@ -1493,11 +1493,13 @@ int ntmp_sgit_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_sgit_cfg *
 	void *tmp;
 	int err;
 
+	base_time = sgi->admin_bt;
 	if (sgcl) {
 		err = ntmp_sgclt_add_entry(cbdr, sgcl);
 		if (err)
 			return err;
 		sgi->admin_sgcl_eid = sgcl->sgcl_eid;
+		base_time = ntmp_adjust_base_time(cbdr, sgi->admin_bt, sgcl->ct);
 	}
 
 	data_size = sizeof(*req);
@@ -1509,7 +1511,6 @@ int ntmp_sgit_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_sgit_cfg *
 	req->crd.update_act = cpu_to_le16(7);
 	req->entry_id = cpu_to_le32(sgi->sgi_eid);
 	req->acfge.admin_sgcl_eid = cpu_to_le32(sgi->admin_sgcl_eid);
-	base_time = ntmp_adjust_base_time(cbdr, sgi->admin_bt, sgcl->ct);
 	req->acfge.admin_bt = cpu_to_le64(base_time);
 	req->acfge.admin_ct_ext = cpu_to_le32(sgi->admin_ct_ext);
 	/* Specify the gate state to be open before the admin stream
