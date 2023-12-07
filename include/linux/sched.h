@@ -1213,6 +1213,9 @@ struct task_struct {
 	enum blocked_on_state		blocked_on_state;
 	struct mutex			*blocked_on;	/* lock we're blocked on */
 	struct task_struct		*blocked_donor;	/* task that is boosting this task */
+#ifdef CONFIG_SCHED_PROXY_EXEC
+	struct list_head		migration_node;
+#endif
 	raw_spinlock_t			blocked_lock;
 
 #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
