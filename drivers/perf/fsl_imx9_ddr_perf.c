@@ -51,6 +51,7 @@
 
 #define NUM_COUNTERS		11
 #define CYCLES_COUNTER		0
+#define CYCLES_EVENT_ID		0
 
 #define to_ddr_pmu(p)		container_of(p, struct ddr_pmu, pmu)
 
@@ -253,6 +254,14 @@ static struct attribute *ddr_perf_events_attrs[] = {
 	IMX9_DDR_PMU_EVENT_ATTR(eddrtq_pmon_ld_rdq0, 66),
 	NULL,
 };
+
+static bool ddr_perf_is_specific_event(int event)
+{
+	if (event >= 64 && event <= 73)
+		return true;
+	else
+		return false;
+}
 
 static const struct attribute_group ddr_perf_events_attr_group = {
 	.name = "events",
@@ -502,6 +511,7 @@ static int ddr_perf_event_init(struct perf_event *event)
 	struct ddr_pmu *pmu = to_ddr_pmu(event->pmu);
 	struct hw_perf_event *hwc = &event->hw;
 	struct perf_event *sibling;
+	int event_id, counter;
 
 	if (event->attr.type != event->pmu->type)
 		return -ENOENT;
@@ -512,6 +522,18 @@ static int ddr_perf_event_init(struct perf_event *event)
 	if (event->cpu < 0) {
 		dev_warn(pmu->dev, "Can't provide per-task data!\n");
 		return -EOPNOTSUPP;
+	}
+
+	counter = (event->attr.config & 0xFF00) >> 8;
+	if (counter > NUM_COUNTERS) {
+		dev_warn(pmu->dev, "Only counter 0-10 is supported!\n");
+		return -EINVAL;
+	}
+
+	event_id = event->attr.config & 0x00FF;
+	if (ddr_perf_is_specific_event(event_id) && counter == 0) {
+		dev_err(pmu->dev, "Need specify counter for counter specific events!\n");
+		return -EINVAL;
 	}
 
 	/*
@@ -547,6 +569,39 @@ static void ddr_perf_event_start(struct perf_event *event, int flags)
 	hwc->state = 0;
 }
 
+static int ddr_perf_alloc_counter(struct ddr_pmu *pmu, int event, int counter)
+{
+	int i;
+
+	if (event == CYCLES_EVENT_ID) {
+		/*
+		 * Always map cycle event to counter 0.
+		 * Cycles counter is dedicated for cycle event
+		 * can't used for the other events.
+		 */
+		if (pmu->events[CYCLES_COUNTER] == NULL)
+			return CYCLES_COUNTER;
+	} else if (counter != 0) {
+		/*
+		 * 1. ddr_perf_event_init() will make sure counter
+		 *    is not 0 for counter specific events.
+		 * 2. Allow specify counter for referene event too.
+		 */
+		if (pmu->events[counter] == NULL)
+			return counter;
+	} else {
+		/*
+		 * Counter may be 0 if user doesn't specify it.
+		 * Auto allocate counter for referene event.
+		 */
+		for (i = 1; i < NUM_COUNTERS; i++)
+			if (pmu->events[i] == NULL)
+				return i;
+	}
+
+	return -ENOENT;
+}
+
 static int ddr_perf_event_add(struct perf_event *event, int flags)
 {
 	struct ddr_pmu *pmu = to_ddr_pmu(event->pmu);
@@ -554,9 +609,17 @@ static int ddr_perf_event_add(struct perf_event *event, int flags)
 	int cfg = event->attr.config;
 	int cfg1 = event->attr.config1;
 	int cfg2 = event->attr.config2;
-	int counter;
+	int event_id, counter;
 
-	counter = (cfg & 0x0000FF00) >> 8;
+	event_id = cfg & 0x00FF;
+	counter = (cfg & 0xFF00) >> 8;
+
+	/* check if counter is available */
+	counter = ddr_perf_alloc_counter(pmu, event_id, counter);
+	if (counter < 0) {
+		dev_dbg(pmu->dev, "There are not enough counters\n");
+		return -EOPNOTSUPP;
+	}
 
 	pmu->events[counter] = event;
 	pmu->active_events++;
@@ -593,9 +656,11 @@ static void ddr_perf_event_del(struct perf_event *event, int flags)
 {
 	struct ddr_pmu *pmu = to_ddr_pmu(event->pmu);
 	struct hw_perf_event *hwc = &event->hw;
+	int counter = hwc->idx;
 
 	ddr_perf_event_stop(event, PERF_EF_UPDATE);
 
+	pmu->events[counter] = NULL;
 	pmu->active_events--;
 	hwc->idx = -1;
 }
