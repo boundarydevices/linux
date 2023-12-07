@@ -950,7 +950,7 @@ int ntmp_ist_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_ist_cfg *cf
 	req->cfge.isc_eid = cpu_to_le32(cfg->isc_eid);
 	req->cfge.si_bitmap = cpu_to_le16(cfg->si_bitmap);
 	req->cfge.orp = cfg->orp;
-	req->cfge.osgi = cfg->orp;
+	req->cfge.osgi = cfg->osgi;
 
 	/* Request header */
 	len = NTMP_REQ_RESP_LEN(data_size, 0);
