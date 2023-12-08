@@ -24,6 +24,11 @@ struct seco_mu_ioctl_get_mu_info {
 	u8 interrupt_idx;
 	u8 tz;
 	u8 did;
+	u8 cmd_tag;
+	u8 rsp_tag;
+	u8 success_tag;
+	u8 base_api_ver;
+	u8 fw_api_ver;
 };
 
 struct seco_mu_ioctl_signed_message {

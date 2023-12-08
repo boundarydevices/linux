@@ -779,6 +779,12 @@ static int seco_mu_ioctl_get_mu_info_handler(struct seco_mu_device_ctx *dev_ctx,
 	info.seco_mu_idx = (u8)priv->seco_mu_id;
 	info.interrupt_idx = SECO_MU_INTERRUPT_INDEX;
 	info.tz = SECO_DEFAULT_TZ;
+	info.did = 0;
+	info.cmd_tag = (u8)priv->cmd_tag;
+	info.rsp_tag = (u8)priv->rsp_tag;
+	info.success_tag = 0;
+	info.base_api_ver = 0;
+	info.fw_api_ver = 0;
 
 	err = imx_sc_rm_get_did(priv->ipc_scu, &info.did);
 	if (err) {
