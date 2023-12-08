@@ -409,6 +409,10 @@
 	};
 };
 
+&mt6359_vcn18_ldo_reg {
+	regulator-always-on;
+};
+
 #ifndef UBOOT
 &afe {
 	#sound-dai-cells = <0>;
