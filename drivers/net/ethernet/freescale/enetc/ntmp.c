@@ -258,7 +258,6 @@ int ntmp_maft_add_entry(struct netc_cbdr *cbdr, u32 entry_id,
 		return -ENOMEM;
 
 	/* Set mac address filter table request data buffer */
-	memset(req, 0, data_size);
 	req->entry_id = cpu_to_le32(entry_id);
 	ether_addr_copy(req->keye.mac_addr, mac_addr);
 	req->cfge.si_bitmap = cpu_to_le16(si_bitmap);
@@ -297,7 +296,6 @@ int ntmp_maft_query_entry(struct netc_cbdr *cbdr, u32 entry_id,
 		return -ENOMEM;
 
 	/* Set mac address filter table request data buffer */
-	memset(req, 0, sizeof(*req));
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -345,7 +343,6 @@ int ntmp_maft_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 		return -ENOMEM;
 
 	/* Set mac address filter table request data buffer */
-	memset(req, 0, sizeof(*req));
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -390,7 +387,6 @@ int ntmp_rsst_query_or_update_entry(struct netc_cbdr *cbdr, u32 *table,
 		return -ENOMEM;
 
 	/* Set the request data buffer */
-	memset(req, 0, data_size);
 	if (query) {
 		len = NTMP_REQ_RESP_LEN(sizeof(*req), data_size);
 		ntmp_fill_request_headr(&cbd, dma, len, NTMP_RSST_ID,
@@ -452,7 +448,6 @@ int ntmp_tgst_query_entry(struct netc_cbdr *cbdr, u32 entry_id,
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, sizeof(*req));
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -526,7 +521,6 @@ int ntmp_tgst_delete_admin_gate_list(struct netc_cbdr *cbdr, u32 entry_id)
 	/* Set the request data buffer and set the admin control list len
 	 * to zero to delete the existing admin control list.
 	 */
-	memset(req, 0, sizeof(*req));
 	req->crd.update_act = cpu_to_le16(1);
 	req->crd.tbl_ver = 0;
 	req->entry_id = cpu_to_le32(entry_id);
@@ -588,7 +582,6 @@ int ntmp_tgst_update_admin_gate_list(struct netc_cbdr *cbdr, u32 entry_id,
 	ge = cfge->ge;
 
 	/* Set the request data buffer */
-	memset(req, 0, data_size);
 	req->crd.update_act = cpu_to_le16(1);
 	req->crd.tbl_ver = 0;
 	req->entry_id = cpu_to_le32(entry_id);
@@ -637,7 +630,6 @@ int ntmp_rpt_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_rpt_cfg *cf
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, data_size);
 	req->crd.update_act = cpu_to_le16(0xf);
 	req->entry_id = cpu_to_le32(cfg->rp_eid);
 	req->cfge.cbs = cpu_to_le32(cfg->cbs);
@@ -682,7 +674,6 @@ int ntmp_rpt_query_entry(struct netc_cbdr *cbdr, u32 entry_id,
 		return -ENOMEM;
 
 	/* Request data */
-	memset(req, 0, sizeof(*req));
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -748,7 +739,6 @@ int ntmp_rpt_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, sizeof(*req));
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -784,7 +774,6 @@ int ntmp_isit_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_isit_cfg *
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, sizeof(*req));
 	if (!add)
 		req->crd.update_act = cpu_to_le16(1);
 	else
@@ -854,7 +843,6 @@ int ntmp_isit_query_entry(struct netc_cbdr *cbdr, u32 entry_id,
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, sizeof(*req));
 	req->ak.entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -904,7 +892,6 @@ int ntmp_isit_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, sizeof(*req));
 	req->ak.entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -939,7 +926,6 @@ int ntmp_ist_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_ist_cfg *cf
 		return -ENOMEM;
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, sizeof(*req));
 	req->crd.update_act = cpu_to_le16(1);
 	req->entry_id = cpu_to_le32(cfg->is_eid);
 	req->cfge.sfe = cfg->sfe;
@@ -988,7 +974,6 @@ int ntmp_ist_query_entry(struct netc_cbdr *cbdr, u32 entry_id,
 		return -ENOMEM;
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, data_size);
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -1049,7 +1034,6 @@ int ntmp_ist_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 		return -ENOMEM;
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, data_size);
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -1084,7 +1068,6 @@ int ntmp_isft_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_isft_cfg *
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, data_size);
 	req->crd.update_act = cpu_to_le16(1);
 	if (add)
 		req->crd.query_act = 1;
@@ -1159,7 +1142,6 @@ int ntmp_isft_query_entry(struct netc_cbdr *cbdr, u32 entry_id,
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, sizeof(*req));
 	req->ak.entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -1219,7 +1201,6 @@ int ntmp_isft_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 		return -ENOMEM;
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, data_size);
 	req->ak.entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -1308,7 +1289,6 @@ static int ntmp_sgclt_add_entry(struct netc_cbdr *cbdr, struct ntmp_sgclt_cfg *s
 		return -ENOMEM;
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, data_size);
 	req->cfge.ct = cpu_to_le32(sgcl->ct);
 	req->cfge.ext_gtst = 1;
 	if (sgcl->init_ipv >= 0) {
@@ -1400,7 +1380,6 @@ int ntmp_sgclt_query_entry(struct netc_cbdr *cbdr, u32 entry_id,
 		return -ENOMEM;
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, data_size);
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -1462,7 +1441,6 @@ static int ntmp_sgclt_delete_entry(struct netc_cbdr *cbdr, u32 entry_id, u32 ent
 		return -ENOMEM;
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, data_size);
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -1507,7 +1485,6 @@ int ntmp_sgit_add_or_update_entry(struct netc_cbdr *cbdr, struct ntmp_sgit_cfg *
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, data_size);
 	req->crd.update_act = cpu_to_le16(7);
 	req->entry_id = cpu_to_le32(sgi->sgi_eid);
 	req->acfge.admin_sgcl_eid = cpu_to_le32(sgi->admin_sgcl_eid);
@@ -1560,7 +1537,6 @@ int ntmp_sgit_query_entry(struct netc_cbdr *cbdr, u32 sgi_eid,
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, sizeof(*req));
 	req->entry_id = cpu_to_le32(sgi_eid);
 
 	/* Request header */
@@ -1653,7 +1629,6 @@ int ntmp_sgit_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 	}
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, data_size);
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
@@ -1743,7 +1718,6 @@ int ntmp_isct_operate_entry(struct netc_cbdr *cbdr, u32 entry_id, int cmd,
 	if (!tmp)
 		return -ENOMEM;
 
-	memset(req, 0, sizeof(*req));
 	if (cmd & NTMP_CMD_UPDATE)
 		req->crd.update_act = cpu_to_le16(1);
 	req->entry_id = cpu_to_le32(entry_id);
@@ -1804,7 +1778,6 @@ int ntmp_ipft_add_entry(struct netc_cbdr *cbdr, struct ntmp_ipft_key *key,
 		return -ENOMEM;
 
 	/* Fill up NTMP request data buffer */
-	memset(req, 0, sizeof(*req));
 	req->crd.update_act = cpu_to_le16(3);
 	req->crd.query_act = 1;
 	req->keye.precedence = cpu_to_le16(key->precedence);
@@ -1885,8 +1858,6 @@ int ntmp_ipft_query_entry(struct netc_cbdr *cbdr, u32 entry_id,
 	if (!tmp)
 		return -ENOMEM;
 
-	/* Fill up NTMP request data buffer */
-	memset(req, 0, sizeof(*req));
 	/* Full Query */
 	req->crd.query_act = 0;
 	req->entry_id = cpu_to_le32(entry_id);
@@ -1973,7 +1944,6 @@ int ntmp_ipft_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 		return -ENOMEM;
 
 	/* Set mac address filter table request data buffer */
-	memset(req, 0, sizeof(*req));
 	req->entry_id = cpu_to_le32(entry_id);
 
 	/* Request header */
