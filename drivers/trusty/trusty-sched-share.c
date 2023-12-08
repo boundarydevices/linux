@@ -173,9 +173,9 @@ err_smc_std_call32:
 	}
 	kfree(sched_share_state->sg);
 err_resources_alloc:
-	kfree(sched_share_state);
 	dev_warn(sched_share_state->dev,
 		 "Trusty-Sched_Share API not available.\n");
+	kfree(sched_share_state);
 err_sched_state_alloc:
 	return NULL;
 }
