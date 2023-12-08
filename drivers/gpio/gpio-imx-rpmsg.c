@@ -454,7 +454,7 @@ static int imx_rpmsg_gpio_probe(struct platform_device *pdev)
 	gc->parent = dev;
 	gc->label = kasprintf(GFP_KERNEL, "imx-rpmsg-gpio-%d", port->idx);
 	gc->ngpio = IMX_RPMSG_GPIO_PER_PORT;
-	gc->base = of_alias_get_id(np, "gpio") * IMX_RPMSG_GPIO_PER_PORT;
+	gc->base = -1;
 
 	gc->direction_input = imx_rpmsg_gpio_direction_input;
 	gc->direction_output = imx_rpmsg_gpio_direction_output;
