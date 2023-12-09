@@ -210,6 +210,12 @@
 	};
 
 	/* Wifi */
+	pinctrl_wifi_pwrseq: wifi-pwrseqgrp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_NAND_READY_B_GPIO3_IO16, 0x150)
+		>;
+	};
+
 	pinctrl_usdhc3: usdhc3grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_NAND_WE_B_USDHC3_CLK, 0x10)
@@ -218,7 +224,6 @@
 			MX8MMN(IOMUXC_NAND_DATA05_USDHC3_DATA1, 0x150)
 			MX8MMN(IOMUXC_NAND_DATA06_USDHC3_DATA2, 0x150)
 			MX8MMN(IOMUXC_NAND_DATA07_USDHC3_DATA3, 0x150)
-			MX8MMN(IOMUXC_NAND_READY_B_USDHC3_RESET_B, 0x150)
 		>;
 	};
 
@@ -254,6 +259,15 @@
 / {
 	aliases {
 		mipi_to_lvds_alt = &mipi_to_lvds_alt;
+	};
+
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wifi_pwrseq>;
+		reset-gpios = <&gpio3 16 GPIO_ACTIVE_LOW>;
+		post-power-on-delay-ms = <200>;
 	};
 
 	gpio_keys_batt: gpio-keys-batt {
@@ -710,6 +724,7 @@
 	vmmc-supply = <&reg_wlan_vmmc>;
 	vqmmc-1-8-v;
 	vqmmc-supply = <&reg_vref_1v8>;
+	mmc-pwrseq = <&wifi_pwrseq>;
 	#address-cells = <1>;
 	#size-cells = <0>;
 
