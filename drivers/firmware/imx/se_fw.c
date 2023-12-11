@@ -892,7 +892,8 @@ static int ele_mu_ioctl_get_soc_info_handler(struct ele_mu_device_ctx *dev_ctx,
 	soc_info.soc_id = info_list->soc_id;
 	soc_info.soc_rev = info_list->soc_rev;
 
-	if (copy_to_user((u8 *)arg, (u8 *)(&soc_info), sizeof(soc_info))) {
+	err = (int)copy_to_user((u8 *)arg, (u8 *)(&soc_info), sizeof(soc_info));
+	if (err) {
 		dev_err(dev_ctx->priv->dev,
 			"%s: Failed to copy soc info to user\n",
 			dev_ctx->miscdev.name);
