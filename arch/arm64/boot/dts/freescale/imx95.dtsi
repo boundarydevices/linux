@@ -2653,6 +2653,37 @@
 			status = "disabled";
 		};
 
+		pcie1_ep: pcie-ep@4c380000 {
+			compatible = "fsl,imx95-pcie-ep";
+			reg = <0 0x4c380000 0 0x10000>,
+			      <0 0x4c3a0000 0 0x1000>,
+			      <0 0x4c3e0000 0 0x1000>,
+			      <0 0x4c3f0000 0 0x10000>,
+			      <0xa 0 1 0>;
+			reg-names = "dbi", "dbi2", "atu", "dma", "addr_space";
+			num-lanes = <1>;
+			interrupts = <GIC_SPI 317 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "dma";
+			fsl,max-link-speed = <3>;
+			clocks = <&scmi_clk IMX95_CLK_HSIO>,
+				 <&scmi_clk IMX95_CLK_HSIOPLL>,
+				 <&scmi_clk IMX95_CLK_HSIOPLL_VCO>,
+				 <&scmi_clk IMX95_CLK_HSIOPCIEAUX>;
+			clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_aux";
+			assigned-clocks =<&scmi_clk IMX95_CLK_HSIOPLL_VCO>,
+					 <&scmi_clk IMX95_CLK_HSIOPLL>,
+					 <&scmi_clk IMX95_CLK_HSIOPCIEAUX>;
+			assigned-clock-rates = <3600000000>, <100000000>, <10000000>;
+			assigned-clock-parents = <0>, <0>,
+						 <&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>;
+			ctrl-ssr = <&serdes1_ssr>;
+			power-domains = <&scmi_devpd IMX95_PD_HSIO_TOP>;
+			power-domain-names = "pd_pcie";
+			num-ib-windows = <8>;
+			num-ob-windows = <8>;
+			status = "disabled";
+		};
+
 		serdes1_ssr: ssr@4c3c0000 {
 			compatible = "fsl,imx95-serdes-syscfg", "syscon";
 			reg = <0 0x4c3c0000 0 0x2000>;
