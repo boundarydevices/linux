@@ -2751,7 +2751,6 @@
 			assigned-clocks = <&scmi_clk IMX95_CLK_BUSNETCMIX>;
 			assigned-clock-parents = <&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>;
 			assigned-clock-rates = <133333333>;
-			power-domains = <&scmi_devpd IMX95_PD_NETC>;
 		};
 
 		sai2: sai@4c880000 {
@@ -2762,7 +2761,6 @@
 				 <&scmi_clk IMX95_CLK_SAI2>, <&dummy>,
 				 <&dummy>;
 			clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
-			power-domains = <&scmi_devpd IMX95_PD_NETC>;
 			dmas = <&edma2 59 0 1>, <&edma2 58 0 0>;
 			dma-names = "rx", "tx";
 			status = "disabled";
@@ -2794,7 +2792,6 @@
 				  0x82000000 0x0 0x4cd20000  0x0 0x4cd20000  0x0 0x60000
 				  /* ENETC0~2: VF0-1 BAR2 - prefetchable memory */
 				  0xc2000000 0x0 0x4cd80000  0x0 0x4cd80000  0x0 0x60000>;
-			power-domains = <&scmi_devpd IMX95_PD_NETC>;
 			assigned-clocks = <&scmi_clk IMX95_CLK_ENET>,
 					  <&scmi_clk IMX95_CLK_ENETREF>;
 			assigned-clock-parents = <&scmi_clk IMX95_CLK_SYSPLL1_PFD2>,
@@ -2845,7 +2842,6 @@
 			ranges = <0x82000000 0x0 0x4cce0000  0x0 0x4cce0000  0x0 0x20000
 				  /* EMDIO BAR2 - prefetchable memory */
 				  0xc2000000 0x0 0x4cd10000  0x0 0x4cd10000  0x0 0x10000>;
-			power-domains = <&scmi_devpd IMX95_PD_NETC>;
 
 			netc_emdio: mdio@0,0 {
 				compatible = "fsl,imx95-netc-emdio";
@@ -2861,7 +2857,6 @@
 			reg = <0x0 0x4cde0000 0x0 0x10000>,
 			      <0x0 0x4cdf0000 0x0 0x10000>;
 			reg-names = "ierb_base", "prb_base";
-			power-domains = <&scmi_devpd IMX95_PD_NETC>;
 		};
 
 		ddr-pmu@4e090dc0 {
