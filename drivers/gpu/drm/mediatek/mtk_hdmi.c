@@ -924,7 +924,7 @@ void mtk_hdmi_clk_enable(struct mtk_hdmi *hdmi)
 	if (hdmi && hdmi->conf && hdmi->conf->clk_enable)
 		hdmi->conf->clk_enable(hdmi);
 	else
-		dev_warn(hdmi->dev, "[%s][%d] hdmi clk_enable not defined\n", __func__, __LINE__);
+		DRM_WARN("[%s][%d] hdmi clk_enable not defined\n", __func__, __LINE__);
 }
 
 void mtk_hdmi_clk_disable(struct mtk_hdmi *hdmi)
@@ -932,7 +932,7 @@ void mtk_hdmi_clk_disable(struct mtk_hdmi *hdmi)
 	if (hdmi && hdmi->conf && hdmi->conf->clk_disable)
 		hdmi->conf->clk_disable(hdmi);
 	else
-		dev_warn(hdmi->dev, "[%s][%d] hdmi clk_disable not defined\n", __func__, __LINE__);
+		DRM_WARN("[%s][%d] hdmi clk_disable not defined\n", __func__, __LINE__);
 }
 
 static enum drm_connector_status
