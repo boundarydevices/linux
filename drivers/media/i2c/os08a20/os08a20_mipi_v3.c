@@ -975,6 +975,7 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 	long ret = 0;
 	struct vvcam_sccb_data_s sensor_reg;
 	void *arg = arg_user;
+	int enable = 0;
 
 	mutex_lock(&sensor->lock);
 	switch (cmd){
@@ -1012,7 +1013,10 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 		break;
 	case VVSENSORIOC_S_STREAM:
 		USER_TO_KERNEL(int);
-		ret = os08a20_s_stream(&sensor->subdev, *(int *)arg);
+		enable = *(int *)arg;
+		if ((enable && !sensor->stream_status) ||
+		    (!enable && sensor->stream_status))
+			ret = os08a20_s_stream(&sensor->subdev, *(int *)arg);
 		break;
 	case VVSENSORIOC_WRITE_REG:
 		ret = copy_from_user(&sensor_reg, arg,
