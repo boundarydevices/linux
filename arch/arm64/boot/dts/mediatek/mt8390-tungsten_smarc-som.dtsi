@@ -505,10 +505,6 @@
 	poweron-in-hs-mode = <0>;
 };
 
-&dmic_codec {
-	wakeup-delay-ms = <200>;
-};
-
 &hdmi0 {
 	status = "okay";
 };
@@ -854,10 +850,6 @@
 
 		codec-0 {
 			sound-dai = <&pmic 0>;
-		};
-
-		codec-1 {
-			sound-dai = <&dmic_codec>;
 		};
 	};
 
