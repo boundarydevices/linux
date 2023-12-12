@@ -9,6 +9,7 @@
 #include <linux/errno.h>
 #include <linux/export.h>
 #include <linux/firmware/imx/ele_base_msg.h>
+#include <linux/firmware/imx/v2x_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
 #include <linux/firmware/imx/se_fw_inc.h>
 #include <linux/genalloc.h>
@@ -56,7 +57,7 @@ struct imx_info {
 	bool init_fw;
 	/* platform specific flag to enable/disable the ELE True RNG */
 	bool v2x_state_check;
-	bool start_rng;
+	int (*start_rng)(struct device *dev);
 	bool enable_ele_trng;
 	bool imem_mgmt;
 };
@@ -92,7 +93,7 @@ static const struct imx_info_list imx8ulp_info = {
 				.reserved_dma_ranges = true,
 				.init_fw = false,
 				.v2x_state_check = false,
-				.start_rng = true,
+				.start_rng = ele_start_rng,
 				.enable_ele_trng = false,
 				.imem_mgmt = true,
 			},
@@ -121,7 +122,7 @@ static const struct imx_info_list imx93_info = {
 				.reserved_dma_ranges = true,
 				.init_fw = true,
 				.v2x_state_check = false,
-				.start_rng = true,
+				.start_rng = ele_start_rng,
 				.enable_ele_trng = true,
 				.imem_mgmt = false,
 			},
@@ -129,7 +130,7 @@ static const struct imx_info_list imx93_info = {
 };
 
 static const struct imx_info_list imx95_info = {
-	.num_mu = 2,
+	.num_mu = 3,
 	.soc_id = SOC_ID_OF_IMX95,
 	.info = {
 			{
@@ -150,7 +151,29 @@ static const struct imx_info_list imx95_info = {
 				.reserved_dma_ranges = false,
 				.init_fw = false,
 				.v2x_state_check = true,
-				.start_rng = false,
+				.start_rng = NULL,
+				.enable_ele_trng = false,
+				.imem_mgmt = false,
+			},
+			{
+				.pdev_name = {"v2x-fw0", "mu0"},
+				.socdev = false,
+				.mu_id = 0,
+				.mu_did = 0,
+				.max_dev_ctx = 1,
+				.cmd_tag = 0x17,
+				.rsp_tag = 0xe1,
+				.success_tag = 0xd6,
+				.base_api_ver = 0x2,
+				.fw_api_ver = 0x2,
+				.se_name = "seco",
+				.pool_name = NULL,
+				.mbox_tx_name = "tx",
+				.mbox_rx_name = "rx",
+				.reserved_dma_ranges = false,
+				.init_fw = false,
+				.v2x_state_check = true,
+				.start_rng = v2x_start_rng,
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 			},
@@ -172,7 +195,7 @@ static const struct imx_info_list imx95_info = {
 				.reserved_dma_ranges = false,
 				.init_fw = false,
 				.v2x_state_check = true,
-				.start_rng = false,
+				.start_rng = NULL,
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 			},
@@ -1442,7 +1465,7 @@ static int se_fw_probe(struct platform_device *pdev)
 
 	/* start ele rng */
 	if (info->start_rng) {
-		ret = ele_do_start_rng(dev);
+		ret = info->start_rng(dev);
 		if (ret)
 			dev_err(dev, "Failed to start ele rng\n");
 	}
