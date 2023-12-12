@@ -634,13 +634,13 @@ static void ak4458_reset(struct ak4458_priv *ak4458, bool active)
 {
 	if (ak4458->reset_gpiod) {
 		gpiod_set_value_cansleep(ak4458->reset_gpiod, active);
-		usleep_range(1000, 2000);
+		usleep_range(2000, 3000);
 	} else if (!IS_ERR_OR_NULL(ak4458->reset)) {
 		if (active)
 			reset_control_assert(ak4458->reset);
 		else
 			reset_control_deassert(ak4458->reset);
-		usleep_range(1000, 2000);
+		usleep_range(2000, 3000);
 	}
 }
 
