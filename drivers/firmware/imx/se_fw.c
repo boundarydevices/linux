@@ -149,10 +149,10 @@ static const struct imx_info_list imx95_info = {
 				.mbox_rx_name = "rx",
 				.pool_name = NULL,
 				.reserved_dma_ranges = false,
-				.init_fw = false,
+				.init_fw = true,
 				.v2x_state_check = true,
-				.start_rng = NULL,
-				.enable_ele_trng = false,
+				.start_rng = ele_start_rng,
+				.enable_ele_trng = true,
 				.imem_mgmt = false,
 			},
 			{
