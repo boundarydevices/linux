@@ -332,12 +332,7 @@
 					};
 				};
 
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					port0 {};
-				};
+				port {};
 			};
 
 			ports {
