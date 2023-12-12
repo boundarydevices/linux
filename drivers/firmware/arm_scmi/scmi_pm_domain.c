@@ -28,6 +28,10 @@ static int scmi_pd_power(struct generic_pm_domain *domain, bool power_on)
 	u32 state, ret_state;
 	struct scmi_pm_domain *pd = to_scmi_pd(domain);
 
+	/* FIXME: temp workaround for netcmix pd always on */
+	if (!strcmp(pd->name, "netc") && !power_on)
+		return 0;
+
 	if (power_on)
 		state = SCMI_POWER_STATE_GENERIC_ON;
 	else
