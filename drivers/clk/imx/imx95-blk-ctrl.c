@@ -6,6 +6,7 @@
 #include <dt-bindings/clock/fsl,imx95-clock.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/pm_runtime.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/err.h>
@@ -47,6 +48,7 @@ struct imx95_blk_ctrl_clk_dev_data {
 struct imx95_blk_ctrl_dev_data {
 	const struct imx95_blk_ctrl_clk_dev_data *clk_dev_data;
 	u32 num_clks;
+	bool rpm_enabled;
 };
 
 static const struct imx95_blk_ctrl_clk_dev_data vpublk_clk_dev_data[] = {
@@ -85,6 +87,7 @@ static const struct imx95_blk_ctrl_clk_dev_data vpublk_clk_dev_data[] = {
 static const struct imx95_blk_ctrl_dev_data vpublk_dev_data = {
 	.num_clks = IMX95_CLK_VPUBLK_END,
 	.clk_dev_data = vpublk_clk_dev_data,
+	.rpm_enabled = true,
 };
 
 static const struct imx95_blk_ctrl_clk_dev_data camblk_clk_dev_data[] = {
@@ -266,6 +269,9 @@ static int imx95_bc_probe(struct platform_device *pdev)
 	if (!clk_hw_data)
 		return -ENOMEM;
 
+	if (bc_data->rpm_enabled)
+		pm_runtime_enable(&pdev->dev);
+
 	clk_hw_data->num = bc_data->num_clks;
 	hws = clk_hw_data->hws;
 
@@ -312,6 +318,9 @@ cleanup:
 			continue;
 		clk_hw_unregister(hws[i]);
 	}
+
+	if (bc_data->rpm_enabled)
+		pm_runtime_disable(&pdev->dev);
 
 	return ret;
 }
