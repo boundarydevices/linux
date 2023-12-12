@@ -61,7 +61,7 @@ endif
 
 # Do not include host rules unless needed
 ifneq ($(dtbo-y),)
-include scripts/Makefile.dtbo
+include scripts/Makefile.dtbos
 endif
 
 ifndef obj
