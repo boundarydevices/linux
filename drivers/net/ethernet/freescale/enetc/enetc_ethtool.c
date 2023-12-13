@@ -836,6 +836,7 @@ static int enetc4_set_ipft_entry(struct enetc_si *si, struct ethtool_rx_flow_spe
 	struct ethhdr *eth_h, *eth_m;
 	struct ntmp_ipft_key *key;
 	struct ntmp_ipft_cfg cfg;
+	int err;
 
 	key = kzalloc(sizeof(*key), GFP_KERNEL);
 	if (!key)
@@ -852,8 +853,10 @@ static int enetc4_set_ipft_entry(struct enetc_si *si, struct ethtool_rx_flow_spe
 		int i;
 		u8 *p;
 
-		if (sizeof(h_ext->data) > NTMP_IPFT_MAX_PLD_LEN)
-			return -EOPNOTSUPP;
+		if (sizeof(h_ext->data) > NTMP_IPFT_MAX_PLD_LEN) {
+			err = -EOPNOTSUPP;
+			goto end;
+		}
 
 		h_ext = &fs->h_ext;
 		m_ext = &fs->m_ext;
@@ -977,7 +980,12 @@ l4ip6:
 		cfg.filter = 0;
 	}
 
-	return ntmp_ipft_add_entry(&si->cbdr, key, &cfg, entry_id);
+	err = ntmp_ipft_add_entry(&si->cbdr, key, &cfg, entry_id);
+
+end:
+	kfree(key);
+
+	return err;
 }
 
 static int enetc_validate_flow_rule(struct net_device *ndev, struct ethtool_rx_flow_spec *fs)

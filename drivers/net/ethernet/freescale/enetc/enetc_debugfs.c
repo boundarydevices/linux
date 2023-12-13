@@ -27,8 +27,10 @@ static int enetc_tgst_show(struct seq_file *s, void *data)
 		return -ENOMEM;
 
 	port = enetc4_pf_to_port(si->pdev);
-	if (port < 0)
-		return -EINVAL;
+	if (port < 0) {
+		err = -EINVAL;
+		goto end;
+	}
 
 	err = ntmp_tgst_query_entry(&si->cbdr, port, info);
 	if (err)
@@ -443,7 +445,7 @@ static int enetc_ipf_entry_show(struct seq_file *s, struct enetc_si *si, u32 ent
 
 	err = ntmp_ipft_query_entry(&si->cbdr, entry_id, info);
 	if (err)
-		return err;
+		goto end;
 
 	dscp = info->key.dscp & NTMP_IPFT_DSCP;
 	dscp_mask = (info->key.dscp & NTMP_IPFT_DSCP_MASK) >> 6;
@@ -512,7 +514,10 @@ static int enetc_ipf_entry_show(struct seq_file *s, struct enetc_si *si, u32 ent
 	seq_printf(s, "Target For Selected Filter Action:0x%x\n", info->cfg.flta_tgt);
 	seq_puts(s, "\n");
 
-	return 0;
+end:
+	kfree(info);
+
+	return err;
 }
 
 static int enetc_ipf_show(struct seq_file *s, void *data)

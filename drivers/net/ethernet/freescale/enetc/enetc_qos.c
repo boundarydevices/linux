@@ -2054,7 +2054,7 @@ static int enetc4_psfp_parse_clsflower(struct enetc_ndev_priv *priv,
 	if (gate_entry->gate.num_entries > NTMP_SGCLT_MAX_GE_NUM) {
 		NL_SET_ERR_MSG_MOD(extack, "No Stream Gate Control List resource!");
 		err = -ENOSPC;
-		goto free_is;
+		goto free_sgi;
 	}
 
 	sgclt_cfg_size = struct_size(sgclt_cfg, entries, gate_entry->gate.num_entries);
