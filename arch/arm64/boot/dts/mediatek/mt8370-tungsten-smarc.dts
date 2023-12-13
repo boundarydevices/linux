@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2023 Boundary Devices
+ */
+/dts-v1/;
+#include "mt8370.dtsi"
+#include "mt83x0-tungsten-smarc.dtsi"
+
+/ {
+	model = "Boundary Devices Tungsten510 SMARC (MT8370)";
+	compatible = "boundary,mt8370-tungsten-smarc", "mediatek,mt8188";
+};
+
+&sound {
+	model = "mt8370-evk";
+};
