@@ -1246,7 +1246,7 @@ static u32 ntmp_sgclt_find_free_entry_id(struct netc_cbdr *cbdr, u32 entry_size)
 		entry_id = find_first_zero_bit(cbdr->sgclt_used_words,
 					       cbdr->sgclt_words_num);
 		if (entry_id == cbdr->sgclt_words_num)
-			return -1;
+			return NTMP_NULL_ENTRY_ID;
 
 		next_eid = find_next_bit(cbdr->sgclt_used_words,
 					 cbdr->sgclt_words_num,
@@ -1256,7 +1256,7 @@ static u32 ntmp_sgclt_find_free_entry_id(struct netc_cbdr *cbdr, u32 entry_size)
 		 next_eid != cbdr->sgclt_words_num);
 
 	if (size < entry_size)
-		return -1;
+		return NTMP_NULL_ENTRY_ID;
 
 	for (i = entry_id; i < entry_id + entry_size; i++)
 		set_bit(i, cbdr->sgclt_used_words);
@@ -1278,9 +1278,10 @@ static int ntmp_sgclt_add_entry(struct netc_cbdr *cbdr, struct ntmp_sgclt_cfg *s
 	u32 data_size, entry_size, len;
 	struct sgclt_req_add *req;
 	u64 total_interval = 0;
-	int i, entry_id, err;
 	union netc_cbd cbd;
 	dma_addr_t dma;
+	u32 entry_id;
+	int i, err;
 	void *tmp;
 
 	data_size = struct_size(req, cfge.ge, sgcl->num_gates);
@@ -1330,7 +1331,7 @@ static int ntmp_sgclt_add_entry(struct netc_cbdr *cbdr, struct ntmp_sgclt_cfg *s
 
 	entry_size = 1 + (sgcl->num_gates + 1) / 2;
 	entry_id = ntmp_sgclt_find_free_entry_id(cbdr, entry_size);
-	if (entry_id < 0) {
+	if (entry_id == NTMP_NULL_ENTRY_ID) {
 		dev_err(cbdr->dma_dev,
 			"Not enough free words in the SGCL table!\n");
 		err = -ENOSPC;
