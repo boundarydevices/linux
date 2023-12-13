@@ -211,14 +211,6 @@ static irqreturn_t netc_timer_isr(int irq, void *data)
 		netc_timer_alarm_write(priv, NETC_TMR_DEFAULT_ALARM, 0);
 	}
 
-	if (tmr_event & TMR_TEVENT_ETS1EN) {
-		/* TODO */
-		event.type = PTP_CLOCK_EXTTS;
-		event.index = 0;
-		//event.timestamp = ;
-		ptp_clock_event(priv->clock, &event);
-	}
-
 	spin_unlock_irqrestore(&priv->lock, flags);
 
 	return IRQ_HANDLED;
