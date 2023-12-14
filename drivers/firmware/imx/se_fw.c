@@ -160,7 +160,7 @@ static const struct imx_info_list imx95_info = {
 				.socdev = false,
 				.mu_id = 0,
 				.mu_did = 0,
-				.max_dev_ctx = 1,
+				.max_dev_ctx = 0,
 				.cmd_tag = 0x17,
 				.rsp_tag = 0xe1,
 				.success_tag = 0xd6,
@@ -1280,14 +1280,38 @@ static int se_fw_probe(struct platform_device *pdev)
 	int i;
 	struct device_node *np;
 
+	info = get_imx_info((struct imx_info_list *)of_id->data,
+			    pdev->name, strlen(pdev->name) + 1);
+
+	if (!info) {
+		dev_err(dev, "Cannot find matching dev-info. %s\n",
+			pdev->name);
+		ret = -1;
+		return ret;
+	}
+
+	if (info->v2x_state_check) {
+		/* Check if it is the V2X MU, but V2X-FW is not
+		 * loaded, then exit.
+		 */
+		if (v2x_fw_state != V2X_FW_STATE_RUNNING &&
+			!memcmp(info->se_name, "seco", 5)) {
+			ret = -1;
+			dev_err(dev, "Failure: V2X FW is not loaded.");
+			return ret;
+		}
+	}
+
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
 		ret = -ENOMEM;
 		dev_err(dev, "Fail allocate mem for private data\n");
 		return ret;
 	}
-	memset(priv, 0x0, sizeof(*priv));
 	priv->dev = dev;
+	priv->info = info;
+	memcpy(priv->pdev_name, pdev->name, strlen(pdev->name) + 1);
+
 	dev_set_drvdata(dev, priv);
 
 	list_add_tail(&priv->priv_data, &priv_data_list);
@@ -1315,17 +1339,6 @@ static int se_fw_probe(struct platform_device *pdev)
 	priv->ele_mb_cl.knows_txdone	= true;
 	priv->ele_mb_cl.rx_callback	= ele_mu_rx_callback;
 
-	info = get_imx_info((struct imx_info_list *)of_id->data,
-			    pdev->name, strlen(pdev->name) + 1);
-
-	if (!info) {
-		dev_err(dev, "Cannot find matching dev-info. %s\n",
-			pdev->name);
-		goto exit;
-	}
-
-	priv->info = info;
-	memcpy(priv->pdev_name, pdev->name, strlen(pdev->name) + 1);
 	priv->max_dev_ctx = info->max_dev_ctx;
 	priv->cmd_tag = info->cmd_tag;
 	priv->rsp_tag = info->rsp_tag;
@@ -1354,7 +1367,7 @@ static int se_fw_probe(struct platform_device *pdev)
 	priv->ctxs = devm_kzalloc(dev, sizeof(dev_ctx) * priv->max_dev_ctx,
 				  GFP_KERNEL);
 
-	if (!priv->ctxs) {
+	if (!priv->ctxs && priv->max_dev_ctx) {
 		ret = -ENOMEM;
 		dev_err(dev, "Fail allocate mem for private dev-ctxs.\n");
 		goto exit;
@@ -1417,8 +1430,6 @@ static int se_fw_probe(struct platform_device *pdev)
 	init_completion(&priv->done);
 	spin_lock_init(&priv->lock);
 
-	dev_set_drvdata(dev, priv);
-
 	if (info->reserved_dma_ranges) {
 		ret = of_reserved_mem_device_init(dev);
 		if (ret) {
@@ -1434,8 +1445,10 @@ static int se_fw_probe(struct platform_device *pdev)
 	if (info->init_fw) {
 		/* start initializing ele fw */
 		ret = ele_init_fw(dev);
-		if (ret)
+		if (ret) {
 			dev_err(dev, "Failed to initialize ele fw.\n");
+			goto exit;
+		}
 	}
 
 	if (info->socdev) {
