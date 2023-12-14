@@ -65,6 +65,12 @@ int ele_get_random(struct device *dev,
 	u8 *buf;
 	int ret;
 
+	/* As per RBG3(RS) construction mentioned in NIST SP800-90C,
+	 * CTR_DRBG generates 128(full entropy) bits after reseeding
+	 * the CTR_DRBG with 256 bits of entropy. so splitting the
+	 * user rng request in multiple of 128 bits & enforce reseed
+	 * for every iteration.
+	 */
 	len = ELE_RNG_MAX_SIZE;
 	buf = dmam_alloc_coherent(priv->dev, len, &dst_dma, GFP_KERNEL);
 	if (!buf) {
@@ -85,6 +91,9 @@ int ele_get_random(struct device *dev,
 	if (ret)
 		goto exit;
 
+	/* bit 1(blocking reseed): wait for trng entropy,
+	 * then reseed rng context.
+	 */
 	priv->tx_msg->data[0] = BIT(1);
 	priv->tx_msg->data[1] = dst_dma;
 	priv->tx_msg->data[2] = len;
