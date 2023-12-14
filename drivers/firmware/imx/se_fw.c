@@ -1268,16 +1268,97 @@ static int se_probe_cleanup(struct platform_device *pdev)
 	return ret;
 }
 
+static int init_device_context(struct device *dev)
+{
+	int ret = 0;
+	int i;
+	struct ele_mu_device_ctx *dev_ctx;
+	struct ele_mu_priv *priv;
+	const struct imx_info *info;
+	char *devname;
+
+	priv = dev_get_drvdata(dev);
+
+	if (!priv) {
+		ret = -EINVAL;
+		dev_err(dev, "Invalid ELE-MU Priv data");
+		return ret;
+	}
+	info = priv->info;
+
+	priv->ctxs = devm_kzalloc(dev, sizeof(dev_ctx) * priv->max_dev_ctx,
+				  GFP_KERNEL);
+
+	if (!priv->ctxs) {
+		ret = -ENOMEM;
+		dev_err(dev, "Fail allocate mem for private dev-ctxs.\n");
+		return ret;
+	}
+
+	/* Create users */
+	for (i = 0; i < priv->max_dev_ctx; i++) {
+		dev_ctx = devm_kzalloc(dev, sizeof(*dev_ctx), GFP_KERNEL);
+		if (!dev_ctx) {
+			ret = -ENOMEM;
+			dev_err(dev,
+				"Fail to allocate memory for device context\n");
+			return ret;
+		}
+
+		dev_ctx->dev = dev;
+		dev_ctx->status = MU_FREE;
+		dev_ctx->priv = priv;
+
+		priv->ctxs[i] = dev_ctx;
+
+		/* Default value invalid for an header. */
+		init_waitqueue_head(&dev_ctx->wq);
+
+		INIT_LIST_HEAD(&dev_ctx->pending_out);
+		INIT_LIST_HEAD(&dev_ctx->pending_in);
+		sema_init(&dev_ctx->fops_lock, 1);
+
+		devname = devm_kasprintf(dev, GFP_KERNEL, "%s_%s_ch%d",
+					 info->se_name,
+					 info->pdev_name[1], i);
+		if (!devname) {
+			ret = -ENOMEM;
+			dev_err(dev,
+				"Fail to allocate memory for misc dev name\n");
+			return ret;
+		}
+
+		dev_ctx->miscdev.name = devname;
+		dev_ctx->miscdev.minor = MISC_DYNAMIC_MINOR;
+		dev_ctx->miscdev.fops = &ele_mu_fops;
+		dev_ctx->miscdev.parent = dev;
+		ret = misc_register(&dev_ctx->miscdev);
+		if (ret) {
+			dev_err(dev, "failed to register misc device %d\n",
+				ret);
+			return ret;
+		}
+
+		ret = devm_add_action(dev, if_misc_deregister,
+				      &dev_ctx->miscdev);
+		if (ret) {
+			dev_err(dev,
+				"failed[%d] to add action to the misc-dev\n",
+				ret);
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
 static int se_fw_probe(struct platform_device *pdev)
 {
-	struct ele_mu_device_ctx *dev_ctx;
 	struct device *dev = &pdev->dev;
 	struct ele_mu_priv *priv;
 	const struct of_device_id *of_id = of_match_device(se_fw_match, dev);
 	struct imx_info *info = NULL;
-	char *devname;
 	int ret;
-	int i;
 	struct device_node *np;
 
 	info = get_imx_info((struct imx_info_list *)of_id->data,
@@ -1364,69 +1445,6 @@ static int se_fw_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	priv->ctxs = devm_kzalloc(dev, sizeof(dev_ctx) * priv->max_dev_ctx,
-				  GFP_KERNEL);
-
-	if (!priv->ctxs && priv->max_dev_ctx) {
-		ret = -ENOMEM;
-		dev_err(dev, "Fail allocate mem for private dev-ctxs.\n");
-		goto exit;
-	}
-
-	/* Create users */
-	for (i = 0; i < priv->max_dev_ctx; i++) {
-		dev_ctx = devm_kzalloc(dev, sizeof(*dev_ctx), GFP_KERNEL);
-		if (!dev_ctx) {
-			ret = -ENOMEM;
-			dev_err(dev,
-				"Fail to allocate memory for device context\n");
-			goto exit;
-		}
-
-		dev_ctx->dev = dev;
-		dev_ctx->status = MU_FREE;
-		dev_ctx->priv = priv;
-
-		priv->ctxs[i] = dev_ctx;
-
-		/* Default value invalid for an header. */
-		init_waitqueue_head(&dev_ctx->wq);
-
-		INIT_LIST_HEAD(&dev_ctx->pending_out);
-		INIT_LIST_HEAD(&dev_ctx->pending_in);
-		sema_init(&dev_ctx->fops_lock, 1);
-
-		devname = devm_kasprintf(dev, GFP_KERNEL, "%s_%s_ch%d",
-					 info->se_name,
-					 info->pdev_name[1], i);
-		if (!devname) {
-			ret = -ENOMEM;
-			dev_err(dev,
-				"Fail to allocate memory for misc dev name\n");
-			goto exit;
-		}
-
-		dev_ctx->miscdev.name = devname;
-		dev_ctx->miscdev.minor = MISC_DYNAMIC_MINOR;
-		dev_ctx->miscdev.fops = &ele_mu_fops;
-		dev_ctx->miscdev.parent = dev;
-		ret = misc_register(&dev_ctx->miscdev);
-		if (ret) {
-			dev_err(dev, "failed to register misc device %d\n",
-				ret);
-			goto exit;
-		}
-
-		ret = devm_add_action(dev, if_misc_deregister,
-				      &dev_ctx->miscdev);
-		if (ret) {
-			dev_err(dev,
-				"failed[%d] to add action to the misc-dev\n",
-				ret);
-			goto exit;
-		}
-	}
-
 	init_completion(&priv->done);
 	spin_lock_init(&priv->lock);
 
@@ -1505,6 +1523,17 @@ static int se_fw_probe(struct platform_device *pdev)
 			goto exit;
 		}
 	}
+
+	if (info->max_dev_ctx) {
+		ret = init_device_context(dev);
+		if (ret) {
+			dev_err(dev,
+				"Failed to create device contexts.\n");
+			ret = -ENOMEM;
+			goto exit;
+		}
+	}
+
 	dev_info(dev, "i.MX secure-enclave: %s interface to firmware, configured.\n",
 		info->pdev_name[1]);
 
