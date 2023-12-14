@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * NEOISP nodes description
+ *
+ * Copyright 2023 NXP
+ */
+
+#include <linux/videodev2.h>
+#include "neoisp.h"
+
+const struct neoisp_node_desc_s node_desc[NEOISP_NODES_COUNT] = {
+	/* NEOISP_DCG_NODE */
+	{
+		.ent_name = NEOISP_NAME "-dcg",
+		.buf_type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+		.caps = V4L2_CAP_VIDEO_OUTPUT_MPLANE,
+	},
+	/* NEOISP_VS_NODE */
+	{
+		.ent_name = NEOISP_NAME "-vs",
+		.buf_type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+		.caps = V4L2_CAP_VIDEO_OUTPUT_MPLANE,
+	},
+	/* NEOISP_PARAMS_NODE */
+	{
+		.ent_name = NEOISP_NAME "-params",
+		.buf_type = V4L2_BUF_TYPE_META_OUTPUT,
+		.caps = V4L2_CAP_META_OUTPUT,
+	},
+	/* NEOISP_FRAME_NODE */
+	{
+		.ent_name = NEOISP_NAME "-frame",
+		.buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
+		.caps = V4L2_CAP_VIDEO_CAPTURE_MPLANE,
+	},
+	/* NEOISP_IR_NODE */
+	{
+		.ent_name = NEOISP_NAME "-ir",
+		.buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
+		.caps = V4L2_CAP_VIDEO_CAPTURE_MPLANE,
+	},
+	/* NEOISP_STATS_NODE */
+	{
+		.ent_name = NEOISP_NAME "-stats",
+		.buf_type = V4L2_BUF_TYPE_META_CAPTURE,
+		.caps = V4L2_CAP_META_CAPTURE,
+	}
+};
