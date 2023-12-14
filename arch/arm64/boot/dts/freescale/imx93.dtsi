@@ -514,7 +514,7 @@
 			};
 
 			tmu: tmu@44482000 {
-				compatible = "fsl,qoriq-tmu";
+				compatible ="fsl,imx93-tmu", "fsl,qoriq-tmu";
 				reg = <0x44482000 0x1000>;
 				clocks = <&clk IMX93_CLK_TMC_GATE>;
 				little-endian;
