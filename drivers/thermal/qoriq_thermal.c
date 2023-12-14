@@ -248,15 +248,6 @@ static int qoriq_tmu_register_tmu_zone(struct device *dev,
 		}
 	}
 
-	if (sites) {
-		if (qdata->ver == TMU_VER1) {
-			regmap_write(qdata->regmap, REGS_TMR, TMR_ME | TMR_ALPF | sites);
-		} else {
-			regmap_write(qdata->regmap, REGS_V2_TMSR, sites);
-			regmap_write(qdata->regmap, REGS_TMR, TMR_ME | TMR_ALPF_V2);
-		}
-	}
-
 	return 0;
 }
 
@@ -295,33 +286,6 @@ static int qoriq_tmu_calibration(struct device *dev,
 		regmap_write(data->regmap, REGS_TTCFGR, val);
 		val = of_read_number(calibration + 1, 1);
 		regmap_write(data->regmap, REGS_TSCFGR, val);
-	}
-
-	return 0;
-}
-
-static int imx93_tmu_calibration(struct device *dev,
-				 struct qoriq_tmu_data *data)
-{
-	const u32 *calibration = NULL;
-	u32 cal_pt = 0;
-	u32 val = 0;
-	unsigned int len = 0;
-	unsigned int i = 0;
-
-	calibration = of_get_property(dev->of_node, "fsl,tmu-calibration", &len);
-	if (calibration == NULL || len / 8 > 16 || len % 8) {
-		dev_err(dev, "invalid tmu calibration\n");
-		return -ENODEV;
-	}
-
-	for (i = 0; i < len; i += 0x8, calibration += 2) {
-		cal_pt = i / 8;
-		regmap_write(data->regmap, REGS_TTCFGR, cal_pt);
-		val = of_read_number(calibration, 1);
-		regmap_write(data->regmap, REGS_TSCFGR, val);
-		val = of_read_number(calibration + 1, 1);
-		regmap_write(data->regmap, REGS_TTRnCR(cal_pt), val);
 	}
 
 	return 0;
@@ -443,10 +407,7 @@ static int qoriq_tmu_probe(struct platform_device *pdev)
 
 	qoriq_tmu_init_device(data);	/* TMU initialization */
 
-	if (data->ver == TMU_VER93)
-		ret = imx93_tmu_calibration(dev, data);
-	else
-		ret = qoriq_tmu_calibration(dev, data);	/* TMU calibration */
+	ret = qoriq_tmu_calibration(dev, data);	/* TMU calibration */
 	if (ret < 0)
 		return ret;
 
