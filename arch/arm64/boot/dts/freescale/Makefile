@@ -464,6 +464,9 @@ dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-jdi-wuxga-lvds-panel.dtb
 imx95-19x19-evk-jtag-dtbs := imx95-19x19-evk.dtb imx95-19x19-evk-jtag.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-jtag.dtb
 
+imx95-19x19-evk-neoisp-dtbs := imx95-19x19-evk.dtb imx95-19x19-evk-neoisp.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-neoisp.dtb
+
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-titan.dtb
 
 imx95-19x19-titan-adv7535-dtbs := imx95-19x19-titan.dtb imx95-19x19-titan-adv7535.dtbo
