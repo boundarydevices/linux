@@ -82,6 +82,16 @@
 #define TCR_RXMSK	BIT(19)
 #define TCR_TXMSK	BIT(18)
 
+enum fsl_lpspi_devtype {
+	IMX7ULP_LPSPI,
+	IMX93_LPSPI,
+	IMX95_LPSPI,
+};
+
+struct fsl_lpspi_devtype_data {
+	enum fsl_lpspi_devtype devtype;
+};
+
 struct lpspi_config {
 	u8 bpw;
 	u8 chip_select;
@@ -119,10 +129,49 @@ struct fsl_lpspi_data {
 	bool usedma;
 	struct completion dma_rx_completion;
 	struct completion dma_tx_completion;
+	/* DMA for slave*/
+	struct spi_transfer		*cur_transfer;
+
+	const struct fsl_lpspi_devtype_data *devtype_data;
 };
 
+static inline int is_imx7ulp_lpspi(struct fsl_lpspi_data *d)
+{
+	return d->devtype_data->devtype == IMX7ULP_LPSPI;
+};
+
+static inline int is_imx93_lpspi(struct fsl_lpspi_data *d)
+{
+	return d->devtype_data->devtype == IMX93_LPSPI;
+};
+
+static inline int is_imx95_lpspi(struct fsl_lpspi_data *d)
+{
+	return d->devtype_data->devtype == IMX95_LPSPI;
+};
+
+
+static struct fsl_lpspi_devtype_data imx93_lpspi_devtype_data = {
+	.devtype = IMX93_LPSPI,
+};
+
+static struct fsl_lpspi_devtype_data imx95_lpspi_devtype_data = {
+	.devtype = IMX95_LPSPI,
+};
+
+static struct fsl_lpspi_devtype_data imx7ulp_lpspi_devtype_data = {
+	.devtype = IMX7ULP_LPSPI,
+};
+
+/*
+ * IMX95, IMX93 have a different edma driver from imx7ulp, so lpspi slave
+ * will have different settings according to the edma of different platforms
+ * to meet the needs of each platform.
+ */
 static const struct of_device_id fsl_lpspi_dt_ids[] = {
-	{ .compatible = "fsl,imx7ulp-spi", },
+	{ .compatible = "fsl,imx7ulp-spi", .data = &imx7ulp_lpspi_devtype_data,},
+	{ .compatible = "fsl,imx93-spi", .data = &imx93_lpspi_devtype_data,},
+	{ .compatible = "fsl,imx95-spi", .data = &imx95_lpspi_devtype_data,},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fsl_lpspi_dt_ids);
@@ -339,7 +388,7 @@ static int fsl_lpspi_set_bitrate(struct fsl_lpspi_data *fsl_lpspi)
 
 static int fsl_lpspi_dma_configure(struct spi_controller *controller)
 {
-	int ret;
+	int ret, dma_burst;
 	enum dma_slave_buswidth buswidth;
 	struct dma_slave_config rx = {}, tx = {};
 	struct fsl_lpspi_data *fsl_lpspi =
@@ -359,10 +408,23 @@ static int fsl_lpspi_dma_configure(struct spi_controller *controller)
 		return -EINVAL;
 	}
 
+	if (fsl_lpspi->is_target && (is_imx95_lpspi(fsl_lpspi) || is_imx93_lpspi(fsl_lpspi))) {
+
+		/*
+		 * Dma maxburst should equal to fifo watermark. But when data length <= fifo_size/2
+		 * dma should burst all data into fifo.
+		 */
+		if (fsl_lpspi->cur_transfer->len > fsl_lpspi->txfifosize >> 1)
+			dma_burst = fsl_lpspi->txfifosize >> 1;
+		else
+			dma_burst = fsl_lpspi->cur_transfer->len;
+	} else
+		dma_burst = 1;
+
 	tx.direction = DMA_MEM_TO_DEV;
 	tx.dst_addr = fsl_lpspi->base_phys + IMX7ULP_TDR;
 	tx.dst_addr_width = buswidth;
-	tx.dst_maxburst = 1;
+	tx.dst_maxburst = dma_burst;
 	ret = dmaengine_slave_config(controller->dma_tx, &tx);
 	if (ret) {
 		dev_err(fsl_lpspi->dev, "TX dma configuration failed with %d\n",
@@ -551,6 +613,90 @@ static int fsl_lpspi_calculate_timeout(struct fsl_lpspi_data *fsl_lpspi,
 	return msecs_to_jiffies(2 * timeout * MSEC_PER_SEC);
 }
 
+static struct sg_table *fsl_lpspi_allocate_sg_for_target(struct spi_controller *controller,
+		       enum dma_data_direction dir)
+{
+	struct fsl_lpspi_data *fsl_lpspi = spi_controller_get_devdata(controller);
+	struct spi_transfer *xfer = fsl_lpspi->cur_transfer;
+	struct scatterlist *sg;
+	struct sg_table *sgt;
+	struct dma_chan *chan;
+	size_t bytes;
+	const void *buf, *pbuf;
+	int i, ret, sg_num, len, tail;
+
+	/*
+	 * When lpspi transfer data is not a multiple of edma burst, it means that
+	 * there is a tail data which edma can not burst the data into fifo. So add
+	 * an extra sg to help edma to handle the tail data. Edma will automatically
+	 * reduce burst length to ensure that tail data can be burst to FIFO correctly.
+	 * Using an extra sg to handle tail data using a lower edma performance but it
+	 * can ensure other data can be bursted into FIFO using a higher edma performance.
+	 */
+	len = xfer->len;
+	if (len > fsl_lpspi->txfifosize >> 1)
+		tail = len % (fsl_lpspi->txfifosize >> 1);
+	else
+		tail = 0;
+
+	switch (dir) {
+	case DMA_FROM_DEVICE:
+		chan = controller->dma_rx;
+		buf = xfer->rx_buf;
+		sgt = &xfer->rx_sg;
+		break;
+	case DMA_TO_DEVICE:
+		chan = controller->dma_tx;
+		buf = xfer->tx_buf;
+		sgt = &xfer->tx_sg;
+		break;
+	default:
+		return ERR_PTR(-EINVAL);
+	}
+
+	if (!virt_addr_valid(buf))
+		return ERR_PTR(-EINVAL);
+
+	sg_num = DIV_ROUND_UP(len, PAGE_SIZE);
+	if (tail)
+		sg_num += 1;
+
+	sg_free_table(sgt);
+
+	ret = sg_alloc_table(sgt, sg_num, GFP_KERNEL);
+
+	if (ret) {
+		sg_free_table(sgt);
+		return ERR_PTR(ret);
+	}
+
+	pbuf = buf;
+	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
+		if (i == (sg_num - 1) && tail)
+			bytes = min_t(size_t, tail, PAGE_SIZE);
+		else
+			bytes = min_t(size_t, len - tail, PAGE_SIZE);
+
+		sg_set_buf(sg, pbuf, bytes);
+
+		pbuf += bytes;
+		len -= bytes;
+	}
+
+	if (WARN_ON(len)) {
+		dev_err(&controller->dev, "len = %d but expected 0!\n", len);
+		sg_free_table(sgt);
+		return ERR_PTR(-EINVAL);
+	}
+
+	sg_num = dma_map_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
+	if (!sg_num) {
+		sg_free_table(sgt);
+		return ERR_PTR(-ENOMEM);
+	}
+	return sgt;
+}
+
 static int fsl_lpspi_dma_transfer(struct spi_controller *controller,
 				struct fsl_lpspi_data *fsl_lpspi,
 				struct spi_transfer *transfer)
@@ -558,12 +704,37 @@ static int fsl_lpspi_dma_transfer(struct spi_controller *controller,
 	struct dma_async_tx_descriptor *desc_tx, *desc_rx;
 	unsigned long transfer_timeout;
 	unsigned long timeout;
-	struct sg_table *tx = &transfer->tx_sg, *rx = &transfer->rx_sg;
+	struct sg_table *tx, *rx;
 	int ret;
 
-	ret = fsl_lpspi_dma_configure(controller);
-	if (ret)
-		return ret;
+	/* Only lpspi slave on imx93 and imx95 need using the special edma configuration */
+	if (fsl_lpspi->is_target && (is_imx95_lpspi(fsl_lpspi) || is_imx93_lpspi(fsl_lpspi))) {
+		fsl_lpspi->cur_transfer = transfer;
+		ret = fsl_lpspi_dma_configure(controller);
+		if (ret)
+			return ret;
+
+		rx = fsl_lpspi_allocate_sg_for_target(controller, DMA_FROM_DEVICE);
+		if (IS_ERR(rx)) {
+			dev_err(&controller->dev, "DMA allocate RX sgtable failed: %ld\n",
+				PTR_ERR(rx));
+			return PTR_ERR(rx);
+		}
+
+		tx = fsl_lpspi_allocate_sg_for_target(controller, DMA_TO_DEVICE);
+		if (IS_ERR(tx)) {
+			dev_err(&controller->dev, "DMA allocate TX sgtable failed: %ld\n",
+				PTR_ERR(tx));
+			return PTR_ERR(tx);
+		}
+	} else {
+		ret = fsl_lpspi_dma_configure(controller);
+		if (ret)
+			return ret;
+
+		tx = &transfer->tx_sg;
+		rx = &transfer->rx_sg;
+	}
 
 	desc_rx = dmaengine_prep_slave_sg(controller->dma_rx,
 				rx->sgl, rx->nents, DMA_DEV_TO_MEM,
@@ -725,6 +896,12 @@ static int fsl_lpspi_transfer_one(struct spi_controller *controller,
 					spi_controller_get_devdata(controller);
 	int ret;
 
+	/*
+	 * Reset FIFO and clear flags when start TO transfer to avoid
+	 * being affected if there is a previous abnormal transmission.
+	 */
+	fsl_lpspi_reset(fsl_lpspi);
+
 	fsl_lpspi->is_first_byte = true;
 	ret = fsl_lpspi_setup_transfer(controller, spi, t);
 	if (ret < 0)
@@ -846,10 +1023,13 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, controller);
 
 	fsl_lpspi = spi_controller_get_devdata(controller);
+	const struct fsl_lpspi_devtype_data *devtype_data =
+			of_device_get_match_data(&pdev->dev);
 	fsl_lpspi->dev = &pdev->dev;
 	fsl_lpspi->is_target = is_target;
 	fsl_lpspi->is_only_cs1 = of_property_read_bool((&pdev->dev)->of_node,
 						"fsl,spi-only-use-cs1-sel");
+	fsl_lpspi->devtype_data = devtype_data;
 
 	init_completion(&fsl_lpspi->xfer_done);
 
