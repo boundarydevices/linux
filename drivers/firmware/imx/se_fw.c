@@ -1247,8 +1247,12 @@ static int se_probe_cleanup(struct platform_device *pdev)
 
 	if (priv->ctxs) {
 		for (i = 0; i < priv->max_dev_ctx; i++) {
-			if (priv->ctxs[i])
+			if (priv->ctxs[i]) {
+				devm_remove_action(dev, if_misc_deregister,
+						   &priv->ctxs[i]->miscdev);
+				misc_deregister(&priv->ctxs[i]->miscdev);
 				devm_kfree(dev, priv->ctxs[i]);
+			}
 		}
 		devm_kfree(dev, priv->ctxs);
 	}
