@@ -6684,6 +6684,7 @@ static int mt8365_afe_pcm_dev_probe(struct platform_device *pdev)
 	int ret, i, sel_irq;
 	unsigned int irq_id;
 	struct resource *res;
+	struct snd_soc_component *component;
 
 	afe = devm_kzalloc(&pdev->dev, sizeof(*afe), GFP_KERNEL);
 	if (!afe)
@@ -6795,10 +6796,27 @@ static int mt8365_afe_pcm_dev_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = devm_snd_soc_register_component(&pdev->dev,
-					      &mt8365_afe_pcm_dai_component,
-					      mt8365_afe_pcm_dais,
-					      ARRAY_SIZE(mt8365_afe_pcm_dais));
+	component = devm_kzalloc(dev, sizeof(*component), GFP_KERNEL);
+	if (!component) {
+		ret = -ENOMEM;
+		return ret;
+	}
+
+	ret = snd_soc_component_initialize(component,
+					   &mt8365_afe_pcm_dai_component,
+					   dev);
+	if (ret) {
+		dev_warn(dev, "err_dai_component\n");
+		return ret;
+	}
+
+#ifdef CONFIG_DEBUG_FS
+	component->debugfs_prefix = "pcm";
+#endif
+
+	ret = snd_soc_add_component(component,
+				    mt8365_afe_pcm_dais,
+				    ARRAY_SIZE(mt8365_afe_pcm_dais));
 	if (ret) {
 		dev_warn(dev, "err_dai_component\n");
 		return ret;
@@ -6816,6 +6834,8 @@ static int mt8365_afe_pcm_dev_probe(struct platform_device *pdev)
 static int mt8365_afe_pcm_dev_remove(struct platform_device *pdev)
 {
 	struct mtk_base_afe *afe = platform_get_drvdata(pdev);
+
+	snd_soc_unregister_component(&pdev->dev);
 
 	mt8365_afe_cleanup_debugfs(afe);
 	mt8365_afe_disable_top_cg(afe, MT8365_TOP_CG_AFE);
