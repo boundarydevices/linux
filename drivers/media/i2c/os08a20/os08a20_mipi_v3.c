@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Copyright (C) 2012-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright 2018 NXP
@@ -51,10 +52,11 @@
 	container_of(i2c_get_clientdata(client), struct os08a20, subdev)
 
 /*
-Use USER_TO_KERNEL/KERNEL_TO_USER to fix "uaccess" exception on run time.
-Also, use "copy_ret" to fix the build issue as below.
-error: ignoring return value of function declared with 'warn_unused_result' attribute.
-*/
+ * Use USER_TO_KERNEL/KERNEL_TO_USER to fix "uaccess" exception on run time.
+ * Also, use "copy_ret" to fix the build issue as below.
+ * error: ignoring return value of function declared with 'warn_unused_result'
+ * attribute.
+ */
 
 #ifdef CONFIG_HARDENED_USERCOPY
 #define USER_TO_KERNEL(TYPE) \
@@ -92,7 +94,6 @@ error: ignoring return value of function declared with 'warn_unused_result' attr
 #define KERNEL_TO_USER_VMALLOC(TYPE)
 #endif
 
-
 struct os08a20_capture_properties {
 	__u64 max_lane_frequency;
 	__u64 max_pixel_frequency;
@@ -121,10 +122,10 @@ struct os08a20 {
 	struct media_pad pads[OS08A20_SENS_PADS_NUM];
 
 	struct v4l2_mbus_framefmt format;
-	vvcam_mode_info_t cur_mode;
-	sensor_blc_t blc;
-	sensor_white_balance_t wb;
-	struct mutex lock;
+	struct vvcam_mode_info_s cur_mode;
+	struct sensor_blc_s blc;
+	struct sensor_white_balance_s wb;
+	struct mutex lock; /* sensor lock */
 	u32 stream_status;
 	u32 resume_status;
 	struct os08a20_ctrls ctrls;
@@ -148,22 +149,22 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 		},
 		.bayer_pattern  = BAYER_BGGR,
 		.ae_info = {
-			.def_frm_len_lines     = 0x4a4,
-			.curr_frm_len_lines    = 0x4a4,
-			.one_line_exp_time_ns  = 14029,
-			.max_integration_line  = 0x4a4 - 8,
-			.min_integration_line  = 8,
-			.max_again             = 15.5 * (1 << SENSOR_FIX_FRACBITS),
-			.min_again             = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_dgain             = 4    * (1 << SENSOR_FIX_FRACBITS),
-			.min_dgain             = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.start_exposure        = 8 * 100 * (1 << SENSOR_FIX_FRACBITS),
-			.cur_fps               = 60   * (1 << SENSOR_FIX_FRACBITS),
-			.max_fps               = 60   * (1 << SENSOR_FIX_FRACBITS),
-			.min_fps               = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.min_afps              = 5    * (1 << SENSOR_FIX_FRACBITS),
-			.int_update_delay_frm  = 1,
-			.gain_update_delay_frm = 1,
+			.def_frm_len_lines	= 0x4a4,
+			.curr_frm_len_lines	= 0x4a4,
+			.one_line_exp_time_ns	= 14029,
+			.max_integration_line	= 0x4a4 - 8,
+			.min_integration_line	= 8,
+			.max_again	= 15.5 * (1 << SENSOR_FIX_FRACBITS),
+			.min_again	= 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_dgain	= 4    * (1 << SENSOR_FIX_FRACBITS),
+			.min_dgain	= 1    * (1 << SENSOR_FIX_FRACBITS),
+			.start_exposure	= 8 * 100 * (1 << SENSOR_FIX_FRACBITS),
+			.cur_fps	= 60   * (1 << SENSOR_FIX_FRACBITS),
+			.max_fps	= 60   * (1 << SENSOR_FIX_FRACBITS),
+			.min_fps	= 1    * (1 << SENSOR_FIX_FRACBITS),
+			.min_afps	= 5    * (1 << SENSOR_FIX_FRACBITS),
+			.int_update_delay_frm	= 1,
+			.gain_update_delay_frm	= 1,
 		},
 		.mipi_info = {
 			.mipi_lane = 4,
@@ -198,25 +199,25 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.max_vsintegration_line = 56,
 			.min_vsintegration_line = 8,
 
-			.max_again             = 15.5 * (1 << SENSOR_FIX_FRACBITS),
-			.min_again             = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_dgain             = 4    * (1 << SENSOR_FIX_FRACBITS),
-			.min_dgain             = 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_again	= 15.5 * (1 << SENSOR_FIX_FRACBITS),
+			.min_again	= 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_dgain	= 4    * (1 << SENSOR_FIX_FRACBITS),
+			.min_dgain	= 1    * (1 << SENSOR_FIX_FRACBITS),
 
-			.max_short_again       = 15.5 * (1 << SENSOR_FIX_FRACBITS),
-			.min_short_again       = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_short_dgain       = 4    * (1 << SENSOR_FIX_FRACBITS),
-			.min_short_dgain       = 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_short_again = 15.5 * (1 << SENSOR_FIX_FRACBITS),
+			.min_short_again = 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_short_dgain = 4    * (1 << SENSOR_FIX_FRACBITS),
+			.min_short_dgain = 1    * (1 << SENSOR_FIX_FRACBITS),
 
-			.start_exposure        = 8 * 800 * (1 << SENSOR_FIX_FRACBITS),
-			.cur_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
-			.max_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
-			.min_fps               = 1  * (1 << SENSOR_FIX_FRACBITS),
-			.min_afps              = 5  * (1 << SENSOR_FIX_FRACBITS),
-			.hdr_ratio             = {
-				.ratio_l_s     = 0,
-				.ratio_s_vs    = 8 * (1 << SENSOR_FIX_FRACBITS),
-				.accuracy      = (1 << SENSOR_FIX_FRACBITS),
+			.start_exposure	= 8 * 800 * (1 << SENSOR_FIX_FRACBITS),
+			.cur_fps	= 30 * (1 << SENSOR_FIX_FRACBITS),
+			.max_fps	= 30 * (1 << SENSOR_FIX_FRACBITS),
+			.min_fps	= 1  * (1 << SENSOR_FIX_FRACBITS),
+			.min_afps	= 5  * (1 << SENSOR_FIX_FRACBITS),
+			.hdr_ratio	= {
+				.ratio_l_s = 0,
+				.ratio_s_vs = 8 * (1 << SENSOR_FIX_FRACBITS),
+				.accuracy = (1 << SENSOR_FIX_FRACBITS),
 			},
 			.int_update_delay_frm  = 1,
 			.gain_update_delay_frm = 1,
@@ -250,16 +251,16 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.max_integration_line  = 0x8f0 - 8,
 			.min_integration_line  = 8,
 
-			.max_again             = 15.5 * (1 << SENSOR_FIX_FRACBITS),
-			.min_again             = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_dgain             = 4    * (1 << SENSOR_FIX_FRACBITS),
-			.min_dgain             = 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_again	= 15.5 * (1 << SENSOR_FIX_FRACBITS),
+			.min_again	= 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_dgain	= 4    * (1 << SENSOR_FIX_FRACBITS),
+			.min_dgain	= 1    * (1 << SENSOR_FIX_FRACBITS),
 
-			.start_exposure        = 8 * 100 * (1 << SENSOR_FIX_FRACBITS),
-			.cur_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
-			.max_fps               = 30 * (1 << SENSOR_FIX_FRACBITS),
-			.min_fps               = 1  * (1 << SENSOR_FIX_FRACBITS),
-			.min_afps              = 5  * (1 << SENSOR_FIX_FRACBITS),
+			.start_exposure	= 8 * 100 * (1 << SENSOR_FIX_FRACBITS),
+			.cur_fps	= 30 * (1 << SENSOR_FIX_FRACBITS),
+			.max_fps	= 30 * (1 << SENSOR_FIX_FRACBITS),
+			.min_fps	= 1  * (1 << SENSOR_FIX_FRACBITS),
+			.min_afps	= 5  * (1 << SENSOR_FIX_FRACBITS),
 			.int_update_delay_frm  = 1,
 			.gain_update_delay_frm = 1,
 		},
@@ -296,25 +297,25 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 			.max_vsintegration_line = 56,
 			.min_vsintegration_line = 8,
 
-			.max_again             = 15.5 * (1 << SENSOR_FIX_FRACBITS),
-			.min_again             = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_dgain             = 4    * (1 << SENSOR_FIX_FRACBITS),
-			.min_dgain             = 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_again	= 15.5 * (1 << SENSOR_FIX_FRACBITS),
+			.min_again	= 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_dgain	= 4    * (1 << SENSOR_FIX_FRACBITS),
+			.min_dgain	= 1    * (1 << SENSOR_FIX_FRACBITS),
 
-			.max_short_again       = 15.5 * (1 << SENSOR_FIX_FRACBITS),
-			.min_short_again       = 1    * (1 << SENSOR_FIX_FRACBITS),
-			.max_short_dgain       = 4    * (1 << SENSOR_FIX_FRACBITS),
-			.min_short_dgain       = 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_short_again = 15.5 * (1 << SENSOR_FIX_FRACBITS),
+			.min_short_again = 1    * (1 << SENSOR_FIX_FRACBITS),
+			.max_short_dgain = 4    * (1 << SENSOR_FIX_FRACBITS),
+			.min_short_dgain = 1    * (1 << SENSOR_FIX_FRACBITS),
 
-			.start_exposure        = 8 * 800 * (1 << SENSOR_FIX_FRACBITS),
-			.cur_fps               = 15 * (1 << SENSOR_FIX_FRACBITS),
-			.max_fps               = 15 * (1 << SENSOR_FIX_FRACBITS),
-			.min_fps               = 1  * (1 << SENSOR_FIX_FRACBITS),
-			.min_afps              = 5  * (1 << SENSOR_FIX_FRACBITS),
-			.hdr_ratio             = {
-				.ratio_l_s     = 0,
-				.ratio_s_vs    = 8 * (1 << SENSOR_FIX_FRACBITS),
-				.accuracy      = (1 << SENSOR_FIX_FRACBITS),
+			.start_exposure	= 8 * 800 * (1 << SENSOR_FIX_FRACBITS),
+			.cur_fps	= 15 * (1 << SENSOR_FIX_FRACBITS),
+			.max_fps	= 15 * (1 << SENSOR_FIX_FRACBITS),
+			.min_fps	= 1  * (1 << SENSOR_FIX_FRACBITS),
+			.min_afps	= 5  * (1 << SENSOR_FIX_FRACBITS),
+			.hdr_ratio	= {
+				.ratio_l_s = 0,
+				.ratio_s_vs = 8 * (1 << SENSOR_FIX_FRACBITS),
+				.accuracy = (1 << SENSOR_FIX_FRACBITS),
 			},
 			.int_update_delay_frm  = 1,
 			.gain_update_delay_frm = 1,
@@ -329,22 +330,21 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 
 static int os08a20_power_on(struct os08a20 *sensor)
 {
+	struct device *dev = &sensor->i2c_client->dev;
 	int ret;
-	pr_debug("enter %s\n", __func__);
 
 	if (gpio_is_valid(sensor->pwn_gpio))
 		gpio_set_value_cansleep(sensor->pwn_gpio, 1);
 
 	ret = clk_prepare_enable(sensor->sensor_clk);
 	if (ret < 0)
-		pr_err("%s: enable sensor clk fail\n", __func__);
+		dev_err(dev, "%s: enable sensor clk fail\n", __func__);
 
 	return ret;
 }
 
 static int os08a20_power_off(struct os08a20 *sensor)
 {
-	pr_debug("enter %s\n", __func__);
 	if (gpio_is_valid(sensor->pwn_gpio))
 		gpio_set_value_cansleep(sensor->pwn_gpio, 0);
 	clk_disable_unprepare(sensor->sensor_clk);
@@ -358,7 +358,6 @@ static int os08a20_runtime_suspend(struct device *dev)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
 
-	pr_debug("enter %s\n", __func__);
 	return os08a20_power_off(sensor);
 }
 
@@ -368,7 +367,6 @@ static int os08a20_runtime_resume(struct device *dev)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
 
-	pr_debug("enter %s\n", __func__);
 	return os08a20_power_on(sensor);
 }
 
@@ -376,6 +374,7 @@ static int os08a20_get_clk(struct os08a20 *sensor, void *clk)
 {
 	struct vvcam_clk_s vvcam_clk;
 	int ret = 0;
+
 	vvcam_clk.sensor_mclk = clk_get_rate(sensor->sensor_clk);
 	vvcam_clk.csi_max_pixel_clk = sensor->ocp.max_pixel_frequency;
 	ret = copy_to_user(clk, &vvcam_clk, sizeof(struct vvcam_clk_s));
@@ -387,13 +386,13 @@ static int os08a20_get_clk(struct os08a20 *sensor, void *clk)
 static int os08a20_write_reg(struct os08a20 *sensor, u16 reg, u8 val)
 {
 	struct device *dev = &sensor->i2c_client->dev;
-	u8 au8Buf[3] = { 0 };
+	u8 buf[3] = { 0 };
 
-	au8Buf[0] = reg >> 8;
-	au8Buf[1] = reg & 0xff;
-	au8Buf[2] = val;
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	buf[2] = val;
 
-	if (i2c_master_send(sensor->i2c_client, au8Buf, 3) < 0) {
+	if (i2c_master_send(sensor->i2c_client, buf, 3) < 0) {
 		dev_err(dev, "Write reg error: reg=%x, val=%x\n", reg, val);
 		return -1;
 	}
@@ -404,23 +403,20 @@ static int os08a20_write_reg(struct os08a20 *sensor, u16 reg, u8 val)
 static int os08a20_read_reg(struct os08a20 *sensor, u16 reg, u8 *val)
 {
 	struct device *dev = &sensor->i2c_client->dev;
-	u8 au8RegBuf[2] = { 0 };
-	u8 u8RdVal = 0;
+	u8 buf[2] = { 0 };
 
-	au8RegBuf[0] = reg >> 8;
-	au8RegBuf[1] = reg & 0xff;
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
 
-	if (i2c_master_send(sensor->i2c_client, au8RegBuf, 2) != 2) {
+	if (i2c_master_send(sensor->i2c_client, buf, 2) != 2) {
 		dev_err(dev, "Read reg error: reg=%x\n", reg);
 		return -1;
 	}
 
-	if (i2c_master_recv(sensor->i2c_client, &u8RdVal, 1) != 1) {
-		dev_err(dev, "Read reg error: reg=%x, val=%x\n", reg, u8RdVal);
+	if (i2c_master_recv(sensor->i2c_client, val, 1) != 1) {
+		dev_err(dev, "Read reg error: reg=%x, val=%x\n", reg, *val);
 		return -1;
 	}
-
-	*val = u8RdVal;
 
 	return 0;
 }
@@ -435,6 +431,7 @@ static int os08a20_write_reg_arry(struct os08a20 *sensor,
 	u8 *send_buf;
 	u32 send_buf_len = 0;
 	struct i2c_client *i2c_client = sensor->i2c_client;
+	struct device *dev = &sensor->i2c_client->dev;
 
 	send_buf = (u8 *)kmalloc(size + 2, GFP_KERNEL);
 	if (!send_buf)
@@ -443,8 +440,8 @@ static int os08a20_write_reg_arry(struct os08a20 *sensor,
 	send_buf[send_buf_len++] = (reg_arry[0].addr >> 8) & 0xff;
 	send_buf[send_buf_len++] = reg_arry[0].addr & 0xff;
 	send_buf[send_buf_len++] = reg_arry[0].data & 0xff;
-	for (i=1; i < size; i++) {
-		if (reg_arry[i].addr == (reg_arry[i-1].addr + 1)){
+	for (i = 1; i < size; i++) {
+		if (reg_arry[i].addr == (reg_arry[i - 1].addr + 1)) {
 			send_buf[send_buf_len++] = reg_arry[i].data & 0xff;
 		} else {
 			msg.addr  = i2c_client->addr;
@@ -453,7 +450,7 @@ static int os08a20_write_reg_arry(struct os08a20 *sensor,
 			msg.len   = send_buf_len;
 			ret = i2c_transfer(i2c_client->adapter, &msg, 1);
 			if (ret < 0) {
-				pr_err("%s:i2c transfer error\n",__func__);
+				dev_err(dev, "%s:i2c transfer error\n", __func__);
 				kfree(send_buf);
 				return ret;
 			}
@@ -474,12 +471,12 @@ static int os08a20_write_reg_arry(struct os08a20 *sensor,
 		msg.len   = send_buf_len;
 		ret = i2c_transfer(i2c_client->adapter, &msg, 1);
 		if (ret < 0)
-			pr_err("%s:i2c transfer end meg error\n",__func__);
+			dev_err(dev, "%s:i2c transfer end msg error\n", __func__);
 		else
 			ret = 0;
-
 	}
 	kfree(send_buf);
+
 	return ret;
 }
 
@@ -487,9 +484,9 @@ static int os08a20_query_capability(struct os08a20 *sensor, void *arg)
 {
 	struct v4l2_capability *pcap = (struct v4l2_capability *)arg;
 
-	strcpy((char *)pcap->driver, "os08a20");
-	sprintf((char *)pcap->bus_info, "csi%d",sensor->csi_id);
-	if(sensor->i2c_client->adapter) {
+	strscpy((char *)pcap->driver, "os08a20", sizeof(pcap->driver));
+	sprintf((char *)pcap->bus_info, "csi%d", sensor->csi_id);
+	if (sensor->i2c_client->adapter) {
 		pcap->bus_info[VVCAM_CAP_BUS_INFO_I2C_ADAPTER_NR_POS] =
 			(__u8)sensor->i2c_client->adapter->nr;
 	} else {
@@ -499,29 +496,31 @@ static int os08a20_query_capability(struct os08a20 *sensor, void *arg)
 	return 0;
 }
 
-static int os08a20_query_supports(struct os08a20 *sensor, void* parry)
+static int os08a20_query_supports(struct os08a20 *sensor, void *parry)
 {
 	struct vvcam_mode_info_array_s *psensor_mode_arry = parry;
 
 	psensor_mode_arry->count = ARRAY_SIZE(pos08a20_mode_info);
-	memcpy((void *)&psensor_mode_arry->modes, (void *)pos08a20_mode_info, sizeof(pos08a20_mode_info));
+	memcpy((void *)&psensor_mode_arry->modes, (void *)pos08a20_mode_info,
+	       sizeof(pos08a20_mode_info));
 
 	return 0;
 }
 
-static int os08a20_get_sensor_id(struct os08a20 *sensor, void* pchip_id)
+static int os08a20_get_sensor_id(struct os08a20 *sensor, void *pchip_id)
 {
 	int ret = 0;
 	u32 chip_id;
 	u8 chip_id_high = 0;
 	u8 chip_id_middle = 0;
 	u8 chip_id_low = 0;
+
 	ret  = os08a20_read_reg(sensor, 0x300a, &chip_id_high);
 	ret |= os08a20_read_reg(sensor, 0x300b, &chip_id_middle);
 	ret |= os08a20_read_reg(sensor, 0x300c, &chip_id_low);
 
-	chip_id = ((chip_id_high & 0xff) << 16) | 
-	        ((chip_id_middle & 0xff) << 8) | (chip_id_low & 0xff);
+	chip_id = ((chip_id_high & 0xff) << 16) |
+		  ((chip_id_middle & 0xff) << 8) | (chip_id_low & 0xff);
 
 	ret = copy_to_user(pchip_id, &chip_id, sizeof(u32));
 	if (ret != 0)
@@ -529,39 +528,42 @@ static int os08a20_get_sensor_id(struct os08a20 *sensor, void* pchip_id)
 	return ret;
 }
 
-static int os08a20_get_reserve_id(struct os08a20 *sensor, void* preserve_id)
+static int os08a20_get_reserve_id(struct os08a20 *sensor, void *preserve_id)
 {
 	int ret = 0;
 	u32 reserve_id = 0x530841;
+
 	ret = copy_to_user(preserve_id, &reserve_id, sizeof(u32));
 	if (ret != 0)
 		ret = -ENOMEM;
 	return ret;
 }
 
-static int os08a20_get_sensor_mode(struct os08a20 *sensor, void* pmode)
+static int os08a20_get_sensor_mode(struct os08a20 *sensor, void *pmode)
 {
 	int ret = 0;
+
 	ret = copy_to_user(pmode, &sensor->cur_mode,
-		sizeof(struct vvcam_mode_info_s));
+			   sizeof(struct vvcam_mode_info_s));
 	if (ret != 0)
 		ret = -ENOMEM;
 	return ret;
 }
 
-static int os08a20_set_sensor_mode(struct os08a20 *sensor, void* pmode)
+static int os08a20_set_sensor_mode(struct os08a20 *sensor, void *pmode)
 {
 	int ret = 0;
 	int i = 0;
 	struct vvcam_mode_info_s sensor_mode;
+
 	ret = copy_from_user(&sensor_mode, pmode,
-		sizeof(struct vvcam_mode_info_s));
+			     sizeof(struct vvcam_mode_info_s));
 	if (ret != 0)
 		return -ENOMEM;
 	for (i = 0; i < ARRAY_SIZE(pos08a20_mode_info); i++) {
 		if (pos08a20_mode_info[i].index == sensor_mode.index) {
 			memcpy(&sensor->cur_mode, &pos08a20_mode_info[i],
-				sizeof(struct vvcam_mode_info_s));
+			       sizeof(struct vvcam_mode_info_s));
 			return 0;
 		}
 	}
@@ -607,7 +609,7 @@ static int os08a20_set_gain(struct os08a20 *sensor, u32 total_gain)
 	} else if (total_gain < 8 * (1 << SENSOR_FIX_FRACBITS)) {
 		again = ((total_gain * 4) / 0x400) * 32;
 		dgain =  total_gain * 128 / again;
-	} else if (total_gain < 16 * (1 << SENSOR_FIX_FRACBITS)){
+	} else if (total_gain < 16 * (1 << SENSOR_FIX_FRACBITS)) {
 		again = ((total_gain * 2) / 0x400) * 64;
 		dgain =  total_gain * 128 / again;
 	} else {
@@ -642,7 +644,7 @@ static int os08a20_set_vsgain(struct os08a20 *sensor, u32 total_gain)
 	} else if (total_gain < 8 * (1 << SENSOR_FIX_FRACBITS)) {
 		again = ((total_gain * 4) / 0x400) * 32;
 		dgain =  total_gain * 128 / again;
-	} else if (total_gain < 16 * (1 << SENSOR_FIX_FRACBITS)){
+	} else if (total_gain < 16 * (1 << SENSOR_FIX_FRACBITS)) {
 		again = ((total_gain * 2) / 0x400) * 64;
 		dgain =  total_gain * 128 / again;
 	} else {
@@ -664,12 +666,10 @@ static int os08a20_set_fps(struct os08a20 *sensor, u32 fps)
 	u32 vts;
 	int ret = 0;
 
-	if (fps > sensor->cur_mode.ae_info.max_fps) {
+	if (fps > sensor->cur_mode.ae_info.max_fps)
 		fps = sensor->cur_mode.ae_info.max_fps;
-	}
-	else if (fps < sensor->cur_mode.ae_info.min_fps) {
+	else if (fps < sensor->cur_mode.ae_info.min_fps)
 		fps = sensor->cur_mode.ae_info.min_fps;
-	}
 	vts = sensor->cur_mode.ae_info.max_fps *
 	      sensor->cur_mode.ae_info.def_frm_len_lines / fps;
 
@@ -678,12 +678,11 @@ static int os08a20_set_fps(struct os08a20 *sensor, u32 fps)
 
 	sensor->cur_mode.ae_info.cur_fps = fps;
 
-	if (sensor->cur_mode.hdr_mode == SENSOR_MODE_LINEAR) {
+	if (sensor->cur_mode.hdr_mode == SENSOR_MODE_LINEAR)
 		sensor->cur_mode.ae_info.max_integration_line = vts - 8;
-	} else {
+	else
 		sensor->cur_mode.ae_info.max_integration_line =
 			vts - sensor->cur_mode.ae_info.max_vsintegration_line - 8;
-	}
 	sensor->cur_mode.ae_info.curr_frm_len_lines = vts;
 	return ret;
 }
@@ -694,7 +693,7 @@ static int os08a20_get_fps(struct os08a20 *sensor, u32 *pfps)
 	return 0;
 }
 
-static int os08a20_set_ratio(struct os08a20 *sensor, void* pratio)
+static int os08a20_set_ratio(struct os08a20 *sensor, void *pratio)
 {
 	int ret = 0;
 	struct sensor_hdr_artio_s hdr_ratio;
@@ -713,7 +712,7 @@ static int os08a20_set_ratio(struct os08a20 *sensor, void* pratio)
 	return 0;
 }
 
-static int os08a20_set_test_pattern(struct os08a20 *sensor, void * arg)
+static int os08a20_set_test_pattern(struct os08a20 *sensor, void *arg)
 {
 	int ret;
 	struct sensor_test_pattern_s test_pattern;
@@ -743,7 +742,7 @@ static int os08a20_set_test_pattern(struct os08a20 *sensor, void * arg)
 			break;
 		}
 	} else {
-		os08a20_write_reg(sensor, 0x5081, 0x00);	
+		os08a20_write_reg(sensor, 0x5081, 0x00);
 	}
 	return ret;
 }
@@ -837,56 +836,46 @@ static int os08a20_get_format_code(struct os08a20 *sensor, u32 *code)
 {
 	switch (sensor->cur_mode.bayer_pattern) {
 	case BAYER_RGGB:
-		if (sensor->cur_mode.bit_width == 8) {
+		if (sensor->cur_mode.bit_width == 8)
 			*code = MEDIA_BUS_FMT_SRGGB8_1X8;
-		} else if (sensor->cur_mode.bit_width == 10) {
+		else if (sensor->cur_mode.bit_width == 10)
 			*code = MEDIA_BUS_FMT_SRGGB10_1X10;
-		} else {
+		else
 			*code = MEDIA_BUS_FMT_SRGGB12_1X12;
-		}
 		break;
 	case BAYER_GRBG:
-		if (sensor->cur_mode.bit_width == 8) {
+		if (sensor->cur_mode.bit_width == 8)
 			*code = MEDIA_BUS_FMT_SGRBG8_1X8;
-		} else if (sensor->cur_mode.bit_width == 10) {
+		else if (sensor->cur_mode.bit_width == 10)
 			*code = MEDIA_BUS_FMT_SGRBG10_1X10;
-		} else {
+		else
 			*code = MEDIA_BUS_FMT_SGRBG12_1X12;
-		}
 		break;
 	case BAYER_GBRG:
-		if (sensor->cur_mode.bit_width == 8) {
+		if (sensor->cur_mode.bit_width == 8)
 			*code = MEDIA_BUS_FMT_SGBRG8_1X8;
-		} else if (sensor->cur_mode.bit_width == 10) {
+		else if (sensor->cur_mode.bit_width == 10)
 			*code = MEDIA_BUS_FMT_SGBRG10_1X10;
-		} else {
+		else
 			*code = MEDIA_BUS_FMT_SGBRG12_1X12;
-		}
 		break;
 	case BAYER_BGGR:
-		if (sensor->cur_mode.bit_width == 8) {
+		if (sensor->cur_mode.bit_width == 8)
 			*code = MEDIA_BUS_FMT_SBGGR8_1X8;
-		} else if (sensor->cur_mode.bit_width == 10) {
+		else if (sensor->cur_mode.bit_width == 10)
 			*code = MEDIA_BUS_FMT_SBGGR10_1X10;
-		} else {
+		else
 			*code = MEDIA_BUS_FMT_SBGGR12_1X12;
-		}
 		break;
 	default:
-		/*nothing need to do*/
 		break;
 	}
 	return 0;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+
 static int os08a20_enum_mbus_code(struct v4l2_subdev *sd,
-				struct v4l2_subdev_state *state,
-				struct v4l2_subdev_mbus_code_enum *code)
-#else
-static int os08a20_enum_mbus_code(struct v4l2_subdev *sd,
-			         struct v4l2_subdev_pad_config *cfg,
-			         struct v4l2_subdev_mbus_code_enum *code)
-#endif
+				  struct v4l2_subdev_state *state,
+				  struct v4l2_subdev_mbus_code_enum *code)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
@@ -895,30 +884,28 @@ static int os08a20_enum_mbus_code(struct v4l2_subdev *sd,
 
 	if (code->index > 0)
 		return -EINVAL;
-	os08a20_get_format_code(sensor,&cur_code);
+	os08a20_get_format_code(sensor, &cur_code);
 	code->code = cur_code;
 
 	return 0;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+
 static int os08a20_set_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_subdev_state *state,
 			   struct v4l2_subdev_format *fmt)
-#else
-static int os08a20_set_fmt(struct v4l2_subdev *sd,
-			   struct v4l2_subdev_pad_config *cfg,
-			   struct v4l2_subdev_format *fmt)
-#endif
 {
 	int ret = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
+	struct device *dev = &sensor->i2c_client->dev;
+	struct vvcam_sccb_data_s *preg_data = 0;
+
 	mutex_lock(&sensor->lock);
 
-	if ((fmt->format.width != sensor->cur_mode.size.bounds_width) ||
-	    (fmt->format.height != sensor->cur_mode.size.bounds_height)) {
-		pr_err("%s:set sensor format %dx%d error\n",
-			__func__,fmt->format.width,fmt->format.height);
+	if (fmt->format.width != sensor->cur_mode.size.bounds_width ||
+	    fmt->format.height != sensor->cur_mode.size.bounds_height) {
+		dev_err(dev, "%s:set sensor format %dx%d error\n",
+			__func__, fmt->format.width, fmt->format.height);
 		mutex_unlock(&sensor->lock);
 		return -EINVAL;
 	}
@@ -928,15 +915,15 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	os08a20_write_reg(sensor, 0x103, 0x01);
 	msleep(20);
 
-	ret = os08a20_write_reg_arry(sensor,
-		(struct vvcam_sccb_data_s *)sensor->cur_mode.preg_data,
-		sensor->cur_mode.reg_data_count);
+	preg_data = (struct vvcam_sccb_data_s *)sensor->cur_mode.preg_data;
+	ret = os08a20_write_reg_arry(sensor, preg_data,
+				     sensor->cur_mode.reg_data_count);
 
 	pm_runtime_mark_last_busy(&sensor->i2c_client->dev);
 	pm_runtime_put_autosuspend(&sensor->i2c_client->dev);
 
 	if (ret < 0) {
-		pr_err("%s:os08a20_write_reg_arry error\n",__func__);
+		dev_err(dev, "%s:os08a20_write_reg_arry error\n", __func__);
 		mutex_unlock(&sensor->lock);
 		return -EINVAL;
 	}
@@ -947,15 +934,10 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	mutex_unlock(&sensor->lock);
 	return 0;
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
+
 static int os08a20_get_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_subdev_state *state,
 			   struct v4l2_subdev_format *fmt)
-#else
-static int os08a20_get_fmt(struct v4l2_subdev *sd,
-			   struct v4l2_subdev_pad_config *cfg,
-			   struct v4l2_subdev_format *fmt)
-#endif
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
@@ -967,8 +949,8 @@ static int os08a20_get_fmt(struct v4l2_subdev *sd,
 }
 
 static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
-                              unsigned int cmd,
-                              void *arg_user)
+			       unsigned int cmd,
+			       void *arg_user)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
@@ -978,7 +960,7 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 	int enable = 0;
 
 	mutex_lock(&sensor->lock);
-	switch (cmd){
+	switch (cmd) {
 	case VVSENSORIOC_S_POWER:
 		ret = 0;
 		break;
@@ -986,7 +968,7 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 		ret = 0;
 		break;
 	case VVSENSORIOC_G_CLK:
-		ret = os08a20_get_clk(sensor,arg);
+		ret = os08a20_get_clk(sensor, arg);
 		break;
 	case VVSENSORIOC_RESET:
 		ret = 0;
@@ -1020,17 +1002,17 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 		break;
 	case VVSENSORIOC_WRITE_REG:
 		ret = copy_from_user(&sensor_reg, arg,
-			sizeof(struct vvcam_sccb_data_s));
+				     sizeof(struct vvcam_sccb_data_s));
 		ret |= os08a20_write_reg(sensor, sensor_reg.addr,
 			sensor_reg.data);
 		break;
 	case VVSENSORIOC_READ_REG:
 		ret = copy_from_user(&sensor_reg, arg,
-			sizeof(struct vvcam_sccb_data_s));
+				     sizeof(struct vvcam_sccb_data_s));
 		ret |= os08a20_read_reg(sensor, sensor_reg.addr,
 			(u8 *)&sensor_reg.data);
 		ret |= copy_to_user(arg, &sensor_reg,
-			sizeof(struct vvcam_sccb_data_s));
+				    sizeof(struct vvcam_sccb_data_s));
 		break;
 	case VVSENSORIOC_S_EXP:
 		USER_TO_KERNEL(u32);
@@ -1061,7 +1043,7 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 		ret = os08a20_set_ratio(sensor, arg);
 		break;
 	case VVSENSORIOC_S_TEST_PATTERN:
-		ret= os08a20_set_test_pattern(sensor, arg);
+		ret = os08a20_set_test_pattern(sensor, arg);
 		break;
 	default:
 		ret = -EINVAL;
@@ -1072,7 +1054,7 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 	return ret;
 }
 
-static struct v4l2_subdev_video_ops os08a20_subdev_video_ops = {
+static const struct v4l2_subdev_video_ops os08a20_subdev_video_ops = {
 	.s_stream = os08a20_s_stream,
 };
 
@@ -1082,19 +1064,19 @@ static const struct v4l2_subdev_pad_ops os08a20_subdev_pad_ops = {
 	.get_fmt = os08a20_get_fmt,
 };
 
-static struct v4l2_subdev_core_ops os08a20_subdev_core_ops = {
+static const struct v4l2_subdev_core_ops os08a20_subdev_core_ops = {
 	.ioctl = os08a20_priv_ioctl,
 };
 
-static struct v4l2_subdev_ops os08a20_subdev_ops = {
+static const struct v4l2_subdev_ops os08a20_subdev_ops = {
 	.core  = &os08a20_subdev_core_ops,
 	.video = &os08a20_subdev_video_ops,
 	.pad   = &os08a20_subdev_pad_ops,
 };
 
 static int os08a20_link_setup(struct media_entity *entity,
-			     const struct media_pad *local,
-			     const struct media_pad *remote, u32 flags)
+			      const struct media_pad *local,
+			      const struct media_pad *remote, u32 flags)
 {
 	return 0;
 }
@@ -1106,9 +1088,7 @@ static const struct media_entity_operations os08a20_sd_media_ops = {
 static int os08a20_regulator_enable(struct os08a20 *sensor)
 {
 	int ret = 0;
-	struct device *dev = &(sensor->i2c_client->dev);
-
-	pr_debug("enter %s\n", __func__);
+	struct device *dev = &sensor->i2c_client->dev;
 
 	if (sensor->io_regulator) {
 		regulator_set_voltage(sensor->io_regulator,
@@ -1130,7 +1110,6 @@ static int os08a20_regulator_enable(struct os08a20 *sensor)
 			dev_err(dev, "set analog voltage failed\n");
 			goto err_disable_io;
 		}
-
 	}
 
 	if (sensor->core_regulator) {
@@ -1156,7 +1135,7 @@ err_disable_io:
 static void os08a20_regulator_disable(struct os08a20 *sensor)
 {
 	int ret = 0;
-	struct device *dev = &(sensor->i2c_client->dev);
+	struct device *dev = &sensor->i2c_client->dev;
 
 	if (sensor->core_regulator) {
 		ret = regulator_disable(sensor->core_regulator);
@@ -1175,29 +1154,28 @@ static void os08a20_regulator_disable(struct os08a20 *sensor)
 		if (ret < 0)
 			dev_err(dev, "io regulator disable failed\n");
 	}
-	return ;
 }
 
 static int os08a20_set_clk_rate(struct os08a20 *sensor)
 {
 	int ret;
 	unsigned int clk;
+	struct device *dev = &sensor->i2c_client->dev;
 
 	clk = sensor->mclk;
 	clk = min_t(u32, clk, (u32)OS08A20_XCLK_MAX);
 	clk = max_t(u32, clk, (u32)OS08A20_XCLK_MIN);
 	sensor->mclk = clk;
 
-	pr_debug("   Setting mclk to %d MHz\n",sensor->mclk / 1000000);
+	dev_dbg(dev, "Setting mclk to %d MHz\n", sensor->mclk / 1000000);
 	ret = clk_set_rate(sensor->sensor_clk, sensor->mclk);
 	if (ret < 0)
-		pr_debug("set rate filed, rate=%d\n", sensor->mclk);
+		dev_err(dev, "Set rate failed, rate=%d\n", sensor->mclk);
 	return ret;
 }
 
 static void os08a20_reset(struct os08a20 *sensor)
 {
-	pr_debug("enter %s\n", __func__);
 	if (!gpio_is_valid(sensor->rst_gpio))
 		return;
 
@@ -1206,13 +1184,10 @@ static void os08a20_reset(struct os08a20 *sensor)
 
 	gpio_set_value_cansleep(sensor->rst_gpio, 1);
 	msleep(20);
-
-	return;
 }
 
-static int os08a20_retrieve_capture_properties(
-			struct os08a20 *sensor,
-			struct os08a20_capture_properties* ocp)
+static int os08a20_get_cap_prop(struct os08a20 *sensor,
+				struct os08a20_capture_properties *ocp)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	__u64 mlf = 0;
@@ -1221,10 +1196,11 @@ static int os08a20_retrieve_capture_properties(
 
 	struct device_node *ep;
 	int ret;
-	/*Collecting the information about limits of capture path
-	* has been centralized to the sensor
-	* * also into the sensor endpoint itself.
-	*/
+	/*
+	 * Collecting the information about limits of capture path
+	 * has been centralized to the sensor
+	 * also into the sensor endpoint itself.
+	 */
 
 	ep = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (!ep) {
@@ -1232,22 +1208,10 @@ static int os08a20_retrieve_capture_properties(
 		return -ENODEV;
 	}
 
-	/*ret = fwnode_property_read_u64(of_fwnode_handle(ep),
-		"max-lane-frequency", &mlf);
-	if (ret || mlf == 0) {
-		dev_dbg(dev, "no limit for max-lane-frequency\n");
-	}*/
 	ret = fwnode_property_read_u64(of_fwnode_handle(ep),
-	        "max-pixel-frequency", &mpf);
-	if (ret || mpf == 0) {
-	        dev_dbg(dev, "no limit for max-pixel-frequency\n");
-	}
-
-	/*ret = fwnode_property_read_u64(of_fwnode_handle(ep),
-	        "max-data-rate", &mdr);
-	if (ret || mdr == 0) {
-	        dev_dbg(dev, "no limit for max-data_rate\n");
-	}*/
+				       "max-pixel-frequency", &mpf);
+	if (ret || mpf == 0)
+		dev_dbg(dev, "no limit for max-pixel-frequency\n");
 
 	ocp->max_lane_frequency = mlf;
 	ocp->max_pixel_frequency = mpf;
@@ -1256,12 +1220,7 @@ static int os08a20_retrieve_capture_properties(
 	return ret;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
 static int os08a20_probe(struct i2c_client *client)
-#else
-static int os08a20_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
-#endif
 {
 	int retval;
 	struct device *dev = &client->dev;
@@ -1269,8 +1228,6 @@ static int os08a20_probe(struct i2c_client *client,
 	struct os08a20 *sensor;
 	u32 chip_id = 0;
 	u8 reg_val = 0;
-
-	pr_info("enter %s\n", __func__);
 
 	sensor = devm_kmalloc(dev, sizeof(*sensor), GFP_KERNEL);
 	if (!sensor)
@@ -1280,12 +1237,12 @@ static int os08a20_probe(struct i2c_client *client,
 	sensor->i2c_client = client;
 
 	sensor->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(sensor->pwn_gpio))
+	if (!gpio_is_valid(sensor->pwn_gpio)) {
 		dev_warn(dev, "No sensor pwdn pin available");
-	else {
+	} else {
 		retval = devm_gpio_request_one(dev, sensor->pwn_gpio,
-						GPIOF_OUT_INIT_HIGH,
-						"os08a20_mipi_pwdn");
+					       GPIOF_OUT_INIT_HIGH,
+					       "os08a20_mipi_pwdn");
 		if (retval < 0) {
 			dev_warn(dev, "Failed to set power pin\n");
 			dev_warn(dev, "retval=%d\n", retval);
@@ -1294,11 +1251,11 @@ static int os08a20_probe(struct i2c_client *client,
 	}
 
 	sensor->rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
-	if (!gpio_is_valid(sensor->rst_gpio))
+	if (!gpio_is_valid(sensor->rst_gpio)) {
 		dev_warn(dev, "No sensor reset pin available");
-	else {
+	} else {
 		retval = devm_gpio_request_one(dev, sensor->rst_gpio,
-						GPIOF_OUT_INIT_HIGH,
+					       GPIOF_OUT_INIT_HIGH,
 						"os08a20_mipi_reset");
 		if (retval < 0) {
 			dev_warn(dev, "Failed to set reset pin\n");
@@ -1313,29 +1270,29 @@ static int os08a20_probe(struct i2c_client *client,
 		return PTR_ERR(sensor->sensor_clk);
 	}
 
-	retval = of_property_read_u32(dev->of_node, "mclk", &(sensor->mclk));
+	retval = of_property_read_u32(dev->of_node, "mclk", &sensor->mclk);
 	if (retval) {
 		dev_err(dev, "mclk missing or invalid\n");
 		return retval;
 	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk_source",
-				(u32 *)&(sensor->mclk_source));
+				      (u32 *)&sensor->mclk_source);
 	if (retval) {
 		dev_err(dev, "mclk_source missing or invalid\n");
 		return retval;
 	}
 
-	retval = of_property_read_u32(dev->of_node, "csi_id", &(sensor->csi_id));
+	retval = of_property_read_u32(dev->of_node, "csi_id",
+				      &sensor->csi_id);
 	if (retval) {
 		dev_err(dev, "csi id missing or invalid\n");
 		return retval;
 	}
 
-	retval = os08a20_retrieve_capture_properties(sensor,&sensor->ocp);
-	if (retval) {
-		dev_warn(dev, "retrive capture properties error\n");
-	}
+	retval = os08a20_get_cap_prop(sensor, &sensor->ocp);
+	if (retval)
+		dev_warn(dev, "retrieve capture properties error\n");
 
 	sensor->io_regulator = devm_regulator_get(dev, "DOVDD");
 	if (IS_ERR(sensor->io_regulator)) {
@@ -1382,8 +1339,8 @@ static int os08a20_probe(struct i2c_client *client,
 
 	if (os08a20_init_controls(sensor))
 		goto probe_err_entity_cleanup;
-	
-	/* os08a20 power on*/
+
+	/* os08a20 power on */
 	retval = os08a20_runtime_resume(dev);
 	if (retval) {
 		dev_err(dev, "failed to power on\n");
@@ -1393,7 +1350,7 @@ static int os08a20_probe(struct i2c_client *client,
 	pm_runtime_set_active(dev);
 	pm_runtime_get_noresume(dev);
 	pm_runtime_enable(dev);
-	
+
 	os08a20_reset(sensor);
 
 	os08a20_read_reg(sensor, 0x300a, &reg_val);
@@ -1403,28 +1360,23 @@ static int os08a20_probe(struct i2c_client *client,
 	os08a20_read_reg(sensor, 0x300c, &reg_val);
 	chip_id |= reg_val;
 	if (chip_id != 0x530841) {
-		pr_warn("camera os08a20 is not found\n");
+		dev_warn(dev, "camera os08a20 is not found\n");
 		retval = -ENODEV;
 		goto probe_err_pm_runtime;
 	}
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
 	retval = v4l2_async_register_subdev_sensor(sd);
-#else
-	retval = v4l2_async_register_subdev_sensor_common(sd);
-#endif
 	if (retval < 0) {
-		dev_err(&client->dev,"%s--Async register failed, ret=%d\n",
-			__func__,retval);
+		dev_err(&client->dev, "%s--Async register failed, ret=%d\n",
+			__func__, retval);
 		goto probe_err_pm_runtime;
 	}
 
 	memcpy(&sensor->cur_mode, &pos08a20_mode_info[0],
-			sizeof(struct vvcam_mode_info_s));
+	       sizeof(struct vvcam_mode_info_s));
 
 	mutex_init(&sensor->lock);
-	pr_info("%s camera mipi os08a20, is found\n", __func__);
-
+	dev_info(dev, "%s camera mipi os08a20, is found\n", __func__);
 
 	pm_runtime_set_autosuspend_delay(dev, 1000);
 	pm_runtime_use_autosuspend(dev);
@@ -1446,17 +1398,11 @@ probe_err_regulator_disable:
 	return retval;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
-static int os08a20_remove(struct i2c_client *client)
-#else
 static void os08a20_remove(struct i2c_client *client)
-#endif
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct os08a20 *sensor = client_to_os08a20(client);
 	struct device *dev = &client->dev;
-
-	pr_info("enter %s\n", __func__);
 
 	pm_runtime_disable(dev);
 	if (!pm_runtime_status_suspended(dev))
@@ -1467,11 +1413,6 @@ static void os08a20_remove(struct i2c_client *client)
 	v4l2_ctrl_handler_free(&sensor->ctrls.handler);
 	os08a20_regulator_disable(sensor);
 	mutex_destroy(&sensor->lock);
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
-	return 0;
-#else
-#endif
 }
 
 static int __maybe_unused os08a20_suspend(struct device *dev)
@@ -1480,9 +1421,8 @@ static int __maybe_unused os08a20_suspend(struct device *dev)
 	struct os08a20 *sensor = client_to_os08a20(client);
 
 	sensor->resume_status = sensor->stream_status;
-	if (sensor->resume_status) {
-		os08a20_s_stream(&sensor->subdev,0);
-	}
+	if (sensor->resume_status)
+		os08a20_s_stream(&sensor->subdev, 0);
 
 	return 0;
 }
@@ -1492,16 +1432,16 @@ static int __maybe_unused os08a20_resume(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct os08a20 *sensor = client_to_os08a20(client);
 
-	if (sensor->resume_status) {
-		os08a20_s_stream(&sensor->subdev,1);
-	}
+	if (sensor->resume_status)
+		os08a20_s_stream(&sensor->subdev, 1);
 
 	return 0;
 }
 
 static const struct dev_pm_ops os08a20_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(os08a20_suspend, os08a20_resume)
-	SET_RUNTIME_PM_OPS(os08a20_runtime_suspend, os08a20_runtime_resume, NULL)
+	SET_RUNTIME_PM_OPS(os08a20_runtime_suspend,
+			   os08a20_runtime_resume, NULL)
 };
 
 static const struct i2c_device_id os08a20_id[] = {
