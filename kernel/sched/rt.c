@@ -2004,6 +2004,39 @@ static int find_lowest_rq(struct task_struct *sched_ctx, struct task_struct *exe
 	return -1;
 }
 
+static inline bool rt_revalidate_rq_state(struct task_struct *task, struct rq *rq,
+					  struct rq *lowest)
+{
+	/*
+	 * We had to unlock the run queue. In
+	 * the mean time, task could have
+	 * migrated already or had its affinity changed.
+	 * Also make sure that it wasn't scheduled on its rq.
+	 * It is possible the task was scheduled, set
+	 * "migrate_disabled" and then got preempted, so we must
+	 * check the task migration disable flag here too.
+	 */
+	if (task_rq(task) != rq)
+		return false;
+
+	if (!cpumask_test_cpu(lowest->cpu, &task->cpus_mask))
+		return false;
+
+	if (task_on_cpu(rq, task))
+		return false;
+
+	if (!rt_task(task))
+		return false;
+
+	if (is_migration_disabled(task))
+		return false;
+
+	if (!task_on_rq_queued(task))
+		return false;
+
+	return true;
+}
+
 /* Will lock the rq it finds */
 static struct rq *find_lock_lowest_rq(struct task_struct *task, struct rq *rq)
 {
@@ -2033,22 +2066,7 @@ static struct rq *find_lock_lowest_rq(struct task_struct *task, struct rq *rq)
 
 		/* if the prio of this runqueue changed, try again */
 		if (double_lock_balance(rq, lowest_rq)) {
-			/*
-			 * We had to unlock the run queue. In
-			 * the mean time, task could have
-			 * migrated already or had its affinity changed.
-			 * Also make sure that it wasn't scheduled on its rq.
-			 * It is possible the task was scheduled, set
-			 * "migrate_disabled" and then got preempted, so we must
-			 * check the task migration disable flag here too.
-			 */
-			if (unlikely(task_rq(task) != rq ||
-				     !cpumask_test_cpu(lowest_rq->cpu, &task->cpus_mask) ||
-				     task_on_cpu(rq, task) ||
-				     !rt_task(task) ||
-				     is_migration_disabled(task) ||
-				     !task_on_rq_queued(task))) {
-
+			if (unlikely(!rt_revalidate_rq_state(task, rq, lowest_rq))) {
 				double_unlock_balance(rq, lowest_rq);
 				lowest_rq = NULL;
 				break;

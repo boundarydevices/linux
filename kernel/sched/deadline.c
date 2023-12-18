@@ -2614,6 +2614,30 @@ static int find_later_rq(struct task_struct *sched_ctx, struct task_struct *exec
 	return -1;
 }
 
+static inline bool dl_revalidate_rq_state(struct task_struct *task, struct rq *rq,
+					  struct rq *later)
+{
+	if (task_rq(task) != rq)
+		return false;
+
+	if (!cpumask_test_cpu(later->cpu, &task->cpus_mask))
+		return false;
+
+	if (task_on_cpu(rq, task))
+		return false;
+
+	if (!dl_task(task))
+		return false;
+
+	if (is_migration_disabled(task))
+		return false;
+
+	if (!task_on_rq_queued(task))
+		return false;
+
+	return true;
+}
+
 /* Locks the rq it finds */
 static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq)
 {
@@ -2645,12 +2669,7 @@ static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq)
 
 		/* Retry if something changed. */
 		if (double_lock_balance(rq, later_rq)) {
-			if (unlikely(task_rq(task) != rq ||
-				     !cpumask_test_cpu(later_rq->cpu, &task->cpus_mask) ||
-				     task_on_cpu(rq, task) ||
-				     !dl_task(task) ||
-				     is_migration_disabled(task) ||
-				     !task_on_rq_queued(task))) {
+			if (unlikely(!dl_revalidate_rq_state(task, rq, later_rq))) {
 				double_unlock_balance(rq, later_rq);
 				later_rq = NULL;
 				break;
