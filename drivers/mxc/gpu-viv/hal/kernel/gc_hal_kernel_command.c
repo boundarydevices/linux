@@ -1589,10 +1589,8 @@ _StartWaitLinkFE(IN gckCOMMAND Command)
         for (i = 0; i < gcvCORE_COUNT; i++) {
             kernel = device->kernels[i];
             if (kernel) {
-#if !gcdCAPTURE_ONLY_MODE
                 /* Enable command processor. */
                 gcmkONERROR(gckWLFE_Execute(kernel->hardware, address, waitLinkBytes));
-#       endif
             }
         }
     } else {
@@ -1600,10 +1598,8 @@ _StartWaitLinkFE(IN gckCOMMAND Command)
     }
 #   else /* gcdSHARED_COMMAND_BUFFER */
 
-#if !gcdCAPTURE_ONLY_MODE
     /* Enable command processor. */
     gcmkONERROR(gckWLFE_Execute(hardware, address, waitLinkBytes));
-#       endif
 
 #   endif /* gcdSHARED_COMMAND_BUFFER */
 
@@ -1943,6 +1939,7 @@ _CommitWaitLinkOnce(IN gckCOMMAND Command,
     gctUINT32      waitSize;
 #if gcdCAPTURE_ONLY_MODE
     gctINT i;
+    gcsDATABASE_PTR database = gcvNULL;
 #endif
 
 #ifdef __QNXNTO__
@@ -2043,6 +2040,10 @@ _CommitWaitLinkOnce(IN gckCOMMAND Command,
     waitLinkLogical = (gctUINT8_PTR)Command->logical + offset;
     waitLinkAddress = Command->address + offset;
 
+#if gcdCAPTURE_ONLY_MODE
+    if (ProcessID)
+        gcmkONERROR(gckKERNEL_FindDatabase(Command->kernel, ProcessID, gcvFALSE, &database));
+#endif
     /* Context switch required? */
     if (Context == gcvNULL) {
         /* See if we have to switch pipes for the command buffer. */
@@ -2146,20 +2147,24 @@ _CommitWaitLinkOnce(IN gckCOMMAND Command,
                                  commandBufferSize - offset,
                                  &linkBytes, &commandLinkLow, &commandLinkHigh));
 
+
 #if gcdCAPTURE_ONLY_MODE
-        if (Command->kernel->core == 0) {
-            for (i = 0; i < gcdCONTEXT_BUFFER_COUNT; ++i) {
-                gcsCONTEXT_PTR buffer = contextBuffer;
+        if (database) {
+            if (database->matchCaptureOnly) {
+                if (Command->kernel->core == 0) {
+                    for (i = 0; i < gcdCONTEXT_BUFFER_COUNT; ++i) {
+                        gcsCONTEXT_PTR buffer = contextBuffer;
 
-                gckOS_CopyToUserData(Command->os, buffer->logical,
-                                     CommandBuffer->contextLogical[i],
-                                     Context->bufferSize);
+                        gckOS_CopyToUserData(Command->os, buffer->logical,
+                                             CommandBuffer->contextLogical[i],
+                                             Context->bufferSize);
 
-                buffer = buffer->next;
+                        buffer = buffer->next;
+                    }
+                }
             }
         }
 #endif
-
         gcmkONERROR(gckVIDMEM_NODE_CleanCache(Command->kernel, contextBuffer->videoMem,
                                               (gctSIZE_T)(entryAddress - contextBuffer->address),
                                               entryLogical, entryBytes));
@@ -2309,7 +2314,7 @@ _CommitWaitLinkOnce(IN gckCOMMAND Command,
     gckKERNEL_SecurityExecute(Command->kernel, commandBufferLogical + offset,
                               commandBufferSize - offset - 8);
 #else
-#if gcdNULL_DRIVER || gcdCAPTURE_ONLY_MODE
+#if gcdNULL_DRIVER
     /*
      * Skip link to entryAddress.
      * Instead, we directly link to final wait link position.
@@ -2319,6 +2324,30 @@ _CommitWaitLinkOnce(IN gckCOMMAND Command,
                              &Command->waitPos.size,
                              &entryLinkLow, &entryLinkHigh));
 #    else
+#if gcdCAPTURE_ONLY_MODE
+    if (database && database->matchCaptureOnly)
+        /*
+        * Skip link to entryAddress.
+        * Instead, we directly link to final wait link position.
+        */
+        gcmkONERROR(gckWLFE_Link(hardware, Command->waitPos.logical,
+                                    waitLinkAddress, waitLinkBytes,
+                                    &Command->waitPos.size,
+                                    &entryLinkLow, &entryLinkHigh));
+    else
+        /*
+         * Generate a LINK from the previous WAIT/LINK command sequence to the
+         * entry determined above (either the context or the command buffer).
+         * This LINK replaces the WAIT instruction from the previous WAIT/LINK
+         * pair, therefore we use WAIT metrics for generation of this LINK.
+         * This action will execute the entire sequence.
+         */
+        gcmkONERROR(gckWLFE_Link(hardware, Command->waitPos.logical,
+                                 entryAddress, entryBytes,
+                                 &Command->waitPos.size,
+                                 &entryLinkLow, &entryLinkHigh));
+
+#       else
     /*
      * Generate a LINK from the previous WAIT/LINK command sequence to the
      * entry determined above (either the context or the command buffer).
@@ -2330,6 +2359,7 @@ _CommitWaitLinkOnce(IN gckCOMMAND Command,
                              entryAddress, entryBytes,
                              &Command->waitPos.size,
                              &entryLinkLow, &entryLinkHigh));
+#       endif
 #    endif
 #endif
 
@@ -3232,6 +3262,10 @@ gckCOMMAND_Execute(IN gckCOMMAND Command, IN gctUINT32 RequestedBytes)
     gctPOINTER   execLogical;
     gctADDRESS   execAddress;
     gctUINT32    execBytes;
+#if gcdCAPTURE_ONLY_MODE
+    gcsDATABASE_PTR database = gcvNULL;
+    gctUINT32 processID;
+#endif
 
     gcmkHEADER_ARG("Command=%p RequestedBytes=0x%x", Command, RequestedBytes);
 
@@ -3277,7 +3311,7 @@ gckCOMMAND_Execute(IN gckCOMMAND Command, IN gctUINT32 RequestedBytes)
                                               Command->offset, execLogical, execBytes));
     }
 
-#if gcdNULL_DRIVER || gcdCAPTURE_ONLY_MODE
+#if gcdNULL_DRIVER
     /*
      * Skip link to execAddress.
      * Instead, we directly link to final wait link position.
@@ -3288,12 +3322,37 @@ gckCOMMAND_Execute(IN gckCOMMAND Command, IN gctUINT32 RequestedBytes)
                              &Command->waitPos.size,
                              &linkLow, &linkHigh));
 #else
-    /* Convert the last WAIT into a LINK. */
-    gcmkONERROR(gckWLFE_Link(Command->kernel->hardware,
+#if gcdCAPTURE_ONLY_MODE
+    gcmkONERROR(gckOS_GetProcessID(&processID));
+
+    if (processID)
+        gckKERNEL_FindDatabase(Command->kernel, processID, gcvFALSE, &database);
+
+    if (database && database->matchCaptureOnly)
+        /*
+         * Skip link to execAddress.
+         * Instead, we directly link to final wait link position.
+         */
+        gcmkONERROR(gckWLFE_Link(Command->kernel->hardware,
+                                 Command->waitPos.logical,
+                                 waitLinkAddress, waitLinkBytes,
+                                 &Command->waitPos.size,
+                                 &linkLow, &linkHigh));
+    else
+        /* Convert the last WAIT into a LINK. */
+        gcmkONERROR(gckWLFE_Link(Command->kernel->hardware,
                              Command->waitPos.logical,
                              execAddress, execBytes,
                              &Command->waitPos.size,
                              &linkLow, &linkHigh));
+#   else
+        /* Convert the last WAIT into a LINK. */
+        gcmkONERROR(gckWLFE_Link(Command->kernel->hardware,
+                             Command->waitPos.logical,
+                             execAddress, execBytes,
+                             &Command->waitPos.size,
+                             &linkLow, &linkHigh));
+#   endif
 #endif
 
     gcmkONERROR(gckVIDMEM_NODE_CleanCache(Command->kernel,
