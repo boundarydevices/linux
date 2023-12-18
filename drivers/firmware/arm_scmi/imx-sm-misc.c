@@ -85,7 +85,7 @@ static int scmi_imx_misc_attributes_get(const struct scmi_protocol_handle *ph,
 }
 
 static int scmi_imx_misc_ctrl_notify(const struct scmi_protocol_handle *ph,
-				     u32 evt_id, u32 ctrl_id, u32 flags)
+				     u32 ctrl_id, u32 flags)
 {
 	struct scmi_imx_misc_info *mi = ph->get_priv(ph);
 	struct scmi_imx_misc_ctrl_notify_in *in;
@@ -115,7 +115,7 @@ static int scmi_imx_misc_ctrl_set_notify_enabled(const struct scmi_protocol_hand
 {
 	int ret;
 
-	ret = scmi_imx_misc_ctrl_notify(ph, evt_id, src_id, enable ? 1 : 0);
+	ret = scmi_imx_misc_ctrl_notify(ph, src_id, enable ? evt_id : 0);
 	if (ret)
 		dev_err(ph->dev, "FAIL_ENABLED - evt[%X] src[%d] - ret:%d\n",
 			 evt_id, src_id, ret);
@@ -159,7 +159,17 @@ static const struct scmi_event_ops scmi_imx_misc_event_ops = {
 
 static const struct scmi_event scmi_imx_misc_events[] = {
 	{
-		.id = SCMI_EVENT_IMX_MISC_CONTROL,
+		.id = SCMI_EVENT_IMX_MISC_CONTROL_DISABLED,
+		.max_payld_sz = sizeof(struct scmi_imx_misc_ctrl_notify_payld),
+		.max_report_sz = sizeof(struct scmi_imx_misc_ctrl_notify_report),
+	},
+	{
+		.id = SCMI_EVENT_IMX_MISC_CONTROL_FALLING_EDGE,
+		.max_payld_sz = sizeof(struct scmi_imx_misc_ctrl_notify_payld),
+		.max_report_sz = sizeof(struct scmi_imx_misc_ctrl_notify_report),
+	},
+	{
+		.id = SCMI_EVENT_IMX_MISC_CONTROL_RISING_EDGE,
 		.max_payld_sz = sizeof(struct scmi_imx_misc_ctrl_notify_payld),
 		.max_report_sz = sizeof(struct scmi_imx_misc_ctrl_notify_report),
 	}
