@@ -42,7 +42,7 @@ static int scmi_imx_misc_ctrl_probe(struct scmi_device *sdev)
 {
 	const struct scmi_handle *handle = sdev->handle;
 	struct device_node *np = sdev->dev.of_node;
-	u32 val, wu_num;
+	u32 src_id, evt_id, wu_num;
 	int ret, i;
 
 	if (!handle)
@@ -54,14 +54,20 @@ static int scmi_imx_misc_ctrl_probe(struct scmi_device *sdev)
 
 	scmi_imx_misc_ctrl_nb.notifier_call = &scmi_imx_misc_ctrl_notifier;
 	wu_num = of_property_count_u32_elems(np, "wakeup-sources");
-	for (i = 0; i < wu_num; i++) {
-		WARN_ON(of_property_read_u32_index(np, "wakeup-sources", i, &val));
+	if (wu_num % 2) {
+		dev_err(&sdev->dev, "Invalid wakeup-sources\n");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < wu_num; i += 2) {
+		WARN_ON(of_property_read_u32_index(np, "wakeup-sources", i, &src_id));
+		WARN_ON(of_property_read_u32_index(np, "wakeup-sources", i + 1, &evt_id));
 		ret = handle->notify_ops->devm_event_notifier_register(sdev, SCMI_PROTOCOL_IMX_MISC,
-								       SCMI_EVENT_IMX_MISC_CONTROL,
-								       &val,
+								       evt_id,
+								       &src_id,
 								       &scmi_imx_misc_ctrl_nb);
 		if (ret)
-			dev_err(&sdev->dev, "Failed to register scmi misc event: %d\n", val);
+			dev_err(&sdev->dev, "Failed to register scmi misc event: %d\n", src_id);
 	}
 
 	return 0;
