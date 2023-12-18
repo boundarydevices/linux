@@ -3869,7 +3869,7 @@ extern u64 avg_vruntime(struct cfs_rq *cfs_rq);
 extern int entity_eligible(struct cfs_rq *cfs_rq, struct sched_entity *se);
 #ifdef CONFIG_SMP
 static inline
-void move_queued_task_locked(struct rq *src_rq, struct rq *dst_rq, struct task_struct *task)
+void __move_queued_task_locked(struct rq *src_rq, struct rq *dst_rq, struct task_struct *task)
 {
 	lockdep_assert_rq_held(src_rq);
 	lockdep_assert_rq_held(dst_rq);
@@ -3880,18 +3880,32 @@ void move_queued_task_locked(struct rq *src_rq, struct rq *dst_rq, struct task_s
 }
 
 static inline
-bool task_is_pushable(struct rq *rq, struct task_struct *p, int cpu)
+int __task_is_pushable(struct rq *rq, struct task_struct *p, int cpu)
 {
 	if (!task_on_cpu(rq, p) &&
 	    cpumask_test_cpu(cpu, &p->cpus_mask))
-		return true;
+		return 1;
 
-	return false;
+	return 0;
 }
 
 #ifdef CONFIG_SCHED_PROXY_EXEC
+void move_queued_task_locked(struct rq *rq, struct rq *dst_rq, struct task_struct *task);
+int task_is_pushable(struct rq *rq, struct task_struct *p, int cpu);
 struct task_struct *find_exec_ctx(struct rq *rq, struct task_struct *p);
 #else /* !CONFIG_SCHED_PROXY_EXEC */
+static inline
+void move_queued_task_locked(struct rq *rq, struct rq *dst_rq, struct task_struct *task)
+{
+	__move_queued_task_locked(rq, dst_rq, task);
+}
+
+static inline
+int task_is_pushable(struct rq *rq, struct task_struct *p, int cpu)
+{
+	return __task_is_pushable(rq, p, cpu);
+}
+
 static inline
 struct task_struct *find_exec_ctx(struct rq *rq, struct task_struct *p)
 {

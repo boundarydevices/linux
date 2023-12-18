@@ -2515,7 +2515,7 @@ next_node:
 	if (next_node) {
 		p = __node_2_pdl(next_node);
 
-		if (task_is_pushable(rq, p, cpu))
+		if (task_is_pushable(rq, p, cpu) == 1)
 			return p;
 
 		next_node = rb_next(next_node);
@@ -2614,8 +2614,44 @@ static int find_later_rq(struct task_struct *sched_ctx, struct task_struct *exec
 	return -1;
 }
 
-static inline bool dl_revalidate_rq_state(struct task_struct *task, struct rq *rq,
-					  struct rq *later)
+static struct task_struct *pick_next_pushable_dl_task(struct rq *rq)
+{
+	struct task_struct *p = NULL;
+	struct rb_node *next_node;
+
+	if (!has_pushable_dl_tasks(rq))
+		return NULL;
+
+	next_node = rb_first_cached(&rq->dl.pushable_dl_tasks_root);
+	while (next_node) {
+		p = __node_2_pdl(next_node);
+		/*
+		 * cpu argument doesn't matter because we treat a -1 result
+		 * (pushable but can't go to cpu0) the same as a 1 result
+		 * (pushable to cpu0). All we care about here is general
+		 * pushability.
+		 */
+		if (task_is_pushable(rq, p, 0))
+			break;
+
+		next_node = rb_next(next_node);
+	}
+
+	if (!p)
+		return NULL;
+
+	WARN_ON_ONCE(rq->cpu != task_cpu(p));
+	WARN_ON_ONCE(task_current(rq, p));
+	WARN_ON_ONCE(p->nr_cpus_allowed <= 1);
+
+	WARN_ON_ONCE(!task_on_rq_queued(p));
+	WARN_ON_ONCE(!dl_task(p));
+
+	return p;
+}
+
+static inline bool __dl_revalidate_rq_state(struct task_struct *task, struct rq *rq,
+					    struct rq *later, bool *retry)
 {
 	if (task_rq(task) != rq)
 		return false;
@@ -2638,15 +2674,46 @@ static inline bool dl_revalidate_rq_state(struct task_struct *task, struct rq *r
 	return true;
 }
 
+static inline bool dl_revalidate_rq_state(struct task_struct *task, struct rq *rq,
+					  struct rq *later, bool *retry)
+{
+	if (!sched_proxy_exec())
+		return __dl_revalidate_rq_state(task, rq, later, retry);
+
+	if (!dl_task(task) || is_migration_disabled(task))
+		return false;
+
+	if (rq != this_rq()) {
+		struct task_struct *next_task = pick_next_pushable_dl_task(rq);
+		struct task_struct *exec_ctx;
+
+		if (next_task != task)
+			return false;
+
+		exec_ctx = find_exec_ctx(rq, next_task);
+		*retry = (exec_ctx && !cpumask_test_cpu(later->cpu,
+							&exec_ctx->cpus_mask));
+	} else {
+		int pushable = task_is_pushable(rq, task, later->cpu);
+
+		*retry = (pushable == -1);
+		if (!pushable)
+			return false;
+	}
+	return true;
+}
+
 /* Locks the rq it finds */
 static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq)
 {
 	struct task_struct *exec_ctx;
 	struct rq *later_rq = NULL;
+	bool retry;
 	int tries;
 	int cpu;
 
 	for (tries = 0; tries < DL_MAX_TRIES; tries++) {
+		retry = false;
 		exec_ctx = find_exec_ctx(rq, task);
 		if (!exec_ctx)
 			break;
@@ -2669,7 +2736,7 @@ static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq)
 
 		/* Retry if something changed. */
 		if (double_lock_balance(rq, later_rq)) {
-			if (unlikely(!dl_revalidate_rq_state(task, rq, later_rq))) {
+			if (unlikely(!dl_revalidate_rq_state(task, rq, later_rq, &retry))) {
 				double_unlock_balance(rq, later_rq);
 				later_rq = NULL;
 				break;
@@ -2681,7 +2748,7 @@ static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq)
 		 * its earliest one has a later deadline than our
 		 * task, the rq is a good one.
 		 */
-		if (dl_task_is_earliest_deadline(task, later_rq))
+		if (!retry && dl_task_is_earliest_deadline(task, later_rq))
 			break;
 
 		/* Otherwise we try again. */
@@ -2690,25 +2757,6 @@ static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq)
 	}
 
 	return later_rq;
-}
-
-static struct task_struct *pick_next_pushable_dl_task(struct rq *rq)
-{
-	struct task_struct *p;
-
-	if (!has_pushable_dl_tasks(rq))
-		return NULL;
-
-	p = __node_2_pdl(rb_first_cached(&rq->dl.pushable_dl_tasks_root));
-
-	WARN_ON_ONCE(rq->cpu != task_cpu(p));
-	WARN_ON_ONCE(task_current(rq, p));
-	WARN_ON_ONCE(p->nr_cpus_allowed <= 1);
-
-	WARN_ON_ONCE(!task_on_rq_queued(p));
-	WARN_ON_ONCE(!dl_task(p));
-
-	return p;
 }
 
 /*

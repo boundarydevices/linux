@@ -3995,6 +3995,81 @@ struct task_struct *find_exec_ctx(struct rq *rq, struct task_struct *p)
 	}
 	return exec_ctx;
 }
+
+#ifdef CONFIG_SMP
+void move_queued_task_locked(struct rq *src_rq, struct rq *dst_rq, struct task_struct *task)
+{
+	lockdep_assert_rq_held(src_rq);
+	lockdep_assert_rq_held(dst_rq);
+
+	if (!sched_proxy_exec()) {
+		__move_queued_task_locked(src_rq, dst_rq, task);
+		return;
+	}
+
+	WARN_ON(!task_queued_on_rq(src_rq, task));
+	WARN_ON(task_current_donor(src_rq, task));
+
+	while (task) {
+		struct task_struct *owner = NULL;
+
+		if (!task_queued_on_rq(src_rq, task) || task_current_donor(src_rq, task))
+			break;
+
+		if (task_is_blocked(task))
+			owner = __mutex_owner(task->blocked_on);
+
+		__move_queued_task_locked(src_rq, dst_rq, task);
+		if (task == owner)
+			break;
+		task = owner;
+	}
+}
+
+/*
+ * Returns:
+ * 1 if chain is pushable and affinity does not prevent pushing to cpu
+ * 0 if chain is unpushable
+ * -1 if chain is pushable but affinity blocks running on cpu.
+ */
+int task_is_pushable(struct rq *rq, struct task_struct *p, int cpu)
+{
+	struct task_struct *exec_ctx;
+
+	lockdep_assert_rq_held(rq);
+
+	if (!sched_proxy_exec())
+		return __task_is_pushable(rq, p, cpu);
+
+	if (task_rq(p) != rq || !task_on_rq_queued(p))
+		return 0;
+
+	exec_ctx = find_exec_ctx(rq, p);
+	/*
+	 * Chain leads off the rq, we're free to push it anywhere.
+	 *
+	 * One wrinkle with relying on find_exec_ctx is that when the chain
+	 * leads to a task currently migrating to rq, we see the chain as
+	 * pushable & push everything prior to the migrating task. Even if
+	 * we checked explicitly for this case, we could still race with a
+	 * migration after the check.
+	 * This shouldn't permanently produce a bad state though, as
+	 * find_proxy_task() will send the chain back to rq and by that point
+	 * the migration should be complete & a proper push can occur.
+	 */
+	if (!exec_ctx)
+		return 1;
+
+	if (task_on_cpu(rq, exec_ctx) || exec_ctx->nr_cpus_allowed <= 1)
+		return 0;
+
+	return cpumask_test_cpu(cpu, &exec_ctx->cpus_mask) ? 1 : -1;
+}
+#else /* !CONFIG_SMP */
+void move_queued_task_locked(struct rq *src_rq, struct rq *dst_rq, struct task_struct *task)
+{
+}
+#endif /* CONFIG_SMP */
 #else /* !CONFIG_SCHED_PROXY_EXEC */
 static inline void proxy_remove_from_sleeping_owner(struct task_struct *p)
 {
