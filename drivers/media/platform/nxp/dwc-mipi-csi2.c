@@ -1016,29 +1016,66 @@ static int dwc_csi_subdev_set_fmt(struct v4l2_subdev *sd,
 }
 
 static int dwc_csi_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
-				   struct v4l2_mbus_frame_desc *fd)
+				  struct v4l2_mbus_frame_desc *fd)
 {
 	struct dwc_csi_device *csidev = sd_to_dwc_csi_device(sd);
-	struct v4l2_mbus_frame_desc_entry *entry = &fd->entry[0];
+	struct v4l2_mbus_frame_desc source_fd;
+	struct v4l2_subdev_route *route;
+	struct v4l2_subdev_state *state;
+	int ret;
 
 	if (pad != DWC_CSI2RX_PAD_SOURCE)
 		return -EINVAL;
 
-	fd->type = V4L2_MBUS_FRAME_DESC_TYPE_PARALLEL;
-	fd->num_entries = 1;
+	memset(fd, 0, sizeof(*fd));
 
-	memset(entry, 0, sizeof(*entry));
+	/*
+	 * Return virtual channel 0 as default value when remote subdev
+	 * don't implement .get_frame_desc subdev callback
+	 */
+	ret = v4l2_subdev_call(csidev->source_sd, pad, get_frame_desc,
+			       csidev->remote_pad, &source_fd);
+	if (ret < 0)
+		return (ret == -ENOIOCTLCMD) ? 0 : ret;
 
-	mutex_lock(&csidev->lock);
+	fd->type = V4L2_MBUS_FRAME_DESC_TYPE_CSI2;
 
-	entry->flags = 0;
-	entry->pixelcode = csidev->csi_fmt->code;
-	entry->bus.csi2.vc = 0;
-	entry->bus.csi2.dt = csidev->csi_fmt->data_type;
+	state = v4l2_subdev_lock_and_get_active_state(sd);
 
-	mutex_unlock(&csidev->lock);
+	for_each_active_route(&state->routing, route) {
+		struct v4l2_mbus_frame_desc_entry *entry = NULL;
+		unsigned int i;
 
-	return 0;
+		if (route->source_pad != pad)
+			continue;
+
+		for (i = 0; i < source_fd.num_entries; ++i) {
+			if (source_fd.entry[i].stream == route->sink_stream) {
+				entry = &source_fd.entry[i];
+				break;
+			}
+		}
+
+		if (!entry) {
+			dev_err(csidev->dev,
+				"Failed to find stream from source frames desc\n");
+			ret = -EPIPE;
+			goto out_unlock;
+		}
+
+		fd->entry[fd->num_entries].stream = route->source_stream;
+		fd->entry[fd->num_entries].flags = entry->flags;
+		fd->entry[fd->num_entries].length = entry->length;
+		fd->entry[fd->num_entries].pixelcode = entry->pixelcode;
+		fd->entry[fd->num_entries].bus.csi2.vc = entry->bus.csi2.vc;
+		fd->entry[fd->num_entries].bus.csi2.dt = entry->bus.csi2.dt;
+
+		fd->num_entries++;
+	}
+
+out_unlock:
+	v4l2_subdev_unlock_state(state);
+	return ret;
 }
 
 static int dwc_csi_start_stream(struct dwc_csi_device *csidev)
