@@ -54,7 +54,7 @@ struct imx95_blk_ctrl_dev_data {
 static const struct imx95_blk_ctrl_clk_dev_data vpublk_clk_dev_data[] = {
 	[IMX95_CLK_VPUBLK_WAVE] = {
 		.name = "vpublk_wave_vpu",
-		.parent_names = (const char *[]){ "vpu_root", },
+		.parent_names = (const char *[]){ "vpu", },
 		.num_parents = 1,
 		.reg = 8,
 		.bit_idx = 0,
@@ -64,7 +64,7 @@ static const struct imx95_blk_ctrl_clk_dev_data vpublk_clk_dev_data[] = {
 	},
 	[IMX95_CLK_VPUBLK_JPEG_ENC] = {
 		.name = "vpublk_jpeg_enc",
-		.parent_names = (const char *[]){ "vpu_jpeg_root", },
+		.parent_names = (const char *[]){ "vpujpeg", },
 		.num_parents = 1,
 		.reg = 8,
 		.bit_idx = 1,
@@ -74,7 +74,7 @@ static const struct imx95_blk_ctrl_clk_dev_data vpublk_clk_dev_data[] = {
 	},
 	[IMX95_CLK_VPUBLK_JPEG_DEC] = {
 		.name = "vpublk_jpeg_dec",
-		.parent_names = (const char *[]){ "vpu_jpeg_root", },
+		.parent_names = (const char *[]){ "vpujpeg", },
 		.num_parents = 1,
 		.reg = 8,
 		.bit_idx = 2,
@@ -93,7 +93,7 @@ static const struct imx95_blk_ctrl_dev_data vpublk_dev_data = {
 static const struct imx95_blk_ctrl_clk_dev_data camblk_clk_dev_data[] = {
 	[IMX95_CLK_CAMBLK_CSI2_FOR0] = {
 		.name = "camblk_csi2_for0",
-		.parent_names = (const char *[]){ "cam_isi_root", },
+		.parent_names = (const char *[]){ "camisi", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 0,
@@ -103,7 +103,7 @@ static const struct imx95_blk_ctrl_clk_dev_data camblk_clk_dev_data[] = {
 	},
 	[IMX95_CLK_CAMBLK_CSI2_FOR1] = {
 		.name = "camblk_csi2_for1",
-		.parent_names = (const char *[]){ "cam_isi_root", },
+		.parent_names = (const char *[]){ "camisi", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 1,
@@ -113,7 +113,7 @@ static const struct imx95_blk_ctrl_clk_dev_data camblk_clk_dev_data[] = {
 	},
 	[IMX95_CLK_CAMBLK_ISI_AXI] = {
 		.name = "camblk_isi_axi",
-		.parent_names = (const char *[]){ "cam_isi_root", },
+		.parent_names = (const char *[]){ "camisi", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 3,
@@ -123,7 +123,7 @@ static const struct imx95_blk_ctrl_clk_dev_data camblk_clk_dev_data[] = {
 	},
 	[IMX95_CLK_CAMBLK_ISP_AXI] = {
 		.name = "camblk_isp_axi",
-		.parent_names = (const char *[]){ "cam_axi_root", },
+		.parent_names = (const char *[]){ "camaxi", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 4,
@@ -133,7 +133,7 @@ static const struct imx95_blk_ctrl_clk_dev_data camblk_clk_dev_data[] = {
 	},
 	[IMX95_CLK_CAMBLK_ISP_PIXEL] = {
 		.name = "camblk_isp_pixel",
-		.parent_names = (const char *[]){ "cam_isi_root", },
+		.parent_names = (const char *[]){ "camisi", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 5,
@@ -143,7 +143,7 @@ static const struct imx95_blk_ctrl_clk_dev_data camblk_clk_dev_data[] = {
 	},
 	[IMX95_CLK_CAMBLK_ISP] = {
 		.name = "camblk_isp",
-		.parent_names = (const char *[]){ "cam_isi_root", },
+		.parent_names = (const char *[]){ "camisi", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 6,
@@ -185,7 +185,7 @@ static const struct imx95_blk_ctrl_clk_dev_data lvds_clk_dev_data[] = {
 
 	[IMX95_CLK_DISPMIX_LVDS_PLL_GATE] = {
 		.name = "lvds_pll_gate",
-		.parent_names = (const char *[]){ "LDBPLL", },
+		.parent_names = (const char *[]){ "ldbpll", },
 		.num_parents = 1,
 		.reg = 0,
 		.bit_idx = 5,
@@ -203,7 +203,7 @@ static const struct imx95_blk_ctrl_dev_data lvds_csr_dev_data = {
 static const struct imx95_blk_ctrl_clk_dev_data dispmix_csr_clk_dev_data[] = {
 	[IMX95_CLK_DISPMIX_ENG0_SEL] = {
 		.name = "disp_engine0_sel",
-		.parent_names = (const char *[]){"video_pll1", "dsi_pll", "ldb_pll_div7", "dummy"},
+		.parent_names = (const char *[]){"videopll1", "dsi_pll", "ldb_pll_div7", "dummy"},
 		.num_parents = 4,
 		.reg = 0,
 		.bit_idx = 0,
@@ -213,7 +213,7 @@ static const struct imx95_blk_ctrl_clk_dev_data dispmix_csr_clk_dev_data[] = {
 	},
 	[IMX95_CLK_DISPMIX_ENG1_SEL] = {
 		.name = "disp_engine1_sel",
-		.parent_names = (const char *[]){"video_pll1", "dsi_pll", "ldb_pll_div7", "dummy"},
+		.parent_names = (const char *[]){"videopll1", "dsi_pll", "ldb_pll_div7", "dummy"},
 		.num_parents = 4,
 		.reg = 0,
 		.bit_idx = 2,
