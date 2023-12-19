@@ -344,7 +344,7 @@ struct dwc_csi_device {
 
 	struct v4l2_subdev sd;
 	struct v4l2_async_notifier notifier;
-	struct v4l2_subdev *sensor_sd;
+	struct v4l2_subdev *source_sd;
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct media_pad pads[DWC_CSI2RX_PADS_NUM];
 	u16 remote_pad;
@@ -647,7 +647,7 @@ static int dwc_csi_get_dphy_configuration(struct dwc_csi_device *csidev,
 					  union phy_configure_opts *opts)
 {
 	struct phy_configure_opts_mipi_dphy *cfg = &opts->mipi_dphy;
-	struct v4l2_subdev *source = csidev->sensor_sd;
+	struct v4l2_subdev *source = csidev->source_sd;
 	s64 link_freq;
 
 	link_freq = v4l2_get_link_freq(source->ctrl_handler,
@@ -1076,7 +1076,7 @@ static int dwc_csi_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 	struct dwc_csi_device *csidev = sd_to_dwc_csi_device(sd);
 	int ret;
 
-	if (!csidev->sensor_sd) {
+	if (!csidev->source_sd) {
 		dev_err(csidev->dev, "Sensor don't link with CSIS pad\n");
 		return -EPIPE;
 	}
@@ -1117,7 +1117,7 @@ sd_stream:
 	 * pattern generator will be from external sensor, so it
 	 * also need to enable external sensor clock.
 	 */
-	ret = v4l2_subdev_call(csidev->sensor_sd, video, s_stream, enable);
+	ret = v4l2_subdev_call(csidev->source_sd, video, s_stream, enable);
 	dwc_csi_log_counters(csidev);
 unlocked:
 	mutex_unlock(&csidev->lock);
@@ -1178,13 +1178,13 @@ static int dwc_csi_link_setup(struct media_entity *entity,
 	remote_sd = media_entity_to_v4l2_subdev(remote_pad->entity);
 
 	if (flags & MEDIA_LNK_FL_ENABLED) {
-		if (csidev->sensor_sd)
+		if (csidev->source_sd)
 			return -EBUSY;
 
-		csidev->sensor_sd = remote_sd;
+		csidev->source_sd = remote_sd;
 		csidev->remote_pad = remote_pad->index;
 	} else {
-		csidev->sensor_sd = NULL;
+		csidev->source_sd = NULL;
 	}
 
 	return 0;
