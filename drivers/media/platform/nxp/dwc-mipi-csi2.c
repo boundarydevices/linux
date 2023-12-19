@@ -1290,13 +1290,20 @@ static int dwc_csi_async_register(struct dwc_csi_device *csidev)
 
 	ret = v4l2_async_nf_register(&csidev->notifier);
 	if (ret)
-		return ret;
+		goto err_notifier_clean;
 
-	return v4l2_async_register_subdev(&csidev->sd);
+	ret = v4l2_async_register_subdev(&csidev->sd);
+	if (ret)
+		goto err_unreg_notifier;
 
+	return ret;
+
+err_unreg_notifier:
+	v4l2_async_nf_unregister(&csidev->notifier);
+err_notifier_clean:
+	v4l2_async_nf_cleanup(&csidev->notifier);
 err_parse:
 	fwnode_handle_put(ep);
-
 	return ret;
 }
 
@@ -1362,6 +1369,12 @@ static int dwc_csi_controls_init(struct dwc_csi_device *csidev)
 	csidev->sd.ctrl_handler = handler;
 	return 0;
 }
+
+static void dwc_csi_controls_cleanup(struct dwc_csi_device *csidev)
+{
+	v4l2_ctrl_handler_free(&csidev->ctrl_handler);
+}
+
 /* -----------------------------------------------------------------------------
  * Suspend/resume
  */
@@ -1540,26 +1553,35 @@ static int dwc_csi_device_probe(struct platform_device *pdev)
 	ret = dwc_csi_controls_init(csidev);
 	if (ret) {
 		dev_err(dev, "Failed to initialize controls\n");
-		return ret;
+		goto err_ent_cleanup;
 	}
 
 	platform_set_drvdata(pdev, &csidev->sd);
 
 	ret = dwc_csi_async_register(csidev);
 	if (ret < 0) {
-		dev_err(dev, "Async register failed: %d\n", ret);
-		return ret;
+		dev_err(dev, "Async register failed\n");
+		goto err_ctl_cleanup;
 	}
 
 	pm_runtime_enable(dev);
 
 	return 0;
+
+err_ctl_cleanup:
+	dwc_csi_controls_cleanup(csidev);
+err_ent_cleanup:
+	media_entity_cleanup(&csidev->sd.entity);
+
+	return ret;
 }
 
 static int dwc_csi_device_remove(struct platform_device *pdev)
 {
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct dwc_csi_device *csidev = sd_to_dwc_csi_device(sd);
+
+	dwc_csi_controls_cleanup(csidev);
 
 	v4l2_async_nf_unregister(&csidev->notifier);
 	v4l2_async_nf_cleanup(&csidev->notifier);
