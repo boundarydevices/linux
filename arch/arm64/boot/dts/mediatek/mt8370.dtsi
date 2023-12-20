@@ -1035,7 +1035,7 @@
 			status = "disabled";
 		};
 
-		spi1: spi1@11010000 {
+		spi1: spi@11010000 {
 			compatible = "mediatek,mt6765-spi";
 			reg = <0 0x11010000 0 0x1000>;
 			interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -1046,7 +1046,7 @@
 			status = "disabled";
 		};
 
-		spi2: spi2@11012000 {
+		spi2: spi@11012000 {
 			compatible = "mediatek,mt6765-spi";
 			reg = <0 0x11012000 0 0x1000>;
 			interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -1057,7 +1057,7 @@
 			status = "disabled";
 		};
 
-		spi3: spi3@11013000 {
+		spi3: spi@11013000 {
 			compatible = "mediatek,mt6765-spi";
 			reg = <0 0x11013000 0 0x1000>;
 			interrupts = <GIC_SPI 194 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -1068,7 +1068,7 @@
 			status = "disabled";
 		};
 
-		spi4: spi4@11018000 {
+		spi4: spi@11018000 {
 			compatible = "mediatek,mt6765-spi";
 			reg = <0 0x11018000 0 0x1000>;
 			interrupts = <GIC_SPI 195 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -1079,7 +1079,7 @@
 			status = "disabled";
 		};
 
-		spi5: spi5@11019000 {
+		spi5: spi@11019000 {
 			compatible = "mediatek,mt6765-spi";
 			reg = <0 0x11019000 0 0x1000>;
 			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH 0>;
