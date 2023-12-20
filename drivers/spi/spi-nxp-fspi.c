@@ -1433,9 +1433,18 @@ err_put_ctrl:
 static void nxp_fspi_remove(struct platform_device *pdev)
 {
 	struct nxp_fspi *f = platform_get_drvdata(pdev);
+	int ret;
+
+	/* enable clock first since there is reigster access */
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0)
+		dev_err(f->dev, "Failed to enable clock %d\n", __LINE__);
 
 	/* disable the hardware */
 	fspi_writel(f, FSPI_MCR0_MDIS, f->iobase + FSPI_MCR0);
+
+	pm_runtime_disable(&pdev->dev);
+	pm_runtime_put_noidle(&pdev->dev);
 
 	nxp_fspi_clk_disable_unprep(f);
 
