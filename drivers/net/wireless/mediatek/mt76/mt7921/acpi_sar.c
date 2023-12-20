@@ -368,7 +368,7 @@ u8 mt7921_acpi_get_mtcl_conf(struct mt7921_phy *phy, char *alpha2)
 		"AT", "BE", "BG", "CY", "CZ", "HR", "DK", "EE",
 		"FI", "FR", "DE", "GR", "HU", "IS", "IE", "IT",
 		"LV", "LI", "LT", "LU", "MT", "NL", "NO", "PL",
-		"PT", "RO", "MT", "SK", "SI", "ES", "CH",
+		"PT", "RO", "SK", "SI", "ES", "SE", "CH",
 	};
 	struct mt7921_acpi_sar *sar = phy->acpisar;
 	struct mt7921_asar_cl *cl;
