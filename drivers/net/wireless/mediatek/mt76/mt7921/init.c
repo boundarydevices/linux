@@ -131,9 +131,14 @@ mt7921_regd_notifier(struct wiphy *wiphy,
 	if (pm->suspended)
 		return;
 
+	dev->regd_in_progress = true;
+
 	mt7921_mutex_acquire(dev);
 	mt7921_regd_update(dev);
 	mt7921_mutex_release(dev);
+
+	dev->regd_in_progress = true;
+	wake_up(&dev->wait);
 }
 
 static int
@@ -414,6 +419,7 @@ int mt7921_register_device(struct mt7921_dev *dev)
 	spin_lock_init(&dev->pm.wake.lock);
 	mutex_init(&dev->pm.mutex);
 	init_waitqueue_head(&dev->pm.wait);
+	init_waitqueue_head(&dev->wait);
 	if (mt76_is_sdio(&dev->mt76))
 		init_waitqueue_head(&dev->mt76.sdio.wait);
 	spin_lock_init(&dev->pm.txq_lock);
