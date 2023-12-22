@@ -1451,7 +1451,7 @@ static const struct i2c_device_id os08a20_id[] = {
 MODULE_DEVICE_TABLE(i2c, os08a20_id);
 
 static const struct of_device_id os08a20_of_match[] = {
-	{ .compatible = "ovti,os08a20" },
+	{ .compatible = "ovti,os08a20_mipi" },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, os08a20_of_match);
