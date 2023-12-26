@@ -105,9 +105,13 @@
 
 	reg_audio_pwr: regulator-audio-pwr {
 		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_audio_pwr>;
 		regulator-name = "cs42448-supply";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio2 1 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
 		regulator-always-on;
 	};
 
@@ -242,6 +246,12 @@
 			MX93_PAD_GPIO_IO18__SAI3_RX_BCLK	0x31e
 			MX93_PAD_GPIO_IO21__SAI3_TX_DATA00	0x31e
 			MX93_PAD_GPIO_IO20__SAI3_RX_DATA00	0x31e
+		>;
+	};
+
+	pinctrl_audio_pwr: audiopwrgrp {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO01__GPIO2_IO01		0x31e
 		>;
 	};
 };
