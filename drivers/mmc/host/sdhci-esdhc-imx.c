@@ -2044,10 +2044,19 @@ static int sdhci_esdhc_suspend(struct device *dev)
 	ret = sdhci_suspend_host(host);
 	if (ret)
 		return ret;
-
-	ret = pinctrl_pm_select_sleep_state(dev);
-	if (ret)
-		return ret;
+	/*
+	 * For the device which works as wakeup source, no need
+	 * to change the pinctrl to sleep state.
+	 * e.g. For SDIO device, the interrupt share with data pin,
+	 * but the pinctrl sleep state may config the data pin to
+	 * other function like GPIO function to save power in PM,
+	 * which finally block the SDIO wakeup function.
+	 */
+	if (!device_may_wakeup(dev) || !host->irq_wake_enabled) {
+		ret = pinctrl_pm_select_sleep_state(dev);
+		if (ret)
+			return ret;
+	}
 
 	if (imx_data->boarddata.cd_gpio_wakeup)
 		ret = mmc_gpio_set_cd_wake(host->mmc, true);
@@ -2068,9 +2077,11 @@ static int sdhci_esdhc_resume(struct device *dev)
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
 
-	ret = pinctrl_pm_select_default_state(dev);
-	if (ret)
-		return ret;
+	if (!device_may_wakeup(dev) || !host->irq_wake_enabled) {
+		ret = pinctrl_pm_select_default_state(dev);
+		if (ret)
+			return ret;
+	}
 
 	/* re-initialize hw state in case it's lost in low power mode */
 	sdhci_esdhc_imx_hwinit(host);
