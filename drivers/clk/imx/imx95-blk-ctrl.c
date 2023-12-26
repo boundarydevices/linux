@@ -111,16 +111,6 @@ static const struct imx95_blk_ctrl_clk_dev_data camblk_clk_dev_data[] = {
 		.flags = CLK_SET_RATE_PARENT,
 		.flags2 = CLK_GATE_SET_TO_DISABLE,
 	},
-	[IMX95_CLK_CAMBLK_ISI_AXI] = {
-		.name = "camblk_isi_axi",
-		.parent_names = (const char *[]){ "camisi", },
-		.num_parents = 1,
-		.reg = 0,
-		.bit_idx = 3,
-		.type = CLK_GATE,
-		.flags = CLK_SET_RATE_PARENT,
-		.flags2 = CLK_GATE_SET_TO_DISABLE,
-	},
 	[IMX95_CLK_CAMBLK_ISP_AXI] = {
 		.name = "camblk_isp_axi",
 		.parent_names = (const char *[]){ "camaxi", },
