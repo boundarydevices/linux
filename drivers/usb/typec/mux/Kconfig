@@ -52,13 +52,4 @@ config TYPEC_SWITCH_GPIO
 	  Say Y or M if your system has a typec super speed channel
 	  switch via a simple GPIO control.
 
-config TYPEC_NXP_TCA_MUX
-	tristate "NXP Type-C Assist block for USB SS lane switch"
-	help
-	  Say Y or M if your system has a NXP Type-C Assist block.
-	  Type-C Assist block is a seamless switch between normal plug
-	  orientation and flipped plug orientation for USB SS lane
-	  selection.
-	  If compiled as a module, the module will be named tca-mux.
-
 endmenu
