@@ -3937,6 +3937,7 @@ static void activate_blocked_waiters(struct rq *target_rq,
 			raw_spin_unlock_irqrestore(&owner->blocked_lock, flags);
 
 			do_activate_blocked_waiter(target_rq, p, en_flags);
+			trace_sched_pe_activate_blocked_entity(owner, p);
 
 			raw_spin_lock_irqsave(&p->blocked_lock, flags);
 			if (list_empty(&p->blocked_activation_node)) {
@@ -4101,8 +4102,10 @@ static int ttwu_runnable(struct task_struct *p, int wake_flags)
 			 */
 			wakeup_preempt(rq, p, wake_flags);
 		}
-		if (proxy_needs_return(rq, p))
+		if (proxy_needs_return(rq, p)) {
+			trace_sched_pe_return_migration(p, p->wake_cpu);
 			goto out;
+		}
 		ttwu_do_wakeup(p);
 		ret = 1;
 	}
@@ -7093,6 +7096,7 @@ static void proxy_enqueue_on_owner(struct rq *rq, struct task_struct *owner,
 	 * ttwu_activate() will pick them up and place them on whatever rq
 	 * @owner will run next.
 	 */
+	trace_sched_pe_enqueue_sleeping_task(owner, p);
 	WARN_ON(p == owner);
 	WARN_ON(!p->on_rq);
 	WARN_ON(p->sleeping_owner);
@@ -7185,6 +7189,8 @@ find_proxy_task(struct rq *rq, struct task_struct *donor, struct rq_flags *rf)
 
 		owner_cpu = task_cpu(owner);
 		if (owner_cpu != this_cpu) {
+			trace_sched_pe_migration(donor, owner);
+
 			/*
 			 * @owner can disappear, simply migrate to @owner_cpu and leave that CPU
 			 * to sort things out.
@@ -7199,6 +7205,8 @@ find_proxy_task(struct rq *rq, struct task_struct *donor, struct rq_flags *rf)
 		}
 
 		if (task_on_rq_migrating(owner)) {
+			trace_sched_pe_owner_is_migrating(owner, p);
+
 			/*
 			 * One of the chain of mutex owners is currently migrating to this
 			 * CPU, but has not yet been enqueued because we are holding the
@@ -7336,6 +7344,7 @@ needs_return:
 		return proxy_resched_idle(rq);
 
 	p->blocked_on_state = BO_RUNNABLE;
+	trace_sched_pe_return_migration(p, p->wake_cpu);
 	proxy_migrate_task(rq, rf, p, p->wake_cpu);
 	return NULL;
 
@@ -7486,6 +7495,8 @@ static void __sched notrace __schedule(int sched_mode)
 	}
 
 	prev_not_proxied = !prev->blocked_donor;
+
+	trace_sched_start_task_selection(prev, cpu, task_is_blocked(prev));
 pick_again:
 	next = pick_next_task(rq, rq->donor, &rf);
 	rq_set_donor(rq, next);
@@ -7500,6 +7511,7 @@ pick_again:
 		if (next == rq->idle)
 			preserve_need_resched = true;
 	}
+	trace_sched_finish_task_selection(rq->donor, next, cpu);
 picked:
 	if (!preserve_need_resched)
 		clear_tsk_need_resched(prev);
