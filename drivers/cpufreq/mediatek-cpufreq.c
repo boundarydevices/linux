@@ -42,7 +42,6 @@ struct mtk_cpu_dvfs_info {
 	struct list_head list_head;
 	int intermediate_voltage;
 	bool need_voltage_tracking;
-	int old_vproc;
 };
 
 static LIST_HEAD(dvfs_info_list);
@@ -193,16 +192,11 @@ static int mtk_cpufreq_voltage_tracking(struct mtk_cpu_dvfs_info *info,
 
 static int mtk_cpufreq_set_voltage(struct mtk_cpu_dvfs_info *info, int vproc)
 {
-	int ret;
-
 	if (info->need_voltage_tracking)
-		ret = mtk_cpufreq_voltage_tracking(info, vproc);
+		return mtk_cpufreq_voltage_tracking(info, vproc);
 	else
-		ret = regulator_set_voltage(info->proc_reg, vproc,
-					    MAX_VOLT_LIMIT);
-	if (!ret)
-		info->old_vproc = vproc;
-	return ret;
+		return regulator_set_voltage(info->proc_reg, vproc,
+					     vproc + VOLT_TOL);
 }
 
 static int mtk_cpufreq_set_target(struct cpufreq_policy *policy,
@@ -220,9 +214,7 @@ static int mtk_cpufreq_set_target(struct cpufreq_policy *policy,
 	inter_vproc = info->intermediate_voltage;
 
 	old_freq_hz = clk_get_rate(cpu_clk);
-	old_vproc = info->old_vproc;
-	if (old_vproc == 0)
-		old_vproc = regulator_get_voltage(info->proc_reg);
+	old_vproc = regulator_get_voltage(info->proc_reg);
 	if (old_vproc < 0) {
 		pr_err("%s: invalid Vproc value: %d\n", __func__, old_vproc);
 		return old_vproc;
