@@ -359,6 +359,10 @@ DECLARE_RESTRICTED_HOOK(android_rvh_update_blocked_fair,
 	TP_PROTO(struct rq *rq),
 	TP_ARGS(rq), 1);
 
+DECLARE_RESTRICTED_HOOK(android_rvh_set_task_comm,
+	TP_PROTO(struct task_struct *tsk, bool exec),
+	TP_ARGS(tsk, exec), 1);
+
 /* macro versions of hooks are no longer required */
 
 #endif /* _TRACE_HOOK_SCHED_H */
