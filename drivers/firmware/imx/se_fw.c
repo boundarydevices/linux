@@ -71,7 +71,7 @@ struct imx_info_list {
 
 static LIST_HEAD(priv_data_list);
 
-static const struct imx_info_list imx8ulp_info = {
+static struct imx_info_list imx8ulp_info = {
 	.num_mu = 1,
 	.soc_id = SOC_ID_OF_IMX8ULP,
 	.info = {
@@ -100,7 +100,7 @@ static const struct imx_info_list imx8ulp_info = {
 	},
 };
 
-static const struct imx_info_list imx93_info = {
+static struct imx_info_list imx93_info = {
 	.num_mu = 1,
 	.soc_id = SOC_ID_OF_IMX93,
 	.info = {
@@ -129,7 +129,7 @@ static const struct imx_info_list imx93_info = {
 	},
 };
 
-static const struct imx_info_list imx95_info = {
+static struct imx_info_list imx95_info = {
 	.num_mu = 3,
 	.soc_id = SOC_ID_OF_IMX95,
 	.info = {
