@@ -502,6 +502,11 @@ static int neoisp_schedule_internal(struct neoisp_node_group_s *node_group, unsi
 		dev_dbg(&neoispd->pdev->dev, "Dcg node not ready, nothing to do\n");
 		return 0;
 	}
+	if ((BIT(NEOISP_FRAME_NODE) & node_group->streaming_map)
+			!= BIT(NEOISP_FRAME_NODE)) {
+		dev_dbg(&neoispd->pdev->dev, "Frame node not ready, nothing to do\n");
+		return 0;
+	}
 
 	if (!mod_params.test.disable_params) {
 		if ((BIT(NEOISP_PARAMS_NODE) & node_group->streaming_map)
