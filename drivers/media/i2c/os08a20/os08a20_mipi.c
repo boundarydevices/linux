@@ -49,6 +49,17 @@
 #define OS08A20_SENS_PAD_SOURCE	0
 #define OS08A20_SENS_PADS_NUM	1
 
+/* 16 dummy pixels + 3840 active pixels + 16 dummy pixels = 3872 */
+#define OS08A20_NATIVE_WIDTH	3872
+/* 16 dummy lines + 2160 active lines + 16 dummy lines = 2192 */
+#define OS08A20_NATIVE_HEIGHT	2192
+
+/* active pixels */
+#define OS08A20_PIXEL_ARRAY_TOP	16
+#define OS08A20_PIXEL_ARRAY_LEFT	16
+#define OS08A20_PIXEL_ARRAY_WIDTH	3840
+#define OS08A20_PIXEL_ARRAY_HEIGHT	2160
+
 #define client_to_os08a20(client)\
 	container_of(i2c_get_clientdata(client), struct os08a20, subdev)
 
@@ -1306,6 +1317,31 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 	return ret;
 }
 
+static int os08a20_get_selection(struct v4l2_subdev *sd,
+				 struct v4l2_subdev_state *sd_state,
+				 struct v4l2_subdev_selection *sel)
+{
+	switch (sel->target) {
+	case V4L2_SEL_TGT_NATIVE_SIZE:
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+		sel->r.top = 0;
+		sel->r.left = 0;
+		sel->r.width = OS08A20_NATIVE_WIDTH;
+		sel->r.height = OS08A20_NATIVE_HEIGHT;
+		return 0;
+	case V4L2_SEL_TGT_CROP:
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+		sel->r.top = OS08A20_PIXEL_ARRAY_TOP;
+		sel->r.left = OS08A20_PIXEL_ARRAY_LEFT;
+		sel->r.width = OS08A20_PIXEL_ARRAY_WIDTH;
+		sel->r.height = OS08A20_PIXEL_ARRAY_HEIGHT;
+
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
 static const struct v4l2_subdev_video_ops os08a20_subdev_video_ops = {
 	.s_stream = os08a20_s_stream,
 };
@@ -1316,6 +1352,7 @@ static const struct v4l2_subdev_pad_ops os08a20_subdev_pad_ops = {
 	.get_fmt		= os08a20_get_fmt,
 	.get_frame_desc		= os08a20_get_frame_desc,
 	.enum_frame_size	= os08a20_enum_frame_size,
+	.get_selection		= os08a20_get_selection,
 };
 
 static const struct v4l2_subdev_core_ops os08a20_subdev_core_ops = {
