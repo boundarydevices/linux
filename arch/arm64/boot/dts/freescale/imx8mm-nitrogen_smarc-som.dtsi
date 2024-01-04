@@ -704,6 +704,8 @@
 	vmmc-supply = <&reg_wlan_vmmc>;
 	vqmmc-1-8-v;
 	vqmmc-supply = <&reg_vref_1v8>;
+	disable-adma1;
+	disable-adma2;
 	#address-cells = <1>;
 	#size-cells = <0>;
 
