@@ -824,6 +824,7 @@
 
 /* J2E */
 #define SM_USBOTG			usbotg1
+#define SM_USBOTG_DWC			usbotg1
 #define GP_SM_USB0_EN_OC(a)		<&gpio1 13 a>
 #define PD_SM_USB0_EN_OC(a)		MX8MMN(IOMUXC_GPIO1_IO13_GPIO1_IO13, a)
 #define PD_SM_USB0_EN_OC_USB(a)		MX8MMN(IOMUXC_GPIO1_IO13_USB1_OTG_OC, a)
