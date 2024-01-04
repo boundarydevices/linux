@@ -116,6 +116,9 @@ struct os08a20_ctrls {
 	struct v4l2_ctrl_handler handler;
 	struct v4l2_ctrl *link_freq;
 	struct v4l2_ctrl *hdr_mode;
+	struct v4l2_ctrl *pixel_rate;
+	struct v4l2_ctrl *hblank;
+	struct v4l2_ctrl *vblank;
 };
 
 /* align with enum sensor_hdr_mode_e */
@@ -191,6 +194,8 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 		},
 		.preg_data      = os08a20_init_setting_1080p,
 		.reg_data_count = ARRAY_SIZE(os08a20_init_setting_1080p),
+		.def_hts        = 0x790,
+		.h_bin          = true,
 	},
 	{
 		.index	        = 1,
@@ -247,6 +252,8 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 		},
 		.preg_data      = os08a20_init_setting_1080p_hdr,
 		.reg_data_count = ARRAY_SIZE(os08a20_init_setting_1080p_hdr),
+		.def_hts        = 0x804,
+		.h_bin          = true,
 	},
 	{
 		.index	        = 2,
@@ -289,6 +296,8 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 		},
 		.preg_data      = os08a20_init_setting_4k,
 		.reg_data_count = ARRAY_SIZE(os08a20_init_setting_4k),
+		.def_hts        = 0x814,
+		.h_bin          = false,
 	},
 	{
 		.index	        = 3,
@@ -345,6 +354,8 @@ static struct vvcam_mode_info_s pos08a20_mode_info[] = {
 		},
 		.preg_data      = os08a20_init_setting_4k_hdr,
 		.reg_data_count = ARRAY_SIZE(os08a20_init_setting_4k_hdr),
+		.def_hts        = 0x818,
+		.h_bin          = false,
 	},
 };
 
@@ -470,7 +481,8 @@ static int os08a20_write_reg_arry(struct os08a20 *sensor,
 			msg.len   = send_buf_len;
 			ret = i2c_transfer(i2c_client->adapter, &msg, 1);
 			if (ret < 0) {
-				dev_err(dev, "%s:i2c transfer error\n", __func__);
+				dev_err(dev, "%s:i2c transfer error addr=%x\n",
+					__func__, reg_arry[i].addr);
 				kfree(send_buf);
 				return ret;
 			}
@@ -681,6 +693,26 @@ static int os08a20_set_vsgain(struct os08a20 *sensor, u32 total_gain)
 	return ret;
 }
 
+static int os08a20_set_hts(struct os08a20 *sensor, u32 hts)
+{
+	int ret = 0;
+
+	ret = os08a20_write_reg(sensor, 0x380c, (u8)(hts >> 8) & 0xff);
+	ret |= os08a20_write_reg(sensor, 0x380d, (u8)(hts & 0xff));
+
+	return ret;
+}
+
+static int os08a20_set_vts(struct os08a20 *sensor, u32 vts)
+{
+	int ret = 0;
+
+	ret = os08a20_write_reg(sensor, 0x380e, (u8)(vts >> 8) & 0xff);
+	ret |= os08a20_write_reg(sensor, 0x380f, (u8)(vts & 0xff));
+
+	return ret;
+}
+
 static int os08a20_set_fps(struct os08a20 *sensor, u32 fps)
 {
 	u32 vts;
@@ -839,6 +871,53 @@ static u32 os08a20_code2bpp(const u32 code)
 	}
 }
 
+/* Update control ranges based on current streaming mode, needs sensor lock */
+static int os08a20_update_controls(struct os08a20 *sensor)
+{
+	int ret;
+	struct device *dev = &sensor->i2c_client->dev;
+	u32 hts = sensor->cur_mode.def_hts;
+	u32 hblank;
+	u32 vts = sensor->cur_mode.ae_info.curr_frm_len_lines;
+	u32 vblank = vts - sensor->cur_mode.size.bounds_height;
+	u32 fps = sensor->cur_mode.ae_info.cur_fps / (1 << SENSOR_FIX_FRACBITS);
+	u64 pixel_rate = (sensor->cur_mode.h_bin) ? hts * vts * fps : 2 * hts * vts * fps;
+
+	ret = __v4l2_ctrl_modify_range(sensor->ctrls.pixel_rate, pixel_rate,
+				       pixel_rate, 1, pixel_rate);
+	if (ret) {
+		dev_err(dev, "Modify range for ctrl: pixel_rate %llu-%llu failed\n",
+			pixel_rate, pixel_rate);
+		goto out;
+	}
+
+	if (sensor->cur_mode.h_bin)
+		hblank = hts - sensor->cur_mode.size.bounds_width;
+	else
+		hblank = 2 * hts - sensor->cur_mode.size.bounds_width;
+
+	ret = __v4l2_ctrl_modify_range(sensor->ctrls.hblank, hblank, hblank,
+				       1, hblank);
+	if (ret) {
+		dev_err(dev, "Modify range for ctrl: hblank %u-%u failed\n",
+			hblank, hblank);
+		goto out;
+	}
+	__v4l2_ctrl_s_ctrl(sensor->ctrls.hblank, sensor->ctrls.hblank->default_value);
+
+	ret = __v4l2_ctrl_modify_range(sensor->ctrls.vblank, 0, vblank * 4,
+				       1, vblank);
+	if (ret) {
+		dev_err(dev, "Modify range for ctrl: vblank %u-%u failed\n",
+			vblank, vblank);
+		goto out;
+	}
+	__v4l2_ctrl_s_ctrl(sensor->ctrls.vblank, sensor->ctrls.vblank->default_value);
+
+out:
+	return ret;
+}
+
 /* needs sensor lock & never fails */
 static void os08a20_update_current_mode(struct os08a20 *sensor, u32 w, u32 h,
 					u32 bpp, enum sensor_hdr_mode_e hdr)
@@ -882,6 +961,9 @@ static int os08a20_apply_current_mode(struct os08a20 *sensor)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	struct vvcam_sccb_data_s *preg_data = NULL;
+	u32 w = sensor->cur_mode.size.bounds_width;
+	u32 h = sensor->cur_mode.size.bounds_height;
+	u32 hts;
 	int ret = 0;
 
 	pm_runtime_get_noresume(dev);
@@ -892,6 +974,19 @@ static int os08a20_apply_current_mode(struct os08a20 *sensor)
 	preg_data = (struct vvcam_sccb_data_s *)sensor->cur_mode.preg_data;
 	ret = os08a20_write_reg_arry(sensor, preg_data,
 				     sensor->cur_mode.reg_data_count);
+	if (ret)
+		goto out;
+
+	/* update controls that depend on current mode */
+	os08a20_update_controls(sensor);
+
+	/* overwrite current mode with current controls */
+	if (sensor->cur_mode.h_bin)
+		hts = w + sensor->ctrls.hblank->cur.val;
+	else
+		hts = (w + sensor->ctrls.hblank->cur.val) / 2;
+	ret = os08a20_set_hts(sensor, hts);
+	ret |= os08a20_set_vts(sensor, h + sensor->ctrls.vblank->cur.val);
 	if (ret < 0)
 		goto out;
 
@@ -932,6 +1027,8 @@ static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
 	int ret = 0;
+	u32 w = sensor->cur_mode.size.bounds_width;
+	u32 h = sensor->cur_mode.size.bounds_height;
 
 	/* s_ctrl holds sensor lock */
 	switch (ctrl->id) {
@@ -941,8 +1038,7 @@ static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 		sensor->hdr = ctrl->val;
 
 		/* update and apply current mode if hdr mode mismatches */
-		os08a20_update_current_mode(sensor, sensor->cur_mode.size.bounds_width,
-					    sensor->cur_mode.size.bounds_height,
+		os08a20_update_current_mode(sensor, w, h,
 					    sensor->cur_mode.bit_width,
 					    sensor->hdr);
 
@@ -950,6 +1046,18 @@ static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 		ret = os08a20_apply_current_mode(sensor);
 		/* TODO check if other controls will need to be updated */
 		break;
+	case V4L2_CID_VBLANK:
+		ret = os08a20_set_vts(sensor, h + ctrl->val);
+		break;
+	case V4L2_CID_HBLANK:
+		if (sensor->cur_mode.h_bin)
+			ret = os08a20_set_hts(sensor, w + ctrl->val);
+		else
+			ret = os08a20_set_hts(sensor, (w + ctrl->val) / 2);
+		break;
+	case V4L2_CID_PIXEL_RATE:
+		/* Read-only, but we adjust it based on mode. */
+		return 0;
 	default:
 		ret = -EINVAL;
 		break;
@@ -980,7 +1088,7 @@ static int os08a20_init_controls(struct os08a20 *sensor)
 	struct v4l2_ctrl_handler *hdl = &ctrls->handler;
 	int ret;
 
-	v4l2_ctrl_handler_init(hdl, 5);
+	v4l2_ctrl_handler_init(hdl, 7);
 
 	/* we can use our own mutex for the ctrl lock */
 	hdl->lock = &sensor->lock;
@@ -992,6 +1100,16 @@ static int os08a20_init_controls(struct os08a20 *sensor)
 					OS08A20_DEFAULT_LINK_FREQ,
 					os08a20_csi2_link_freqs);
 
+	/* mode dependent, actual range set in os08a20_update_controls */
+	ctrls->pixel_rate = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_PIXEL_RATE,
+					      0, 0, 1, 0);
+
+	ctrls->hblank = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_HBLANK,
+					  0, 0, 1, 0);
+
+	ctrls->vblank = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_VBLANK,
+					  0, 0, 1, 0);
+
 	ctrls->hdr_mode = v4l2_ctrl_new_std_menu_items(hdl, ops, V4L2_CID_HDR_SENSOR_MODE,
 				     ARRAY_SIZE(os08a20_hdr_mode_menu) - 1, 0,
 				     SENSOR_MODE_LINEAR, os08a20_hdr_mode_menu);
@@ -1002,6 +1120,7 @@ static int os08a20_init_controls(struct os08a20 *sensor)
 	}
 
 	ctrls->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+	ctrls->pixel_rate->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 
 	sensor->subdev.ctrl_handler = hdl;
 	return 0;
@@ -1666,6 +1785,7 @@ static int os08a20_probe(struct i2c_client *client)
 	memcpy(&sensor->cur_mode, &pos08a20_mode_info[0],
 	       sizeof(struct vvcam_mode_info_s));
 	sensor->hdr = SENSOR_MODE_LINEAR;
+	os08a20_update_controls(sensor);
 
 	mutex_init(&sensor->lock);
 	dev_info(dev, "%s camera mipi os08a20, is found\n", __func__);

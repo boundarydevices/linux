@@ -245,6 +245,8 @@ struct vvcam_mode_info_s {
 	struct sensor_mipi_info_s mipi_info;
 	void *preg_data;
 	u32 reg_data_count;
+	u32 def_hts;
+	bool h_bin;
 };
 
 struct sensor_blc_s {
