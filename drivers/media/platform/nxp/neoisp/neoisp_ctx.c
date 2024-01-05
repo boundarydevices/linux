@@ -2,9 +2,8 @@
 /*
  * NEOISP context registers/memory setting helpers
  *
- * Copyright 2023 NXP
+ * Copyright 2023-2024 NXP
  * Author: Aymen Sghaier (aymen.sghaier@nxp.com)
- *
  */
 
 #include <linux/clk.h>
@@ -927,7 +926,7 @@ static void neoisp_set_cas(struct neoisp_reg_params_s *p, struct neoisp_dev_s *n
 			NEO_CAS_OFFSET_CAM0_OFFSET_SET(p->cas.offset_offset));
 }
 
-static void neoisp_set_gcm(struct neoisp_reg_params_s *p, struct neoisp_dev_s *neoispd)
+void neoisp_set_gcm(struct neoisp_reg_params_s *p, struct neoisp_dev_s *neoispd)
 {
 	regmap_field_write(neoispd->regs.fields[NEO_GCM_IMAT0_CAM0_IDX],
 			NEO_GCM_IMAT0_CAM0_R0C0_SET(p->gcm.imat_rxcy[0][0])

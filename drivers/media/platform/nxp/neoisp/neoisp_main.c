@@ -6,9 +6,8 @@
  * "David Plowman <david.plowman@raspberrypi.com>" and
  * "Nick Hollinghurst <nick.hollinghurst@raspberrypi.com>"
  *
- * Copyright 2023 NXP
+ * Copyright 2023-2024 NXP
  * Author: Aymen Sghaier (aymen.sghaier@nxp.com)
- *
  */
 
 #include <linux/clk.h>
@@ -275,6 +274,13 @@ static void neoisp_config_gcm_for_yuv(struct neoisp_dev_s *neoispd)
 
 }
 
+static void neoisp_config_gcm_for_rgb(struct neoisp_dev_s *neoispd)
+{
+	/* set default gcm parameters that corresponds to rgb output */
+	neoisp_set_gcm(&neoisp_default_params.regs, neoispd);
+
+}
+
 static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 {
 	struct neoisp_mparam_packetizer_s *pck = &mod_params.pack;
@@ -283,6 +289,8 @@ static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 
 	if (FMT_IS_YUV(pixfmt))
 		neoisp_config_gcm_for_yuv(neoispd);
+	else
+		neoisp_config_gcm_for_rgb(neoispd);
 
 	switch (pixfmt) {
 	case V4L2_PIX_FMT_NV12:
@@ -294,14 +302,6 @@ static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 		pck->ctrl_cam0_order1 = 0;
 		pck->ctrl_cam0_order2 = 1;
 		break;
-	case V4L2_PIX_FMT_YUV24:
-		pck->ctrl_cam0_type = 1;
-		pck->ch12_ctrl_cam0_subsample = 0;
-		/* set channels orders */
-		pck->ctrl_cam0_order0 = 0;
-		pck->ctrl_cam0_order1 = 1;
-		pck->ctrl_cam0_order2 = 2;
-		break;
 	case V4L2_PIX_FMT_YUYV:
 		pck->ctrl_cam0_type = 1;
 		pck->ch12_ctrl_cam0_subsample = 1;
@@ -309,6 +309,14 @@ static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 		pck->ctrl_cam0_order0 = 0;
 		pck->ctrl_cam0_order1 = 1;
 		pck->ctrl_cam0_order2 = 3;
+		break;
+	default: /* all other pixel formats */
+		pck->ctrl_cam0_type = 1;
+		pck->ch12_ctrl_cam0_subsample = 0;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 0;
+		pck->ctrl_cam0_order1 = 1;
+		pck->ctrl_cam0_order2 = 2;
 		break;
 	}
 
@@ -469,11 +477,11 @@ static void neoisp_queue_job(struct neoisp_dev_s *neoispd,
 		struct neoisp_node_group_s *node_group,
 		struct neoisp_meta_params_s *params)
 {
-	neoisp_set_packetizer(neoispd);
-	neoisp_set_pipe_conf(neoispd);
 	/* if params provided then do setup */
 	if (!IS_ERR_OR_NULL(params))
 		neoisp_set_params(neoispd, params);
+	neoisp_set_packetizer(neoispd);
+	neoisp_set_pipe_conf(neoispd);
 
 	/* kick off the hw */
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_TRIG_CAM0_IDX],
