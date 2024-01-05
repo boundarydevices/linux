@@ -1453,7 +1453,7 @@ static int neoisp_init_node(struct neoisp_node_group_s *node_group, __u32 id)
 	if (ret)
 		goto err_unregister_video_dev;
 
-	dev_info(&neoispd->pdev->dev,
+	dev_dbg(&neoispd->pdev->dev,
 			"%s device node registered as /dev/video%d\n",
 			NODE_NAME(node), node->vfd.num);
 
@@ -1477,7 +1477,7 @@ static int neoisp_init_group(struct neoisp_dev_s *neoispd, __u32 id)
 	node_group->neoisp_dev = neoispd;
 	node_group->streaming_map = 0;
 
-	dev_info(&neoispd->pdev->dev, "Register nodes for group %u\n", id);
+	dev_dbg(&neoispd->pdev->dev, "Register nodes for group %u\n", id);
 
 	/* Register v4l2_device and media_device */
 	mdev = &node_group->mdev;
@@ -1554,7 +1554,7 @@ static void neoisp_destroy_node_group(struct neoisp_node_group_s *node_group)
 				node_group->params_dma_addr);
 	}
 
-	dev_info(&neoispd->pdev->dev, "Unregister from media controller\n");
+	dev_dbg(&neoispd->pdev->dev, "Unregister from media controller\n");
 
 	v4l2_device_unregister_subdev(&node_group->sd);
 	media_entity_cleanup(&node_group->sd.entity);
@@ -1667,7 +1667,10 @@ static int neoisp_probe(struct platform_device *pdev)
 	}
 
 	ret = neoisp_init_hw(neoisp_dev);
+	if (ret)
+		goto disable_nodes_err;
 
+	dev_info(&pdev->dev, "probe: done (%d)\n", ret);
 	return ret;
 
 disable_nodes_err:
@@ -1676,7 +1679,7 @@ disable_nodes_err:
 err_pm:
 	pm_runtime_disable(&pdev->dev);
 
-	dev_err(&pdev->dev, "probe: returning %d", ret);
+	dev_err(&pdev->dev, "probe: error %d\n", ret);
 	return ret;
 }
 
