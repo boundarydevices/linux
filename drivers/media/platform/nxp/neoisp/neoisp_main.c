@@ -1158,6 +1158,10 @@ static void neoisp_get_stats(struct neoisp_dev_s *neoispd, struct neoisp_buffer_
 	__u8 *src = (__u8 *)(uintptr_t)neoispd->mmio_tcm;
 	__u32 offset, size;
 
+	/* check if stats node */
+	if (mod_params.test.disable_stats)
+		return;
+
 	if (IS_ERR_OR_NULL(dest) || IS_ERR_OR_NULL(src)) {
 		dev_err(&neoispd->pdev->dev, "Error: stats pointer\n");
 		return;
