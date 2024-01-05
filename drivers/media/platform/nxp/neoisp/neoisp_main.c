@@ -218,14 +218,17 @@ static int neoisp_node_buffer_prepare(struct vb2_buffer *vb)
 	return 0;
 }
 
-static void send_frame_sync_event(struct neoisp_node_s *node, __u32 sequence)
+static void send_frame_sync_event(struct neoisp_dev_s *neoispd)
 {
+	struct v4l2_subdev *sd =  &neoispd->queued_job.node_group->sd;
+	struct neoisp_buffer_s *buf = neoispd->queued_job.buf[NEOISP_DCG_NODE];
+
 	struct v4l2_event ev = {
 		.type = V4L2_EVENT_FRAME_SYNC,
-		.u.frame_sync.frame_sequence = sequence,
+		.u.frame_sync.frame_sequence = buf->vb.sequence,
 	};
 
-	v4l2_event_queue(&node->vfd, &ev);
+	v4l2_event_queue(sd->devnode, &ev);
 }
 
 __u32 *get_vaddr(struct neoisp_buffer_s *buf)
@@ -486,6 +489,7 @@ static void neoisp_queue_job(struct neoisp_dev_s *neoispd,
 	/* kick off the hw */
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_TRIG_CAM0_IDX],
 			NEO_PIPE_CONF_TRIG_CAM0_TRIGGER);
+	send_frame_sync_event(neoispd);
 	dev_dbg(&neoispd->pdev->dev, "isp starting\n");
 }
 
@@ -1282,7 +1286,6 @@ static irqreturn_t neoisp_irq_handler(int irq, void *dev_id)
 				buf[i]->vb.vb2_buf.timestamp = ts;
 				vb2_buffer_done(&buf[i]->vb.vb2_buf,
 						VB2_BUF_STATE_DONE);
-				send_frame_sync_event(node, buf[i]->vb.sequence);
 			}
 		}
 		/* check if there's more to do before going to sleep */
