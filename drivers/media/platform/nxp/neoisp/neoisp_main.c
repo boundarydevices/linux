@@ -1308,9 +1308,12 @@ static int neoisp_init_subdev(struct neoisp_node_group_s *node_group)
 	int ret;
 
 	v4l2_subdev_init(sd, &neoisp_sd_ops);
-	sd->entity.function = MEDIA_ENT_F_PROC_VIDEO_PIXEL_FORMATTER;
+	sd->entity.function = MEDIA_ENT_F_PROC_VIDEO_ISP;
 	sd->owner = THIS_MODULE;
 	sd->dev = &neoispd->pdev->dev;
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE
+			| V4L2_SUBDEV_FL_STREAMS
+			| V4L2_SUBDEV_FL_HAS_EVENTS;
 	strscpy(sd->name, NEOISP_NAME, sizeof(sd->name));
 
 	for (i = 0; i < NEOISP_NODES_COUNT; i++)
@@ -1505,6 +1508,10 @@ static int neoisp_init_group(struct neoisp_dev_s *neoispd, __u32 id)
 	}
 
 	ret = media_device_register(mdev);
+	if (ret)
+		goto err_unregister_nodes;
+
+	ret = v4l2_device_register_subdev_nodes(&node_group->v4l2_dev);
 	if (ret)
 		goto err_unregister_nodes;
 
