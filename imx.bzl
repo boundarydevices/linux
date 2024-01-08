@@ -243,7 +243,6 @@ _IMX_IN_TREE_MODULES = [
     "drivers/media/rc/gpio-ir-recv.ko",
     "drivers/pci/controller/dwc/pci-imx6.ko",
     "drivers/soc/imx/imx8mp-blk-ctrl.ko",
-    "drivers/thermal/device_cooling.ko",
     "drivers/firmware/imx/imx-dsp.ko",
     "drivers/mfd/wm8994.ko",
     "drivers/soc/imx/imx8ulp_lpm.ko",
@@ -337,6 +336,12 @@ _IMX_IN_TREE_MODULES = [
     "drivers/i2c/muxes/i2c-mux-gpio.ko",
     "drivers/iio/accel/fxls8962af-core.ko",
     "drivers/i2c/i2c-mux.ko",
+    "drivers/iio/common/st_sensors/st_sensors.ko",
+    "drivers/iio/magnetometer/st_magn.ko",
+    "drivers/iio/common/st_sensors/st_sensors_i2c.ko",
+    "drivers/iio/common/st_sensors/st_sensors_spi.ko",
+    "drivers/iio/magnetometer/st_magn_i2c.ko",
+    "drivers/iio/magnetometer/st_magn_spi.ko",
 ]
 
 def define_imx():
