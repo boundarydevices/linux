@@ -274,6 +274,7 @@ imx8qm-mek-revd-dsi-rm67199-dtbs := imx8qm-mek-dsi-rm67199.dtb imx8qm-mek-revd.d
 imx8qm-pcieax2pciebx1-revd-dtbs := imx8qm-pcieax2pciebx1.dtb imx8qm-mek-revd.dtbo
 imx8qm-mek-revd-esai-dtbs := imx8qm-mek-esai.dtb imx8qm-mek-revd.dtbo
 imx8qm-mek-revd-root-dtbs := imx8qm-mek-root.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-md-dtbs := imx8qm-mek-md.dtb imx8qm-mek-revd.dtbo
 
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-rpmsg.dtb
@@ -294,6 +295,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-dsi-rm67199.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-pcieax2pciebx1-revd.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-esai.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-root.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-md.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-ai_ml.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-colibri-eval-v3.dtb
