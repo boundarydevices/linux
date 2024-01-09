@@ -146,3 +146,4 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_init);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_wake);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_write_finished);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_alter_rwsem_list_add);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_downgrade_wake_finish);
