@@ -14,3 +14,22 @@ config MTK_SENINF30
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called mtk-seninf.
+
+config MTK_CAMSV30
+	tristate "MediaTek ISP3.0 CAMSV driver"
+	depends on VIDEO_V4L2_SUBDEV_API
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	depends on OF
+	depends on PM
+	select VIDEOBUF2_VMALLOC
+	select VIDEOBUF2_DMA_CONTIG
+	select MTK_SENINF30
+	select PHY_MTK_MIPI_CSI_0_5
+	default n
+	help
+	  This driver provides a path to bypass the SoC ISP so that
+	  image data come from the SENINF can go directly into memory
+	  without any image processing.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mtk-camsv30.
