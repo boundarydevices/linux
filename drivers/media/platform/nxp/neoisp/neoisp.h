@@ -149,7 +149,8 @@ struct neoisp_node_s {
 };
 
 struct neoisp_node_group_s {
-	unsigned int id;
+	__u32 id;
+	__u32 frame_sequence;
 	struct v4l2_device v4l2_dev;
 	struct v4l2_subdev sd;
 	struct neoisp_dev_s *neoisp_dev;

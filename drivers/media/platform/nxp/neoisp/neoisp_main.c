@@ -221,11 +221,11 @@ static int neoisp_node_buffer_prepare(struct vb2_buffer *vb)
 static void send_frame_sync_event(struct neoisp_dev_s *neoispd)
 {
 	struct v4l2_subdev *sd =  &neoispd->queued_job.node_group->sd;
-	struct neoisp_buffer_s *buf = neoispd->queued_job.buf[NEOISP_DCG_NODE];
+	__u32 sequence = neoispd->queued_job.node_group->frame_sequence;
 
 	struct v4l2_event ev = {
 		.type = V4L2_EVENT_FRAME_SYNC,
-		.u.frame_sync.frame_sequence = buf->vb.sequence,
+		.u.frame_sync.frame_sequence = sequence,
 	};
 
 	v4l2_event_queue(sd->devnode, &ev);
@@ -1065,6 +1065,9 @@ static int neoisp_node_streamon(struct file *file, void *priv,
 
 	INIT_LIST_HEAD(&node->ready_queue);
 
+	/* init frame_sequence */
+	node->node_group->frame_sequence = 0;
+
 	/* locking should be handled by the queue->lock? */
 	return vb2_streamon(&node->queue, type);
 }
@@ -1204,7 +1207,7 @@ static irqreturn_t neoisp_irq_handler(int irq, void *dev_id)
 {
 	struct neoisp_dev_s *neoispd = (struct neoisp_dev_s *)dev_id;
 	struct neoisp_buffer_s **buf = neoispd->queued_job.buf;
-	struct neoisp_node_s *node;
+	struct neoisp_node_group_s *node_group = neoispd->queued_job.node_group;
 	__u64 ts = ktime_get_ns();
 	__u32 irq_status = 0;
 	__u32 irq_clear = 0;
@@ -1282,12 +1285,14 @@ static irqreturn_t neoisp_irq_handler(int irq, void *dev_id)
 		dev_dbg(&neoispd->pdev->dev, "Neo is entring done irq_clear %x\n", irq_clear);
 		for (i = 0; i < NEOISP_NODES_COUNT; i++) {
 			if (buf[i]) {
-				node = &neoispd->queued_job.node_group->node[i];
+				buf[i]->vb.sequence = node_group->frame_sequence;
 				buf[i]->vb.vb2_buf.timestamp = ts;
 				vb2_buffer_done(&buf[i]->vb.vb2_buf,
 						VB2_BUF_STATE_DONE);
 			}
 		}
+		/* update frame_sequence */
+		node_group->frame_sequence++;
 		/* check if there's more to do before going to sleep */
 		neoisp_schedule_next(neoispd, true);
 	}
