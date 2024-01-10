@@ -13502,6 +13502,7 @@ M:	Andy Hsieh <andy.hsieh@mediatek.com>
 S:	Supported
 F:	Documentation/devicetree/bindings/media/mediatek,mt8365-camsv.yaml
 F:	Documentation/devicetree/bindings/media/mediatek,mt8365-seninf.yaml
+F:	drivers/media/platform/mediatek/isp/isp_30/seninf/*
 
 MEDIATEK SMI DRIVER
 M:	Yong Wu <yong.wu@mediatek.com>

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config MTK_SENINF30
+	tristate "MediaTek ISP3.0 SENINF driver"
+	depends on VIDEO_V4L2_SUBDEV_API
+	depends on MEDIA_CAMERA_SUPPORT
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	depends on OF
+	select V4L2_FWNODE
+	default n
+	help
+	  This driver provides a MIPI CSI-2 receiver interface to connect
+	  an external camera module with MediaTek ISP3.0. It is able to handle
+	  multiple cameras at the same time.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mtk-seninf.
