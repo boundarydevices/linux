@@ -91,9 +91,6 @@ static void mtk_camsv_update_buffers_add(struct mtk_cam_dev *cam_dev,
 {
 	mtk_camsv_write(cam_dev, CAMSV_FBC_IMGO_ENQ_ADDR, buf->daddr);
 
-	if (cam_dev->conf->enableFH)
-		mtk_camsv_write(cam_dev, CAMSV_IMGO_FH_BASE_ADDR, buf->fhaddr);
-
 	mtk_camsv_write(cam_dev, CAMSV_IMGO_FBC, 0x1U);
 }
 
