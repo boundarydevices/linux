@@ -1300,12 +1300,27 @@ static irqreturn_t neoisp_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static const struct v4l2_subdev_pad_ops neoisp_pad_ops = {
+static int neoisp_sd_subs_evt(struct v4l2_subdev *sd, struct v4l2_fh *fh,
+			       struct v4l2_event_subscription *sub)
+{
+	if (sub->type != V4L2_EVENT_FRAME_SYNC)
+		return -EINVAL;
+
+	return v4l2_event_subscribe(fh, sub, 0, NULL);
+}
+
+static const struct v4l2_subdev_core_ops neoisp_sd_core_ops = {
+	.subscribe_event = neoisp_sd_subs_evt,
+	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
+};
+
+static const struct v4l2_subdev_pad_ops neoisp_sd_pad_ops = {
 	.link_validate = v4l2_subdev_link_validate_default,
 };
 
 static const struct v4l2_subdev_ops neoisp_sd_ops = {
-	.pad = &neoisp_pad_ops,
+	.core = &neoisp_sd_core_ops,
+	.pad = &neoisp_sd_pad_ops,
 };
 
 static int neoisp_init_subdev(struct neoisp_node_group_s *node_group)
