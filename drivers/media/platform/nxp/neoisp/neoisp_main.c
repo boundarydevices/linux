@@ -247,11 +247,16 @@ static dma_addr_t get_addr(struct neoisp_buffer_s *buf, __u32 num_plane)
 
 static void neoisp_config_gcm_for_yuv(struct neoisp_dev_s *neoispd)
 {
+	/**
+	 * conversion matrix values comes from:
+	 * https://en.wikipedia.org/wiki/YCbCr#ITU-R_BT.601_conversion
+	 */
 	__s16 yuv_mat[3][3] = {
-		{77, 150, 30},
-		{-38, -74, 111},
-		{158, -132, -26},
+		{65, 129, 25},
+		{-38, -74, 112},
+		{112, -94, -18},
 	};
+
 	regmap_field_write(neoispd->regs.fields[NEO_GCM_OMAT0_CAM0_IDX],
 			NEO_GCM_OMAT0_CAM0_R0C0_SET(yuv_mat[0][0])
 			| NEO_GCM_OMAT0_CAM0_R0C1_SET(yuv_mat[0][1]));
@@ -267,14 +272,14 @@ static void neoisp_config_gcm_for_yuv(struct neoisp_dev_s *neoispd)
 			| NEO_GCM_OMAT4_CAM0_R2C1_SET(yuv_mat[2][1]));
 	regmap_field_write(neoispd->regs.fields[NEO_GCM_OMAT5_CAM0_IDX],
 			NEO_GCM_OMAT5_CAM0_R2C2_SET(yuv_mat[2][2]));
+	regmap_field_write(neoispd->regs.fields[NEO_GCM_OOFFSET0_CAM0_IDX],
+			NEO_GCM_OOFFSET0_CAM0_OFFSET0_SET(256));
 	regmap_field_write(neoispd->regs.fields[NEO_GCM_OOFFSET1_CAM0_IDX],
 			NEO_GCM_OOFFSET1_CAM0_OFFSET1_SET(2048));
 	regmap_field_write(neoispd->regs.fields[NEO_GCM_OOFFSET2_CAM0_IDX],
 			NEO_GCM_OOFFSET2_CAM0_OFFSET2_SET(2048));
-	/* set signed CbCr data */
 	regmap_field_write(neoispd->regs.fields[NEO_GCM_MAT_CONFG_CAM0_IDX],
-			NEO_GCM_MAT_CONFG_CAM0_SIGN_CONFG_SET(0));
-
+			NEO_GCM_MAT_CONFG_CAM0_SIGN_CONFG_SET(1));
 }
 
 static void neoisp_config_gcm_for_rgb(struct neoisp_dev_s *neoispd)
@@ -1592,6 +1597,18 @@ static void neoisp_destroy_node_group(struct neoisp_node_group_s *node_group)
 	v4l2_device_unregister(&node_group->v4l2_dev);
 }
 
+static int neoisp_init_ctx(void)
+{
+	int i = 0;
+	__u16 *ptr = neoisp_default_params.mems.gtm.drc_global_tonemap;
+
+	/* Fill default global tonemap lut with 1.0 value (256) */
+	for (; i < NEO_DRC_GLOBAL_TONEMAP_SIZE; i++)
+		ptr[i] = 1 << 8;
+
+	return 0;
+}
+
 static int neoisp_init_hw(struct neoisp_dev_s *neoispd)
 {
 	int ret;
@@ -1690,6 +1707,10 @@ static int neoisp_probe(struct platform_device *pdev)
 	}
 
 	ret = neoisp_init_hw(neoisp_dev);
+	if (ret)
+		goto disable_nodes_err;
+
+	ret = neoisp_init_ctx();
 	if (ret)
 		goto disable_nodes_err;
 
