@@ -109,8 +109,6 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/initcall.h>
 
-#include <kunit/test.h>
-
 static int kernel_init(void *);
 
 /*
@@ -1549,8 +1547,6 @@ static noinline void __init kernel_init_freeable(void)
 	page_alloc_init_late();
 
 	do_basic_setup();
-
-	kunit_run_all_tests();
 
 	wait_for_initramfs();
 	console_on_rootfs();

@@ -54,6 +54,8 @@
 #include <trace/events/initcall.h>
 #define CREATE_TRACE_POINTS
 #include <trace/events/printk.h>
+#undef CREATE_TRACE_POINTS
+#include <trace/hooks/printk.h>
 
 #include "printk_ringbuffer.h"
 #include "console_cmdline.h"
@@ -627,10 +629,14 @@ static ssize_t info_print_ext_header(char *buf, size_t size,
 	u64 ts_usec = info->ts_nsec;
 	char caller[20];
 #ifdef CONFIG_PRINTK_CALLER
+	int vh_ret = 0;
 	u32 id = info->caller_id;
 
-	snprintf(caller, sizeof(caller), ",caller=%c%u",
-		 id & 0x80000000 ? 'C' : 'T', id & ~0x80000000);
+	trace_android_vh_printk_ext_header(caller, sizeof(caller), id, &vh_ret);
+
+	if (!vh_ret)
+		snprintf(caller, sizeof(caller), ",caller=%c%u",
+			 id & 0x80000000 ? 'C' : 'T', id & ~0x80000000);
 #else
 	caller[0] = '\0';
 #endif
@@ -1332,9 +1338,12 @@ static size_t print_time(u64 ts, char *buf)
 static size_t print_caller(u32 id, char *buf)
 {
 	char caller[12];
+	int vh_ret = 0;
 
-	snprintf(caller, sizeof(caller), "%c%u",
-		 id & 0x80000000 ? 'C' : 'T', id & ~0x80000000);
+	trace_android_vh_printk_caller(caller, sizeof(caller), id, &vh_ret);
+	if (!vh_ret)
+		snprintf(caller, sizeof(caller), "%c%u",
+			 id & 0x80000000 ? 'C' : 'T', id & ~0x80000000);
 	return sprintf(buf, "[%6s]", caller);
 }
 #else
@@ -2069,6 +2078,12 @@ static inline void printk_delay(int level)
 
 static inline u32 printk_caller_id(void)
 {
+	u32 caller_id = 0;
+
+	trace_android_vh_printk_caller_id(&caller_id);
+	if (caller_id)
+		return caller_id;
+
 	return in_task() ? task_pid_nr(current) :
 		0x80000000 + smp_processor_id();
 }
@@ -2605,6 +2620,12 @@ void resume_console(void)
  */
 static int console_cpu_notify(unsigned int cpu)
 {
+	int flag = 0;
+
+	trace_android_vh_printk_hotplug(&flag);
+	if (flag)
+		return 0;
+
 	if (!cpuhp_tasks_frozen) {
 		/* If trylock fails, someone else is doing the printing */
 		if (console_trylock())
@@ -3925,6 +3946,7 @@ int _printk_deferred(const char *fmt, ...)
 
 	return r;
 }
+EXPORT_SYMBOL_GPL(_printk_deferred);
 
 /*
  * printk rate limiting, lifted from the networking subsystem.

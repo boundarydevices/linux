@@ -36,6 +36,7 @@
 #include <linux/filelock.h>
 
 #include "internal.h"
+#include <trace/hooks/syscall_check.h>
 
 int do_truncate(struct mnt_idmap *idmap, struct dentry *dentry,
 		loff_t length, unsigned int time_attrs, struct file *filp)
@@ -912,6 +913,7 @@ static int do_dentry_open(struct file *f,
 		error = -ENODEV;
 		goto cleanup_all;
 	}
+	trace_android_vh_check_file_open(f);
 
 	error = security_file_open(f);
 	if (error)
@@ -1069,8 +1071,6 @@ struct file *dentry_open(const struct path *path, int flags,
 	int error;
 	struct file *f;
 
-	validate_creds(cred);
-
 	/* We must always pass in a valid mount pointer. */
 	BUG_ON(!path->mnt);
 
@@ -1109,7 +1109,6 @@ struct file *dentry_create(const struct path *path, int flags, umode_t mode,
 	struct file *f;
 	int error;
 
-	validate_creds(cred);
 	f = alloc_empty_file(flags, cred);
 	if (IS_ERR(f))
 		return f;

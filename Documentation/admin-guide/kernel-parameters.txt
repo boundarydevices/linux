@@ -1073,6 +1073,10 @@
 			can be useful when debugging issues that require an SLB
 			miss to occur.
 
+	disable_dma32=	[KNL]
+			Dynamically disable ZONE_DMA32 on kernels compiled with
+			CONFIG_ZONE_DMA32=y.
+
 	disable=	[IPV6]
 			See Documentation/networking/ipv6.rst.
 
@@ -1836,6 +1840,10 @@
 				If specified, z/VM IUCV HVC accepts connections
 				from listed z/VM user IDs only.
 
+	hvc_dcc.enable=	[ARM,ARM64]	Enable DCC driver at runtime. For GKI,
+				disabled at runtime by default to prevent
+				crashes in devices which do not support DCC.
+
 	hv_nopvspin	[X86,HYPER_V] Disables the paravirt spinlock optimizations
 				      which allow the hypervisor to 'idle' the
 				      guest on lock contention.
@@ -2530,7 +2538,7 @@
 			CONFIG_KUNIT to be set to be fully enabled. The
 			default value can be overridden via
 			KUNIT_DEFAULT_ENABLED.
-			Default is 1 (enabled)
+			Default is 0 (disabled)
 
 	kvm.ignore_msrs=[KVM] Ignore guest accesses to unhandled MSRs.
 			Default is 0 (don't ignore, but inject #GP)
