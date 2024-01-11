@@ -230,11 +230,6 @@ struct neoisp_mod_params_s {
 };
 
 /*
- * functions
- */
-int neoisp_set_params(struct neoisp_dev_s *neoispd, struct neoisp_meta_params_s *p);
-
-/*
  * globals
  */
 extern const int neoisp_fields_a[NEOISP_FIELD_COUNT]; /* array of all fields offsets */
