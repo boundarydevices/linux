@@ -927,14 +927,8 @@ static int neoisp_try_fmt(struct v4l2_format *f, struct neoisp_node_s *node)
 {
 	struct neoisp_dev_s *neoispd = node->node_group->neoisp_dev;
 	const struct neoisp_fmt_s *fmt;
-	unsigned int is_rgb, i;
+	unsigned int is_srgb;
 	u32 pixfmt = f->fmt.pix_mp.pixelformat;
-
-	dev_dbg(&neoispd->pdev->dev,
-			"%s: [%s] req %ux%u %x, planes %d\n",
-			__func__, NODE_NAME(node), f->fmt.pix_mp.width,
-			f->fmt.pix_mp.height, pixfmt,
-			f->fmt.pix_mp.num_planes);
 
 	if ((pixfmt == V4L2_META_FMT_NEO_ISP_STATS)
 			|| (pixfmt == V4L2_META_FMT_NEO_ISP_PARAMS))
@@ -942,8 +936,6 @@ static int neoisp_try_fmt(struct v4l2_format *f, struct neoisp_node_s *node)
 
 	fmt = neoisp_find_pixel_format(pixfmt, NEOISP_FMT_VIDEO_OUTPUT | NEOISP_FMT_VIDEO_CAPTURE);
 	if (!fmt) {
-		dev_dbg(&neoispd->pdev->dev, "%s: [%s] Format not found, trying default\n",
-				__func__, NODE_NAME(node));
 		if (NODE_IS_OUTPUT(node))
 			fmt = &formats_vout[0];
 		else
@@ -956,28 +948,21 @@ static int neoisp_try_fmt(struct v4l2_format *f, struct neoisp_node_s *node)
 	f->fmt.pix_mp.width = max(min(f->fmt.pix_mp.width, 65536u), 64u);
 	f->fmt.pix_mp.height = max(min(f->fmt.pix_mp.height, 65536u), 64u);
 
-	f->fmt.pix_mp.colorspace = V4L2_COLORSPACE_SMPTE170M,
-		/* In all cases, we only support the defaults for these: */
-		f->fmt.pix_mp.ycbcr_enc =
-			V4L2_MAP_YCBCR_ENC_DEFAULT(f->fmt.pix_mp.colorspace);
-	f->fmt.pix_mp.xfer_func =
-		V4L2_MAP_XFER_FUNC_DEFAULT(f->fmt.pix_mp.colorspace);
+	if (NODE_IS_OUTPUT(node))
+		/* FIXME: we should use V4L2_COLORSPACE_RAW here instead of SRGB */
+		f->fmt.pix_mp.colorspace = V4L2_COLORSPACE_SRGB;
+	else
+		f->fmt.pix_mp.colorspace = V4L2_COLORSPACE_SRGB;
 
-	is_rgb = f->fmt.pix_mp.colorspace == V4L2_COLORSPACE_SRGB;
+	/* In all cases, we only support the defaults for these: */
+	f->fmt.pix_mp.ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(f->fmt.pix_mp.colorspace);
+	f->fmt.pix_mp.xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(f->fmt.pix_mp.colorspace);
+	is_srgb = f->fmt.pix_mp.colorspace == V4L2_COLORSPACE_SRGB;
 	f->fmt.pix_mp.quantization =
-		V4L2_MAP_QUANTIZATION_DEFAULT(is_rgb, f->fmt.pix_mp.colorspace,
+		V4L2_MAP_QUANTIZATION_DEFAULT(is_srgb, f->fmt.pix_mp.colorspace,
 				f->fmt.pix_mp.ycbcr_enc);
-
 	/* Set plane size and bytes/line for each plane. */
 	neoisp_fill_mp(f, fmt);
-
-	for (i = 0; i < f->fmt.pix_mp.num_planes; i++)
-		dev_dbg(&neoispd->pdev->dev,
-				"%s: [%s] calc plane %d, %ux%u, depth %u, bpl %u size %u\n",
-				__func__, NODE_NAME(node), i, f->fmt.pix_mp.width,
-				f->fmt.pix_mp.height, fmt->bit_depth,
-				f->fmt.pix_mp.plane_fmt[i].bytesperline,
-				f->fmt.pix_mp.plane_fmt[i].sizeimage);
 
 	return 0;
 }
