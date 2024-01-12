@@ -599,7 +599,7 @@
 	clocks = <&clk IMX8MM_CLK_PCIE1_PHY>;
 	clock-names = "ref";
 	fsl,clkreq-unsupported;
-#if 0
+#if 1
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
 #else
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
