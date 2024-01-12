@@ -130,6 +130,7 @@ static int regulator_userspace_consumer_probe(struct platform_device *pdev)
 		pdata = &tmpdata;
 		memset(pdata, 0, sizeof(*pdata));
 
+		pdata->name = pdev->dev.of_node->name;
 		pdata->no_autoswitch = true;
 		pdata->num_supplies = 1;
 		pdata->supplies = devm_kzalloc(&pdev->dev, sizeof(*pdata->supplies), GFP_KERNEL);
