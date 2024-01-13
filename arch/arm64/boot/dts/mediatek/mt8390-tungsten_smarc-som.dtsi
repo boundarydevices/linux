@@ -373,6 +373,11 @@
 		};
 	};
 
+	regulator-efuse {
+		compatible = "regulator-output";
+		vout-supply = <&mt6359_vefuse_ldo_reg>;
+	};
+
 	reg_hub: regulator-hub {
 		compatible = "regulator-fixed";
 		enable-active-high;
