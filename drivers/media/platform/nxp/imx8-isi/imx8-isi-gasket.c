@@ -87,6 +87,8 @@ const struct mxc_gasket_ops mxc_imx93_gasket_ops = {
 /* -----------------------------------------------------------------------------
  * i.MX95 gasket
  */
+#define ISI_QOS						0x10
+#define ISI_PANIC_QOS					0x14
 
 /*
  * MIPI CSI0 connected to port 2 and MIPI CSI1 connected to port 3 of
@@ -186,6 +188,15 @@ static u8 get_index_by_dt(u8 data_type)
 	return imx95_dt_to_index_map[i].index;
 }
 
+static void mxc_imx95_set_qos(struct mxc_isi_dev *isi)
+{
+	/* Config QoS */
+	regmap_write(isi->gasket, ISI_QOS, 0x3);
+
+	/* Config Panic QoS */
+	regmap_write(isi->gasket, ISI_PANIC_QOS, 0x3);
+}
+
 static void mxc_imx95_gasket_enable(struct mxc_isi_dev *isi,
 				    const struct v4l2_mbus_frame_desc *fd,
 				    const struct v4l2_mbus_framefmt *fmt,
@@ -198,6 +209,8 @@ static void mxc_imx95_gasket_enable(struct mxc_isi_dev *isi,
 	/* Enable data type for pixel data on the vc */
 	reg = CSI_PIXEL_FORMATER_BASE(port) + CSI_PIXEL_DATA_TYPE_VC(csi2->vc);
 	regmap_write(isi->gasket, reg, BIT(get_index_by_dt(csi2->dt)));
+
+	mxc_imx95_set_qos(isi);
 }
 
 static void mxc_imx95_gasket_disable(struct mxc_isi_dev *isi,
