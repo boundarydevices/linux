@@ -647,9 +647,10 @@
 	status = "okay";
 
 	bluetooth {
-		compatible = "cypress,cyw4373a0-bt";
+		compatible = "infineon,cyw55572-bt";
+		brcm,requires-autobaud-mode;
+		max-speed = <921600>;
 		shutdown-gpios = GP_BT_REG_ON;
-		max-speed = <3000000>;
 	};
 };
 
