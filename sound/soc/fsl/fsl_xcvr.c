@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright 2019 NXP
 
+#include <drm/drm_bridge.h>
+#include <drm/drm_connector.h>
 #include <linux/bitrev.h>
 #include <linux/clk.h>
 #include <linux/firmware.h>
@@ -1142,6 +1144,16 @@ static const struct regmap_config fsl_xcvr_regmap_cfg = {
 	.cache_type = REGCACHE_FLAT,
 };
 
+static void edid_work(struct work_struct *work)
+{
+	struct fsl_xcvr *xcvr = container_of(work, struct fsl_xcvr, work);
+	struct device *dev = &xcvr->pdev->dev;
+
+	dev_dbg(dev, "trigger edid read\n");
+	if (xcvr->bridge)
+		drm_bridge_get_edid(xcvr->bridge, NULL);
+}
+
 static irqreturn_t irq0_isr(int irq, void *devid)
 {
 	struct fsl_xcvr *xcvr = (struct fsl_xcvr *)devid;
@@ -1211,6 +1223,7 @@ static irqreturn_t irq0_isr(int irq, void *devid)
 	}
 	if (isr & FSL_XCVR_IRQ_CMDC_STATUS_UPD) {
 		dev_dbg(dev, "CMDC status update\n");
+		schedule_work(&xcvr->work);
 		isr_clr |= FSL_XCVR_IRQ_CMDC_STATUS_UPD;
 	}
 
@@ -1244,6 +1257,7 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 	struct fsl_xcvr *xcvr;
 	struct resource *rx_res, *tx_res;
 	void __iomem *regs;
+	struct device_node *hdmi_np;
 	int ret, irq;
 
 	xcvr = devm_kzalloc(dev, sizeof(*xcvr), GFP_KERNEL);
@@ -1359,11 +1373,20 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 	if (ret)
 		dev_err(&pdev->dev, "fail to create sys group\n");
 
+	INIT_WORK(&xcvr->work, edid_work);
+
+	hdmi_np = of_parse_phandle(pdev->dev.of_node, "hdmi-phandle", 0);
+	if (hdmi_np)
+		xcvr->bridge = of_drm_find_bridge(hdmi_np);
+
 	return ret;
 }
 
 static void fsl_xcvr_remove(struct platform_device *pdev)
 {
+	struct fsl_xcvr *xcvr = dev_get_drvdata(&pdev->dev);
+
+	cancel_work_sync(&xcvr->work);
 	sysfs_remove_group(&pdev->dev.kobj, fsl_xcvr_get_attr_grp());
 	pm_runtime_disable(&pdev->dev);
 }
