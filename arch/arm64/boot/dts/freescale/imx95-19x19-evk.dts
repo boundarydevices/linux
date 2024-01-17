@@ -46,7 +46,7 @@
 		cooling-max-state = <3>;
 		#cooling-cells = <2>;
 		pwms = <&tpm6 2 4000000 PWM_POLARITY_INVERTED>;
-		cooling-levels = <1 128 192 255>;
+		cooling-levels = <64 128 192 255>;
 	};
 
 	memory@80000000 {
