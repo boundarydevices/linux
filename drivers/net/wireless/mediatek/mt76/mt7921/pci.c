@@ -416,9 +416,6 @@ static int mt7921_pci_suspend(struct pci_dev *pdev, pm_message_t state)
 	if (err < 0)
 		goto restore_suspend;
 
-	wait_event_timeout(dev->wait,
-			   !dev->regd_in_progress, 5 * HZ);
-
 	err = mt76_connac_mcu_set_hif_suspend(mdev, true);
 	if (err)
 		goto restore_suspend;
