@@ -420,6 +420,7 @@ struct dpu95_soc {
 	struct clk			*clk_pix;
 	struct clk			*clk_ocram;
 	struct clk			*clk_ldb;
+	struct clk			*clk_ldb_vco;
 
 	int				comctrl_irq[DPU95_COMCTRL_IRQ_IRQS];
 	int				disp_irq0[DPU95_DISPLAY_IRQ0_IRQS];
@@ -465,6 +466,8 @@ int dpu95_map_disp_irq2(struct dpu95_soc *dpu, int irq);
 void dpu95_irq_hw_init(struct dpu95_soc *dpu);
 
 void dpu95_submodules_hw_init(struct dpu95_soc *dpu);
+
+int dpu95_set_qos(struct dpu95_soc *dpu);
 
 void dpu95_enable_display_pipeline_sync(struct dpu95_soc *dpu);
 void dpu95_disable_display_pipeline_sync(struct dpu95_soc *dpu);
