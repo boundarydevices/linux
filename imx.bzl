@@ -116,7 +116,6 @@ _IMX_IN_TREE_MODULES = [
     "sound/soc/sof/snd-sof-utils.ko",
     "drivers/remoteproc/imx_rproc.ko",
     "drivers/soc/imx/gpcv2.ko",
-    "drivers/media/v4l2-core/v4l2-fwnode.ko",
     "sound/soc/fsl/snd-soc-imx-rpmsg.ko",
     "drivers/tty/serial/fsl_lpuart.ko",
     "drivers/gpu/drm/imx/dcss/imx-dcss.ko",
@@ -136,7 +135,6 @@ _IMX_IN_TREE_MODULES = [
     "drivers/cpufreq/imx-cpufreq-dt.ko",
     "drivers/pinctrl/freescale/pinctrl-imx8mn.ko",
     "drivers/iio/buffer/industrialio-triggered-buffer.ko",
-    "drivers/media/v4l2-core/v4l2-async.ko",
     "drivers/trusty/trusty-core.ko",
     "drivers/media/platform/mxc/capture/ov5640_camera_mipi_v2.ko",
     "drivers/gpu/drm/bridge/synopsys/dw-hdmi-cec.ko",
@@ -342,6 +340,12 @@ _IMX_IN_TREE_MODULES = [
     "drivers/iio/common/st_sensors/st_sensors_spi.ko",
     "drivers/iio/magnetometer/st_magn_i2c.ko",
     "drivers/iio/magnetometer/st_magn_spi.ko",
+    "drivers/iio/gyro/st_gyro.ko",
+    "drivers/iio/gyro/st_gyro_i2c.ko",
+    "drivers/iio/gyro/st_gyro_spi.ko",
+    "drivers/iio/accel/st_accel_i2c.ko",
+    "drivers/iio/accel/st_accel_spi.ko",
+    "drivers/iio/accel/st_accel.ko",
 ]
 
 def define_imx():
