@@ -724,19 +724,19 @@
 	a55 {
 		trips {
 			atrip2: trip2 {
-				temperature = <35000>;
+				temperature = <55000>;
 				hysteresis = <2000>;
 				type = "active";
 			};
 
 			atrip3: trip3 {
-				temperature = <45000>;
+				temperature = <65000>;
 				hysteresis = <2000>;
 				type = "active";
 			};
 
 			atrip4: trip4 {
-				temperature = <60000>;
+				temperature = <75000>;
 				hysteresis = <2000>;
 				type = "active";
 			};
