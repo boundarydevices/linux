@@ -1102,7 +1102,7 @@
 	dptx_pin: dptx-pin {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO46__FUNC_I0_DP_TX_HPD>;
-			bias-pull-down;
+			bias-pull-up;
 		};
 	};
 
