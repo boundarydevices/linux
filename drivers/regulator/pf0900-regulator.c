@@ -117,7 +117,7 @@ static int pf0900_pmic_write(struct pf0900 *pf0900, unsigned int reg,
 	uint8_t crcBuf[3];
 	uint8_t data[2];
 	unsigned int rxBuf;
-	int ret;
+	int ret = -EINVAL;
 
 	/* If not updating entire register, perform a read-mod-write */
 	data[0] = val;
