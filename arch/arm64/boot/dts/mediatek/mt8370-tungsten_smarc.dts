@@ -13,8 +13,6 @@
 #include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
 #include <dt-bindings/usb/pd.h>
 
-#define USE_I2SIN_WITH_I2SO1
-
 / {
 	model = "Boundary Devices mt8370 tungsten smarc";
 	compatible = "boundary,mt8390-tungsten_smarc", "mediatek,mt8188";
@@ -276,23 +274,10 @@
 #endif
 };
 
-#if 0
 &afe {
 	#sound-dai-cells = <0>;
-	mediatek,dmic-iir-on;
-	mediatek,dmic-clk-mono;
-	status = "okay";
-};
-#endif
-
-&afe {
-	#sound-dai-cells = <0>;
-	mediatek,etdm-in1-multi-pin-mode;
-	mediatek,etdm-in2-multi-pin-mode;
 	mediatek,etdm-out1-multi-pin-mode;
-	mediatek,etdm-out2-multi-pin-mode;
-
-	mediatek,etdm-in1-cowork-source = <3>;
+	mediatek,etdm-in2-multi-pin-mode;
 	mediatek,etdm-in2-cowork-source = <2>;
 	status = "okay";
 };
@@ -1001,11 +986,15 @@
 	audio-routing =
 		"Headphone", "Headphone L",
 		"Headphone", "Headphone R",
-		"AIN1", "Headset Mic",
-		"DMIC_INPUT", "AP DMIC",
-		"AP DMIC", "AUDGLB",
-		"AP DMIC", "MIC_BIAS_0",
-		"AP DMIC", "MIC_BIAS_2";
+		"Headphone", "HPOUTL",
+		"Headphone", "HPOUTR",
+		"Headphone", "SPKOUTL",
+		"Headphone", "SPKOUTR",
+		"Headset Mic", "MICBIAS",
+		"IN1R", "Headset Mic",
+		"IN2R", "Headset Mic",
+		"IN3L", "Headset Mic",
+		"IN3R", "Headset Mic";
 	status = "okay";
 
 	dai-link-0 {
@@ -1051,11 +1040,7 @@
 
 	dai-link-4 {
 		sound-dai = <&afe>;
-#ifdef USE_I2SIN_WITH_I2SO1
 		dai-link-name = "ETDM2_IN_BE";
-#else
-		dai-link-name = "ETDM1_IN_BE";
-#endif
 		status = "okay";
 
 		codec-0 {
@@ -1076,29 +1061,34 @@
 
 &pio {
 	aud_pins_default: audiodefault {
-		pins-cmd-dat {
-			pinmux = <PINMUX_GPIO101__FUNC_O_AUD_CLK_MOSI>,
-				 <PINMUX_GPIO102__FUNC_O_AUD_SYNC_MOSI>,
-				 <PINMUX_GPIO103__FUNC_O_AUD_DAT_MOSI0>,
-				 <PINMUX_GPIO104__FUNC_O_AUD_DAT_MOSI1>,
-				 <PINMUX_GPIO105__FUNC_I0_AUD_DAT_MISO0>,
-				 <PINMUX_GPIO106__FUNC_I0_AUD_DAT_MISO1>,
-				 <PINMUX_GPIO107__FUNC_B0_I2SIN_MCK>,
-				 <PINMUX_GPIO108__FUNC_B0_I2SIN_BCK>,
-				 <PINMUX_GPIO109__FUNC_B0_I2SIN_WS>,
-				 <PINMUX_GPIO110__FUNC_I0_I2SIN_D0>,
-				 <PINMUX_GPIO114__FUNC_O_I2SO2_MCK>,
-				 <PINMUX_GPIO115__FUNC_B0_I2SO2_BCK>,
-				 <PINMUX_GPIO116__FUNC_B0_I2SO2_WS>,
-				 <PINMUX_GPIO117__FUNC_O_I2SO2_D0>,
-				 <PINMUX_GPIO118__FUNC_O_I2SO2_D1>,
-				 <PINMUX_GPIO125__FUNC_O_DMIC1_CLK>,
-				 <PINMUX_GPIO126__FUNC_I0_DMIC1_DAT>,
-				 <PINMUX_GPIO128__FUNC_O_DMIC2_CLK>,
-				 <PINMUX_GPIO129__FUNC_I0_DMIC2_DAT>,
-				 <PINMUX_GPIO121__FUNC_B0_PCM_CLK>,
-				 <PINMUX_GPIO122__FUNC_B0_PCM_SYNC>,
-				 <PINMUX_GPIO124__FUNC_I0_PCM_DI>;
+		pins-aud-pmic {
+			pinmux = <
+				PINMUX_GPIO101__FUNC_O_AUD_CLK_MOSI
+				PINMUX_GPIO102__FUNC_O_AUD_SYNC_MOSI
+				PINMUX_GPIO103__FUNC_O_AUD_DAT_MOSI0
+				PINMUX_GPIO104__FUNC_O_AUD_DAT_MOSI1
+				PINMUX_GPIO105__FUNC_I0_AUD_DAT_MISO0
+				PINMUX_GPIO106__FUNC_I0_AUD_DAT_MISO1
+			>;
+		};
+
+		pins-pcm-wifi {
+			pinmux = <
+				PINMUX_GPIO121__FUNC_B0_PCM_CLK
+				PINMUX_GPIO122__FUNC_B0_PCM_SYNC
+				PINMUX_GPIO123__FUNC_O_PCM_DO
+				PINMUX_GPIO124__FUNC_I0_PCM_DI
+			>;
+		};
+
+		pins-i2s {
+			pinmux = <
+				PINMUX_GPIO119__FUNC_O_I2SO1_MCK
+				PINMUX_GPIO112__FUNC_O_I2SO1_WS
+				PINMUX_GPIO120__FUNC_O_I2SO1_BCK
+				PINMUX_GPIO113__FUNC_O_I2SO1_D0
+				PINMUX_GPIO110__FUNC_I0_I2SIN_D0
+			>;
 		};
 	};
 
@@ -1466,10 +1456,6 @@
 			input-enable;
 			drive-strength = <MTK_DRIVE_6mA>;
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
-		};
-
-		pins-pcm {
-			pinmux = <PINMUX_GPIO123__FUNC_O_PCM_DO>;
 		};
 
 		wcn-3v3-en {
