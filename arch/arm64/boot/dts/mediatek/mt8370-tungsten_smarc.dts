@@ -43,19 +43,6 @@
 		stdout-path = "serial0:115200n8";
 	};
 
-#if 0
-	edp_panel_fixed_3v3: regulator@0 {
-		compatible = "regulator-fixed";
-		regulator-name = "edp_panel_3v3";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		enable-active-high;
-		gpio = <&pio 15 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&edp_panel_3v3_en_pins>;
-	};
-#endif
-
 	memory@40000000 {
 		device_type = "memory";
 		reg = <0 0x40000000 0x1 0x00000000>;
@@ -114,32 +101,19 @@
 		};
 	};
 
-#if 0
-	usb_p0_vbus: usb0-otg-vbus {
-		compatible = "regulator-fixed";
-		regulator-name = "p0_vbus";
-		pinctrl-names = "default";
-		pinctrl-0 = <&reg_usbotg_vbus>;
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&pio 84 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-	};
-#endif
-
-	reg_usb_otg_vbus: regulator-usb-otg-vbus {
+	reg_usb_otg_vbus: regulator-usb-otg-vbus { /* USB 2.0 P0 USB-C */
 		compatible = "regulator-fixed";
 		pinctrl-names = "off", "on";
-		pinctrl-0 = <&pinctrl_reg_usbotg_vbus_off>;
-		pinctrl-1 = <&pinctrl_reg_usbotg_vbus_on>;
+		pinctrl-0 = <&reg_usb_otg_vbus_off_pins>;
+		pinctrl-1 = <&reg_usb_otg_vbus_on_pins>;
 		regulator-name = "usb_otg_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = <&pio 85 GPIO_ACTIVE_HIGH>;
+		gpio = <&pio 85 GPIO_ACTIVE_HIGH>; /* USB0_VBUS_VALID */
 		enable-active-high;
 	};
 
-	onboard_hub: regulator@5 {
+	onboard_hub: regulator@5 { /* USB HUB */
 		compatible = "regulator-fixed";
 		regulator-name = "hub_reset";
 		regulator-min-microvolt = <1800000>;
@@ -150,26 +124,11 @@
 		pinctrl-0 = <&usb_hub_reset>;
 	};
 
-#if 0
-	lcm1_tp_avdd: lcm1-tp-avdd {
-		compatible = "regulator-fixed";
-		regulator-name = "lcm1-tp-avdd";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&pio 119 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		pinctrl-names = "default";
-		pinctrl-0 = <&lcm1_tp_avdd_pin>;
-	};
-#endif
-
 	VDD_5V: VDD-5V {
 		compatible = "regulator-fixed";
 		regulator-name = "VDD-5V";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		//gpio = <&pio 10 GPIO_ACTIVE_HIGH>;
-		//enable-active-high;
 		regulator-always-on;
 	};
 
@@ -178,8 +137,6 @@
 		regulator-name = "VDD-3V3";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		//gpio = <&pio 9 GPIO_ACTIVE_HIGH>;
-		//enable-active-high;
 		regulator-always-on;
 	};
 
@@ -188,12 +145,10 @@
 		regulator-name = "VDD-1V8";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
-		//gpio = <&pio 9 GPIO_ACTIVE_HIGH>;
-		//enable-active-high;
 		regulator-always-on;
 	};
 
-	sdio_fixed_3v3: regulator@2 {
+	sdio_fixed_3v3: regulator@2 { /* WiFi */
 		compatible = "regulator-fixed";
 		regulator-name = "sdio_card";
 		regulator-min-microvolt = <3300000>;
@@ -202,7 +157,7 @@
 		regulator-always-on;
 	};
 
-	sdio_fixed_1v8: regulator@3 {
+	sdio_fixed_1v8: regulator@3 { /* WiFi */
 		compatible = "regulator-fixed";
 		regulator-name = "sdio_io";
 		regulator-min-microvolt = <1800000>;
@@ -211,9 +166,8 @@
 		regulator-always-on;
 	};
 
-	sdio2_en_3v3: regulator-sdio2 {
+	sdio2_en_3v3: regulator-sdio2 { /* SDCARD */
 		compatible = "regulator-fixed";
-
 		regulator-always-on;
 		regulator-name = "sdio2-en";
 		regulator-min-microvolt = <3300000>;
@@ -221,7 +175,6 @@
 		gpio = <&pio 111 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
-
 
 	connector {
 		compatible = "usb-c-connector";
@@ -248,30 +201,41 @@
 		};
 	};
 
-#if 0
-	dsi0_en: dsi0-en {
-		compatible = "regulator-fixed";
-		regulator-name = "lcm1_en";
-		enable-active-high;
-		gpio = <&pio 111 GPIO_ACTIVE_HIGH>;
+	gpio_keys: gpio-keys {
+		compatible = "gpio-keys";
 		pinctrl-names = "default";
-		pinctrl-0 = <&dsi0_en_pins_default>;
-	};
+		pinctrl-0 = <&gpio_keys_pins>;
 
-	amic_codec: amic-codec {
-		#sound-dai-cells = <0>;
-		compatible = "dmic-codec";
-		num-channels = <2>;
-		wakeup-delay-ms = <200>;
-	};
+		charger-present {
+			label = "charger present";
+			gpios = <&pio 129 GPIO_ACTIVE_LOW>;
+			linux,code = <11>;
+		};
 
-	dmic_codec: dmic-codec {
-		#sound-dai-cells = <0>;
-		compatible = "dmic-codec";
-		num-channels = <2>;
-		wakeup-delay-ms = <30>;
+		force-recovery {
+			label = "force recovery";
+			gpios = <&pio 126 GPIO_ACTIVE_LOW>;
+			linux,code = <2>;
+		};
+
+		lid-open {
+			label = "lid open";
+			gpios = <&pio 65 GPIO_ACTIVE_LOW>;
+			linux,code = <3>;
+		};
+
+		pwr-on {
+			label = "power on";
+			gpios = <&pio 127 GPIO_ACTIVE_LOW>;
+			linux,code = <4>;
+		};
+
+		sleep {
+			label = "sleep";
+			gpios = <&pio 66 GPIO_ACTIVE_LOW>;
+			linux,code = <5>;
+		};
 	};
-#endif
 };
 
 &afe {
@@ -310,7 +274,7 @@
 	};
 };
 
-&dpi1 {
+&dpi1 { /* HDMI */
 	status = "okay";
 };
 
@@ -390,7 +354,7 @@
 			alias = <&dsi0_to_lvds>;
 			enable-gpios = <&pio 25 GPIO_ACTIVE_HIGH>;
 			i2c-address = <0x2c>;
-			i2c-bus = <&i2c_lcd_c>;
+			i2c-bus = <&i2c_mux_lcd_dsi0>;
 			interrupts-extended = <&pio 128 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
@@ -413,33 +377,23 @@
 	};
 };
 
-#if 0
-&dsi1 {
-        #address-cells = <1>;
-        #size-cells = <0>;
-        poweron-in-hs-mode = <0>;
-};
-#endif
-
 &hdmi0 {
        status = "okay";
 };
 
 &disp_pwm0 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&disp_pwm0_pin_default>;
+	pinctrl-0 = <&disp_pwm0_pin>;
 	status = "okay";
 };
-
 
 &disp_pwm1 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&disp_pwm1_pin_default>;
+	pinctrl-0 = <&disp_pwm1_pin>;
 	status = "okay";
 };
 
-
-&i2c0 {
+&i2c0 { /* SM_I2C_GP */
 	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&i2c0_pin>;
 	pinctrl-1 = <&i2c0_1_pin>;
@@ -448,14 +402,15 @@
 	clock-frequency = <100000>;
 	status = "okay";
 
-	mux9546-gp@73 {
+	/* On bd-universal-smarc-carrier */
+	i2c_mux_smarc_gp@73 {
 		compatible = "nxp,pca9546";
 		reg = <0x73>;
 		reset-gpios = <&pio 6 GPIO_ACTIVE_LOW>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		i2c_gp_a: SM_I2C_GP@0 {
+		i2c_mux_smarc_gp_rtc: i2cmuxsmarcgp@rtc {
 			/* RTC */
 			clock-frequency = <100000>;
 			reg = <0>;
@@ -463,7 +418,7 @@
 			#size-cells = <0>;
 		};
 
-		i2c_gp_b: SM_I2C_GP@1 {
+		i2c_mux_smarc_gp_usbc: i2cmuxsmarcgp@usb-c {
 			/* USB C */
 			clock-frequency = <100000>;
 			reg = <1>;
@@ -471,7 +426,7 @@
 			#size-cells = <0>;
 		};
 
-		i2c_gp_c: SM_I2C_GP@2 {
+		i2c_mux_smarc_gp_aud: i2cmuxsmarcgp@audio {
 			/* audio */
 			clock-frequency = <100000>;
 			reg = <2>;
@@ -479,7 +434,7 @@
 			#size-cells = <0>;
 		};
 
-		i2c_gp_d: SM_I2C_GP@3 {
+		i2c_mux_smarc_gp_pcie: i2cmuxsmarcgp@pcie {
 			/* pcie */
 			clock-frequency = <100000>;
 			reg = <3>;
@@ -490,38 +445,29 @@
 
 };
 
-&i2c1 {
+&i2c1 { /* PMIC I2C bus, but the PMIC is on spmi !!! */
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c1_pin>;
 	clock-frequency = <400000>;
 	status = "okay";
-#if 0
-	it5205fn: it5205fn@48 {
-		compatible = "mediatek,it5205fn";
-		reg = <0x48>;
-		type3v3-supply = <&mt6359_vcn33_1_bt_ldo_reg>;
-		svid = /bits/ 16 <0xff01>;
-		status = "okay";
-	};
-#endif
 };
 
-&i2c2 {
+&i2c2 { /* LCD I2C */
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2_pin>;
 	clock-frequency = <400000>;
 	status = "okay";
 
-	mux9546-lcd@73 {
+	i2c_mux_smarc_lcd@73 { /* On SMARC carrier */
 		compatible = "nxp,pca9546";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_mux9546_lcd>;
+		pinctrl-0 = <&mux_smarc_lcd_pin>;
 		reg = <0x73>;
 		reset-gpios = <&pio 5 GPIO_ACTIVE_LOW>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		i2c_lcd_a: SM_I2C_LCD@0 {
+		i2c_mux_lcd_edp0: i2cmuxsmarclcd@edp0 {
 			/* EDP0 */
 			clock-frequency = <100000>;
 			reg = <0>;
@@ -529,7 +475,7 @@
 			#size-cells = <0>;
 		};
 
-		i2c_lcd_b: SM_I2C_LCD@1 {
+		i2c_mux_lcd_edp1: i2cmuxsmarclcd@edp1 {
 			/* EDP1 */
 			clock-frequency = <100000>;
 			reg = <1>;
@@ -537,7 +483,7 @@
 			#size-cells = <0>;
 		};
 
-		i2c_lcd_c: SM_I2C_LCD@2 {
+		i2c_mux_lcd_dsi0: i2cmuxsmarclcd@dsi0 {
 			/* DSI0 */
 			clock-frequency = <100000>;
 			reg = <2>;
@@ -545,7 +491,7 @@
 			#size-cells = <0>;
 		};
 
-		i2c_lcd_d: SM_I2C_LCD@3 {
+		i2c_mux_lcd_dsi1: i2cmuxsmarclcd@dsi1 {
 			/* DSI1 */
 			clock-frequency = <100000>;
 			reg = <3>;
@@ -555,37 +501,22 @@
 	};
 };
 
-&i2c3 {
+&i2c3 { /* CSI0 I2C */
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c3_pin>;
 	clock-frequency = <400000>;
 	status = "okay";
 };
 
-&i2c4 {
+&i2c4 { /* CSI1 I2C */
 	pinctrl-names = "default", "default";
 	pinctrl-0 = <&i2c4_pin>;
-	// pinctrl-1 = <&rt1715_int>;
 	clock-frequency = <1000000>;
 	status = "okay";
 
 };
 
-&i2c5 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c5_pin>;
-	clock-frequency = <400000>;
-	status = "okay";
-};
-
-&i2c6 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c6_pin>;
-	clock-frequency = <400000>;
-	status = "okay";
-};
-
-&i2c_gp_a {
+&i2c_mux_smarc_gp_rtc {
 	rv3028: rtc@52 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&rv3028_pin>;
@@ -598,7 +529,7 @@
 	};
 };
 
-&i2c_gp_b {
+&i2c_mux_smarc_gp_usbc {
 	usb_mux: hd3ss3220@60 {
 		compatible = "ti,hd3ss3220";
 		interrupts-extended = <&pio 45 IRQ_TYPE_LEVEL_LOW>;
@@ -627,7 +558,7 @@
 	};
 };
 
-&i2c_gp_c {
+&i2c_mux_smarc_gp_aud {
 	wm8962: codec@1a {
 		#sound-dai-cells = <0>;
 		AVDD-supply = <&VDD_1V8>;
@@ -653,7 +584,7 @@
 };
 
 /* DSI0 */
-&i2c_lcd_c {
+&i2c_mux_lcd_dsi0 {
 	/* Touch screens */
 	ts_dsi0_goodix: ts-dsi0-goodix@14 {
 		compatible = "goodix,gt911";
@@ -793,7 +724,7 @@
 &wifi_pwrseq {
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&wifi_pins_pwrseq>;
+	pinctrl-0 = <&wifi_pwrseq_pin>;
 
 	reset-gpios = <&pio 89 GPIO_ACTIVE_LOW>;
 	post-power-on-delay-ms = <200>;
@@ -896,9 +827,9 @@
 	status = "okay";
 };
 
-&ssusb {
+&ssusb { /* USB-C */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_reg_usbotg_iddig>;
+	pinctrl-0 = <&usbotg_iddig_pin>;
 	maximum-speed = "high-speed";
 	dr_mode = "otg"; /* 1: host, 2: device, 3 otg */
 	mediatek,force-vbus-peripheral;
@@ -939,13 +870,11 @@
 };
 
 &usb_host0 {
-	//vbus-supply = <&usb_p0_vbus>;
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	status = "okay";
 };
 
-&ssusb1 {
-	//maximum-speed = "high-speed";
+&ssusb1 { /* HUB */
 	//pinctrl-0 = <&usb1_default>;
 	//pinctrl-names = "default";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
@@ -975,10 +904,9 @@
 	status = "okay";
 };
 
-&ssusb2 {
+&ssusb2 { /* USB ETH 7850 */
 	maximum-speed = "high-speed";
 	mediatek,force-vbus-peripheral;
-	// usb-role-switch;
 	dr_mode = "host";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	status = "okay";
@@ -1111,8 +1039,6 @@
 	};
 };
 
-
-
 &cam_vcore {
 	domain-supply = <&mt6359_vproc1_buck_reg>;
 };
@@ -1154,6 +1080,27 @@
 		};
 	};
 
+	disp_pwm0_pin: disp-pwm0-pin {
+		pins1 {
+			pinmux = <PINMUX_GPIO29__FUNC_O_DISP_PWM0>;
+			bias-pull-down;
+		};
+	};
+
+	disp_pwm1_pin: disp-pwm1-pin {
+		pins1 {
+			pinmux = <PINMUX_GPIO30__FUNC_O_DISP_PWM1>;
+			bias-pull-down;
+		};
+	};
+
+	dptx_pin: dptx-pin {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO46__FUNC_I0_DP_TX_HPD>;
+			bias-pull-up;
+		};
+	};
+
 	dsi0_sn65dsi83_pins: dsi0-sn65dsi83-pins {
 		pins-irq {
 			pinmux = <PINMUX_GPIO128__FUNC_B_GPIO128>;
@@ -1171,13 +1118,6 @@
 		pins1 {
 			pinmux = <PINMUX_GPIO15__FUNC_B_GPIO15>;
 			output-high;
-		};
-	};
-
-	dptx_pin: dptx-pin {
-		pins-cmd-dat {
-			pinmux = <PINMUX_GPIO46__FUNC_I0_DP_TX_HPD>;
-			bias-pull-up;
 		};
 	};
 
@@ -1247,35 +1187,20 @@
 		};
 	};
 
+	gpio_keys_pins: gpio-keys-pins {
+		pins-keys {
+			pinmux = <PINMUX_GPIO129__FUNC_B_GPIO129>,
+				 <PINMUX_GPIO65__FUNC_B_GPIO65>,
+				 <PINMUX_GPIO66__FUNC_B_GPIO66>;
+			bias-pull-up;
+		};
+	};
+
 	hd3ss3220_pin: hd3ss3320-pin {
 		irq_pins {
 			pinmux = <PINMUX_GPIO45__FUNC_B_GPIO45>;
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 			input-enable;
-		};
-	};
-
-	uart0_pins: uart0-pins {
-		pins {
-			pinmux = <PINMUX_GPIO31__FUNC_O_UTXD0>,
-				 <PINMUX_GPIO32__FUNC_I1_URXD0>;
-			bias-pull-up;
-		};
-	};
-
-	uart1_pins: uart1-pins {
-		pins {
-			pinmux = <PINMUX_GPIO33__FUNC_O_UTXD1>,
-				 <PINMUX_GPIO34__FUNC_I1_URXD1>;
-			bias-pull-up;
-		};
-	};
-
-	uart2_pins: uart2-pins {
-		pins {
-			pinmux = <PINMUX_GPIO35__FUNC_O_UTXD2>,
-				 <PINMUX_GPIO36__FUNC_I1_URXD2>;
-			bias-pull-up;
 		};
 	};
 
@@ -1331,82 +1256,7 @@
 		};
 	};
 
-	i2c5_pin: i2c5-pin {
-		pins-bus {
-			pinmux = <PINMUX_GPIO66__FUNC_B1_SDA5>,
-				 <PINMUX_GPIO65__FUNC_B1_SCL5>;
-			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
-		};
-	};
-
-	i2c6_pin: i2c6-pin {
-		pins-bus {
-			pinmux = <PINMUX_GPIO68__FUNC_B1_SDA6>,
-				 <PINMUX_GPIO67__FUNC_B1_SCL6>;
-			bias-pull-up = <MTK_PULL_SET_RSEL_011>;
-			mediatek,drive-strength-adv = <7>;
-		};
-	};
-
-	rt1715_int: rt1715_int_pin {
-		pins_cmd0_dat {
-			pinmux = <PINMUX_GPIO12__FUNC_B_GPIO12>;
-			bias-pull-up;
-			input-enable;
-		};
-	};
-
-	kpd_gpios_def_cfg: keypad-pins-default {
-		pins_kp {
-			pinmux = <PINMUX_GPIO44__FUNC_B1_KPROW0>,
-					<PINMUX_GPIO43__FUNC_B1_KPCOL1>,
-					<PINMUX_GPIO42__FUNC_B1_KPCOL0>;
-		};
-	};
-
-	panel_pins_default: panel-pins-default {
-		panel-dcdc {
-			pinmux = <PINMUX_GPIO45__FUNC_B_GPIO45>;
-			output-low;
-		};
-
-		panel-rst {
-			pinmux = <PINMUX_GPIO25__FUNC_B_GPIO25>;
-			output-high;
-		};
-	};
-
-	pinctrl_mux9546_lcd: mux9546-lcdgrp {
-		pins-reset {
-			pinmux = <PINMUX_GPIO5__FUNC_B_GPIO5>;
-			bias-pull-down;
-		};
-	};
-
-#if 0
-	dsi0_en_pins_default: dsi0-en-pins-default {
-		panel-en {
-			pinmux = <PINMUX_GPIO111__FUNC_B_GPIO111>;
-			output-low;
-		};
-	};
-#endif
-	disp_pwm0_pin_default: disp-pwm0-pin-default {
-		pins1 {
-			pinmux = <PINMUX_GPIO29__FUNC_O_DISP_PWM0>;
-			bias-pull-down;
-		};
-	};
-
-	disp_pwm1_pin_default: disp-pwm1-pin-default {
-		pins1 {
-			pinmux = <PINMUX_GPIO30__FUNC_O_DISP_PWM1>;
-			bias-pull-down;
-		};
-	};
-
-	mmc0_pins_default: mmc0default {
+	mmc0_pins_default: mmc0-default {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO161__FUNC_B1_MSDC0_DAT0>,
 				 <PINMUX_GPIO160__FUNC_B1_MSDC0_DAT1>,
@@ -1435,7 +1285,7 @@
 		};
 	};
 
-	mmc0_pins_uhs: mmc0uhs{
+	mmc0_pins_uhs: mmc0-uhs{
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO161__FUNC_B1_MSDC0_DAT0>,
 				 <PINMUX_GPIO160__FUNC_B1_MSDC0_DAT1>,
@@ -1470,7 +1320,7 @@
 		};
 	};
 
-	mmc1_pins_default: mmc1default {
+	mmc1_pins_default: mmc1-default {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO163__FUNC_B1_MSDC1_CMD>,
 				 <PINMUX_GPIO165__FUNC_B1_MSDC1_DAT0>,
@@ -1504,7 +1354,7 @@
 		};
 	};
 
-	mmc1_pins_uhs: mmc1uhs {
+	mmc1_pins_uhs: mmc1-uhs {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO163__FUNC_B1_MSDC1_CMD>,
 				 <PINMUX_GPIO165__FUNC_B1_MSDC1_DAT0>,
@@ -1539,11 +1389,6 @@
 			input-enable;
 			drive-strength = <MTK_DRIVE_6mA>;
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
-		};
-
-		wcn-3v3-en {
-			pinmux = <PINMUX_GPIO74__FUNC_B_GPIO74>;
-			output-high;
 		};
 	};
 
@@ -1583,19 +1428,33 @@
 		};
 	};
 
-	wifi_pins_pwrseq: wifipwrseq {
-		pins-wifi-enable {
-			pinmux = <PINMUX_GPIO89__FUNC_B_GPIO89>;        /* USB2_IDDIG */
-			output-low;
+	mux_smarc_lcd_pin: mux-smarc-lcd-pin {
+		pins-reset {
+			pinmux = <PINMUX_GPIO5__FUNC_B_GPIO5>;
+			bias-pull-down;
 		};
 	};
 
-	reg_usbotg_vbus: reg-usbotg-vbus {
-		pins-vbus {
-			pinmux = <PINMUX_GPIO84__FUNC_B_GPIO84>,
+	reg_usb_otg_vbus_off_pins: reg-usb-otg-vbus-off-pins {
+		vbus-pins {
+			pinmux = <PINMUX_GPIO84__FUNC_O_USB_DRVVBUS>,
 				<PINMUX_GPIO85__FUNC_B_GPIO85>;
-			bias-disable;
-			output-low;
+			output-high;
+		};
+	};
+
+	reg_usb_otg_vbus_on_pins: reg-usb-otg-vbus-on-pins {
+		pins-vbus {
+			pinmux = <PINMUX_GPIO84__FUNC_O_USB_DRVVBUS>,
+				<PINMUX_GPIO85__FUNC_I0_VBUSVALID>;
+			input-enable;
+		};
+	};
+
+	rv3028_pin: rv3028grp {
+		pins-irq {
+			pinmux = <PINMUX_GPIO42__FUNC_B_GPIO42>; 	/* KPCOL0 */
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 		};
 	};
 
@@ -1666,27 +1525,35 @@
 		};
 	};
 
-	pinctrl_reg_usbotg_iddig: reg-usbotg-iddiggrp {
-		iddig-pin {
-			pinmux = <PINMUX_GPIO83__FUNC_B_GPIO83>;
-			input-enable;
+	uart0_pins: uart0-pins {
+		pins {
+			pinmux = <PINMUX_GPIO31__FUNC_O_UTXD0>,
+				 <PINMUX_GPIO32__FUNC_I1_URXD0>;
 			bias-pull-up;
 		};
 	};
 
-	pinctrl_reg_usbotg_vbus_off: reg-usbotg-vbus-offgrp {
-		vbus-pins {
-			pinmux = <PINMUX_GPIO84__FUNC_O_USB_DRVVBUS>,
-				<PINMUX_GPIO85__FUNC_B_GPIO85>;
-			output-high;
+	uart1_pins: uart1-pins {
+		pins {
+			pinmux = <PINMUX_GPIO33__FUNC_O_UTXD1>,
+				 <PINMUX_GPIO34__FUNC_I1_URXD1>;
+			bias-pull-up;
 		};
 	};
 
-	pinctrl_reg_usbotg_vbus_on: reg-usbotg-vbus-ongrp {
-		pins-vbus {
-			pinmux = <PINMUX_GPIO84__FUNC_O_USB_DRVVBUS>,
-				<PINMUX_GPIO85__FUNC_I0_VBUSVALID>;
+	uart2_pins: uart2-pins {
+		pins {
+			pinmux = <PINMUX_GPIO35__FUNC_O_UTXD2>,
+				 <PINMUX_GPIO36__FUNC_I1_URXD2>;
+			bias-pull-up;
+		};
+	};
+
+	usbotg_iddig_pin: usbotg-iddig-pin {
+		iddig-pin {
+			pinmux = <PINMUX_GPIO83__FUNC_B_GPIO83>;
 			input-enable;
+			bias-pull-up;
 		};
 	};
 
@@ -1714,25 +1581,12 @@
 			pinmux = <PINMUX_GPIO80__FUNC_B_GPIO80>;        /* SPIM2_CLK */
 			output-low;
 		};
-#if 0
-		valid-pin {
-			pinmux = <PINMUX_GPIO85__FUNC_I0_VBUSVALID>;
-			input-enable;
-		};
-#endif
 	};
 
-	rv3028_pin: rv3028grp {
-		pins-irq {
-			pinmux = <PINMUX_GPIO42__FUNC_B_GPIO42>; 	/* KPCOL0 */
-			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
-		};
-	};
-
-	lcm1_tp_avdd_pin: lcm1-tp-avdd-pin {
-		lcm1_tp_en: lcm1-tp-en{
-			pinmux = <PINMUX_GPIO120__FUNC_B_GPIO120>;
-			output-high;
+	wifi_pwrseq_pin: wifi-pwrseq-pin {
+		pins-wifi-enable {
+			pinmux = <PINMUX_GPIO89__FUNC_B_GPIO89>;        /* USB2_IDDIG */
+			output-low;
 		};
 	};
 };
