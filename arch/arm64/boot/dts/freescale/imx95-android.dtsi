@@ -38,3 +38,8 @@
 		};
 	};
 };
+
+&lpuart5 {
+       /delete-node/ bluetooth;
+};
+
