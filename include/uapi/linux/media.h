@@ -231,8 +231,7 @@ struct media_link_desc {
 	struct media_pad_desc source;
 	struct media_pad_desc sink;
 	__u32 flags;
-	__s32 request_fd;
-	__u32 reserved[1];
+	__u32 reserved[2];
 };
 
 struct media_links_enum {
