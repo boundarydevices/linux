@@ -634,7 +634,7 @@ static struct snd_soc_dai_link mt8188_mt6359_dai_links[] = {
 		.no_pcm = 1,
 		.dai_fmt = SND_SOC_DAIFMT_I2S |
 			SND_SOC_DAIFMT_NB_NF |
-			SND_SOC_DAIFMT_CBP_CFP,
+			SND_SOC_DAIFMT_CBC_CFC,
 		.dpcm_capture = 1,
 		.ignore_suspend = 1,
 		.ops = &mt8188_etdm_ops,
@@ -645,7 +645,7 @@ static struct snd_soc_dai_link mt8188_mt6359_dai_links[] = {
 		.no_pcm = 1,
 		.dai_fmt = SND_SOC_DAIFMT_I2S |
 			SND_SOC_DAIFMT_NB_NF |
-			SND_SOC_DAIFMT_CBP_CFP,
+			SND_SOC_DAIFMT_CBC_CFC,
 		.dpcm_capture = 1,
 		.ops = &mt8188_etdm_ops,
 		SND_SOC_DAILINK_REG(ETDM2_IN_BE),
