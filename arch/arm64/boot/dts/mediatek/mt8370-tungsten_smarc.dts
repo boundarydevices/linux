@@ -654,167 +654,19 @@
 
 /* DSI0 */
 &i2c_lcd_c {
-	dsi0_pca9540: i2cmux9540@70 {
-		compatible = "nxp,pca9540";
-		reg = <0x70>;
-		status = "disabled";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		i2c_lcd_c@0 {
-			clock-frequency = <100000>;
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			/* Touch screens */
-			ts_dsi0_ft5x06: ts-dsi0-ft5x06@38 {
-				compatible = "edt,ft5x06-ts";
-				interrupts-extended = <&pio 146 IRQ_TYPE_EDGE_FALLING>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&ts_dsi0_ft5x06_pins>;
-				reg = <0x38>;
-				reset-gpios = <&pio 7 GPIO_ACTIVE_LOW>;
-				wakeup-gpios = <&pio 146 GPIO_ACTIVE_LOW>;
-			};
-		};
-
-		i2c_lcd_c@1 {
-			clock-frequency = <100000>;
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			mipi_lt8912_2: mipi-lt8912-2@48 {
-				compatible = "lontium,lt8912";
-				display-dsi = <&dsi0_fb>;
-				interrupts-extended = <&pio 128 IRQ_TYPE_LEVEL_LOW>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&ts_dsi0_lt8912_pins>;
-				reg = <0x48>;
-				reset-gpios = <&pio 25 GPIO_ACTIVE_LOW>;
-			};
-		};
+	/* Touch screens */
+	ts_dsi0_goodix: ts-dsi0-goodix@14 {
+		compatible = "goodix,gt911";
+		display = <&dsi0>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&pio 146 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&pio 146 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ts_dsi0_goodix_pins>;
+		reg = <0x14>; /* 0x14 or 0x5d */
+		reset-gpios = <&pio 7 GPIO_ACTIVE_HIGH>;
 	};
-
-	dsi0_pca9540_2: i2cmux9540_2@70{
-		compatible = "nxp,pca9540";
-		reg = <0x70>;
-		status = "disabled";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		i2c_lcd_c@0 {
-			clock-frequency = <100000>;
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			/* Touch screens */
-			ts_dsi0_goodix: ts-dsi0-goodix@5d {
-				compatible = "goodix,gt911";
-				display = <&dsi0>;
-				esd-recovery-timeout-ms = <2000>;
-				interrupts-extended = <&pio 146 IRQ_TYPE_LEVEL_HIGH>;
-				irq-gpios = <&pio 146 GPIO_ACTIVE_HIGH>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&ts_dsi0_goodix_pins>;
-				reg = <0x5d>;
-				reset-gpios = <&pio 7 GPIO_ACTIVE_HIGH>;
-			};
-		};
-
-		mipi_tc358767_bus: i2c_lcd_c@1 {
-			clock-frequency = <100000>;
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-	};
-
-//
-#if 0
-	mipi_pca9546: i2cmux9546@70 {
-                compatible = "nxp,pca9546";
-                reg = <0x70>;
-                status = "disabled";
-                #address-cells = <1>;
-                #size-cells = <0>;
-
-                i2c_lcd_c@0 {
-                        clock-frequency = <100000>;
-                        reg = <0>;
-                        #address-cells = <1>;
-                        #size-cells = <0>;
-
-                        lt8912@48 {
-                                compatible = "lontium,lt8912";
-                                ddc-i2c-bus = <&mipi_ref(ddc_i2c_bus)>;
-                                display-dsi = <&mipi_ref(fb)>;
-                                reg = <0x48>;
-                                reset-gpios = <&mipi_ref(max7323) 0 GPIO_ACTIVE_LOW>;
-                        };
-                };
-
-		mipi_ref(ddc_i2c_bus): _MIPI_(I2C_BUS)@1 {
-			clock-frequency = <100000>;
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			/* edid  @50 */
-		};
-
-		_MIPI_(I2C_BUS)@2 {
-			clock-frequency = <100000>;
-			reg = <2>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			/* Touch screens */
-			ts_mipi_ref_grp2(ft5x06, 2)@38 {
-				compatible = "edt,ft5x06-ts";
-				interrupts-extended = GP(TS_IRQ, IRQ_TYPE_EDGE_FALLING);
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrlm_ts_ref(ft5x06)>;
-				reg = <0x38>;
-				reset-gpios = GP(TS_RESET, GPIO_ACTIVE_LOW);
-				wakeup-gpios = GP(TS_IRQ, GPIO_ACTIVE_LOW);
-				status = "disabled";
-			};
-
-			ts_mipi_ref_grp(goodix2)@5d {
-				compatible = "goodix,gt9271";
-				display = <&_MIPI_(SUBSYSTEM)>;
-				esd-recovery-timeout-ms = <2000>;
-				interrupts-extended = GP(TS_IRQ, IRQ_TYPE_LEVEL_HIGH);
-				irq-gpios = GP(TS_IRQ, GPIO_ACTIVE_HIGH);
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrlm_ts_ref(gt911)>;
-				reg = <0x5d>;
-				reset-gpios = GP(TS_RESET, GPIO_ACTIVE_HIGH);
-				status = "disabled";
-			};
-		};
-
-		_MIPI_(I2C_BUS)@3 {
-			clock-frequency = <100000>;
-			reg = <3>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			mipi_ref_grp(max7323)@68 {
-				compatible = "maxim,max7323";
-				gpio-controller;
-				reg = <0x68>;
-				#gpio-cells = <2>;
-			};
-		};
-        };
-//
-#endif
-
 };
-/* END of i2c_lcd_c for DSI */
 
 &pmic {
 	interrupt-parent = <&pio>;
@@ -1874,19 +1726,6 @@
 		pins-irq {
 			pinmux = <PINMUX_GPIO42__FUNC_B_GPIO42>; 	/* KPCOL0 */
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
-		};
-	};
-
-	touch_pins: touchdefault {
-		touch_pin_irq: pin-irq {
-			pinmux = <PINMUX_GPIO6__FUNC_B_GPIO6>;
-			input-enable;
-			bias-disable;
-		};
-
-		touch_pin_reset: pin-reset {
-			pinmux = <PINMUX_GPIO5__FUNC_B_GPIO5>;
-			output-high;
 		};
 	};
 
