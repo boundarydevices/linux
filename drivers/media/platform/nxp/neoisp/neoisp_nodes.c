@@ -2,22 +2,22 @@
 /*
  * NEOISP nodes description
  *
- * Copyright 2023 NXP
+ * Copyright 2023-2024 NXP
  */
 
 #include <linux/videodev2.h>
 #include "neoisp.h"
 
 const struct neoisp_node_desc_s node_desc[NEOISP_NODES_COUNT] = {
-	/* NEOISP_DCG_NODE */
+	/* NEOISP_INPUT0_NODE */
 	{
-		.ent_name = NEOISP_NAME "-dcg",
+		.ent_name = NEOISP_NAME "-input0",
 		.buf_type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
 		.caps = V4L2_CAP_VIDEO_OUTPUT_MPLANE,
 	},
-	/* NEOISP_VS_NODE */
+	/* NEOISP_INPUT1_NODE */
 	{
-		.ent_name = NEOISP_NAME "-vs",
+		.ent_name = NEOISP_NAME "-input1",
 		.buf_type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
 		.caps = V4L2_CAP_VIDEO_OUTPUT_MPLANE,
 	},

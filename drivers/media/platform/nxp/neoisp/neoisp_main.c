@@ -354,8 +354,8 @@ static void neoisp_update_hdr_decompress(__u32 ibpp)
 
 	/* 16 bits per pixel is already in default configuration */
 	if (ibpp < 16) { /* 8, 10, 12 or 14 */
-		regp->decompress_dcg.knee_point1 = 1 << ibpp;
-		regp->decompress_dcg.knee_ratio0 = (1 << (20 - ibpp)) - 1;
+		regp->decompress_input0.knee_point1 = 1 << ibpp;
+		regp->decompress_input0.knee_ratio0 = (1 << (20 - ibpp)) - 1;
 	}
 }
 
@@ -364,7 +364,7 @@ static void neoisp_update_hdr_decompress(__u32 ibpp)
  */
 static int neoisp_set_pipe_conf(struct neoisp_dev_s *neoispd)
 {
-	struct neoisp_buffer_s *buf = neoispd->queued_job.buf[NEOISP_DCG_NODE];
+	struct neoisp_buffer_s *buf = neoispd->queued_job.buf[NEOISP_INPUT0_NODE];
 	struct neoisp_buffer_s *buf_out = neoispd->queued_job.buf[NEOISP_FRAME_NODE];
 	struct neoisp_node_s *nd = &neoispd->queued_job.node_group->node[NEOISP_FRAME_NODE];
 	struct neoisp_mparam_conf_s *cfg = &mod_params.conf;
@@ -374,7 +374,7 @@ static int neoisp_set_pipe_conf(struct neoisp_dev_s *neoispd)
 	width = nd->format.fmt.pix_mp.width;
 	height = nd->format.fmt.pix_mp.height;
 	obpp = (nd->neoisp_format->bit_depth + 7) / 8;
-	nd = &neoispd->queued_job.node_group->node[NEOISP_DCG_NODE];
+	nd = &neoispd->queued_job.node_group->node[NEOISP_INPUT0_NODE];
 	ibpp = (nd->neoisp_format->bit_depth + 7) / 8;
 	cfg->img_conf_cam0_ibpp0 = nd->neoisp_format->ibpp;
 
@@ -433,7 +433,7 @@ static int neoisp_set_pipe_conf(struct neoisp_dev_s *neoispd)
 			| NEO_PIPE_CONF_IMG_SIZE_CAM0_HEIGHT_SET(height));
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG0_IN_LS_CAM0_IDX],
 			NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(ibpp * width));
-	/* raw image addr from video output dcg node buffer */
+	/* raw image addr from video output input0 node buffer */
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG0_IN_ADDR_CAM0_IDX],
 			NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(get_addr(buf, 0)));
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG1_IN_ADDR_CAM0_IDX], 0u);
@@ -510,13 +510,13 @@ static int neoisp_schedule_internal(struct neoisp_node_group_s *node_group, unsi
 	__u8 rgbir_input = 0; /* FIXME compute the actual flag */
 
 	/*
-	 * To schedule a job, we need dcg and params (if not disabled) streaming nodes
+	 * To schedule a job, we need input0 and params (if not disabled) streaming nodes
 	 *  to have a buffer ready,
 	 * (Note that streaming_map is protected by hw_lock, which is held.)
 	 */
-	if ((BIT(NEOISP_DCG_NODE) & node_group->streaming_map)
-			!= BIT(NEOISP_DCG_NODE)) {
-		dev_dbg(&neoispd->pdev->dev, "Dcg node not ready, nothing to do\n");
+	if ((BIT(NEOISP_INPUT0_NODE) & node_group->streaming_map)
+			!= BIT(NEOISP_INPUT0_NODE)) {
+		dev_dbg(&neoispd->pdev->dev, "Input0 node not ready, nothing to do\n");
 		return 0;
 	}
 	if ((BIT(NEOISP_FRAME_NODE) & node_group->streaming_map)
@@ -558,12 +558,12 @@ static int neoisp_schedule_internal(struct neoisp_node_group_s *node_group, unsi
 			continue;
 		/*
 		 * Check whether buffer will be ignored or not according to pix formats, ...
-		 * if staggered input then "vs" buffer will be handled
+		 * if staggered input then "input1" buffer will be handled
 		 * if rgbir input format is set then "ir" buffer will be handled
 		 * ...
 		 */
 		if ((!rgbir_input && i == NEOISP_IR_NODE) ||
-				(!staggered_input && i == NEOISP_VS_NODE)) {
+				(!staggered_input && i == NEOISP_INPUT1_NODE)) {
 			ignore_buffers = true;
 		}
 
@@ -925,7 +925,6 @@ static int neoisp_g_fmt_vid(struct file *file, void *priv, struct v4l2_format *f
 
 static int neoisp_try_fmt(struct v4l2_format *f, struct neoisp_node_s *node)
 {
-	struct neoisp_dev_s *neoispd = node->node_group->neoisp_dev;
 	const struct neoisp_fmt_s *fmt;
 	unsigned int is_srgb;
 	u32 pixfmt = f->fmt.pix_mp.pixelformat;
@@ -1045,9 +1044,9 @@ static int neoisp_node_streamon(struct file *file, void *priv,
 
 	dev_dbg(&neoispd->pdev->dev, "Stream on for node %s\n", NODE_NAME(node));
 	/*
-	 * Check if this is dcg node to preload default params
+	 * Check if this is input0 node to preload default params
 	 */
-	if (node->id == NEOISP_DCG_NODE) {
+	if (node->id == NEOISP_INPUT0_NODE) {
 		neoisp_update_hdr_decompress(node->neoisp_format->bit_depth);
 		/* program registers and look-up tables */
 		neoisp_set_params(neoispd, &neoisp_default_params);

@@ -96,8 +96,8 @@ enum neoisp_fmt_type_e {
 };
 
 enum neoisp_node_e {
-	NEOISP_DCG_NODE,
-	NEOISP_VS_NODE,
+	NEOISP_INPUT0_NODE,
+	NEOISP_INPUT1_NODE,
 	NEOISP_PARAMS_NODE,
 	NEOISP_FRAME_NODE,
 	NEOISP_IR_NODE,
