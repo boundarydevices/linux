@@ -101,6 +101,11 @@
 		};
 	};
 
+	regulator-efuse {
+		compatible = "regulator-output";
+		vout-supply = <&mt6359_vefuse_ldo_reg>;
+	};
+
 	reg_usb_otg_vbus: regulator-usb-otg-vbus { /* USB 2.0 P0 USB-C */
 		compatible = "regulator-fixed";
 		pinctrl-names = "off", "on";
