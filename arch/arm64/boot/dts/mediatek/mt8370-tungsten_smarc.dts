@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0 OR MIT)
 /*
  * Copyright (C) 2023 Boundary Devices
- * Author: Simon Gaynor <simon.gaynor@lairdconnect.com>
  */
 /dts-v1/;
 #include "mt8370.dtsi"
@@ -14,8 +13,8 @@
 #include <dt-bindings/usb/pd.h>
 
 / {
-	model = "Boundary Devices mt8370 tungsten smarc";
-	compatible = "boundary,mt8390-tungsten_smarc", "mediatek,mt8188";
+	model = "Boundary Devices Tungsten510 SMARC (MT8370)";
+	compatible = "boundary,mt8370-tungsten_smarc", "mediatek,mt8188";
 
 	aliases {
 		serial0 = &uart0;
@@ -270,7 +269,6 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		ethernet_phy0: ethernet-phy {
-			//reg = <0x7>;
 			reg-mask = <0xf0>;
 			compatible = "ethernet-phy-ieee802.3-c22";
 			eee-broken-1000t;
@@ -450,7 +448,7 @@
 
 };
 
-&i2c1 { /* PMIC I2C bus, but the PMIC is on spmi !!! */
+&i2c1 { /* PMIC I2C bus, but the PMIC is on spmi */
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c1_pin>;
 	clock-frequency = <400000>;
@@ -838,8 +836,6 @@
 	maximum-speed = "high-speed";
 	dr_mode = "otg"; /* 1: host, 2: device, 3 otg */
 	mediatek,force-vbus-peripheral;
-	//mediatek,clk-mgr;
-	//mediatek,mtcmos-switch;
 	vbus-supply = <&reg_usb_otg_vbus>;
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	wakeup-source;
@@ -880,12 +876,10 @@
 };
 
 &ssusb1 { /* HUB */
-	//pinctrl-0 = <&usb1_default>;
-	//pinctrl-names = "default";
+	pinctrl-0 = <&usb1_default>;
+	pinctrl-names = "default";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	dr_mode = "host";
-	mediatek,clk-mgr;
-	mediatek,mtcmos-switch;
 	mediatek,force-vbus;
 	wakeup-source;
 	status = "okay";
@@ -947,14 +941,11 @@
 			#size-cells = <0x0>;
 			eth_phy: ethernet-phy@1 {
 				reg = <1>;
-				/* Lines are LEDs 0 - 3 respectivly.
-				*  We only use led 0(LINK1000) and 2(LINK_ACT)
-				*/
 				microchip,led-modes = <
 					LAN78XX_LINK_1000_ACTIVITY
 					LAN78XX_LINK_10_ACTIVITY
-					LAN78XX_LINK_ACTIVITY
 					LAN78XX_LINK_10_100_ACTIVITY
+					LAN78XX_LINK_ACTIVITY
 				>;
 			};
 		};
