@@ -19,7 +19,7 @@
 	#size-cells = <2>;
 
 	neoisp0: isp@4ae00000 {
-		compatible = "fsl,neoisp";
+		compatible = "nxp,neoisp";
 		status = "ok";
 		#address-cells = <2>;
 		#size-cells = <2>;
