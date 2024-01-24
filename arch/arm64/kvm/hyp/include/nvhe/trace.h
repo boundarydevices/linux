@@ -16,6 +16,8 @@ struct hyp_buffer_page {
 #ifdef CONFIG_TRACING
 void *tracing_reserve_entry(unsigned long length);
 void tracing_commit_entry(void);
+int register_hyp_event_ids(unsigned long start, unsigned long end);
+
 #define HYP_EVENT(__name, __proto, __struct, __assign, __printk)		\
 	HYP_EVENT_FORMAT(__name, __struct);					\
 	extern atomic_t __name##_enabled;					\
@@ -79,6 +81,11 @@ do {							\
 #else
 static inline void *tracing_reserve_entry(unsigned long length) { return NULL; }
 static inline void tracing_commit_entry(void) { }
+static inline int register_hyp_event_ids(unsigned long start, unsigned long end)
+{
+	return -ENODEV;
+}
+
 #define HYP_EVENT(__name, __proto, __struct, __assign, __printk)      \
 	static inline void trace_##__name(__proto) {}
 
