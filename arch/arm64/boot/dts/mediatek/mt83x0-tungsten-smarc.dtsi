@@ -465,16 +465,16 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		i2c_mux_lcd_edp0: i2cmuxsmarclcd@edp0 {
-			/* EDP0 */
+		i2c_mux_lcd_exp1: i2cmuxsmarclcd@exp1 {
+			/* EXP1 */
 			clock-frequency = <100000>;
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
 
-		i2c_mux_lcd_edp1: i2cmuxsmarclcd@edp1 {
-			/* EDP1 */
+		i2c_mux_lcd_exp2: i2cmuxsmarclcd@exp2 {
+			/* EXP2 */
 			clock-frequency = <100000>;
 			reg = <1>;
 			#address-cells = <1>;
