@@ -1754,7 +1754,7 @@ static const struct dev_pm_ops neoisp_pm = {
 };
 
 static const struct of_device_id neoisp_dt_ids[] = {
-	{ .compatible = "fsl,neoisp", .data = NULL },
+	{ .compatible = "nxp,neoisp", .data = NULL },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, neoisp_dt_ids);
