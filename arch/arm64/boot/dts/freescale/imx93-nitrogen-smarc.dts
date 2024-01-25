@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: (GPL-2.0-or-later OR MIT)
 /*
- * Copyright 2023 Boundary Devices
+ * Copyright 2024 Boundary Devices
+ *
  */
 
 /dts-v1/;
@@ -9,16 +10,16 @@
 #include <dt-bindings/leds/common.h>
 #include "imx93.dtsi"
 
-#define DSI 8 // 10 = sn65, 8 = no sn65
+#define DSI 8 // 10 = sn65 (not tested), 8 = no sn65
 
 &ele_mu {
 	memory-region = <&ele_reserved>;
 };
 
 / {
-	model = "Boundary i.MX93 nitrogen93 board. Rev.10";
-	bd-variant = "i.MX93 nitrogen93 board. DSI 8\"";
-	compatible = "fsl,imx93-bd-smarc", "fsl,imx93";
+	model = "Boundary Devices Nitrogen93 SMARC";
+	bd-variant = "Nitrogen93 SMARC DSI 8\"";
+	compatible = "fsl,imx93-nitrogen-smarc", "fsl,imx93";
 
 	chosen {
 		stdout-path = &lpuart1;
@@ -60,7 +61,7 @@
 			no-map;
 		};
 
-		vdev1vring0: vdev1vring0@a4000000 {
+		vdev1vring0: vdev1vring0@a4010000 {
 			reg = <0 0xa4010000 0 0x8000>;
 			no-map;
 		};
@@ -99,6 +100,31 @@
 		fsl,startup-delay-ms = <500>;
 	};
 
+	connector {
+		compatible = "usb-c-connector";
+		label = "USB-C";
+		data-role = "dual";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hs_ep: endpoint {
+					remote-endpoint = <&usb_hs_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				ss_ep: endpoint {
+					remote-endpoint = <&hd3ss3220_in_ep>;
+				};
+			};
+		};
+	};
+
 #if 0
 	ethosu {
 		compatible = "arm,ethosu";
@@ -114,19 +140,19 @@
 		led-0 {
 			label = "428A-link-100";
 			function = LED_FUNCTION_STATUS;
-                        color = <LED_COLOR_ID_GREEN>;
-                        gpios = <&pcal6534 30 GPIO_ACTIVE_LOW>;
-                        default-state = "off";
-                        linux,default-trigger = "stmmac-0:03:100Mbps";
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&pcal6534 30 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			linux,default-trigger = "stmmac-0:03:100Mbps";
 		};
 
 		led-1 {
 			label = "4289-link-100";
 			function = LED_FUNCTION_STATUS;
-                        color = <LED_COLOR_ID_GREEN>;
-                        gpios = <&pcal6534 11 GPIO_ACTIVE_LOW>;
-                        default-state = "off";
-                        linux,default-trigger = "42890000.ethernet-1:03:100Mbps";
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&pcal6534 11 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			linux,default-trigger = "42890000.ethernet-1:03:100Mbps";
 		};
 
 	};
@@ -186,8 +212,6 @@
 
 	reg_wlan_vmmc: regulator-wlan-vmmc {
 		compatible = "regulator-fixed";
-		//pinctrl-names = "default";
-		//pinctrl-0 = <&pinctrl_reg_wlan_vmmc>;
 		regulator-name = "reg_wlan_vmmc";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
@@ -203,23 +227,19 @@
 
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
 		compatible = "regulator-fixed";
-		//pinctrl-names = "default";
-		//pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
 		regulator-name = "usb_otg_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = <&pcal6534 14 GPIO_ACTIVE_HIGH>;
+		gpio = <&pcal6534 14 GPIO_ACTIVE_HIGH>; /* P1_6 */
 		enable-active-high;
 	};
 
 	reg_usb_2_vbus: regulator-usb-2-vbus {
 		compatible = "regulator-fixed";
-		//pinctrl-names = "default";
-		//pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
 		regulator-name = "usb_2_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = <&pcal6534 13 GPIO_ACTIVE_HIGH>;
+		gpio = <&pcal6534 13 GPIO_ACTIVE_HIGH>; /* P1_5 */
 		enable-active-high;
 	};
 
@@ -231,7 +251,7 @@
 		display = <&lcdif>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_dsi>;
-		pwms = <&tpm5 3 30000 0>;       /* 42 = 24MHz  30000 = 3.3 Khz */
+		pwms = <&tpm5 1 30000 0>;       /* 42 = 24MHz  30000 = 3.3 Khz */
 		status = "okay";
 	};
 
@@ -267,6 +287,7 @@
 			"AMIC", "MICBIAS",
 			"IN3R", "AMIC",
 			"IN1R", "AMIC";
+		codec-master;
 	};
 };
 
@@ -292,10 +313,9 @@
 			reg = <3>;
 			eee-broken-1000t;
 			at803x,hib-disabled;
-//			interrupts-extended = <&gpio2 29 GPIO_ACTIVE_LOW>;
+			/* This platform has no seperate eth_lpi */
 			interrupt-parent = <&gpio2>;
 			interrupts = <29 IRQ_TYPE_LEVEL_LOW>;
-//			interrupt-names = "eth_lpi";
 			reset-gpios =<&pcal6534 1 GPIO_ACTIVE_LOW>;
 		};
 	};
@@ -325,13 +345,12 @@
 	};
 };
 
-
 &lpm {
 	soc-supply = <&buck1>;
 	status = "okay";
 };
 
-&lpi2c1 { /* PMIC I2C bus, but the PMIC is on lpi2c2 !!! */
+&lpi2c1 { /* PMIC I2C bus, but the PMIC is on lpi2c2 */
 	#address-cells = <1>;
 	#size-cells = <0>;
 	clock-frequency = <400000>;
@@ -354,7 +373,7 @@
 		compatible = "nxp,pca9451a";
 		reg = <0x25>;
 		interrupt-parent = <&pcal6534>;
-		interrupts = <11 IRQ_TYPE_EDGE_FALLING>;
+		interrupts = <28 IRQ_TYPE_EDGE_FALLING>;
 
 		regulators {
 			buck1: BUCK1 {
@@ -436,14 +455,14 @@
 		interrupt-controller;
 		#interrupt-cells = <2>;
 		interrupt-parent = <&gpio2>;
-		interrupts = <17 IRQ_TYPE_LEVEL_LOW>;
+		interrupts = <21 IRQ_TYPE_LEVEL_LOW>;
 		reset-gpios = <&gpio2 28 GPIO_ACTIVE_LOW>; /* GPIO_IO28 */
 		gpio-line-names = "P0_0 ENET2", "P0_1 ENET1", "P0_2 WL_EN",
 					"P0_3 WIFI_SDIO_WAKE", "P0_4 BT_EN",
 					"P0_5 EMMC_RESET", "P0_6 BT_HOST_WAKE",
 					"P0_7 ESPI1_CS1",
 					"P1_0 CHARGER_PRESENT", "P1_1 ESPI_ALERT0",
-					"P1_2 TEST", "P1_3 ESPI_RESET",
+					"P1_2 TEST", "P1_3 ETH1_SPEED",
 					"P1_4 SD2_WP", "P1_5 USB2_PWR_EN_OC",
 					"P1_6 USB1_PWR_EN_OC", "P1_7 GPIO_4",
 					"P2_0 LCD0_BCKL_EN", "P2_1 LCD0_VDD_EN",
@@ -453,11 +472,11 @@
 					"P3_0 GPIO_8", "P3_1 RESET_OUT",
 					"P3_2 GPIO_10", "P3_3 GPIO_11",
 					"P3_4 PMIC_IRQ", "P3_5 GPIO_13",
-					"P3_6 TP33", "P3_7 CARRIER_PWR_ON",
+					"P3_6 ETH0_SPEED", "P3_7 CARRIER_PWR_ON",
 					"P4_0 I2C_HUB_RESET", "P4_1 GPIO_9";
 	};
 
-	i2cmuxsom@71 {
+	i2c_mux_som@71 {
 		pinctrl-names = "default";
 		compatible = "nxp,pca9546";
 		reg = <0x71>;
@@ -465,7 +484,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		i2cmuxsoma: i2cmuxsom@csi0 {
+		i2c_mux_som_csi0: i2cmuxsom@csi0 {
 			/* CSI0 I2C */
 			clock-frequency = <100000>;
 			reg = <0>;
@@ -473,7 +492,7 @@
 			#size-cells = <0>;
 		};
 
-		i2cmuxsomb: i2cmuxsom@lcd {
+		i2c_mux_som_lcd: i2cmuxsom@lcd {
 			/* LCD I2C */
 			clock-frequency = <100000>;
 			reg = <1>;
@@ -481,7 +500,7 @@
 			#size-cells = <0>;
 		};
 
-		i2cmuxsomc: i2cmuxsom@csi1 {
+		i2c_mux_som_csi1: i2cmuxsom@csi1 {
 			/* CSI1 I2C */
 			clock-frequency = <100000>;
 			reg = <2>;
@@ -491,9 +510,8 @@
 	};
 };
 
-
-&i2cmuxsomb { /* LCD I2C */
-	i2cmuxsmarc-lcd@73 { /* On SMARC carrier */
+&i2c_mux_som_lcd { /* LCD I2C */
+	i2c_mux_smarc_lcd@73 { /* On SMARC carrier */
 		pinctrl-names = "default";
 		compatible = "nxp,pca9546";
 		reg = <0x73>;
@@ -501,7 +519,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		i2cmuxlcda: i2cmuxlcd@exp1 {
+		i2c_mux_lcd_exp1: i2cmuxsmarclcd@exp1 {
 			/* EXP1 I2C */
 			clock-frequency = <100000>;
 			reg = <0>;
@@ -509,7 +527,7 @@
 			#size-cells = <0>;
 		};
 
-		i2cmuxlcdb: i2cmuxlcd@exp2 {
+		i2c_mux_lcd_exp2: i2cmuxsmarclcd@exp2 {
 			/* EXP2 I2C */
 			clock-frequency = <100000>;
 			reg = <1>;
@@ -517,7 +535,7 @@
 			#size-cells = <0>;
 		};
 
-		i2cmuxlcdc: i2cmuxlcd@dsi0 {
+		i2c_mux_lcd_dsi0: i2cmuxsmarclcd@dsi0 {
 			/* DSI0 I2C */
 			clock-frequency = <100000>;
 			reg = <2>;
@@ -525,7 +543,7 @@
 			#size-cells = <0>;
 		};
 
-		i2cmuxlcdd: i2cmuxlcd@dsi1 {
+		i2c_mux_lcd_dsi1: i2cmuxsmarclcd@dsi1 {
 			/* DSI1 I2C */
 			clock-frequency = <100000>;
 			reg = <3>;
@@ -536,7 +554,7 @@
 };
 
 /* DSI */
-&i2cmuxlcdc {
+&i2c_mux_lcd_dsi0 {
 	/* 0x5d or 0x14 */
 	ts_goodix_dsi: touchscreen_dsi@14 {
 		compatible = "goodix,gt9271";
@@ -574,7 +592,7 @@
 #endif
 };
 
-&tpm5 {
+&tpm5 { /* DSI / DISP_PWM0 Backlight */
 	status = "okay";
 };
 
@@ -595,7 +613,7 @@
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
 		clocks = <&clk IMX93_CLK_MIPI_TEST_BYTE>,
-		        <&clk IMX93_CLK_MEDIA_DISP_PIX>;
+			<&clk IMX93_CLK_MEDIA_DISP_PIX>;
 		clock-names = "mipi_clk", "pixel_clock";
 		compatible = "panel,common";
 		dsi-format = "rgb888";
@@ -607,17 +625,11 @@
 #else
 		mipi-cmds = <&mipi_cmds_ltk080a60a004t>;
 #endif
-
 		mode-skip-eot;
 		mode-video;
 		mode-video-burst;
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
-		
-		/* used by dsi_to_lvds node ?? !!! */
-		//pinctrl-names = "sn65dsi83";
-		//pinctrl-0 = <&pinctrl_i2cmuxlcdc_sn65dsi83>;
-
 		power-supply = <&reg_vref_5v0>;
 		reg = <0>;
 		spwg;
@@ -709,38 +721,38 @@
 	status = "okay";
 
 	/* On bd-universal-smarc-carrier */
-	i2cmuxsmarc-gp@73 {
+	i2c_mux_smarc_gp@73 {
 		compatible = "nxp,pca9546";
 		reg = <0x73>;
 		reset-gpios = <&gpio2 2 GPIO_ACTIVE_LOW>; /* SMARC GPIO6*/
 		#address-cells = <1>;
 		#size-cells = <0>;
-		
-		i2cmuxsmarcgpa: i2cmuxsmarc-gp@rtc {
+
+		i2c_mux_smarc_gp_rtc: i2cmuxsmarcgp@rtc {
 			/* RTC */
 			clock-frequency = <100000>;
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
-		
-		i2cmuxsmarcgpb: i2cmuxsmarc-gp@usb-c {
+
+		 i2c_mux_smarc_gp_usbc: i2cmuxsmarcgp@usb-c{
 				/* USB C */
 			clock-frequency = <100000>;
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
-		
-		i2cmuxsmarcgpc: i2cmuxsmarc-gp@audio {
+
+		 i2c_mux_smarc_gp_aud: i2cmuxsmarcgp@audio{
 			/* audio */
 			clock-frequency = <100000>;
 			reg = <2>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
-		
-		i2cmuxsmarcgpd: i2cmuxsmarc-gp@pcie {
+
+		 i2c_mux_smarc_gp_pcie: i2cmuxsmarcgp@pcie{
 			/* pcie */
 			clock-frequency = <100000>;
 			reg = <3>;
@@ -750,7 +762,7 @@
 	};
 };
 
-&i2cmuxsmarcgpa {
+&i2c_mux_smarc_gp_rtc {
 	rv3028: rtc@52 {
 		backup-switchover-dsm;
 		#clock-cells = <0>;
@@ -759,16 +771,43 @@
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
 		interrupt-parent = <&gpio2>; /* SMARC GPIO12 */
-		interrupts = <22 IRQ_TYPE_LEVEL_LOW>;
+		interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
 		wakeup-source;
 	};
 };
 
-&i2cmuxsmarcgpc {
+&i2c_mux_smarc_gp_usbc {
+	usb_mux: hd3ss3220@60 {
+		compatible = "ti,hd3ss3220";
+		interrupts-extended = <&pcal6534 27 IRQ_TYPE_EDGE_FALLING>; /* P3_3 GPIO_11 */
+		reg = <0x60>;
+
+		ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hd3ss3220_in_ep: endpoint {
+					remote-endpoint = <&ss_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				hd3ss3220_out_ep: endpoint {
+					remote-endpoint = <&usb_role_switch>;
+				};
+			};
+		};
+	};
+};
+
+&i2c_mux_smarc_gp_aud {
 	codec: wm8962@1a {
 		compatible = "wlf,wm8962";
 		reg = <0x1a>;
-		clocks = <&clk IMX93_CLK_SAI1_GATE>;
+		clocks = <&clk IMX93_CLK_SAI3_GATE>;
 		AVDD-supply = <&reg_vref_1v8>;
 		CPVDD-supply = <&reg_vref_1v8>;
 		DBVDD-supply = <&reg_vdd_3v3>;
@@ -797,8 +836,6 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_lpspi1>;
 	pinctrl-1 = <&pinctrl_lpspi1>;
-	// cs-gpios = <&gpio2 8 GPIO_ACTIVE_LOW>;
-	// pinctrl-assert-gpios = <&adp5585gpio 4 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -822,22 +859,22 @@
 	status = "okay";
 };
 
-
-#if 0
 &lpuart5 {
 	/* BT */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
-	pinctrl-assert-gpios = <&pcal6534 19 GPIO_ACTIVE_HIGH>;
-	status = "disabled";
+	uart-has-rtscts;
+	status = "okay";
 
 	bluetooth {
-		compatible = "nxp,88w8987-bt";
+		shutdown-gpios = <&pcal6534 4 GPIO_ACTIVE_HIGH>;
+		compatible = "infineon,cyw55572-bt";
+		brcm,requires-autobaud-mode;
+		max-speed = <921600>;
 	};
 };
-#endif
 
-&lpuart6 { /*  SER2 */
+&lpuart6 { /*  SER3 */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart6>;
 	status = "okay";
@@ -846,6 +883,7 @@
 &lpuart8 { /*  SER0 */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart8>;
+	uart-has-rtscts;
 	status = "okay";
 };
 
@@ -863,11 +901,7 @@
 	xceiver-supply = <&reg_can2_stby>;
 };
 
-&tpm1 {
-	status = "okay";
-};
-
-&usbotg1 {
+&usbotg1 { /* USB-C */
 	dr_mode = "otg";
 	hnp-disable;
 	srp-disable;
@@ -878,9 +912,28 @@
 	samsung,picophy-pre-emp-curr-control = <3>;
 	samsung,picophy-dc-vol-level-adjust = <7>;
 	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			usb_hs_ep: endpoint {
+				remote-endpoint = <&hs_ep>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			usb_role_switch: endpoint {
+				remote-endpoint = <&hd3ss3220_out_ep>;
+			};
+		};
+	};
 };
 
-&usbotg2 {
+&usbotg2 { /* J2 */
 	dr_mode = "host";
 	vbus-supply = <&reg_usb_2_vbus>;
 	disable-over-current;
@@ -901,7 +954,7 @@
 	status = "okay";
 };
 
-&sai3 { 
+&sai3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
 	assigned-clocks = <&clk IMX93_CLK_SAI3>;
@@ -960,6 +1013,12 @@
 		interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
 		interrupt-names = "host-wake";
 	};
+
+	wifi@1 {
+                reg = <1>;
+                compatible = "brcm,bcm4329-fmac";
+                laird,regdomain = "US";
+        };
 };
 
 &iomuxc {
@@ -967,7 +1026,7 @@
 /* DSI */
 	pinctrl_backlight_dsi: backlight-dsi {
 		fsl,pins = <
-			MX93_PAD_GPIO_IO26__TPM5_CH3				0x02
+			MX93_PAD_GPIO_IO22__TPM5_CH1				0x02
 		>;
 	};
 
@@ -1048,7 +1107,7 @@
 
 	pinctrl_rv3028: rv3028grp {
 		fsl,pins = <
-			MX93_PAD_GPIO_IO22__GPIO2_IO22				0x31e
+			MX93_PAD_GPIO_IO24__GPIO2_IO24				0x31e
 		>;
 	};
 
@@ -1069,7 +1128,7 @@
 	pinctrl_pcal6534: pcal6534grp {
 		fsl,pins = <
 			MX93_PAD_GPIO_IO28__GPIO2_IO28				0x31e
-			MX93_PAD_GPIO_IO17__GPIO2_IO17				0x31e
+			MX93_PAD_GPIO_IO21__GPIO2_IO21				0x31e
 		>;
 	};
 
@@ -1081,7 +1140,7 @@
 			MX93_PAD_SAI1_RXD0__LPSPI1_SOUT				0x3fe
 		>;
 	};
-	
+
 	pinctrl_lpspi3: lpspi3grp {
 		fsl,pins = <
 			MX93_PAD_GPIO_IO07__LPSPI3_PCS1				0x3fe

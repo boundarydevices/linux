@@ -1,0 +1,131 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR MIT)
+/*
+ * Copyright 2024 Boundary Devices
+ */
+
+/dts-v1/;
+
+#include "imx93-nitrogen-smarc.dts"
+
+/ {
+	bd-variant = "Nitrogen93 SMARC LVDS";
+
+	lvds_backlight: lvds_backlight {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		display = <&lcdif>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight>;
+		pwms = <&tpm6 1 30000 0>;       /* 33.3 Khz */
+		status = "okay";
+	};
+
+	lvds_panel {
+		compatible = "tianma,tm070jdhg30";
+		backlight = <&lvds_backlight>;
+
+		port {
+			panel_lvds_in: endpoint {
+				remote-endpoint = <&lvds_out>;
+			};
+		};
+	};
+};
+
+&dsi_backlight {
+	status = "disabled";
+};
+
+&ts_goodix_dsi {
+	status = "disabled";
+};
+
+&lpi2c1 { /* PMIC I2C bus, but the PMIC is on lpi2c2 !!! */
+
+	ts_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&pcal6534 23 IRQ_TYPE_EDGE_RISING>;
+		interrupt-parent = <&pcal6534>;
+		interrupts = <23 IRQ_TYPE_EDGE_RISING>; // P2_7
+		irq-gpios = <&pcal6534 23 GPIO_ACTIVE_HIGH>;
+		//pinctrl-names = "default";
+		//pinctrl-0 = <&pinctrl_ts_lvds_gt911>;
+		reg = <0x5d>;
+		//reset-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+};
+
+&dphy {
+	status = "disabled";
+};
+
+&dsi {
+	status = "disabled";
+};
+
+&lcdif {
+	assigned-clock-rates = <498000000>, <71142857>, <400000000>, <133333333>;
+	status = "okay";
+};
+
+&ldb {
+	status = "okay";
+
+	lvds-channel@0 {
+		status = "okay";
+
+#if 0
+		display-timings {
+		t_lvds: t_lvds_default {
+			/* m101nwwb by default */
+			clock-frequency = <74250000>;
+			hactive = <1280>;
+			vactive = <800>;
+			hback-porch = <5>;
+			hfront-porch = <123>;
+			vback-porch = <3>;
+			vfront-porch = <24>;
+			hsync-len = <1>;
+			vsync-len = <1>;
+			};
+		};
+#endif
+
+		port@1 {
+			reg = <1>;
+
+			lvds_out: endpoint {
+				remote-endpoint = <&panel_lvds_in>;
+			};
+		};
+	};
+
+};
+
+&ldb_phy {
+	status = "okay";
+};
+
+&dphy {
+	status = "disabled"; /* DSI */
+};
+
+&tpm5 {
+	status = "disabled"; /* DSI backlight */
+};
+
+&tpm6 {
+	status = "okay";
+};
+
+&iomuxc {
+
+	pinctrl_backlight: backlight {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO23__TPM6_CH1				0x02
+		>;
+	};
+};
