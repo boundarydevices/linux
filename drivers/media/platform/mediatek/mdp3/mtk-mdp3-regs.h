@@ -310,6 +310,8 @@ struct mdp_frame {
 	u32			usage;		/* enum mdp_buffer_usage */
 	struct mdp_crop		crop;
 	struct v4l2_rect	compose;
+	u32			roi_w;
+	u32			roi_h;
 	s32			rotation;
 	u32			hflip:1;
 	u32			vflip:1;

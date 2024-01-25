@@ -205,6 +205,13 @@ const struct mdp_format *mdp_try_fmt_mplane(struct mdp_dev *mdp,
 			ctx_id, i, bpl, min_bpl, max_bpl, si, min_si, max_si);
 	}
 
+	if (V4L2_TYPE_IS_CAPTURE(f->type)) {
+		struct mdp_frame *c = &param->captures[0];
+
+		c->roi_w = clamp(org_w, pix_limit->wmin, pix_limit->wmax);
+		c->roi_h = clamp(org_h, pix_limit->hmin, pix_limit->hmax);
+	}
+
 	return fmt;
 }
 
@@ -471,8 +478,8 @@ static void mdp_set_orientation(struct img_output *out,
 void mdp_set_dst_config(struct img_output *out,
 			struct mdp_frame *frame, struct vb2_buffer *vb)
 {
-	out->buffer.format.width = frame->compose.width;
-	out->buffer.format.height = frame->compose.height;
+	out->buffer.format.width = frame->roi_w;
+	out->buffer.format.height = frame->roi_h;
 	mdp_prepare_buffer(&out->buffer, frame, vb);
 	mdp_set_src_crop(&out->crop, &frame->crop);
 	mdp_set_orientation(out, frame->rotation, frame->hflip, frame->vflip);
