@@ -62,7 +62,9 @@
 };
 
 &isi_0 {
-	status = "disabled";
+	cap_device {
+		status = "disabled";
+	};
 };
 
 &isp_0 {

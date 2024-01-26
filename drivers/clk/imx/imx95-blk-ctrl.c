@@ -149,6 +149,16 @@ static const struct imx95_blk_ctrl_dev_data camblk_dev_data = {
 };
 
 static const struct imx95_blk_ctrl_clk_dev_data lvds_clk_dev_data[] = {
+	[IMX95_CLK_DISPMIX_LVDS_PHY_DIV] = {
+		.name = "ldb_phy_div",
+		.parent_names = (const char *[]){ "ldbpll", },
+		.num_parents = 1,
+		.reg = 0,
+		.bit_idx = 0,
+		.bit_width = 1,
+		.type = CLK_DIVIDER,
+		.flags2 = CLK_DIVIDER_POWER_OF_TWO,
+	},
 	[IMX95_CLK_DISPMIX_LVDS_CH_GATE] = {
 		.name = "lvds_ch_gate",
 		.parent_names = (const char *[]){ "ldb_pll_div7", },
@@ -168,17 +178,6 @@ static const struct imx95_blk_ctrl_clk_dev_data lvds_clk_dev_data[] = {
 		.reg = 0,
 		.bit_idx = 3,
 		.bit_width = 2,
-		.type = CLK_GATE,
-		.flags = CLK_SET_RATE_PARENT,
-		.flags2 = CLK_GATE_SET_TO_DISABLE,
-	},
-
-	[IMX95_CLK_DISPMIX_LVDS_PLL_GATE] = {
-		.name = "lvds_pll_gate",
-		.parent_names = (const char *[]){ "ldbpll", },
-		.num_parents = 1,
-		.reg = 0,
-		.bit_idx = 5,
 		.type = CLK_GATE,
 		.flags = CLK_SET_RATE_PARENT,
 		.flags2 = CLK_GATE_SET_TO_DISABLE,
