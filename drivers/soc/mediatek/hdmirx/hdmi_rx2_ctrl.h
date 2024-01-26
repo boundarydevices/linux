@@ -177,6 +177,8 @@ void hdmi_rx_domain_off(struct MTK_HDMI *myhdmi);
 void hdmirx_toprgu_rst(struct MTK_HDMI *myhdmi);
 void io_get_hdr10_info(struct MTK_HDMI *myhdmi,
 	struct hdr10InfoPkt *hdr10_info);
+void io_get_avi_info(struct MTK_HDMI *myhdmi,
+	struct hdr10InfoPkt *hdr10_info);
 void hdmirx_set_vcore(struct MTK_HDMI *myhdmi, u32 vcore);
 
 #endif

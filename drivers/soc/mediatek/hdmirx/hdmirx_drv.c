@@ -1656,6 +1656,15 @@ static long hdmirx_ioctl(struct file *filp,
 		}
 		break;
 
+	case MTK_HDMIRX_AVI:
+		io_get_avi_info(myhdmi, &hdr10_info);
+		if (copy_to_user((void __user *)arg, &hdr10_info,
+			sizeof(struct hdr10InfoPkt))) {
+			RX_DEF_LOG("[RX] failed: %d\n", __LINE__);
+			r = -EFAULT;
+		}
+		break;
+
 	case MTK_HDMIRX_DRV_VER:
 	{
 		struct HDMIRX_DRIVER_VERSION ver;
@@ -1670,6 +1679,7 @@ static long hdmirx_ioctl(struct file *filp,
 		}
 		break;
 	}
+
 	default:
 		r = -EFAULT;
 		RX_DEF_LOG("[RX] Unknown ioctl: 0x%x\n", cmd);
@@ -1736,6 +1746,13 @@ static long hdmirx_ioctl_compat(struct file *filp,
 		arg_hdr10 = compat_ptr(arg);
 		filp->f_op->unlocked_ioctl(filp,
 			MTK_HDMIRX_PKT,
+			(unsigned long)arg_hdr10);
+		break;
+
+	case CP_MTK_HDMIRX_AVI:
+		arg_hdr10 = compat_ptr(arg);
+		filp->f_op->unlocked_ioctl(filp,
+			MTK_HDMIRX_AVI,
 			(unsigned long)arg_hdr10);
 		break;
 

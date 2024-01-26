@@ -1007,6 +1007,17 @@ void io_get_hdr10_info(struct MTK_HDMI *myhdmi,
 	memcpy(hdr10_info, &myhdmi->hdr10info, sizeof(struct hdr10InfoPkt));
 }
 
+void io_get_avi_info(struct MTK_HDMI *myhdmi,
+	struct hdr10InfoPkt *hdr10_info)
+{
+	struct hdr10InfoPkt aviinfo;
+
+	aviinfo.fgValid = myhdmi->AviInfo.fgValid;
+	aviinfo.type = (u8)HDMI_INFO_FRAME_ID_AVI;
+	memcpy(&aviinfo.u1InfoData[0], &myhdmi->AviInfo.u1InfoData[0], 32);
+	memcpy(hdr10_info, &aviinfo, sizeof(struct hdr10InfoPkt));
+}
+
 void
 hdmi2_get_infoframe(struct MTK_HDMI *myhdmi)
 {
