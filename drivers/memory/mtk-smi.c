@@ -36,6 +36,14 @@
 #define SMI_DCM				0x300
 #define SMI_DUMMY			0x444
 
+#define SMI_COMMON_CLAMP_EN		0x3c0
+#define SMI_COMMON_CLAMP_EN_SET		0x3c4
+#define SMI_COMMON_CLAMP_EN_CLR		0x3c8
+#define SMI_COMMON_CLAMP_MASK(inport)	BIT(inport)
+
+#define SMI_SUB_COMM_INPORT_NR		(8)
+#define LARB_MAX_SUB_COMMON		(2)
+
 /* SMI LARB */
 #define SMI_LARB_SLP_CON                0xc
 #define SLP_PROT_EN                     BIT(0)
@@ -111,6 +119,21 @@ enum mtk_smi_type {
 	MTK_SMI_GEN2_SUB_COMM,	/* gen2 smi sub common */
 };
 
+/* In order to avoid the conflict between mtk_smi_larb_clamp() request and the
+ * suspend (with protect-on) and resume (with protect-off) process of SMI larb,
+ * mtk_smi_protect_status is used to record the current protection status of
+ * each larb.
+ * The clamp request will be rejected when larb is suspending/suspended. And to
+ * avoid the completed protect operation being submitted repeatedly.
+ */
+enum mtk_smi_protect_status {
+	SMI_PROT_STA_REFUSE_TO_CHANGE	= 0, /* suspend or changing (default) */
+	SMI_PROT_STA_PROT_ON,		/* resume and protected */
+	SMI_PROT_STA_PROT_OFF,		/* resume and un-protected */
+};
+
+static spinlock_t smi_prot_lock;
+
 /* larbs: Require apb/smi clocks while gals is optional. */
 static const char * const mtk_smi_larb_clks[] = {"apb", "smi", "gals"};
 #define MTK_SMI_LARB_REQ_CLK_NR		2
@@ -166,6 +189,9 @@ struct mtk_smi_larb { /* larb: local arbiter */
 	int				larbid;
 	u32				*mmu;
 	unsigned char			*bank;
+	struct regmap			*sub_comm_syscon[LARB_MAX_SUB_COMMON];
+	int				sub_comm_inport[LARB_MAX_SUB_COMMON];
+	enum mtk_smi_protect_status	prot_status;	/* -> smi_prot_lock */
 };
 
 static int
@@ -480,6 +506,37 @@ static void mtk_smi_larb_sleep_ctrl_disable(struct mtk_smi_larb *larb)
 	writel_relaxed(0, larb->base + SMI_LARB_SLP_CON);
 }
 
+static void mtk_smi_larb_clamp_protect(struct device *dev, bool set_clamp)
+{
+	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
+	unsigned int tmp = 0, i;
+
+	if (!larb)
+		return;
+
+	for (i = 0; i < LARB_MAX_SUB_COMMON; i++) {
+		if (!larb->sub_comm_syscon[i])
+			break;
+
+		if (set_clamp) {
+			regmap_write(larb->sub_comm_syscon[i],
+				     SMI_COMMON_CLAMP_EN_SET,
+				     SMI_COMMON_CLAMP_MASK(
+				     larb->sub_comm_inport[i]));
+		} else {
+			regmap_write(larb->sub_comm_syscon[i],
+				     SMI_COMMON_CLAMP_EN_CLR,
+				     SMI_COMMON_CLAMP_MASK(
+				     larb->sub_comm_inport[i]));
+		}
+
+		regmap_read(larb->sub_comm_syscon[i], SMI_COMMON_CLAMP_EN, &tmp);
+		if (((tmp & BIT(larb->sub_comm_inport[i])) ? true : false) != set_clamp)
+			dev_info(dev, "%s failed, inport %d status 0x%x\n",
+				 __func__, larb->sub_comm_inport[i], tmp);
+	}
+}
+
 static int mtk_smi_device_link_common(struct device *dev, struct device **com_dev)
 {
 	struct platform_device *smi_com_pdev;
@@ -540,7 +597,8 @@ static int mtk_smi_larb_probe(struct platform_device *pdev)
 {
 	struct mtk_smi_larb *larb;
 	struct device *dev = &pdev->dev;
-	int ret;
+	struct device_node *smi_node;
+	int ret, i;
 
 	larb = devm_kzalloc(dev, sizeof(*larb), GFP_KERNEL);
 	if (!larb)
@@ -561,6 +619,26 @@ static int mtk_smi_larb_probe(struct platform_device *pdev)
 	ret = mtk_smi_device_link_common(dev, &larb->smi_common_dev);
 	if (ret < 0)
 		return ret;
+
+	/* find sub common to clamp larb for ISP software reset */
+	for (i = 0; i < LARB_MAX_SUB_COMMON; i++) {
+		smi_node = of_parse_phandle(dev->of_node, "mediatek,smi-sub-comm", i);
+		if (!smi_node)
+			break;
+
+		larb->sub_comm_syscon[i] = syscon_node_to_regmap(smi_node);
+		ret = of_property_read_u32(dev->of_node,
+					   "mediatek,smi-sub-comm-inport",
+					   &larb->sub_comm_inport[i]);
+		if (IS_ERR(larb->sub_comm_syscon[i]) || ret ||
+		    (larb->sub_comm_inport[i] >= SMI_SUB_COMM_INPORT_NR)) {
+			dev_notice(dev, "Failed to get smi parent syscon\n");
+			larb->sub_comm_syscon[i] = NULL;
+		}
+		of_node_put(smi_node);
+	}
+
+	larb->prot_status = SMI_PROT_STA_REFUSE_TO_CHANGE;
 
 	pm_runtime_enable(dev);
 	platform_set_drvdata(pdev, larb);
@@ -589,6 +667,7 @@ static int __maybe_unused mtk_smi_larb_resume(struct device *dev)
 {
 	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
 	const struct mtk_smi_larb_gen *larb_gen = larb->larb_gen;
+	unsigned long flags;
 	int ret;
 
 	ret = clk_bulk_prepare_enable(larb->smi.clk_num, larb->smi.clks);
@@ -599,15 +678,39 @@ static int __maybe_unused mtk_smi_larb_resume(struct device *dev)
 		mtk_smi_larb_sleep_ctrl_disable(larb);
 
 	/* Configure the basic setting for this larb */
-	return larb_gen->config_port(dev);
+	ret = larb_gen->config_port(dev);
+	if (ret)
+		return ret;
+
+	spin_lock_irqsave(&smi_prot_lock, flags);
+	larb->prot_status = SMI_PROT_STA_PROT_OFF;
+	spin_unlock_irqrestore(&smi_prot_lock, flags);
+
+	return 0;
 }
 
 static int __maybe_unused mtk_smi_larb_suspend(struct device *dev)
 {
 	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
+	enum mtk_smi_protect_status prot_status;
+	unsigned long flags;
 	int ret;
 
-	if (MTK_SMI_CAPS(larb->larb_gen->flags_general, MTK_SMI_FLAG_SLEEP_CTL)) {
+	spin_lock_irqsave(&smi_prot_lock, flags);
+	if (larb->prot_status == SMI_PROT_STA_REFUSE_TO_CHANGE) {
+		spin_unlock_irqrestore(&smi_prot_lock, flags);
+		dev_info(dev, "the protection status is changing...\n");
+		return -EAGAIN;
+	}
+	prot_status = larb->prot_status;
+	larb->prot_status = SMI_PROT_STA_REFUSE_TO_CHANGE;
+	spin_unlock_irqrestore(&smi_prot_lock, flags);
+
+	/* No need to repeat trigger protect when user has enabled protect
+	 * via mtk_smi_larb_clamp().
+	 */
+	if (prot_status == SMI_PROT_STA_PROT_OFF &&
+	    MTK_SMI_CAPS(larb->larb_gen->flags_general, MTK_SMI_FLAG_SLEEP_CTL)) {
 		ret = mtk_smi_larb_sleep_ctrl_enable(larb);
 		if (ret)
 			return ret;
@@ -616,6 +719,59 @@ static int __maybe_unused mtk_smi_larb_suspend(struct device *dev)
 	clk_bulk_disable_unprepare(larb->smi.clk_num, larb->smi.clks);
 	return 0;
 }
+
+/* In order to avoid the abnormal SMI bus status which is generated by the
+ * glitch from the master warm SW reset, parent SMI of SMI larb should be
+ * protected by clamp temporarily.
+ * This solution is required by ISP7.
+ */
+void mtk_smi_larb_clamp(struct device *larbdev, bool on)
+{
+	struct mtk_smi_larb *larb = dev_get_drvdata(larbdev);
+	const struct mtk_smi_larb_gen *larb_gen;
+	unsigned long flags;
+
+	if (!larb)
+		return;
+
+	spin_lock_irqsave(&smi_prot_lock, flags);
+	if (larb->prot_status == SMI_PROT_STA_REFUSE_TO_CHANGE) {
+		dev_err(larbdev, "refuse to change protection\n");
+		goto clamp_out;
+	}
+
+	if ((on && (larb->prot_status == SMI_PROT_STA_PROT_ON)) ||
+	    (!on && (larb->prot_status == SMI_PROT_STA_PROT_OFF))) {
+		dev_warn(larbdev, "ignore duplicate protection(%s)\n",
+			 (on) ? "on" : "off");
+		goto clamp_out;
+	}
+
+	larb->prot_status = SMI_PROT_STA_REFUSE_TO_CHANGE;
+	spin_unlock_irqrestore(&smi_prot_lock, flags);
+
+	larb_gen = larb->larb_gen;
+	if (on) {
+		/* set protection */
+		mtk_smi_larb_sleep_ctrl_enable(larb);
+		mtk_smi_larb_clamp_protect(larbdev, true);
+
+	} else {
+		/* release protection */
+		mtk_smi_larb_clamp_protect(larbdev, false);
+		mtk_smi_larb_sleep_ctrl_disable(larb);
+	}
+
+	dev_dbg(larbdev, "is %sprotected\n", (on) ? "" : "un-");
+
+	spin_lock_irqsave(&smi_prot_lock, flags);
+	larb->prot_status = (on) ? SMI_PROT_STA_PROT_ON :
+			    SMI_PROT_STA_PROT_OFF;
+
+clamp_out:
+	spin_unlock_irqrestore(&smi_prot_lock, flags);
+}
+EXPORT_SYMBOL_GPL(mtk_smi_larb_clamp);
 
 static const struct dev_pm_ops smi_larb_pm_ops = {
 	SET_RUNTIME_PM_OPS(mtk_smi_larb_suspend, mtk_smi_larb_resume, NULL)
@@ -878,6 +1034,8 @@ static struct platform_driver * const smidrivers[] = {
 
 static int __init mtk_smi_init(void)
 {
+	spin_lock_init(&smi_prot_lock);
+
 	return platform_register_drivers(smidrivers, ARRAY_SIZE(smidrivers));
 }
 module_init(mtk_smi_init);
