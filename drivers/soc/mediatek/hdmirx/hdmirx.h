@@ -222,6 +222,8 @@ enum HDMI_SWITCH_NO {
 /* get HDR10 packet */
 #define MTK_HDMIRX_PKT			HDMI_IOWR(6, struct hdr10InfoPkt)
 #define MTK_HDMIRX_DRV_VER		HDMI_IOWR(7, struct HDMIRX_DRIVER_VERSION)
+/* get AVI packet */
+#define MTK_HDMIRX_AVI			HDMI_IOWR(8, struct hdr10InfoPkt)
 
 #define CP_MTK_HDMIRX_VID_INFO		HDMI_IOWR(1, struct HDMIRX_VID_PARA)
 #define CP_MTK_HDMIRX_AUD_INFO		HDMI_IOWR(2, struct HDMIRX_AUD_INFO)
@@ -230,5 +232,6 @@ enum HDMI_SWITCH_NO {
 #define CP_MTK_HDMIRX_SWITCH		HDMI_IOW(5, unsigned int)
 #define CP_MTK_HDMIRX_PKT		HDMI_IOWR(6, struct hdr10InfoPkt)
 #define CP_MTK_HDMIRX_DRV_VER		HDMI_IOWR(7, struct HDMIRX_DRIVER_VERSION)
+#define CP_MTK_HDMIRX_AVI		HDMI_IOWR(8, struct hdr10InfoPkt)
 
 #endif
