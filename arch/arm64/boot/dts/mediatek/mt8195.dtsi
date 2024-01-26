@@ -2500,6 +2500,8 @@
 			reg = <0 0x15001000 0 0x1000>;
 			mediatek,larb-id = <9>;
 			mediatek,smi = <&smi_sub_common_img1_3x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_img1_3x1>;
+			mediatek,smi-sub-comm-inport = <0>;
 			clocks = <&imgsys CLK_IMG_LARB9>,
 			         <&imgsys CLK_IMG_LARB9>,
 			         <&imgsys CLK_IMG_GALS>;
@@ -2542,6 +2544,8 @@
 			reg = <0 0x15120000 0 0x1000>;
 			mediatek,larb-id = <10>;
 			mediatek,smi = <&smi_sub_common_img1_3x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_img1_3x1>;
+			mediatek,smi-sub-comm-inport = <1>;
 			clocks = <&imgsys CLK_IMG_DIP0>,
 			       <&imgsys1_dip_top CLK_IMG1_DIP_TOP_LARB10>,
 			       <&imgsys CLK_IMG_LARB9>,
@@ -2567,6 +2571,8 @@
 			reg = <0 0x15230000 0 0x1000>;
 			mediatek,larb-id = <11>;
 			mediatek,smi = <&smi_sub_common_img1_3x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_img1_3x1>;
+			mediatek,smi-sub-comm-inport = <2>;
 			clocks = <&imgsys CLK_IMG_WPE0>,
 			       <&imgsys1_wpe CLK_IMG1_WPE_LARB11>,
 			       <&imgsys CLK_IMG_LARB9>,
@@ -2586,6 +2592,8 @@
 			reg = <0 0x15340000 0 0x1000>;
 			mediatek,larb-id = <12>;
 			mediatek,smi = <&smi_sub_common_img0_3x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_img0_3x1>;
+			mediatek,smi-sub-comm-inport = <0>;
 			clocks = <&ipesys CLK_IPE_SMI_LARB12>,
 				 <&ipesys CLK_IPE_SMI_LARB12>;
 			clock-names = "apb", "smi";
@@ -2603,6 +2611,8 @@
 			reg = <0 0x16001000 0 0x1000>;
 			mediatek,larb-id = <13>;
 			mediatek,smi = <&smi_sub_common_cam_4x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_4x1>;
+			mediatek,smi-sub-comm-inport = <0>;
 			clocks = <&camsys CLK_CAM_LARB13>,
 			       <&camsys CLK_CAM_LARB13>,
 			       <&camsys CLK_CAM_CAM2MM0_GALS>;
@@ -2615,6 +2625,8 @@
 			reg = <0 0x16002000 0 0x1000>;
 			mediatek,larb-id = <14>;
 			mediatek,smi = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm-inport = <0>;
 			clocks = <&camsys CLK_CAM_LARB14>,
 				 <&camsys CLK_CAM_LARB14>;
 			clock-names = "apb", "smi";
@@ -2650,6 +2662,8 @@
 			reg = <0 0x16012000 0 0x1000>;
 			mediatek,larb-id = <16>;
 			mediatek,smi = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm-inport = <1>;
 			clocks = <&camsys_rawa CLK_CAM_RAWA_LARBX>,
 			         <&camsys_rawa CLK_CAM_RAWA_LARBX>;
 			clock-names = "apb", "smi";
@@ -2661,6 +2675,8 @@
 			reg = <0 0x16013000 0 0x1000>;
 			mediatek,larb-id = <17>;
 			mediatek,smi = <&smi_sub_common_cam_4x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_4x1>;
+			mediatek,smi-sub-comm-inport = <1>;
 			clocks = <&camsys_yuva CLK_CAM_YUVA_LARBX>,
 			         <&camsys_yuva CLK_CAM_YUVA_LARBX>;
 			clock-names = "apb", "smi";
@@ -2672,6 +2688,8 @@
 			reg = <0 0x16014000 0 0x1000>;
 			mediatek,larb-id = <27>;
 			mediatek,smi = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm-inport = <2>;
 			clocks = <&camsys_rawb CLK_CAM_RAWB_LARBX>,
 				 <&camsys_rawb CLK_CAM_RAWB_LARBX>;
 			clock-names = "apb", "smi";
@@ -2683,6 +2701,8 @@
 			reg = <0 0x16015000 0 0x1000>;
 			mediatek,larb-id = <28>;
 			mediatek,smi = <&smi_sub_common_cam_4x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_4x1>;
+			mediatek,smi-sub-comm-inport = <2>;
 			clocks = <&camsys_yuvb CLK_CAM_YUVB_LARBX>,
 				 <&camsys_yuvb CLK_CAM_YUVB_LARBX>;
 			clock-names = "apb", "smi";
@@ -2724,6 +2744,8 @@
 			reg = <0 0x16141000 0 0x1000>;
 			mediatek,larb-id = <25>;
 			mediatek,smi = <&smi_sub_common_cam_4x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_4x1>;
+			mediatek,smi-sub-comm-inport = <3>;
 			clocks = <&camsys CLK_CAM_LARB13>,
 			         <&camsys_mraw CLK_CAM_MRAW_LARBX>,
 			         <&camsys CLK_CAM_CAM2MM0_GALS>;
@@ -2736,6 +2758,8 @@
 			reg = <0 0x16142000 0 0x1000>;
 			mediatek,larb-id = <26>;
 			mediatek,smi = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm-inport = <3>;
 			clocks = <&camsys_mraw CLK_CAM_MRAW_LARBX>,
 				 <&camsys_mraw CLK_CAM_MRAW_LARBX>;
 			clock-names = "apb", "smi";
@@ -2754,6 +2778,8 @@
 			reg = <0 0x17201000 0 0x1000>;
 			mediatek,larb-id = <18>;
 			mediatek,smi = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_cam_7x1>;
+			mediatek,smi-sub-comm-inport = <6>;
 			clocks = <&ccusys CLK_CCU_LARB18>,
 				 <&ccusys CLK_CCU_LARB18>;
 			clock-names = "apb", "smi";
