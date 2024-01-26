@@ -933,7 +933,7 @@
 			};
 
 			flexcan2: can@425b0000 {
-				compatible = "fsl,imx95-flexcan", "fsl,imx93-flexcan";
+				compatible = "fsl,imx95-flexcan";
 				reg = <0x425b0000 0x10000>;
 				interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_BUSWAKEUP>,
@@ -947,7 +947,7 @@
 			};
 
 			flexcan3: can@42600000 {
-				compatible = "fsl,imx95-flexcan", "fsl,imx93-flexcan";
+				compatible = "fsl,imx95-flexcan";
 				reg = <0x42600000 0x10000>;
 				interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_BUSWAKEUP>,
@@ -1327,7 +1327,7 @@
 			};
 
 			flexcan4: can@427c0000 {
-				compatible = "fsl,imx95-flexcan", "fsl,imx93-flexcan";
+				compatible = "fsl,imx95-flexcan";
 				reg = <0x427c0000 0x10000>;
 				interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_BUSWAKEUP>,
@@ -1341,7 +1341,7 @@
 			};
 
 			flexcan5: can@427d0000 {
-				compatible = "fsl,imx95-flexcan", "fsl,imx93-flexcan";
+				compatible = "fsl,imx95-flexcan";
 				reg = <0x427d0000 0x10000>;
 				interrupts = <GIC_SPI 44 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_BUSWAKEUP>,
@@ -1563,7 +1563,7 @@
 			};
 
 			flexcan1: can@443a0000 {
-				compatible = "fsl,imx95-flexcan", "fsl,imx93-flexcan";
+				compatible = "fsl,imx95-flexcan";
 				reg = <0x443a0000 0x10000>;
 				interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scmi_clk IMX95_CLK_BUSAON>,
