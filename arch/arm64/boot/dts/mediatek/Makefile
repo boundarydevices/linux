@@ -43,4 +43,6 @@ dtb-$(CONFIG_ARCH_MEDIATEK) += mt8370-tungsten-smarc.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += mt8390-tungsten-smarc.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += mt8516-pumpkin.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += genio-510-evk.dtb
-subdir-y += dtbo
+subdir-y += mt8370
+subdir-y += mt8390
+subdir-y += mt83x0-tungsten-smarc

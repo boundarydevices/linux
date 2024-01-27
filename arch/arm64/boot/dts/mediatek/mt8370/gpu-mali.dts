@@ -70,7 +70,7 @@
 					static-coefficient = <2427750>;
 					dynamic-coefficient = <4687>;
 					ts = <20000 2000 (-20) 2>;
-					//thermal-zone = "soc_max";
+					thermal-zone = "soc-max";
 				};
 				power_model@1 {
 					compatible = "arm,mali-tnax-power-model";

@@ -85,6 +85,7 @@
 						 <&iommu_vpp M4U_PORT_L14_GCAMSV_F_IMGO_1>,
 						 <&iommu_vpp M4U_PORT_L14_GCAMSV_F_IMGO_2>,
 						 <&iommu_vpp M4U_PORT_L14_GCAMSV_H_IMGO_1>,
+						 <&iommu_vpp M4U_PORT_L14_GCAMSV_H_IMGO_2>,
 						 <&iommu_vpp M4U_PORT_L14_GCAMSV_B_UFEO_1>,
 						 <&iommu_vpp M4U_PORT_L14_GCAMSV_B_UFEO_2>,
 						 <&iommu_vpp M4U_PORT_L14_GCAMSV_D_UFEO_1>,
@@ -546,7 +547,7 @@
 				assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5>;
 			};
 
-			camsv6@16187000 {
+			camsv8@16187000 {
 				compatible = "mediatek,camsv";
 				reg = <0 0x16187000 0 0x1000>,
 					  <0 0x1618f000 0 0x1000>;

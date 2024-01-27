@@ -209,6 +209,9 @@
 							  <&opp_table_apu_rv>,
 							  <&opp_table_vpu>,
 							  <&opp_table_dla>;
+
+				nvmem-cells = <&efuse_apu_segment>;
+				nvmem-cell-names = "efuse_apu_segment";
 			};
 
 			vpu_core0: vpu_core0@19120000 {
