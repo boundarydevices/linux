@@ -7,6 +7,52 @@
 
 #include "wave6-vpu.h"
 
+unsigned int wave6_default_bytesperline(unsigned int fourcc, unsigned int width)
+{
+	unsigned int bytesperline = width;
+
+	switch (fourcc) {
+		case V4L2_PIX_FMT_YUV420:
+		case V4L2_PIX_FMT_NV12:
+		case V4L2_PIX_FMT_NV21:
+		case V4L2_PIX_FMT_YUV422P:
+		case V4L2_PIX_FMT_NV16:
+		case V4L2_PIX_FMT_NV61:
+		case V4L2_PIX_FMT_NV24:
+		case V4L2_PIX_FMT_NV42:
+		case V4L2_PIX_FMT_YUV420M:
+		case V4L2_PIX_FMT_NV12M:
+		case V4L2_PIX_FMT_NV21M:
+		case V4L2_PIX_FMT_YUV422M:
+		case V4L2_PIX_FMT_NV16M:
+		case V4L2_PIX_FMT_NV61M:
+			bytesperline = round_up(width, 32);
+			break;
+		case V4L2_PIX_FMT_YUYV:
+			bytesperline = round_up(width, 32) * 2;
+			break;
+		case V4L2_PIX_FMT_YUV24:
+		case V4L2_PIX_FMT_RGB24:
+			bytesperline = round_up((width * 3), 16);
+			break;
+		case V4L2_PIX_FMT_P010:
+			bytesperline = round_up((width * 2), 32);
+			break;
+		case V4L2_PIX_FMT_ARGB32:
+		case V4L2_PIX_FMT_XRGB32:
+		case V4L2_PIX_FMT_RGBA32:
+		case V4L2_PIX_FMT_RGBX32:
+		case V4L2_PIX_FMT_ARGB2101010:
+			bytesperline = round_up((width * 4), 16);
+			break;
+	default:
+		bytesperline = width;
+		break;
+	}
+
+	return bytesperline;
+}
+
 struct vb2_v4l2_buffer *wave6_get_dst_buf_by_addr(struct vpu_instance *inst,
 						  dma_addr_t addr)
 {

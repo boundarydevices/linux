@@ -63,6 +63,7 @@ static inline bool wave6_vpu_both_queues_are_streaming(struct vpu_instance *inst
 	return vb2_is_streaming(vq_cap) && vb2_is_streaming(vq_out);
 }
 
+unsigned int wave6_default_bytesperline(unsigned int fourcc, unsigned int width);
 struct vb2_v4l2_buffer *wave6_get_dst_buf_by_addr(struct vpu_instance *inst,
 						  dma_addr_t addr);
 int wave6_vpu_wait_interrupt(struct vpu_instance *inst, unsigned int timeout);
