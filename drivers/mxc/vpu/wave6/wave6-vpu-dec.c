@@ -552,8 +552,6 @@ static int wave6_vpu_dec_start_decode(struct vpu_instance *inst)
 static void wave6_vpu_dec_stop_decode(struct vpu_instance *inst)
 {
 	dev_dbg(inst->dev->dev, "%s: state %d\n", __func__, inst->state);
-
-	wave6_vpu_dec_update_bitstream_buffer(inst, 0);
 }
 
 static void wave6_handle_decoded_frame(struct vpu_instance *inst,
@@ -1595,6 +1593,7 @@ static int wave6_vpu_dec_seek_header(struct vpu_instance *inst)
 			ret = 0;
 		}
 	} else {
+		wave6_vpu_dec_retry_one_frame(inst);
 		wave6_vpu_dec_handle_source_change(inst, &initial_info);
 	}
 
@@ -1746,11 +1745,6 @@ static void wave6_vpu_dec_stop_streaming(struct vb2_queue *q)
 		wave6_vpu_set_instance_state(inst, VPU_INST_STATE_SEEK);
 		inst->sequence = 0;
 	} else {
-		dma_addr_t rd_ptr = 0, wr_ptr = 0;
-
-		wave6_vpu_dec_get_bitstream_buffer(inst, &rd_ptr, &wr_ptr, NULL);
-		wave6_vpu_dec_set_rd_ptr(inst, wr_ptr, true);
-
 		if (v4l2_m2m_has_stopped(m2m_ctx))
 			v4l2_m2m_clear_state(m2m_ctx);
 
