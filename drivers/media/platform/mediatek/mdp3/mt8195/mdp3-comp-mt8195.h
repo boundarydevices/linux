@@ -122,6 +122,25 @@ struct mdp_hdr_subfrm_8195 {
 struct mdp_hdr_data_8195 {
 	u32 top;
 	u32 relay;
+	u32 coef3x3_0;
+	u32 b_channel_nr;
+	u32 a_luma;
+	u32 lbox_det_1;
+	u32 cursor_ctrl;
+	u32 y2r_09;
+	u32 tone_map_top;
+	u32 hlg_sg;
+	u32 l_mix_0;
+	u32 r2y_00;
+	u32 r2y_01;
+	u32 r2y_02;
+	u32 r2y_03;
+	u32 r2y_04;
+	u32 r2y_05;
+	u32 r2y_06;
+	u32 r2y_07;
+	u32 r2y_08;
+	u32 r2y_09;
 	struct mdp_hdr_subfrm_8195   subfrms[IMG_MAX_SUBFRAMES_8195];
 } __packed;
 
