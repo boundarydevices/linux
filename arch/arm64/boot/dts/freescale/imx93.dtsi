@@ -685,6 +685,28 @@
 				timeout-sec = <40>;
 			};
 
+			tpm1: pwm@44310000 {
+				compatible = "fsl,imx7ulp-pwm";
+				reg = <0x44310000 0x1000>;
+				clocks = <&clk IMX93_CLK_TPM1_GATE>;
+				assigned-clocks = <&clk IMX93_CLK_TPM1>;
+				assigned-clock-parents = <&clk IMX93_CLK_BUS_AON>;
+				assigned-clock-rates = <40000000>;
+				#pwm-cells = <3>;
+				status = "disabled";
+			};
+
+			tpm3: pwm@424e0000 {
+				compatible = "fsl,imx7ulp-pwm";
+				reg = <0x424e0000 0x1000>;
+				clocks = <&clk IMX93_CLK_TPM3_GATE>;
+				assigned-clocks = <&clk IMX93_CLK_TPM3>;
+				assigned-clock-parents = <&clk IMX93_CLK_BUS_WAKEUP>;
+				assigned-clock-rates = <133333334>;
+				#pwm-cells = <3>;
+				status = "disabled";
+			};
+
 			tpm4: pwm@424f0000 {
 				compatible = "fsl,imx7ulp-pwm";
 				reg = <0x424f0000 0x1000>;
