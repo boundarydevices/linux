@@ -30,7 +30,9 @@
 #define IMX93_CLK_FLEXIO2		21
 #define IMX93_CLK_LPTMR1		24
 #define IMX93_CLK_LPTMR2		25
+#define IMX93_CLK_TPM1			26
 #define IMX93_CLK_TPM2			27
+#define IMX93_CLK_TPM3			28
 #define IMX93_CLK_TPM4			29
 #define IMX93_CLK_TPM5			30
 #define IMX93_CLK_TPM6			31
