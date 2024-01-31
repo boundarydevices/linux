@@ -131,6 +131,7 @@ struct mdp_dev {
 	struct v4l2_device			v4l2_dev;
 	struct video_device			*m2m_vdev;
 	struct v4l2_m2m_dev			*m2m_dev;
+	struct media_device			mdev;
 	/* synchronization protect for m2m device operation */
 	struct mutex				m2m_lock;
 	atomic_t				suspended;
