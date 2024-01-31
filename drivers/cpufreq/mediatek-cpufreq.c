@@ -624,7 +624,7 @@ static const struct mtk_cpufreq_platform_data mt8365_platform_data = {
 	.max_volt_shift = 200000,
 	.proc_max_volt = 1025000,
 	.sram_min_volt = 800000,
-	.sram_max_volt = 940000,
+	.sram_max_volt = 925000,
 };
 
 /* List of machines supported by this driver */
