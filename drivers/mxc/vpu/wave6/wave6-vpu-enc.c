@@ -1698,6 +1698,10 @@ static u32 to_colour_primaries(enum v4l2_colorspace colorspace)
 		return 4;
 	case V4L2_COLORSPACE_470_SYSTEM_BG:
 		return 5;
+	case V4L2_COLORSPACE_GENERIC_FILM:
+		return 8;
+	case V4L2_COLORSPACE_ST428:
+		return 10;
 	case V4L2_COLORSPACE_RAW:
 	default:
 		return 2;
@@ -1726,6 +1730,18 @@ static u32 to_transfer_characteristics(enum v4l2_colorspace colorspace,
 		return 8;
 	case V4L2_XFER_FUNC_SMPTE2084:
 		return 16;
+	case V4L2_XFER_FUNC_GAMMA22:
+		return 4;
+	case V4L2_XFER_FUNC_GAMMA28:
+		return 5;
+	case V4L2_XFER_FUNC_XVYCC:
+		return 11;
+	case V4L2_XFER_FUNC_BT1361:
+		return 12;
+	case V4L2_XFER_FUNC_ST428:
+		return 17;
+	case V4L2_XFER_FUNC_HLG:
+		return 18;
 	case V4L2_XFER_FUNC_DCI_P3:
 	default:
 		return 2;
@@ -1754,6 +1770,8 @@ static u32 to_matrix_coeffs(enum v4l2_colorspace colorspace,
 		return 10;
 	case V4L2_YCBCR_ENC_SMPTE240M:
 		return 7;
+	case V4L2_YCBCR_ENC_BT470_6M:
+		return 4;
 	default:
 		return 2;
 	}
