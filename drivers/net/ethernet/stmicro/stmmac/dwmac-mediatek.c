@@ -615,6 +615,7 @@ static int mediatek_dwmac_common_data(struct platform_device *pdev,
 				      struct plat_stmmacenet_data *plat,
 				      struct mediatek_dwmac_plat_data *priv_plat)
 {
+	struct device_node *np = pdev->dev.of_node;
 	int i;
 
 	plat->interface = priv_plat->phy_mode;
@@ -651,6 +652,14 @@ static int mediatek_dwmac_common_data(struct platform_device *pdev,
 		if (i > 0)
 			plat->tx_queues_cfg[i].tbs_en = 1;
 	}
+
+	/* EEE may lead to FSM error,
+	 * mask PRTYEN bit, if EEE is required
+	 */
+	if (of_property_read_bool(np, "snps,en-rx-lpi-clockgating"))
+		plat->rx_clk_runs_in_lpi = 0;
+	else
+		plat->rx_clk_runs_in_lpi = 1;
 
 	return 0;
 }
