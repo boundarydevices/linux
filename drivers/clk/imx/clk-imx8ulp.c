@@ -449,6 +449,7 @@ static int imx8ulp_clk_pcc4_init(struct platform_device *pdev)
 static int imx8ulp_clk_pcc5_init(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	struct device_node *np;
 	struct clk_hw_onecell_data *clk_data;
 	struct clk_hw **clks;
 	void __iomem *base;
@@ -513,8 +514,12 @@ static int imx8ulp_clk_pcc5_init(struct platform_device *pdev)
 	clks[IMX8ULP_CLK_CSI] = imx8ulp_clk_hw_composite("csi", pcc5_periph_plat_sels, ARRAY_SIZE(pcc5_periph_plat_sels), true, true, true, base + 0xbc, 1);
 	clks[IMX8ULP_CLK_DSI] = imx8ulp_clk_hw_composite("dsi", pcc5_periph_plat_sels, ARRAY_SIZE(pcc5_periph_plat_sels), true, true, true, base + 0xc0, 1);
 	clks[IMX8ULP_CLK_WDOG5] = imx8ulp_clk_hw_composite("wdog5", pcc5_periph_bus_sels, ARRAY_SIZE(pcc5_periph_bus_sels), true, true, true, base + 0xc8, 1);
-	clks[IMX8ULP_CLK_EPDC] = imx8ulp_clk_hw_composite("epdc", pcc5_periph_plat_sels, ARRAY_SIZE(pcc5_periph_plat_sels), true, true, true, base + 0xcc, 1);
-	clks[IMX8ULP_CLK_PXP] = imx8ulp_clk_hw_composite("pxp", lpav_axi_div, 1, false, false, true, base + 0xd0, 1);
+	/* only enable epdc/pxp clock for devices that have it */
+	np = of_find_node_by_path("/soc@0/bus@2d800000/epdc@2db30000");
+	if (np) {
+		clks[IMX8ULP_CLK_EPDC] = imx8ulp_clk_hw_composite("epdc", pcc5_periph_plat_sels, ARRAY_SIZE(pcc5_periph_plat_sels), true, true, true, base + 0xcc, 1);
+		clks[IMX8ULP_CLK_PXP] = imx8ulp_clk_hw_composite("pxp", lpav_axi_div, 1, false, false, true, base + 0xd0, 1);
+	}
 	clks[IMX8ULP_CLK_GPU2D] = imx8ulp_clk_hw_composite("gpu2d", pcc5_periph_plat_sels, ARRAY_SIZE(pcc5_periph_plat_sels), true, true, true, base + 0xf0, 1);
 	clks[IMX8ULP_CLK_GPU3D] = imx8ulp_clk_hw_composite("gpu3d", pcc5_periph_plat_sels, ARRAY_SIZE(pcc5_periph_plat_sels), true, true, true, base + 0xf4, 1);
 	clks[IMX8ULP_CLK_DC_NANO] = imx8ulp_clk_hw_composite("dc_nano", pcc5_periph_plat_sels, ARRAY_SIZE(pcc5_periph_plat_sels), true, true, true, base + 0xf8, 1);
