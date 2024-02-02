@@ -30,6 +30,26 @@ config DRM_MEDIATEK_HDMI
 	help
 	  DRM/KMS HDMI driver for Mediatek SoCs
 
+config DRM_MEDIATEK_CEC
+	tristate "DRM CEC Support for MediaTek SoCs"
+	depends on DRM_MEDIATEK_HDMI
+	select CEC_CORE
+	help
+	  DRM/KMS HDMI CEC driver for MediaTek 8195 compatible HDMI SoCs.
+	  Choose this option if you want to
+	  enable the CEC driver. Note that the CEC
+	  driver depends on DRM_MEDIATEK_HDMI, so select
+	  DRM_MEDIATEK_HDMI before choosing this option.
+
+config DRM_MEDIATEK_CEC_SUSPEND_LOW_POWER
+	tristate "DRM CEC SUSPEND LOW POWER Support for MediaTek SoCs"
+	depends on DRM_MEDIATEK_CEC
+	help
+	  DRM/KMS CEC SUSPEND_LOW_POWER for MediaTek SoCs.
+	  Choose this option if you want to
+	  disable CEC clock when
+	  platform enter suspend.
+
 config MTK_DPTX_SUPPORT
 	tristate "DRM DPTX Support for Mediatek SoCs"
 	depends on DRM_MEDIATEK
