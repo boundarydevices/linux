@@ -408,8 +408,6 @@ void phylink_caps_to_linkmodes(unsigned long *linkmodes, unsigned long caps)
 	if (caps & MAC_25000FD) {
 		__set_bit(ETHTOOL_LINK_MODE_25000baseCR_Full_BIT, linkmodes);
 		__set_bit(ETHTOOL_LINK_MODE_25000baseKR_Full_BIT, linkmodes);
-		__set_bit(ETHTOOL_LINK_MODE_25000baseCR_S_Full_BIT, linkmodes);
-		__set_bit(ETHTOOL_LINK_MODE_25000baseKR_S_Full_BIT, linkmodes);
 		__set_bit(ETHTOOL_LINK_MODE_25000baseSR_Full_BIT, linkmodes);
 	}
 
