@@ -830,9 +830,18 @@
 		};
 
 		cec: cec@10014000 {
-			compatible = "mediatek,mt8188-cec";
+			compatible = "mediatek,cec2";
 			reg = <0 0x10014000 0 0x100>;
 			interrupts = <GIC_SPI 680 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_CEC_66M_HCLK>,
+				<&infracfg_ao CLK_INFRA_AO_CEC_66M_BCLK>,
+				<&infracfg_ao CLK_INFRA_AO_HDMI_32K>,
+				<&infracfg_ao CLK_INFRA_AO_HDMI_26M>;
+			clock-names = "cec_66m_h",
+				"cec_66m_b",
+				"hdmi_32k",
+				"hdmi_26m";
+			hdmi = <&hdmi0>;
 		};
 
 		pwm: pwm@10048000 {
