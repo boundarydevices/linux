@@ -412,6 +412,8 @@ static int mt7921_pci_suspend(struct pci_dev *pdev, pm_message_t state)
 	cancel_delayed_work_sync(&pm->ps_work);
 	cancel_work_sync(&pm->wake_work);
 
+	mt7921_roc_abort_sync(dev);
+
 	err = mt7921_mcu_drv_pmctrl(dev);
 	if (err < 0)
 		goto restore_suspend;
