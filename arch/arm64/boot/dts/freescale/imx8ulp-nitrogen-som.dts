@@ -8,13 +8,6 @@
 #include "imx8ulp-nitrogen-som.dtsi"
 
 &iomuxc1 {
-	pinctrl_backlight_mipi: backlight_mipigrp{
-		fsl,pins = <
-#define GP_BACKLIGHT_MIPI	<&gpioe 9 GPIO_ACTIVE_HIGH>
-			MX8ULP_PAD_PTE9__PTE9		0x7
-		>;
-	};
-
 	pinctrl_fec: fecgrp {
 		fsl,pins = <
 			MX8ULP_PAD_PTF8__ENET0_MDIO	0x43
@@ -44,10 +37,6 @@
 			MX8ULP_PAD_PTE10__PTE10		0x7
 #define GPIO_KEYS_J6P23	<&gpiof 12 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTF12__PTF12		0x7
-#if 0
-#define GPIO_KEYS_J6P25	<&gpiof 14 GPIO_ACTIVE_HIGH>
-			MX8ULP_PAD_PTF14__PTF14		0x7
-#endif
 #define GPIO_KEYS_J6P27	<&gpiof 18 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTF18__PTF18		0x7
 #define GPIO_KEYS_J6P29	<&gpiof 25 GPIO_ACTIVE_HIGH>
@@ -57,10 +46,6 @@
 
 	pinctrl_gpio_keys_m2: gpio-keys-xgrp {
 		fsl,pins = <
-#if 0
-#define GPIO_KEYS_J12	<&gpioe 0 GPIO_ACTIVE_HIGH>
-			MX8ULP_PAD_PTE0__PTE0		0x7
-#endif
 #define GPIO_KEYS_J13	<&gpioe 2 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTE2__PTE2		0x7
 #define GPIO_KEYS_J14	<&gpioe 4 GPIO_ACTIVE_HIGH>
@@ -74,9 +59,6 @@
 #define GPIO_KEYS_J19	<&gpiof 24 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTF24__PTF24		0x7
 #define GPIO_KEYS_J20	<&gpioe 10 GPIO_ACTIVE_HIGH>
-#if 0			/* Also J6P21 */
-			MX8ULP_PAD_PTE10__PTE10		0x7
-#endif
 #define GPIO_KEYS_J22	<&gpioe 14 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTE14__PTE14		0x7
 		>;
@@ -84,10 +66,6 @@
 
 	pinctrl_gpio_leds_j6b: gpio-leds-j6grp {
 		fsl,pins = <
-#if 0
-#define GPIO_LEDS_J6P16	<&gpiod 12 GPIO_ACTIVE_HIGH>
-			MX8ULP_PAD_PTD12__PTD12		0x7
-#endif
 #define GPIO_LEDS_J6P18	<&gpiod 18 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTD18__PTD18		0x7
 #define GPIO_LEDS_J6P20	<&gpiod 23 GPIO_ACTIVE_HIGH>
@@ -96,10 +74,6 @@
 			MX8ULP_PAD_PTE23__PTE23		0x7
 #define GPIO_LEDS_J6P24	<&gpiof 13 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTF13__PTF13		0x7
-#if 0
-#define GPIO_LEDS_J6P26	<&gpiof 17 GPIO_ACTIVE_HIGH>
-			MX8ULP_PAD_PTF17__PTF17		0x7
-#endif
 #define GPIO_LEDS_J6P28	<&gpiof 19 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTF19__PTF19		0x7
 #define GPIO_LEDS_J6P30	<&gpiod 19 GPIO_ACTIVE_HIGH>
@@ -109,10 +83,6 @@
 
 	pinctrl_gpio_leds_m2: gpio-leds-xgrp {
 		fsl,pins = <
-#if 0
-#define GPIO_LEDS_J12	<&gpioe 1 GPIO_ACTIVE_HIGH>
-			MX8ULP_PAD_PTE1__PTE1		0x7
-#endif
 #define GPIO_LEDS_J13	<&gpioe 3 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTE3__PTE3		0x7
 #define GPIO_LEDS_J14	<&gpioe 5 GPIO_ACTIVE_HIGH>
@@ -160,17 +130,12 @@
 		>;
 	};
 
-	pinctrl_mipi_com35h3r04uly: mipi-com35h3r04ulygrp {
+	pinctrl_sn65dsi83: sn65dsi83grp {
 		fsl,pins = <
-#define GP_LCD_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
-			MX8ULP_PAD_PTE7__PTE7		0x02
-		>;
-	};
-
-	pinctrl_mipi_q035_014: mipi-q035-014grp {
-		fsl,pins = <
-#define GP_LCD_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
-			MX8ULP_PAD_PTE7__PTE7		0x02
+#define GP_SN65DSI83_EN	<&gpiof 26 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF26__PTF26         0x02
+#define GPIRQ_SN65DSI83	<&gpioe 9 IRQ_TYPE_LEVEL_HIGH>
+			MX8ULP_PAD_PTE9__PTE9		0x7
 		>;
 	};
 
@@ -194,13 +159,13 @@
 		>;
 	};
 
-	pinctrl_ts_atmel: ts-atmelgrp {
+	pinctrl_ts_goodix: ts-goodixgrp {
 		fsl,pins = <
-#define GPIRQ_TS_ATMEL	<&gpioe 22 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_ATMEL	<&gpioe 22 GPIO_ACTIVE_LOW>
+#define GPIRQ_TS	<&gpioe 22 IRQ_TYPE_LEVEL_HIGH>
+#define GP_TS_IRQ	<&gpioe 22 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTE22__PTE22		0x03
-#define GP_TS_ATMEL_RESET <&gpiof 26 GPIO_ACTIVE_LOW>
-			MX8ULP_PAD_PTF26__PTF26		0x03
+#define GP_TS_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTE7__PTE7		0x02
 		>;
 	};
 
@@ -229,8 +194,7 @@
 	};
 };
 
-#include "../panel-com35h3r04uly.dtsi"
-#include "../panel-q035-014.dtsi"
+#include "../panel-m101nwwb.dtsi"
 
 / {
 	model = "Boundary Devices Nitrogen 8ULP SOM";
@@ -246,7 +210,8 @@
 		mipi_dsi_phy = &dphy;
 		pwm_mipi = &tpm4;
 		t_mipi = &t_mipi;
-		ts_atmel_mt = &ts_mipi_atmel_mt;
+		ts_goodix = &ts_goodix;
+		mipi_to_lvds = &mipi_to_lvds;
 	};
 
 	backlight_mipi: backlight-mipi {
@@ -265,9 +230,6 @@
 				>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <81>;
-		enable-gpios = GP_BACKLIGHT_MIPI;
-		pinctrl-0 = <&pinctrl_backlight_mipi>;
-		pinctrl-names = "default";
 		pwms = <&tpm4 0 50000 0>;
 		status = "okay";
 	};
@@ -563,6 +525,9 @@
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
 		power-supply = <&reg_vref_5v>;
+		pinctrl-names = "sn65dsi83";
+		pinctrl-0 = <&pinctrl_sn65dsi83>;
+		sn65dsi83 = <&mipi_to_lvds>;
 		reg = <0>;
 		spwg;
 
@@ -582,6 +547,14 @@
 				vsync-active = <0>;
 				de-active = <1>;
 			};
+		};
+
+		mipi_to_lvds: mipi-to-lvds {
+			i2c-address = <0x2c>;
+			i2c-bus = <&lpi2c5>;
+			enable-gpios = GP_SN65DSI83_EN;
+			interrupts-extended = GPIRQ_SN65DSI83;
+			status = "disabled";
 		};
 
 		port {
@@ -625,13 +598,15 @@
 };
 
 &lpi2c5 {
-	ts_mipi_atmel_mt: touchscreen@4a {
-		compatible = "atmel,maxtouch";
-		interrupts-extended = GPIRQ_TS_ATMEL;
+	ts_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		reg = <0x5d>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_atmel>;
-		reg = <0x4a>;
-		reset-gpios = GP_TS_ATMEL_RESET;
+		pinctrl-0 = <&pinctrl_ts_goodix>;
+		interrupts-extended = GPIRQ_TS;
+		irq-gpios = GP_TS_IRQ;
+		reset-gpios = GP_TS_RESET;
+		esd-recovery-timeout-ms = <2000>;
 		status = "disabled";
 	};
 };
