@@ -165,6 +165,12 @@
 			no-map;
 		};
 
+		ele_reserved: ele-reserved@90000000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0x90000000 0 0x100000>;
+			no-map;
+		};
+
 		audio_reserved: audio@a8500000 {
 			compatible = "shared-dma-pool";
 			no-map;
@@ -184,6 +190,10 @@
 	memory-region = <&dsp_vdev0buffer>, <&dsp_vdev0vring0>,
 			<&dsp_vdev0vring1>, <&dsp_reserved>;
 	status = "okay";
+};
+
+&ele_mu {
+	memory-region = <&ele_reserved>;
 };
 
 &lpi2c5 {
