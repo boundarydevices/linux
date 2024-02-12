@@ -178,7 +178,7 @@ static const struct imx_info_list imx95_info = {
 				.success_tag = 0xd6,
 				.base_api_ver = 0x2,
 				.fw_api_ver = 0x2,
-				.se_name = "seco",
+				.se_name = "v2x_dbg",
 				.pool_name = NULL,
 				.mbox_tx_name = "tx",
 				.mbox_rx_name = "rx",
@@ -202,7 +202,7 @@ static const struct imx_info_list imx95_info = {
 				.success_tag = 0xd6,
 				.base_api_ver = 0x2,
 				.fw_api_ver = 0x2,
-				.se_name = "seco",
+				.se_name = "v2x_she",
 				.pool_name = NULL,
 				.mbox_tx_name = "tx",
 				.mbox_rx_name = "rx",
@@ -1540,7 +1540,7 @@ static int se_fw_probe(struct platform_device *pdev)
 		 * loaded, then exit.
 		 */
 		if (v2x_fw_state != V2X_FW_STATE_RUNNING &&
-			!memcmp(info->se_name, "seco", 5)) {
+			!memcmp(info->se_name, "v2x_dbg", 8)) {
 			ret = -1;
 			dev_err(dev, "Failure: V2X FW is not loaded.");
 			return ret;
@@ -1653,7 +1653,7 @@ static int se_fw_probe(struct platform_device *pdev)
 		 * loaded, then exit.
 		 */
 		if (v2x_fw_state != V2X_FW_STATE_RUNNING &&
-			!memcmp(info->se_name, "seco", 5)) {
+			!memcmp(info->se_name, "v2x_she", 8)) {
 			ret = -1;
 			dev_err(dev, "Failure: V2X FW is not loaded.");
 			goto exit;
