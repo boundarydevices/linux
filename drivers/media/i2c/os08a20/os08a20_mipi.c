@@ -29,6 +29,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-fwnode.h>
+#include <media/mipi-csi2.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include "vvsensor.h"
@@ -948,6 +949,40 @@ static int os08a20_get_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static u8 os08a20_code2dt(const u32 code)
+{
+	switch (code) {
+	case MEDIA_BUS_FMT_SBGGR10_1X10:
+		return MIPI_CSI2_DT_RAW10;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+		return MIPI_CSI2_DT_RAW12;
+	default:
+		return MIPI_CSI2_DT_RAW10;
+	}
+}
+
+static int os08a20_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
+				  struct v4l2_mbus_frame_desc *fd)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct os08a20 *sensor = client_to_os08a20(client);
+	u32 code = MEDIA_BUS_FMT_SBGGR10_1X10;
+
+	fd->type = V4L2_MBUS_FRAME_DESC_TYPE_CSI2;
+	fd->num_entries = 1;
+
+	/* get sensor current code*/
+	mutex_lock(&sensor->lock);
+	os08a20_get_format_code(sensor, &code);
+	mutex_unlock(&sensor->lock);
+
+	fd->entry[0].pixelcode = code;
+	fd->entry[0].bus.csi2.vc = 0;
+	fd->entry[0].bus.csi2.dt = os08a20_code2dt(code);
+
+	return 0;
+}
+
 static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 			       unsigned int cmd,
 			       void *arg_user)
@@ -1062,6 +1097,7 @@ static const struct v4l2_subdev_pad_ops os08a20_subdev_pad_ops = {
 	.enum_mbus_code = os08a20_enum_mbus_code,
 	.set_fmt = os08a20_set_fmt,
 	.get_fmt = os08a20_get_fmt,
+	.get_frame_desc	= os08a20_get_frame_desc,
 };
 
 static const struct v4l2_subdev_core_ops os08a20_subdev_core_ops = {
