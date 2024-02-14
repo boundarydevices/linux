@@ -571,6 +571,11 @@
 	regulator-always-on;
 };
 
+&mt6359_vsim1_ldo_reg {
+	/* Used by mmc1. Limit to 1v8 as this ldo cannot do 3v3 */
+	regulator-max-microvolt = <1800000>;
+};
+
 &uart0 {
 	pinctrl-0 = <&uart0_pins>;
 	pinctrl-names = "default";
