@@ -66,6 +66,7 @@ struct neoisp_meta_params_s neoisp_default_params = {
 	.decompress_input0 = { .ctrl_enable = 1,
 		.knee_point1 = (1 << 16) - 1, /* default ibpp is 16 */
 		.knee_ratio0 = 1 << 4,
+		.knee_ratio4 = 1 << 4,
 	},
 	.decompress_input1 = { .ctrl_enable = 0 },
 	.obwb[0] = {
