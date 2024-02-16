@@ -1336,7 +1336,6 @@ static int neoisp_init_subdev(struct neoisp_node_group_s *node_group)
 	sd->owner = THIS_MODULE;
 	sd->dev = &neoispd->pdev->dev;
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE
-			| V4L2_SUBDEV_FL_STREAMS
 			| V4L2_SUBDEV_FL_HAS_EVENTS;
 	strscpy(sd->name, NEOISP_NAME, sizeof(sd->name));
 
