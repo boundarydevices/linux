@@ -53,6 +53,15 @@ config VIDEO_AP1302
 config VIDEO_CCS_PLL
 	tristate
 
+config VIDEO_AR0430
+	tristate "ON Semiconductor AR0430 sensor support"
+	help
+	  This is a Video4Linux2 sensor driver for the ON Semiconductor
+	  AR0430 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called ar0430.
+
 config VIDEO_AR0521
 	tristate "ON Semiconductor AR0521 sensor support"
 	help
