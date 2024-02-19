@@ -276,16 +276,6 @@ static void *map_donated_memory_noclear(unsigned long host_va, size_t size)
 	return va;
 }
 
-static void *map_donated_memory(unsigned long host_va, size_t size)
-{
-	void *va = map_donated_memory_noclear(host_va, size);
-
-	if (va)
-		memset(va, 0, size);
-
-	return va;
-}
-
 static void __unmap_donated_memory(void *va, size_t size)
 {
 	kvm_flush_dcache_to_poc(va, size);
@@ -308,20 +298,6 @@ static void unmap_donated_memory_noclear(void *va, size_t size)
 		return;
 
 	__unmap_donated_memory(va, size);
-}
-
-static void
-teardown_donated_memory(struct kvm_hyp_memcache *mc, void *addr, size_t size)
-{
-	void *start;
-
-	size = PAGE_ALIGN(size);
-	memset(addr, 0, size);
-
-	for (start = addr; start < addr + size; start += PAGE_SIZE)
-		push_hyp_memcache(mc, start, hyp_virt_to_phys);
-
-	unmap_donated_memory_noclear(addr, size);
 }
 
 /*
@@ -533,8 +509,7 @@ static void teardown_sve_state(struct pkvm_hyp_vcpu *hyp_vcpu)
 		struct kvm_hyp_memcache *vcpu_mc;
 
 		vcpu_mc = &hyp_vcpu->vcpu.arch.pkvm_memcache;
-		teardown_donated_memory(vcpu_mc, sve_state,
-					vcpu_sve_state_size(&hyp_vcpu->vcpu));
+		hyp_free(sve_state);
 	}
 }
 
@@ -598,16 +573,20 @@ static int pkvm_vcpu_init_sve(struct pkvm_hyp_vcpu *hyp_vcpu, struct kvm_vcpu *h
 	sve_state_size = sve_state_size(sve_max_vl);
 	sve_state = kern_hyp_va(READ_ONCE(host_vcpu->arch.sve_state));
 
-	if (!sve_state || !sve_state_size || (sve_max_vl > kvm_sve_max_vl)) {
+	if (!sve_state && !pkvm_hyp_vcpu_is_protected(hyp_vcpu)) {
+		ret = -EINVAL;
+		goto err;
+	}
+
+	if (!sve_state_size || (sve_max_vl > kvm_sve_max_vl)) {
 		ret = -EINVAL;
 		goto err;
 	}
 
 	if (pkvm_hyp_vcpu_is_protected(hyp_vcpu)) {
-		sve_state = map_donated_memory((unsigned long) sve_state,
-					        sve_state_size);
+		sve_state = hyp_alloc(sve_state_size);
 		if (!sve_state) {
-			ret = -ENOMEM;
+			ret = hyp_alloc_errno();
 			goto err;
 		}
 	} else {
