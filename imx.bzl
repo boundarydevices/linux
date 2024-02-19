@@ -310,8 +310,6 @@ _IMX_IN_TREE_MODULES = [
     "drivers/power/supply/max17042_battery.ko",
     "drivers/iio/trigger/iio-trig-hrtimer.ko",
     "drivers/iio/industrialio-sw-trigger.ko",
-    "net/wireless/cfg80211.ko",
-    "net/mac80211/mac80211.ko",
     "drivers/gpu/drm/imx/display-imx-rpmsg.ko",
     "drivers/cpufreq/cpufreq-dt-platdev.ko",
     "drivers/iio/accel/fxls8962af-i2c.ko",
