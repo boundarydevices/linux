@@ -2368,6 +2368,7 @@
   timer_delete
   timer_delete_sync
   timer_of_init
+  TKT340553_SW_WORKAROUND
   _totalram_pages
   touchscreen_parse_properties
   touchscreen_report_pos
