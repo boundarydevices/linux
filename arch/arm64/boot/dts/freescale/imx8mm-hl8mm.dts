@@ -134,7 +134,7 @@
 
 	pinctrl_i2c3_pca9546: i2c3-pca9546grp {
 		fsl,pins = <
-#define GP_I2C3_PCA9546_RESET	<&gpio5 18 GPIO_ACTIVE_HIGH>
+#define GP_I2C3_PCA9546_RESET	<&gpio5 12 GPIO_ACTIVE_LOW>
 			MX8MM_IOMUXC_ECSPI2_MISO_GPIO5_IO12		0x1c0
 			>;
 		};
