@@ -1463,6 +1463,23 @@ struct v4l2_subdev_state *v4l2_subdev_lock_active_state(struct v4l2_subdev *sd);
 void v4l2_subdev_lock_state(struct v4l2_subdev_state *state);
 
 /**
+ * v4l2_subdev_lock_and_get_active_state() - Locks and returns the active subdev
+ *					     state for the subdevice
+ * @sd: The subdevice
+ *
+ * Returns the locked active state for the subdevice, or NULL if the subdev
+ * does not support active state.
+ *
+ * The state must be unlocked with v4l2_subdev_unlock_state() after use.
+ */
+static inline struct v4l2_subdev_state *
+v4l2_subdev_lock_and_get_active_state(struct v4l2_subdev *sd)
+{
+	if (sd->state)
+		v4l2_subdev_lock_state(sd->state);
+	return sd->state;
+}
+/**
  * v4l2_subdev_unlock_state() - Unlock the subdev state
  * @state: The subdevice state
  *
