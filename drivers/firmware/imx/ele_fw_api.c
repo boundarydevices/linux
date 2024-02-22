@@ -8,6 +8,13 @@
 #include "ele_common.h"
 #include "ele_fw_api.h"
 
+struct ele_rng_msg {
+	u32 header; /* u8 Tag; u8 Command; u8 Size; u8 Ver; */
+	u16 rsv;
+	u16 flags;
+	u32 data[2];
+};
+
 int ele_init_fw(struct device *dev)
 {
 	struct ele_mu_priv *priv = dev_get_drvdata(dev);
@@ -60,6 +67,7 @@ int ele_get_random(struct device *dev,
 		   void *data, size_t len)
 {
 	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+	struct ele_rng_msg *tx_msg;
 	unsigned int status;
 	dma_addr_t dst_dma;
 	u8 *buf;
@@ -84,8 +92,9 @@ int ele_get_random(struct device *dev,
 		goto exit1;
 	}
 
+	tx_msg = (struct ele_rng_msg *)priv->tx_msg;
 	ret = plat_fill_cmd_msg_hdr(priv,
-				    (struct mu_hdr *)&priv->tx_msg->header,
+				    (struct mu_hdr *)&tx_msg->header,
 				    ELE_GET_RANDOM_REQ, ELE_GET_RANDOM_REQ_SZ,
 				    false);
 	if (ret)
@@ -94,9 +103,9 @@ int ele_get_random(struct device *dev,
 	/* bit 1(blocking reseed): wait for trng entropy,
 	 * then reseed rng context.
 	 */
-	priv->tx_msg->data[0] = BIT(1);
-	priv->tx_msg->data[1] = dst_dma;
-	priv->tx_msg->data[2] = len;
+	tx_msg->flags = BIT(1);
+	tx_msg->data[0] = dst_dma;
+	tx_msg->data[1] = len;
 	ret = imx_ele_msg_send_rcv(priv);
 	if (ret < 0)
 		goto exit;
