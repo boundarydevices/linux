@@ -123,7 +123,7 @@
 			reg = <0x50>;
 			interrupt-parent = <&gpio3>;
 			interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
-			status = "okay";
+			status = "disabled";
 
 			port {
 				typec1_dr_sw: endpoint {
@@ -148,6 +148,7 @@
 		lsm6dsm@6a {
 			compatible = "st,lsm6dso";
 			reg = <0x6a>;
+			status = "disabled";
 		};
 	};
 };
