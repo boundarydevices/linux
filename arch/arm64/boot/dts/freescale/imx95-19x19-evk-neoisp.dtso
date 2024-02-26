@@ -18,12 +18,12 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
-	neoisp0: isp@4ae00000 {
-		compatible = "fsl,neoisp";
+	neoisp0: isp@5ae00000 {
+		compatible = "nxp,neoisp";
 		status = "ok";
 		#address-cells = <2>;
 		#size-cells = <2>;
-		reg = <0x0 0x4ae00000 0x0 0x8000>, <0x0 0x4afe0000 0x0 0x10000>;
+		reg = <0x0 0x5ae00000 0x0 0x8000>, <0x0 0x5afe0000 0x0 0x10000>;
 		reg-names = "registers", "stats";
 		interrupts = <GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-parent = <&gic>;

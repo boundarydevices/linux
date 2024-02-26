@@ -2,7 +2,7 @@
 /*
  * NEOISP main header file
  *
- * Copyright 2023 NXP
+ * Copyright 2023-2024 NXP
  */
 
 #ifndef NEOISP_H
@@ -23,8 +23,8 @@
 #define NEOISP_NODE_GROUPS_COUNT (8)
 #define NEOISP_MIN_W             (64u)
 #define NEOISP_MIN_H             (64u)
-#define NEOISP_MAX_W             (2048u)
-#define NEOISP_MAX_H             (1024u)
+#define NEOISP_MAX_W             (4096u)
+#define NEOISP_MAX_H             (4096u)
 #define NEOISP_ALIGN_W           (3)
 #define NEOISP_ALIGN_H           (3)
 #define NEOISP_FMT_CAP           (0)
@@ -96,8 +96,8 @@ enum neoisp_fmt_type_e {
 };
 
 enum neoisp_node_e {
-	NEOISP_DCG_NODE,
-	NEOISP_VS_NODE,
+	NEOISP_INPUT0_NODE,
+	NEOISP_INPUT1_NODE,
 	NEOISP_PARAMS_NODE,
 	NEOISP_FRAME_NODE,
 	NEOISP_IR_NODE,
@@ -149,7 +149,8 @@ struct neoisp_node_s {
 };
 
 struct neoisp_node_group_s {
-	unsigned int id;
+	__u32 id;
+	__u32 frame_sequence;
 	struct v4l2_device v4l2_dev;
 	struct v4l2_subdev sd;
 	struct neoisp_dev_s *neoisp_dev;

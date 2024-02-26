@@ -2,7 +2,7 @@
 /*
  * NEOISP context definition
  *
- * Copyright 2023 NXP
+ * Copyright 2023-2024 NXP
  */
 
 #ifndef NEOISP_CTX_H
@@ -47,5 +47,10 @@ enum isp_block_map_e {
 	NEO_DRC_GLOBAL_HIST_ROI0_MAP = ISP_OFF(0x5800/sizeof(__u32)) | ISP_WSZ(416),
 	NEO_DRC_GLOBAL_HIST_ROI1_MAP = ISP_OFF(0x5F00/sizeof(__u32)) | ISP_WSZ(416),
 };
+
+/*
+ * functions
+ */
+void neoisp_set_gcm(struct neoisp_reg_params_s *p, struct neoisp_dev_s *neoispd);
 
 #endif /* NEOISP_CTX_H */

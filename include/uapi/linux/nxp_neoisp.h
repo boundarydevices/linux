@@ -3,7 +3,7 @@
  * NXP NEOISP userspace API
  * Reference i.MX95 Applications Processor Reference Manual
  *
- * Copyright (C) 2023 NXP
+ * Copyright 2023-2024 NXP
  */
 
 #ifndef UAPI_NXP_NEOISP_H
@@ -29,8 +29,8 @@ enum neoisp_version_e {
  *   - 0: do not update feature
  */
 struct neoisp_feat_ctrl_s {
-	__u32 hdr_decompress_dcg_cfg : 1;
-	__u32 hdr_decompress_vs_cfg : 1;
+	__u32 hdr_decompress_input0_cfg : 1;
+	__u32 hdr_decompress_input1_cfg : 1;
 	__u32 obwb0_cfg : 1;
 	__u32 obwb1_cfg : 1;
 	__u32 obwb2_cfg : 1;
@@ -163,8 +163,8 @@ struct neoisp_stat_hist_cfg_s {
 	__u16 hist_ctrl_offset;
 	__u8 hist_ctrl_channel;
 	__u8 hist_ctrl_pattern;
-	__u8 hist_ctrl_dir_vs_dif;
-	__u8 hist_ctrl_lin_vs_log;
+	__u8 hist_ctrl_dir_input1_dif;
+	__u8 hist_ctrl_lin_input1_log;
 	__u32 hist_scale_scale;
 };
 
@@ -474,8 +474,8 @@ struct neoisp_gcm_cfg_s {
  */
 struct neoisp_reg_params_s {
 	/* Pipeline 1 */
-	struct neoisp_hdr_decompress0_cfg_s decompress_dcg;
-	struct neoisp_hdr_decompress1_cfg_s decompress_vs;
+	struct neoisp_hdr_decompress0_cfg_s decompress_input0;
+	struct neoisp_hdr_decompress1_cfg_s decompress_input1;
 	struct neoisp_obwb_cfg_s obwb[NEO_OBWB_CNT];
 	struct neoisp_hdr_merge_cfg_s hdr_merge;
 	struct neoisp_rgbir_cfg_s rgbir;

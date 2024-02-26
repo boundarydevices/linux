@@ -2,9 +2,8 @@
 /*
  * NEOISP context registers/memory setting helpers
  *
- * Copyright 2023 NXP
+ * Copyright 2023-2024 NXP
  * Author: Aymen Sghaier (aymen.sghaier@nxp.com)
- *
  */
 
 #include <linux/clk.h>
@@ -31,14 +30,14 @@
 #include "neoisp_ctx.h"
 
 /*
- * This is the initial set of parameters setup by driver upon a streamon ioctl for DCG node.
+ * This is the initial set of parameters setup by driver upon a streamon ioctl for INPUT0 node.
  * It could be updated later by the driver depending on input/output formats setup by userspace
  * and also if fine tuned parameters are provided by a third party (IPA).
  */
 struct neoisp_meta_params_s neoisp_default_params = {
 	.features_cfg = {
-		.hdr_decompress_dcg_cfg = 1,
-		.hdr_decompress_vs_cfg = 1,
+		.hdr_decompress_input0_cfg = 1,
+		.hdr_decompress_input1_cfg = 1,
 		.obwb0_cfg = 1,
 		.obwb1_cfg = 1,
 		.obwb2_cfg = 1,
@@ -64,11 +63,11 @@ struct neoisp_meta_params_s neoisp_default_params = {
 		.drc_local_tonemap_cfg = 1,
 	},
 	.regs = {
-	.decompress_dcg = { .ctrl_enable = 1,
+	.decompress_input0 = { .ctrl_enable = 1,
 		.knee_point1 = (1 << 16) - 1, /* default ibpp is 16 */
 		.knee_ratio0 = 1 << 4,
 	},
-	.decompress_vs = { .ctrl_enable = 0 },
+	.decompress_input1 = { .ctrl_enable = 0 },
 	.obwb[0] = {
 		.ctrl_obpp = 3,
 		.r_ctrl_gain = 1 << 8,
@@ -151,7 +150,7 @@ struct neoisp_meta_params_s neoisp_default_params = {
 		.cluma_scale_shift = 10,
 		.calpha_gain_gain = 1 << 8,
 		.calpha_gain_offset = 0,
-		.stretch_gain = 1 << 8,
+		.stretch_gain = 32 << 8,
 	},
 	.vignetting_ctrl = { .ctrl_enable = 0, },
 	.ctemp  = { .ctrl_enable = 0, },
@@ -202,80 +201,13 @@ struct neoisp_meta_params_s neoisp_default_params = {
 			{0, 0, 256},
 			},
 		.ooffsets = {0, 0, 0},
-		.gamma0_gamma0 = 1 << 8,
+		.gamma0_gamma0 = 106, /* 1/2.4 x 256 */
 		.gamma0_offset0 = 0,
-		.gamma1_gamma1 = 1 << 8,
+		.gamma1_gamma1 = 106, /* 1/2.4 x 256 */
 		.gamma1_offset1 = 0,
-		.gamma2_gamma2 = 1 << 8,
+		.gamma2_gamma2 = 106, /* 1/2.4 x 256 */
 		.gamma2_offset2 = 0,
-		.blklvl0_ctrl_gain0 = 1 << 8,
-		.blklvl0_ctrl_offset0 = 0,
-		.blklvl1_ctrl_gain1 = 1 << 8,
-		.blklvl1_ctrl_offset1 = 0,
-		.blklvl2_ctrl_gain2 = 1 << 8,
-		.blklvl2_ctrl_offset2 = 0,
-		.lowth_ctrl01_threshold0 = 0,
-		.lowth_ctrl01_threshold1 = 0,
-		.lowth_ctrl2_threshold2 = 0,
 		.mat_confg_sign_confg = 1,
-		},
-	},
-	.mems = {
-		.gtm = {
-			.drc_global_tonemap = {
-				0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x016f, 0x0ea9,
-				0x1a73, 0x2734, 0x3c0b, 0x5229, 0x5c92, 0x6188, 0x64b4, 0x68a0,
-				0x72cf, 0x7de6, 0x87c2, 0x9094, 0x9884, 0x9fb3, 0xa63a, 0xac30,
-				0xb1a7, 0xb6ae, 0xbb52, 0xbf9e, 0xc39c, 0xc753, 0xcaca, 0xce09,
-				0xd113, 0xd3ee, 0xd69f, 0xd928, 0xdb8c, 0xddd0, 0xdff5, 0xe1fe,
-				0xe3ed, 0xe5c4, 0xe785, 0xe930, 0xeac8, 0xec4e, 0xedc4, 0xef29,
-				0xf07f, 0xf1c7, 0xf302, 0xf431, 0xf555, 0xf66d, 0xf77b, 0xf87f,
-				0xf979, 0xfa6b, 0xfb55, 0xfc36, 0xfd11, 0xfde4, 0xfeb0, 0xff75,
-				0xffff, 0xfd81, 0xfaf5, 0xf88f, 0xf64b, 0xf426, 0xf21f, 0xf031,
-				0xee5d, 0xec9f, 0xeaf7, 0xe962, 0xe7e0, 0xe66f, 0xe50e, 0xe3bc,
-				0xe278, 0xe141, 0xe017, 0xdef8, 0xdde4, 0xdcdb, 0xdbdc, 0xdae6,
-				0xd9f8, 0xd913, 0xd836, 0xd761, 0xd692, 0xd5cb, 0xd509, 0xd44e,
-				0xd399, 0xd02e, 0xccf7, 0xc9ee, 0xc711, 0xc45b, 0xc1ca, 0xbf5b,
-				0xbd0a, 0xbad7, 0xb8be, 0xb6bf, 0xb4d7, 0xb304, 0xb146, 0xaf9a,
-				0xae01, 0xac78, 0xaaff, 0xa994, 0xa838, 0xa6e9, 0xa5a6, 0xa46f,
-				0xa343, 0xa221, 0xa10a, 0x9ffc, 0x9ef5, 0x9deb, 0x9ce6, 0x9bdf,
-				0x9afa, 0x983e, 0x95ab, 0x933e, 0x90f3, 0x8ec8, 0x8cba, 0x8ac7,
-				0x88ee, 0x872b, 0x857d, 0x83e4, 0x825d, 0x80e8, 0x7f83, 0x7e2d,
-				0x7ce5, 0x7bab, 0x7a7c, 0x7955, 0x783d, 0x7727, 0x761d, 0x751b,
-				0x7421, 0x7330, 0x724a, 0x7167, 0x7089, 0x6fae, 0x6ed8, 0x6e0c,
-				0x6d57, 0x6b78, 0x69b6, 0x680e, 0x667d, 0x6502, 0x639a, 0x6246,
-				0x6102, 0x5fce, 0x5ea9, 0x5d91, 0x5c86, 0x5b87, 0x5a93, 0x59a9,
-				0x58c9, 0x57f3, 0x5724, 0x565e, 0x55a0, 0x54e9, 0x5438, 0x538e,
-				0x52ea, 0x524c, 0x51b3, 0x511f, 0x5091, 0x5007, 0x4f81, 0x4f00,
-				0x4e83, 0x4d51, 0x4c32, 0x4b23, 0x4a23, 0x4911, 0x480d, 0x4716,
-				0x462c, 0x454c, 0x4473, 0x439d, 0x42d0, 0x420d, 0x4152, 0x40a0,
-				0x3ff5, 0x3f54, 0x3eba, 0x3e26, 0x3d94, 0x3d06, 0x3be7, 0x3ad1,
-				0x39c6, 0x38c2, 0x37c9, 0x36d7, 0x35ee, 0x350d, 0x3432, 0x335e,
-				0x3291, 0x3109, 0x2f97, 0x2e3b, 0x2cf2, 0x2bbb, 0x2a95, 0x297d,
-				0x2874, 0x2777, 0x2687, 0x25a1, 0x24c6, 0x23f5, 0x232d, 0x226d,
-				0x21b6, 0x2106, 0x205d, 0x1fba, 0x1f1e, 0x1e88, 0x1df7, 0x1d6b,
-				0x1ce5, 0x1c63, 0x1be6, 0x1b6d, 0x1af8, 0x1a87, 0x1a19, 0x19af,
-				0x1948, 0x1884, 0x17cb, 0x171d, 0x1679, 0x15dd, 0x154a, 0x14be,
-				0x143a, 0x13bb, 0x1343, 0x12d0, 0x1263, 0x11fa, 0x1196, 0x1136,
-				0x10db, 0x1083, 0x102e, 0x0fdd, 0x0f8f, 0x0f44, 0x0efb, 0x0eb5,
-				0x0e72, 0x0e31, 0x0df3, 0x0db6, 0x0d7c, 0x0d43, 0x0d0c, 0x0cd7,
-				0x0ca4, 0x0c42, 0x0be5, 0x0b8e, 0x0b3c, 0x0aee, 0x0aa5, 0x0a5f,
-				0x0a1d, 0x09dd, 0x09a1, 0x0968, 0x0931, 0x08fd, 0x08cb, 0x089b,
-				0x086d, 0x0841, 0x0817, 0x07ee, 0x07c7, 0x07a2, 0x077d, 0x075a,
-				0x0739, 0x0718, 0x06f9, 0x06db, 0x06be, 0x06a1, 0x0686, 0x066b,
-				0x0652, 0x0621, 0x05f2, 0x05c7, 0x059e, 0x0577, 0x0552, 0x052f,
-				0x050e, 0x04ee, 0x04d0, 0x04b4, 0x0498, 0x047e, 0x0465, 0x044d,
-				0x0436, 0x0420, 0x040b, 0x03f7, 0x03e3, 0x03d1, 0x03be, 0x03ad,
-				0x039c, 0x038c, 0x037c, 0x036d, 0x035f, 0x0350, 0x0343, 0x0335,
-				0x0329, 0x0310, 0x02f9, 0x02e3, 0x02cf, 0x02bb, 0x02a9, 0x0297,
-				0x0287, 0x0277, 0x0268, 0x025a, 0x024c, 0x023f, 0x0232, 0x0226,
-				0x021b, 0x0210, 0x0205, 0x01fb, 0x01f1, 0x01e8, 0x01df, 0x01d6,
-				0x01ce, 0x01c6, 0x01be, 0x01b6, 0x01af, 0x01a8, 0x01a1, 0x019a,
-				0x0194, 0x0188, 0x017c, 0x0171, 0x0167, 0x015d, 0x0154, 0x014b,
-				0x0143, 0x013b, 0x0134, 0x012d, 0x0126, 0x011f, 0x0119, 0x0113,
-				0x010d, 0x0108, 0x0102, 0x00fd, 0x00f8, 0x00f4, 0x00ef, 0x00eb,
-				0x00e7, 0x00e3, 0x00df, 0x00db, 0x00d7, 0x00d4, 0x00d0, 0x00cd,
-			},
 		},
 	},
 };
@@ -296,85 +228,85 @@ static inline void ctx_blk_write(uint32_t field, __u32 *ptr, __u32 *dest)
 static void neoisp_set_hdr_decompress0(struct neoisp_reg_params_s *p, struct neoisp_dev_s *neoispd)
 {
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_CTRL_CAM0_IDX],
-			NEO_CTRL_CAM0_ENABLE_SET(p->decompress_dcg.ctrl_enable));
+			NEO_CTRL_CAM0_ENABLE_SET(p->decompress_input0.ctrl_enable));
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_POINT1_CAM0_IDX],
-			p->decompress_dcg.knee_point1);
+			p->decompress_input0.knee_point1);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_POINT2_CAM0_IDX],
-			p->decompress_dcg.knee_point2);
+			p->decompress_input0.knee_point2);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_POINT3_CAM0_IDX],
-			p->decompress_dcg.knee_point3);
+			p->decompress_input0.knee_point3);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_POINT4_CAM0_IDX],
-			p->decompress_dcg.knee_point4);
+			p->decompress_input0.knee_point4);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_OFFSET0_CAM0_IDX],
-			p->decompress_dcg.knee_offset0);
+			p->decompress_input0.knee_offset0);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_OFFSET1_CAM0_IDX],
-			p->decompress_dcg.knee_offset1);
+			p->decompress_input0.knee_offset1);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_OFFSET2_CAM0_IDX],
-			p->decompress_dcg.knee_offset2);
+			p->decompress_input0.knee_offset2);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_OFFSET3_CAM0_IDX],
-			p->decompress_dcg.knee_offset3);
+			p->decompress_input0.knee_offset3);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_OFFSET4_CAM0_IDX],
-			p->decompress_dcg.knee_offset4);
+			p->decompress_input0.knee_offset4);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_RATIO01_CAM0_IDX],
-			NEO_HDR_DECOMPRESS0_KNEE_RATIO01_CAM0_RATIO0_SET(p->decompress_dcg.knee_ratio0)
-			| NEO_HDR_DECOMPRESS0_KNEE_RATIO01_CAM0_RATIO1_SET(p->decompress_dcg.knee_ratio1));
+			NEO_HDR_DECOMPRESS0_KNEE_RATIO01_CAM0_RATIO0_SET(p->decompress_input0.knee_ratio0)
+			| NEO_HDR_DECOMPRESS0_KNEE_RATIO01_CAM0_RATIO1_SET(p->decompress_input0.knee_ratio1));
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_RATIO23_CAM0_IDX],
-			NEO_HDR_DECOMPRESS0_KNEE_RATIO23_CAM0_RATIO2_SET(p->decompress_dcg.knee_ratio2)
-			| NEO_HDR_DECOMPRESS0_KNEE_RATIO23_CAM0_RATIO3_SET(p->decompress_dcg.knee_ratio3));
+			NEO_HDR_DECOMPRESS0_KNEE_RATIO23_CAM0_RATIO2_SET(p->decompress_input0.knee_ratio2)
+			| NEO_HDR_DECOMPRESS0_KNEE_RATIO23_CAM0_RATIO3_SET(p->decompress_input0.knee_ratio3));
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_RATIO4_CAM0_IDX],
-			p->decompress_dcg.knee_ratio4);
+			p->decompress_input0.knee_ratio4);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_NPOINT0_CAM0_IDX],
-			p->decompress_dcg.knee_npoint0);
+			p->decompress_input0.knee_npoint0);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_NPOINT1_CAM0_IDX],
-			p->decompress_dcg.knee_npoint1);
+			p->decompress_input0.knee_npoint1);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_NPOINT2_CAM0_IDX],
-			p->decompress_dcg.knee_npoint2);
+			p->decompress_input0.knee_npoint2);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_NPOINT3_CAM0_IDX],
-			p->decompress_dcg.knee_npoint3);
+			p->decompress_input0.knee_npoint3);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS0_KNEE_NPOINT4_CAM0_IDX],
-			p->decompress_dcg.knee_npoint4);
+			p->decompress_input0.knee_npoint4);
 }
 
 static void neoisp_set_hdr_decompress1(struct neoisp_reg_params_s *p, struct neoisp_dev_s *neoispd)
 {
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_CTRL_CAM0_IDX],
-			NEO_CTRL_CAM0_ENABLE_SET(p->decompress_vs.ctrl_enable));
+			NEO_CTRL_CAM0_ENABLE_SET(p->decompress_input1.ctrl_enable));
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_POINT1_CAM0_IDX],
-			p->decompress_vs.knee_point1);
+			p->decompress_input1.knee_point1);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_POINT2_CAM0_IDX],
-			p->decompress_vs.knee_point2);
+			p->decompress_input1.knee_point2);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_POINT3_CAM0_IDX],
-			p->decompress_vs.knee_point3);
+			p->decompress_input1.knee_point3);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_POINT4_CAM0_IDX],
-			p->decompress_vs.knee_point4);
+			p->decompress_input1.knee_point4);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_OFFSET0_CAM0_IDX],
-			p->decompress_vs.knee_offset0);
+			p->decompress_input1.knee_offset0);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_OFFSET1_CAM0_IDX],
-			p->decompress_vs.knee_offset1);
+			p->decompress_input1.knee_offset1);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_OFFSET2_CAM0_IDX],
-			p->decompress_vs.knee_offset2);
+			p->decompress_input1.knee_offset2);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_OFFSET3_CAM0_IDX],
-			p->decompress_vs.knee_offset3);
+			p->decompress_input1.knee_offset3);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_OFFSET4_CAM0_IDX],
-			p->decompress_vs.knee_offset4);
+			p->decompress_input1.knee_offset4);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_RATIO01_CAM0_IDX],
-			NEO_HDR_DECOMPRESS1_KNEE_RATIO01_CAM0_RATIO0_SET(p->decompress_vs.knee_ratio0)
-			| NEO_HDR_DECOMPRESS1_KNEE_RATIO01_CAM0_RATIO1_SET(p->decompress_vs.knee_ratio1));
+			NEO_HDR_DECOMPRESS1_KNEE_RATIO01_CAM0_RATIO0_SET(p->decompress_input1.knee_ratio0)
+			| NEO_HDR_DECOMPRESS1_KNEE_RATIO01_CAM0_RATIO1_SET(p->decompress_input1.knee_ratio1));
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_RATIO23_CAM0_IDX],
-			NEO_HDR_DECOMPRESS1_KNEE_RATIO23_CAM0_RATIO2_SET(p->decompress_vs.knee_ratio2)
-			| NEO_HDR_DECOMPRESS1_KNEE_RATIO23_CAM0_RATIO3_SET(p->decompress_vs.knee_ratio3));
+			NEO_HDR_DECOMPRESS1_KNEE_RATIO23_CAM0_RATIO2_SET(p->decompress_input1.knee_ratio2)
+			| NEO_HDR_DECOMPRESS1_KNEE_RATIO23_CAM0_RATIO3_SET(p->decompress_input1.knee_ratio3));
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_RATIO4_CAM0_IDX],
-			p->decompress_vs.knee_ratio4);
+			p->decompress_input1.knee_ratio4);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_NPOINT0_CAM0_IDX],
-			p->decompress_vs.knee_npoint0);
+			p->decompress_input1.knee_npoint0);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_NPOINT1_CAM0_IDX],
-			p->decompress_vs.knee_npoint1);
+			p->decompress_input1.knee_npoint1);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_NPOINT2_CAM0_IDX],
-			p->decompress_vs.knee_npoint2);
+			p->decompress_input1.knee_npoint2);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_NPOINT3_CAM0_IDX],
-			p->decompress_vs.knee_npoint3);
+			p->decompress_input1.knee_npoint3);
 	regmap_field_write(neoispd->regs.fields[NEO_HDR_DECOMPRESS1_KNEE_NPOINT4_CAM0_IDX],
-			p->decompress_vs.knee_npoint4);
+			p->decompress_input1.knee_npoint4);
 }
 
 static void neoisp_set_ob_wb0(struct neoisp_reg_params_s *p, struct neoisp_dev_s *neoispd)
@@ -492,16 +424,16 @@ static void neoisp_set_rgbir(struct neoisp_reg_params_s *p, struct neoisp_dev_s 
 			NEO_HIST_CTRL_CAM0_OFFSET_SET(p->rgbir.hists[0].hist_ctrl_offset)
 			| NEO_HIST_CTRL_CAM0_CHANNEL_SET(p->rgbir.hists[0].hist_ctrl_channel)
 			| NEO_HIST_CTRL_CAM0_PATTERN_SET(p->rgbir.hists[0].hist_ctrl_pattern)
-			| NEO_HIST_CTRL_CAM0_DIR_VS_DIF_SET(p->rgbir.hists[0].hist_ctrl_dir_vs_dif)
-			| NEO_HIST_CTRL_CAM0_LIN_VS_LOG_SET(p->rgbir.hists[0].hist_ctrl_lin_vs_log));
+			| NEO_HIST_CTRL_CAM0_DIR_INPUT1_DIF_SET(p->rgbir.hists[0].hist_ctrl_dir_input1_dif)
+			| NEO_HIST_CTRL_CAM0_LIN_INPUT1_LOG_SET(p->rgbir.hists[0].hist_ctrl_lin_input1_log));
 	regmap_field_write(neoispd->regs.fields[NEO_RGBIR_HIST0_SCALE_CAM0_IDX],
 			p->rgbir.hists[0].hist_scale_scale);
 	regmap_field_write(neoispd->regs.fields[NEO_RGBIR_HIST1_CTRL_CAM0_IDX],
 			NEO_HIST_CTRL_CAM0_OFFSET_SET(p->rgbir.hists[1].hist_ctrl_offset)
 			| NEO_HIST_CTRL_CAM0_CHANNEL_SET(p->rgbir.hists[1].hist_ctrl_channel)
 			| NEO_HIST_CTRL_CAM0_PATTERN_SET(p->rgbir.hists[1].hist_ctrl_pattern)
-			| NEO_HIST_CTRL_CAM0_DIR_VS_DIF_SET(p->rgbir.hists[1].hist_ctrl_dir_vs_dif)
-			| NEO_HIST_CTRL_CAM0_LIN_VS_LOG_SET(p->rgbir.hists[1].hist_ctrl_lin_vs_log));
+			| NEO_HIST_CTRL_CAM0_DIR_INPUT1_DIF_SET(p->rgbir.hists[1].hist_ctrl_dir_input1_dif)
+			| NEO_HIST_CTRL_CAM0_LIN_INPUT1_LOG_SET(p->rgbir.hists[1].hist_ctrl_lin_input1_log));
 	regmap_field_write(neoispd->regs.fields[NEO_RGBIR_HIST1_SCALE_CAM0_IDX],
 			p->rgbir.hists[1].hist_scale_scale);
 }
@@ -525,32 +457,32 @@ static void neoisp_set_stat_hists(struct neoisp_reg_params_s *p, struct neoisp_d
 			NEO_HIST_CTRL_CAM0_OFFSET_SET(p->stat.hists[0].hist_ctrl_offset)
 			| NEO_HIST_CTRL_CAM0_CHANNEL_SET(p->stat.hists[0].hist_ctrl_channel)
 			| NEO_HIST_CTRL_CAM0_PATTERN_SET(p->stat.hists[0].hist_ctrl_pattern)
-			| NEO_HIST_CTRL_CAM0_DIR_VS_DIF_SET(p->stat.hists[0].hist_ctrl_dir_vs_dif)
-			| NEO_HIST_CTRL_CAM0_LIN_VS_LOG_SET(p->stat.hists[0].hist_ctrl_lin_vs_log));
+			| NEO_HIST_CTRL_CAM0_DIR_INPUT1_DIF_SET(p->stat.hists[0].hist_ctrl_dir_input1_dif)
+			| NEO_HIST_CTRL_CAM0_LIN_INPUT1_LOG_SET(p->stat.hists[0].hist_ctrl_lin_input1_log));
 	regmap_field_write(neoispd->regs.fields[NEO_STAT_HIST0_SCALE_CAM0_IDX],
 			p->stat.hists[0].hist_scale_scale);
 	regmap_field_write(neoispd->regs.fields[NEO_STAT_HIST1_CTRL_CAM0_IDX],
 			NEO_HIST_CTRL_CAM0_OFFSET_SET(p->stat.hists[1].hist_ctrl_offset)
 			| NEO_HIST_CTRL_CAM0_CHANNEL_SET(p->stat.hists[1].hist_ctrl_channel)
 			| NEO_HIST_CTRL_CAM0_PATTERN_SET(p->stat.hists[1].hist_ctrl_pattern)
-			| NEO_HIST_CTRL_CAM0_DIR_VS_DIF_SET(p->stat.hists[1].hist_ctrl_dir_vs_dif)
-			| NEO_HIST_CTRL_CAM0_LIN_VS_LOG_SET(p->stat.hists[1].hist_ctrl_lin_vs_log));
+			| NEO_HIST_CTRL_CAM0_DIR_INPUT1_DIF_SET(p->stat.hists[1].hist_ctrl_dir_input1_dif)
+			| NEO_HIST_CTRL_CAM0_LIN_INPUT1_LOG_SET(p->stat.hists[1].hist_ctrl_lin_input1_log));
 	regmap_field_write(neoispd->regs.fields[NEO_STAT_HIST1_SCALE_CAM0_IDX],
 			p->stat.hists[1].hist_scale_scale);
 	regmap_field_write(neoispd->regs.fields[NEO_STAT_HIST2_CTRL_CAM0_IDX],
 			NEO_HIST_CTRL_CAM0_OFFSET_SET(p->stat.hists[2].hist_ctrl_offset)
 			| NEO_HIST_CTRL_CAM0_CHANNEL_SET(p->stat.hists[2].hist_ctrl_channel)
 			| NEO_HIST_CTRL_CAM0_PATTERN_SET(p->stat.hists[2].hist_ctrl_pattern)
-			| NEO_HIST_CTRL_CAM0_DIR_VS_DIF_SET(p->stat.hists[2].hist_ctrl_dir_vs_dif)
-			| NEO_HIST_CTRL_CAM0_LIN_VS_LOG_SET(p->stat.hists[2].hist_ctrl_lin_vs_log));
+			| NEO_HIST_CTRL_CAM0_DIR_INPUT1_DIF_SET(p->stat.hists[2].hist_ctrl_dir_input1_dif)
+			| NEO_HIST_CTRL_CAM0_LIN_INPUT1_LOG_SET(p->stat.hists[2].hist_ctrl_lin_input1_log));
 	regmap_field_write(neoispd->regs.fields[NEO_STAT_HIST2_SCALE_CAM0_IDX],
 			p->stat.hists[2].hist_scale_scale);
 	regmap_field_write(neoispd->regs.fields[NEO_STAT_HIST3_CTRL_CAM0_IDX],
 			NEO_HIST_CTRL_CAM0_OFFSET_SET(p->stat.hists[3].hist_ctrl_offset)
 			| NEO_HIST_CTRL_CAM0_CHANNEL_SET(p->stat.hists[3].hist_ctrl_channel)
 			| NEO_HIST_CTRL_CAM0_PATTERN_SET(p->stat.hists[3].hist_ctrl_pattern)
-			| NEO_HIST_CTRL_CAM0_DIR_VS_DIF_SET(p->stat.hists[3].hist_ctrl_dir_vs_dif)
-			| NEO_HIST_CTRL_CAM0_LIN_VS_LOG_SET(p->stat.hists[3].hist_ctrl_lin_vs_log));
+			| NEO_HIST_CTRL_CAM0_DIR_INPUT1_DIF_SET(p->stat.hists[3].hist_ctrl_dir_input1_dif)
+			| NEO_HIST_CTRL_CAM0_LIN_INPUT1_LOG_SET(p->stat.hists[3].hist_ctrl_lin_input1_log));
 	regmap_field_write(neoispd->regs.fields[NEO_STAT_HIST3_SCALE_CAM0_IDX],
 			p->stat.hists[3].hist_scale_scale);
 }
@@ -927,7 +859,7 @@ static void neoisp_set_cas(struct neoisp_reg_params_s *p, struct neoisp_dev_s *n
 			NEO_CAS_OFFSET_CAM0_OFFSET_SET(p->cas.offset_offset));
 }
 
-static void neoisp_set_gcm(struct neoisp_reg_params_s *p, struct neoisp_dev_s *neoispd)
+void neoisp_set_gcm(struct neoisp_reg_params_s *p, struct neoisp_dev_s *neoispd)
 {
 	regmap_field_write(neoispd->regs.fields[NEO_GCM_IMAT0_CAM0_IDX],
 			NEO_GCM_IMAT0_CAM0_R0C0_SET(p->gcm.imat_rxcy[0][0])
@@ -1104,9 +1036,9 @@ int neoisp_set_params(struct neoisp_dev_s *neoispd, struct neoisp_meta_params_s 
 	__u32 *mem = (__u32 *)neoispd->mmio_tcm;
 
 	/* update selected blocks wrt feature config flag */
-	if (p->features_cfg.hdr_decompress_dcg_cfg)
+	if (p->features_cfg.hdr_decompress_input0_cfg)
 		neoisp_set_hdr_decompress0(&p->regs, neoispd);
-	if (p->features_cfg.hdr_decompress_vs_cfg)
+	if (p->features_cfg.hdr_decompress_input1_cfg)
 		neoisp_set_hdr_decompress1(&p->regs, neoispd);
 	if (p->features_cfg.obwb0_cfg)
 		neoisp_set_ob_wb0(&p->regs, neoispd);

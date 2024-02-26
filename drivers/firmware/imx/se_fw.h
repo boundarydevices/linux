@@ -76,6 +76,7 @@ struct ele_mu_device_ctx {
 
 	struct ele_shared_mem secure_mem;
 	struct ele_shared_mem non_secure_mem;
+	u32 mu_buff_offset;
 
 	u32 temp_cmd[MAX_MESSAGE_SIZE];
 	u32 temp_resp[MAX_RECV_SIZE];
