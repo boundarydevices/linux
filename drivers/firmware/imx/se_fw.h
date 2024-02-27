@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Copyright 2021-2023 NXP
+ * Copyright 2021-2024 NXP
  */
 
 #ifndef SE_MU_H
@@ -104,6 +104,11 @@ struct ele_api_msg {
 	u32 data[ELE_MSG_DATA_NUM];
 };
 
+struct perf_time_frame {
+	struct timespec64 t_start;
+	struct timespec64 t_end;
+};
+
 struct ele_mu_priv {
 	struct list_head priv_data;
 	struct ele_mu_device_ctx *cmd_receiver_dev;
@@ -143,6 +148,7 @@ struct ele_mu_priv {
 	u8 max_dev_ctx;
 	struct ele_mu_device_ctx **ctxs;
 	struct ele_imem_buf imem;
+	struct perf_time_frame time_frame;
 };
 
 phys_addr_t get_phy_buf_mem_pool(struct device *dev,

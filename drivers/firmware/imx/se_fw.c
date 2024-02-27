@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2021-2023 NXP
+ * Copyright 2021-2024 NXP
  */
 
 #include <linux/dma-mapping.h>
@@ -257,6 +257,8 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 		dev_ctx = priv->cmd_receiver_dev;
 	} else if (header.tag == priv->rsp_tag) {
 		if (priv->waiting_rsp_dev) {
+			/* Capture response timer for user space interaction */
+			ktime_get_ts64(&priv->time_frame.t_end);
 			dev_dbg(dev, "Selecting rsp waiter\n");
 			dev_ctx = priv->waiting_rsp_dev;
 			is_response = true;
@@ -569,6 +571,11 @@ static ssize_t ele_mu_fops_write(struct file *fp, const char __user *buf,
 	dev_dbg(ele_mu_priv->dev,
 		"%s: sending message\n",
 			dev_ctx->miscdev.name);
+
+	/* Capture request timer here to not include time for mutex lock */
+	if (header.tag == ele_mu_priv->cmd_tag)
+		ktime_get_ts64(&ele_mu_priv->time_frame.t_start);
+
 	err = mbox_send_message(ele_mu_priv->tx_chan, dev_ctx->temp_cmd);
 	if (err < 0) {
 		dev_err(ele_mu_priv->dev,
@@ -1013,6 +1020,34 @@ exit:
 	return err;
 }
 
+/* IOCTL to provide request and response timestamps from FW for a crypto
+ * operation
+ */
+static int ele_mu_ioctl_get_time(struct ele_mu_device_ctx *dev_ctx, unsigned long arg)
+{
+	struct ele_mu_priv *priv = dev_get_drvdata(dev_ctx->dev);
+	int err = -EINVAL;
+	struct ele_time_frame time_frame;
+
+	if (!priv) {
+		err = -EINVAL;
+		goto exit;
+	}
+
+	time_frame.t_start = priv->time_frame.t_start;
+	time_frame.t_end = priv->time_frame.t_end;
+	err = (int)copy_to_user((u8 *)arg, (u8 *)(&time_frame), sizeof(time_frame));
+	if (err) {
+		dev_err(dev_ctx->priv->dev,
+			"%s: Failed to copy timer to user\n",
+			dev_ctx->miscdev.name);
+		err  = -EFAULT;
+		goto exit;
+	}
+exit:
+	return err;
+}
+
 /* Open a char device. */
 static int ele_mu_fops_open(struct inode *nd, struct file *fp)
 {
@@ -1188,6 +1223,9 @@ static long ele_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 
 	case ELE_MU_IOCTL_GET_SOC_INFO:
 		err = ele_mu_ioctl_get_soc_info_handler(dev_ctx, arg);
+		break;
+	case ELE_MU_IOCTL_GET_TIMER:
+		err = ele_mu_ioctl_get_time(dev_ctx, arg);
 		break;
 
 	default:
