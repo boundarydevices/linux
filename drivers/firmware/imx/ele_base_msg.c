@@ -104,7 +104,55 @@ exit:
 	return ret;
 }
 
+int ele_write_fuse(struct device *dev, uint16_t fuse_id, u32 value, bool lock)
+{
+	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+	unsigned int status, ind;
+	int ret;
 
+	ret = imx_se_alloc_tx_rx_buf(priv);
+	if (ret)
+		return ret;
+
+	ret = plat_fill_cmd_msg_hdr(priv,
+				    (struct mu_hdr *)&priv->tx_msg->header,
+				    ELE_WRITE_FUSE, ELE_WRITE_FUSE_REQ_MSG_SZ,
+				    true);
+	if (ret) {
+		pr_err("Error: plat_fill_cmd_msg_hdr failed.\n");
+		goto exit;
+	}
+
+	priv->tx_msg->data[0] = (32 << 16) | (fuse_id << 5);
+	if (lock)
+		priv->tx_msg->data[0] |= BIT(31);
+	priv->tx_msg->data[1] = value;
+
+	ret = imx_ele_msg_send_rcv(priv);
+	if (ret < 0)
+		goto exit;
+
+	ret  = validate_rsp_hdr(priv,
+				priv->rx_msg->header,
+				ELE_WRITE_FUSE,
+				ELE_WRITE_FUSE_RSP_MSG_SZ,
+				true);
+	if (ret)
+		goto exit;
+
+	status = RES_STATUS(priv->rx_msg->data[0]);
+	ind = RES_IND(priv->rx_msg->data[0]);
+	if (status != priv->success_tag) {
+		dev_err(dev, "Command Id[%d], Status=0x%x, Indicator=0x%x",
+			ELE_WRITE_FUSE, status, ind);
+		ret = -1;
+	}
+
+exit:
+	imx_se_free_tx_rx_buf(priv);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(ele_write_fuse);
 
 int ele_ping(struct device *dev)
 {

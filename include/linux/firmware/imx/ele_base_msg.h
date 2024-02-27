@@ -68,6 +68,10 @@
 #define ELE_GET_STATE_REQ_SZ		0x04
 #define ELE_GET_STATE_RSP_SZ		0x10
 
+#define ELE_WRITE_FUSE			0xD6
+#define ELE_WRITE_FUSE_REQ_MSG_SZ	12
+#define ELE_WRITE_FUSE_RSP_MSG_SZ	12
+
 #define V2X_FW_STATE_UNKNOWN		0x00
 #define V2X_FW_STATE_RUNNING		0x15
 
@@ -79,6 +83,7 @@ int ele_service_swap(struct device *dev,
 		     phys_addr_t addr,
 		     u32 addr_size, u16 flag);
 int ele_get_v2x_fw_state(struct device *dev, uint32_t *state);
+int ele_write_fuse(struct device *dev, uint16_t fuse_index, u32 value, bool block);
 
 int read_common_fuse(struct device *dev,
 		     uint16_t fuse_id, u32 *value);

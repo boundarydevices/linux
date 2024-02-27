@@ -22,6 +22,7 @@
 #define MSG_SIZE(x)			(((x) & 0x0000ff00) >> 8)
 #define MSG_VER(x)			((x) & 0x000000ff)
 #define RES_STATUS(x)			((x) & 0x000000ff)
+#define RES_IND(x)			(((x) & 0x0000ff00) >> 8)
 #define MAX_DATA_SIZE_PER_USER		(65 * 1024)
 #define S4_DEFAULT_MUAP_INDEX		(2)
 #define S4_MUAP_DEFAULT_MAX_USERS	(4)
