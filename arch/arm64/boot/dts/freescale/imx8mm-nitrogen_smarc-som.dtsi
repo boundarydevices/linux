@@ -594,25 +594,24 @@
 
 #ifdef IMX8MM
 &pcie0 {
-	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
-			  <&clk IMX8MM_CLK_PCIE1_PHY>,
-			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
-	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
-	assigned-clock-parents = <&clk IMX8MM_SYS_PLL2_50M>,
-				 <&clk IMX8MM_SYS_PLL2_100M>,
-				 <&clk IMX8MM_SYS_PLL2_250M>;
-	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
-		 <&clk IMX8MM_CLK_PCIE1_AUX>,
-		 <&clk IMX8MM_CLK_PCIE1_PHY>,
-		 <&pcie0_refclk>;
-	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	assigned-clocks = <&clk IMX8MMN(CLK_PCIE1_AUX)>,
+		<&clk IMX8MMN(CLK_PCIE1_CTRL)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL2_50M)>,
+		<&clk IMX8MMN(SYS_PLL2_250M)>;
+	assigned-clock-rates = <10000000>, <250000000>;
+	clocks = <&clk IMX8MMN(CLK_PCIE1_ROOT)>,
+		<&clk IMX8MMN(CLK_PCIE1_AUX)>,
+		<&clk IMX8MMN(CLK_PCIE1_PHY)>;
+	clock-names = "pcie", "pcie_aux", "pcie_bus";
 	ext_osc = <0>;
-	l1ss-disabled;
-	status = "okay";
 };
 
 &pcie_phy {
-	clk_mode = <3>;
+	fsl,clkreq-unsupported;
+	ext_osc = <0>;
+	fsl,tx-deemph-gen1 = <0x2d>;
+	fsl,tx-deemph-gen2 = <0xf>;
+	status = "okay";
 };
 #endif
 
