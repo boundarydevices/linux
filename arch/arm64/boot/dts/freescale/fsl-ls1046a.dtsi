@@ -475,7 +475,6 @@
 			reg = <0x00 0x1ea0000 0x0 0xffff>;
 			#phy-cells = <1>;
 			big-endian;
-			fsl,dcfg-handle = <&dcfg>;
 		};
 
 		serdes2: phy@1eb0000 {
@@ -483,7 +482,6 @@
 			reg = <0x00 0x1eb0000 0x0 0xffff>;
 			#phy-cells = <1>;
 			big-endian;
-			fsl,dcfg-handle = <&dcfg>;
 		};
 
 		dcfg: dcfg@1ee0000 {
