@@ -3,18 +3,21 @@
  * Copyright 2021-2024 NXP
  */
 
-#include <linux/dma-mapping.h>
+#include <linux/clk.h>
 #include <linux/completion.h>
+#include <linux/delay.h>
 #include <linux/dev_printk.h>
+#include <linux/dma-mapping.h>
 #include <linux/errno.h>
 #include <linux/export.h>
+#include <linux/firmware.h>
 #include <linux/firmware/imx/ele_base_msg.h>
-#include <linux/firmware/imx/v2x_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
 #include <linux/firmware/imx/se_fw_inc.h>
+#include <linux/firmware/imx/v2x_base_msg.h>
 #include <linux/genalloc.h>
-#include <linux/io.h>
 #include <linux/init.h>
+#include <linux/io.h>
 #include <linux/miscdevice.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
@@ -25,9 +28,9 @@
 #include <linux/string.h>
 #include <linux/sys_soc.h>
 
-#include "se_fw.h"
 #include "ele_common.h"
 #include "ele_fw_api.h"
+#include "se_fw.h"
 
 static uint32_t v2x_fw_state;
 
@@ -37,6 +40,7 @@ static uint32_t v2x_fw_state;
 #define SOC_VER_MASK			0xFFFF0000
 #define SOC_ID_MASK			0x0000FFFF
 #define RESERVED_DMA_POOL		BIT(1)
+#define IMX_ELE_FW_DIR                 "/lib/firmware/imx/ele/"
 
 struct imx_info {
 	const uint8_t pdev_name[2][10];
@@ -61,6 +65,7 @@ struct imx_info {
 	int (*start_rng)(struct device *dev);
 	bool enable_ele_trng;
 	bool imem_mgmt;
+	uint8_t *fw_name_in_rfs;
 };
 
 struct imx_info_list {
@@ -98,6 +103,8 @@ static const struct imx_info_list imx8ulp_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = true,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = IMX_ELE_FW_DIR\
+						  "mx8ulpa2ext-ahab-container.img",
 			},
 	},
 };
@@ -128,6 +135,7 @@ static const struct imx_info_list imx93_info = {
 				.enable_ele_trng = true,
 				.imem_mgmt = false,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = NULL,
 			},
 	},
 };
@@ -158,6 +166,7 @@ static const struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-fw0", "mu0"},
@@ -181,6 +190,7 @@ static const struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-fw6", "mu6"},
@@ -204,6 +214,7 @@ static const struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 				.mu_buff_size = 256,
+				.fw_name_in_rfs = NULL,
 			},
 	}
 };
@@ -1430,6 +1441,60 @@ static int init_device_context(struct device *dev)
 	return ret;
 }
 
+static void se_load_firmware(const struct firmware *fw, void *context)
+{
+	struct ele_mu_priv *priv = context;
+	const struct imx_info *info = priv->info;
+	const char *ele_fw_name = info->fw_name_in_rfs;
+	uint8_t *ele_fw_buf;
+	phys_addr_t ele_fw_phyaddr;
+
+	if (!fw) {
+		if (priv->fw_fail)
+			dev_dbg(priv->dev,
+				 "External FW not found, using ROM FW.\n");
+		else {
+			/*add a bit delay to wait for firmware priv released */
+			msleep(20);
+
+			/* Load firmware one more time if timeout */
+			request_firmware_nowait(THIS_MODULE,
+					FW_ACTION_UEVENT, info->fw_name_in_rfs,
+					priv->dev, GFP_KERNEL, priv,
+					se_load_firmware);
+			priv->fw_fail++;
+			dev_dbg(priv->dev, "Value of retries = 0x%x\n",
+				priv->fw_fail);
+		}
+
+		return;
+	}
+
+	/* allocate buffer to store the ELE FW */
+	ele_fw_buf = dmam_alloc_coherent(priv->dev, fw->size,
+					 &ele_fw_phyaddr,
+					 GFP_KERNEL);
+	if (!ele_fw_buf) {
+		dev_err(priv->dev, "Failed to alloc ELE fw buffer memory\n");
+		goto exit;
+	}
+
+	memcpy(ele_fw_buf, fw->data, fw->size);
+
+	if (ele_fw_authenticate(priv->dev, ele_fw_phyaddr))
+		dev_err(priv->dev,
+			"Failed to authenticate & load ELE firmware %s.\n",
+			ele_fw_name);
+
+exit:
+	dmam_free_coherent(priv->dev,
+			   fw->size,
+			   ele_fw_buf,
+			   ele_fw_phyaddr);
+
+	release_firmware(fw);
+}
+
 static int se_fw_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1576,6 +1641,17 @@ static int se_fw_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (info->fw_name_in_rfs) {
+		ret = request_firmware_nowait(THIS_MODULE,
+					      FW_ACTION_UEVENT,
+					      info->fw_name_in_rfs,
+					      dev, GFP_KERNEL, priv,
+					      se_load_firmware);
+		if (ret)
+			dev_warn(dev, "Failed to get firmware [%s].\n",
+				 info->fw_name_in_rfs);
+	}
+
 	/* start ele rng */
 	if (info->start_rng) {
 		ret = info->start_rng(dev);
@@ -1621,7 +1697,10 @@ exit:
 	/* if execution control reaches here, ele-mu probe fail.
 	 * hence doing the cleanup
 	 */
-	return se_probe_cleanup(pdev);
+	if (se_probe_cleanup(pdev))
+		dev_err(dev, "Failed clean-up.\n");
+
+	return ret;
 }
 
 /**

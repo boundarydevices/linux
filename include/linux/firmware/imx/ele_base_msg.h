@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Copyright 2021-2023 NXP
+ * Copyright 2021-2024 NXP
  *
  * Header file for the ELE Base API(s).
  */
@@ -56,6 +56,10 @@
 #define ELE_IMEM_EXPORT			0x1
 #define ELE_IMEM_IMPORT			0x2
 
+#define ELE_FW_AUTH_REQ			0x02
+#define ELE_FW_AUTH_REQ_SZ		0x10
+#define ELE_FW_AUTH_RSP_MSG_SZ		0x08
+
 #define ELE_READ_FUSE_REQ		0x97
 #define ELE_READ_FUSE_REQ_MSG_SZ	0x08
 #define ELE_READ_FUSE_RSP_MSG_SZ	0x0C
@@ -87,4 +91,6 @@ int ele_write_fuse(struct device *dev, uint16_t fuse_index, u32 value, bool bloc
 
 int read_common_fuse(struct device *dev,
 		     uint16_t fuse_id, u32 *value);
+
+int ele_fw_authenticate(struct device *dev, phys_addr_t addr);
 #endif
