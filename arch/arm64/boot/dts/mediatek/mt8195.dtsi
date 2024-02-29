@@ -2508,8 +2508,8 @@
 			compatible = "mediatek,mt8195-smi-larb";
 			reg = <0 0x15001000 0 0x1000>;
 			mediatek,larb-id = <9>;
-			mediatek,smi = <&smi_sub_common_img1_3x1>;
-			mediatek,smi-sub-comm = <&smi_sub_common_img1_3x1>;
+			mediatek,smi = <&smi_sub_common_img0_3x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_img0_3x1>;
 			mediatek,smi-sub-comm-inport = <0>;
 			clocks = <&imgsys CLK_IMG_LARB9>,
 			         <&imgsys CLK_IMG_LARB9>,
@@ -2552,8 +2552,8 @@
 			compatible = "mediatek,mt8195-smi-larb";
 			reg = <0 0x15120000 0 0x1000>;
 			mediatek,larb-id = <10>;
-			mediatek,smi = <&smi_sub_common_img1_3x1>;
-			mediatek,smi-sub-comm = <&smi_sub_common_img1_3x1>;
+			mediatek,smi = <&smi_sub_common_img0_3x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_img0_3x1>;
 			mediatek,smi-sub-comm-inport = <1>;
 			clocks = <&imgsys CLK_IMG_DIP0>,
 			       <&imgsys1_dip_top CLK_IMG1_DIP_TOP_LARB10>,
@@ -2579,8 +2579,8 @@
 			compatible = "mediatek,mt8195-smi-larb";
 			reg = <0 0x15230000 0 0x1000>;
 			mediatek,larb-id = <11>;
-			mediatek,smi = <&smi_sub_common_img1_3x1>;
-			mediatek,smi-sub-comm = <&smi_sub_common_img1_3x1>;
+			mediatek,smi = <&smi_sub_common_img0_3x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_img0_3x1>;
 			mediatek,smi-sub-comm-inport = <2>;
 			clocks = <&imgsys CLK_IMG_WPE0>,
 			       <&imgsys1_wpe CLK_IMG1_WPE_LARB11>,
@@ -2600,8 +2600,8 @@
 			compatible = "mediatek,mt8195-smi-larb";
 			reg = <0 0x15340000 0 0x1000>;
 			mediatek,larb-id = <12>;
-			mediatek,smi = <&smi_sub_common_img0_3x1>;
-			mediatek,smi-sub-comm = <&smi_sub_common_img0_3x1>;
+			mediatek,smi = <&smi_sub_common_img1_3x1>;
+			mediatek,smi-sub-comm = <&smi_sub_common_img1_3x1>;
 			mediatek,smi-sub-comm-inport = <0>;
 			clocks = <&ipesys CLK_IPE_SMI_LARB12>,
 				 <&ipesys CLK_IPE_SMI_LARB12>;
