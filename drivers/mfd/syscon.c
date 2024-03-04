@@ -23,6 +23,7 @@
 #include <linux/reset.h>
 #include <linux/mfd/syscon.h>
 #include <linux/slab.h>
+#include <trace/hooks/regmap.h>
 
 static struct platform_driver syscon_driver;
 
@@ -105,6 +106,10 @@ static struct syscon *of_syscon_register(struct device_node *np, bool check_res)
 	}
 
 	syscon_config.name = kasprintf(GFP_KERNEL, "%pOFn@%pa", np, &res.start);
+	if (!syscon_config.name) {
+		ret = -ENOMEM;
+		goto err_regmap;
+	}
 	syscon_config.reg_stride = reg_io_width;
 	syscon_config.val_bits = reg_io_width * 8;
 	syscon_config.max_register = resource_size(&res) - reg_io_width;
@@ -141,6 +146,7 @@ static struct syscon *of_syscon_register(struct device_node *np, bool check_res)
 			goto err_reset;
 	}
 
+	trace_android_vh_regmap_update(&syscon_config, regmap);
 	syscon->regmap = regmap;
 	syscon->np = np;
 

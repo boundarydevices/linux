@@ -25,6 +25,7 @@
 #include <linux/jhash.h>
 #include <linux/sockptr.h>
 #include <linux/static_key.h>
+#include <linux/android_kabi.h>
 
 #include <net/inet_sock.h>
 #include <net/route.h>
@@ -82,6 +83,7 @@ struct ipcm_cookie {
 	__s16			tos;
 	char			priority;
 	__u16			gso_size;
+	ANDROID_KABI_RESERVE(1);
 };
 
 static inline void ipcm_init(struct ipcm_cookie *ipcm)
@@ -758,7 +760,7 @@ int ip_options_rcv_srr(struct sk_buff *skb, struct net_device *dev);
  *	Functions provided by ip_sockglue.c
  */
 
-void ipv4_pktinfo_prepare(const struct sock *sk, struct sk_buff *skb);
+void ipv4_pktinfo_prepare(const struct sock *sk, struct sk_buff *skb, bool drop_dst);
 void ip_cmsg_recv_offset(struct msghdr *msg, struct sock *sk,
 			 struct sk_buff *skb, int tlen, int offset);
 int ip_cmsg_send(struct sock *sk, struct msghdr *msg,

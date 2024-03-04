@@ -17,6 +17,7 @@
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_mmu.h>
 #include <asm/kvm_nested.h>
+#include <asm/kvm_pkvm.h>
 #include <asm/debug-monitors.h>
 #include <asm/stacktrace/nvhe.h>
 #include <asm/traps.h>
@@ -299,6 +300,21 @@ static int handle_trap_exceptions(struct kvm_vcpu *vcpu)
 	int handled;
 
 	/*
+	 * If we run a non-protected VM when protection is enabled
+	 * system-wide, resync the state from the hypervisor and mark
+	 * it as dirty on the host side if it wasn't dirty already
+	 * (which could happen if preemption has taken place).
+	 */
+	if (is_protected_kvm_enabled() && !kvm_vm_is_protected(vcpu->kvm)) {
+		preempt_disable();
+		if (!(vcpu_get_flag(vcpu, PKVM_HOST_STATE_DIRTY))) {
+			kvm_call_hyp_nvhe(__pkvm_vcpu_sync_state);
+			vcpu_set_flag(vcpu, PKVM_HOST_STATE_DIRTY);
+		}
+		preempt_enable();
+	}
+
+	/*
 	 * See ARM ARM B1.14.1: "Hyp traps on instructions
 	 * that fail their condition code check"
 	 */
@@ -313,6 +329,48 @@ static int handle_trap_exceptions(struct kvm_vcpu *vcpu)
 	}
 
 	return handled;
+}
+
+static int handle_hyp_req_mem(struct kvm_vcpu *vcpu,
+			   struct kvm_hyp_req *req)
+{
+	switch (req->mem.dest) {
+	case REQ_MEM_DEST_HYP_ALLOC:
+		return __pkvm_topup_hyp_alloc(req->mem.nr_pages);
+	case REQ_MEM_DEST_VCPU_MEMCACHE:
+		return topup_hyp_memcache(&vcpu->arch.stage2_mc,
+					  req->mem.nr_pages);
+	};
+
+	pr_warn("Unknown kvm_hyp_req mem dest: %d\n", req->mem.dest);
+
+	return -EINVAL;
+}
+
+static int handle_hyp_req(struct kvm_vcpu *vcpu)
+{
+	struct kvm_hyp_req *hyp_req = vcpu->arch.hyp_reqs;
+	int i, ret;
+
+	for (i = 0; i < KVM_HYP_REQ_MAX; i++, hyp_req++) {
+		if (hyp_req->type == KVM_HYP_LAST_REQ)
+			break;
+
+		switch (hyp_req->type) {
+		case KVM_HYP_REQ_TYPE_MEM:
+			ret = handle_hyp_req_mem(vcpu, hyp_req);
+			break;
+		default:
+			pr_warn("Unknown kvm_hyp_req type: %d\n", hyp_req->type);
+			ret = -EINVAL;
+		}
+
+		if (ret)
+			return ret;
+	}
+
+	/* handled */
+	return 1;
 }
 
 /*
@@ -354,6 +412,8 @@ int handle_exit(struct kvm_vcpu *vcpu, int exception_index)
 		 */
 		run->exit_reason = KVM_EXIT_FAIL_ENTRY;
 		return -EINVAL;
+	case ARM_EXCEPTION_HYP_REQ:
+		return handle_hyp_req(vcpu);
 	default:
 		kvm_pr_unimpl("Unsupported exception type: %d",
 			      exception_index);
@@ -365,6 +425,13 @@ int handle_exit(struct kvm_vcpu *vcpu, int exception_index)
 /* For exit types that need handling before we can be preempted */
 void handle_exit_early(struct kvm_vcpu *vcpu, int exception_index)
 {
+	/*
+	 * We just exited, so the state is clean from a hypervisor
+	 * perspective.
+	 */
+	if (is_protected_kvm_enabled())
+		vcpu_clear_flag(vcpu, PKVM_HOST_STATE_DIRTY);
+
 	if (ARM_SERROR_PENDING(exception_index)) {
 		if (this_cpu_has_cap(ARM64_HAS_RAS_EXTN)) {
 			u64 disr = kvm_vcpu_get_disr(vcpu);

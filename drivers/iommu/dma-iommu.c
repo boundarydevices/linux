@@ -29,6 +29,7 @@
 #include <linux/spinlock.h>
 #include <linux/swiotlb.h>
 #include <linux/vmalloc.h>
+#include <trace/events/swiotlb.h>
 #include <trace/hooks/iommu.h>
 
 #include "dma-iommu.h"
@@ -611,6 +612,9 @@ static int iommu_dma_init_domain(struct iommu_domain *domain, dma_addr_t base,
 	}
 
 	init_iova_domain(iovad, 1UL << order, base_pfn);
+
+	trace_android_rvh_iommu_iovad_init_alloc_algo(dev, iovad);
+
 	ret = iova_domain_init_rcaches(iovad);
 	if (ret)
 		goto done_unlock;
@@ -643,6 +647,8 @@ static int dma_info_to_prot(enum dma_data_direction dir, bool coherent,
 
 	if (attrs & DMA_ATTR_PRIVILEGED)
 		prot |= IOMMU_PRIV;
+
+	trace_android_rvh_iommu_dma_info_to_prot(attrs, &prot);
 
 	switch (dir) {
 	case DMA_BIDIRECTIONAL:
@@ -1055,6 +1061,8 @@ static dma_addr_t iommu_dma_map_page(struct device *dev, struct page *page,
 			dev_warn_once(dev, "DMA bounce buffers are inactive, unable to map unaligned transaction.\n");
 			return DMA_MAPPING_ERROR;
 		}
+
+		trace_swiotlb_bounced(dev, phys, size);
 
 		aligned_size = iova_align(iovad, size);
 		phys = swiotlb_tbl_map_single(dev, phys, size, aligned_size,

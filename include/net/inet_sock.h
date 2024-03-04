@@ -17,6 +17,7 @@
 #include <linux/types.h>
 #include <linux/jhash.h>
 #include <linux/netdevice.h>
+#include <linux/android_kabi.h>
 
 #include <net/flow.h>
 #include <net/sock.h>
@@ -241,6 +242,9 @@ struct inet_sock {
 
 	struct ip_mc_socklist __rcu	*mc_list;
 	struct inet_cork_full	cork;
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
 };
 
 #define IPCORK_OPT	1	/* ip-options has been held in ipcork.opt */
@@ -300,11 +304,6 @@ static inline unsigned long inet_cmsg_flags(const struct inet_sock *inet)
 	clear_bit(INET_FLAGS_##nr, &inet_sk(sk)->inet_flags)
 #define inet_assign_bit(nr, sk, val)		\
 	assign_bit(INET_FLAGS_##nr, &inet_sk(sk)->inet_flags, val)
-
-static inline bool sk_is_inet(struct sock *sk)
-{
-	return sk->sk_family == AF_INET || sk->sk_family == AF_INET6;
-}
 
 /**
  * sk_to_full_sk - Access to a full socket

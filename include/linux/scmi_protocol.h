@@ -12,6 +12,7 @@
 #include <linux/device.h>
 #include <linux/notifier.h>
 #include <linux/types.h>
+#include <linux/android_kabi.h>
 
 #define SCMI_MAX_STR_SIZE		64
 #define SCMI_SHORT_NAME_MAX_SIZE	16
@@ -112,6 +113,8 @@ struct scmi_clk_proto_ops {
 			      u8 oem_type, u32 oem_val, bool atomic);
 	int (*parent_get)(const struct scmi_protocol_handle *ph, u32 clk_id, u32 *parent_id);
 	int (*parent_set)(const struct scmi_protocol_handle *ph, u32 clk_id, u32 parent_id);
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 struct scmi_perf_domain_info {
@@ -167,6 +170,8 @@ struct scmi_perf_proto_ops {
 	bool (*fast_switch_possible)(const struct scmi_protocol_handle *ph,
 				     u32 domain);
 	enum scmi_power_scale (*power_scale_get)(const struct scmi_protocol_handle *ph);
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 /**
@@ -193,6 +198,8 @@ struct scmi_power_proto_ops {
 			 u32 state);
 	int (*state_get)(const struct scmi_protocol_handle *ph, u32 domain,
 			 u32 *state);
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 /**
@@ -369,6 +376,8 @@ struct scmi_sensor_info {
 	unsigned int resolution;
 	int exponent;
 	struct scmi_range_attrs scalar_attrs;
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 /*
@@ -504,6 +513,8 @@ struct scmi_sensor_proto_ops {
 			  u32 sensor_id, u32 *sensor_config);
 	int (*config_set)(const struct scmi_protocol_handle *ph,
 			  u32 sensor_id, u32 sensor_config);
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 /**
@@ -525,6 +536,8 @@ struct scmi_reset_proto_ops {
 	int (*reset)(const struct scmi_protocol_handle *ph, u32 domain);
 	int (*assert)(const struct scmi_protocol_handle *ph, u32 domain);
 	int (*deassert)(const struct scmi_protocol_handle *ph, u32 domain);
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 enum scmi_voltage_level_mode {
@@ -855,6 +868,8 @@ struct scmi_handle {
 				    unsigned int *atomic_threshold);
 
 	const struct scmi_notify_ops *notify_ops;
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 enum scmi_std_protocol {
@@ -885,6 +900,8 @@ struct scmi_device {
 	const char *name;
 	struct device dev;
 	struct scmi_handle *handle;
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 #define to_scmi_dev(d) container_of(d, struct scmi_device, dev)

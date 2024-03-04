@@ -16,6 +16,7 @@
 #include <nvhe/memory.h>
 #include <nvhe/mem_protect.h>
 #include <nvhe/mm.h>
+#include <nvhe/modules.h>
 #include <nvhe/spinlock.h>
 
 struct kvm_pgtable pkvm_pgtable;
@@ -110,6 +111,76 @@ int __pkvm_create_private_mapping(phys_addr_t phys, size_t size,
 	return err;
 }
 
+int __hyp_allocator_map(unsigned long va, phys_addr_t phys)
+{
+	return __pkvm_create_mappings(va, PAGE_SIZE, phys, PAGE_HYP);
+}
+
+#ifdef CONFIG_NVHE_EL2_DEBUG
+static unsigned long mod_range_start = ULONG_MAX;
+static unsigned long mod_range_end;
+static DEFINE_HYP_SPINLOCK(mod_range_lock);
+
+static void update_mod_range(unsigned long addr, size_t size)
+{
+	hyp_spin_lock(&mod_range_lock);
+	mod_range_start = min(mod_range_start, addr);
+	mod_range_end = max(mod_range_end, addr + size);
+	hyp_spin_unlock(&mod_range_lock);
+}
+
+void assert_in_mod_range(unsigned long addr)
+{
+	/*
+	 * This is not entirely watertight if there are private range
+	 * allocations between modules being loaded, but in practice that is
+	 * probably going to be allocation initiated by the modules themselves.
+	 */
+	hyp_spin_lock(&mod_range_lock);
+	WARN_ON(addr < mod_range_start || mod_range_end <= addr);
+	hyp_spin_unlock(&mod_range_lock);
+}
+#else
+static inline void update_mod_range(unsigned long addr, size_t size) { }
+#endif
+
+void *__pkvm_alloc_module_va(u64 nr_pages)
+{
+	size_t size = nr_pages << PAGE_SHIFT;
+	unsigned long addr = 0;
+
+	if (!pkvm_alloc_private_va_range(size, &addr))
+		update_mod_range(addr, size);
+
+	return (void *)addr;
+}
+
+int __pkvm_map_module_page(u64 pfn, void *va, enum kvm_pgtable_prot prot, bool is_protected)
+{
+	unsigned long addr = (unsigned long)va;
+	int ret;
+
+	assert_in_mod_range(addr);
+
+	if (!is_protected) {
+		ret = __pkvm_host_donate_hyp(pfn, 1);
+		if (ret)
+			return ret;
+	}
+
+	ret = __pkvm_create_mappings(addr, PAGE_SIZE, hyp_pfn_to_phys(pfn), prot);
+	if (ret && !is_protected)
+		WARN_ON(__pkvm_hyp_donate_host(pfn, 1));
+
+	return ret;
+}
+
+void __pkvm_unmap_module_page(u64 pfn, void *va)
+{
+	WARN_ON(__pkvm_hyp_donate_host(pfn, 1));
+	pkvm_remove_mappings(va, va + PAGE_SIZE);
+}
+
 int pkvm_create_mappings_locked(void *from, void *to, enum kvm_pgtable_prot prot)
 {
 	unsigned long start = (unsigned long)from;
@@ -144,6 +215,15 @@ int pkvm_create_mappings(void *from, void *to, enum kvm_pgtable_prot prot)
 	hyp_spin_unlock(&pkvm_pgd_lock);
 
 	return ret;
+}
+
+void pkvm_remove_mappings(void *from, void *to)
+{
+	unsigned long size = (unsigned long)to - (unsigned long)from;
+
+	hyp_spin_lock(&pkvm_pgd_lock);
+	WARN_ON(kvm_pgtable_hyp_unmap(&pkvm_pgtable, (u64)from, size) != size);
+	hyp_spin_unlock(&pkvm_pgd_lock);
 }
 
 int hyp_back_vmemmap(phys_addr_t back)
@@ -240,7 +320,7 @@ void *hyp_fixmap_map(phys_addr_t phys)
 	WRITE_ONCE(*ptep, pte);
 	dsb(ishst);
 
-	return (void *)slot->addr;
+	return (void *)slot->addr + offset_in_page(phys);
 }
 
 static void fixmap_clear_slot(struct hyp_fixmap_slot *slot)
@@ -420,4 +500,18 @@ int refill_memcache(struct kvm_hyp_memcache *mc, unsigned long min_pages,
 	*host_mc = tmp;
 
 	return ret;
+}
+
+phys_addr_t __pkvm_private_range_pa(void *va)
+{
+	kvm_pte_t pte;
+	u32 level;
+
+	hyp_spin_lock(&pkvm_pgd_lock);
+	WARN_ON(kvm_pgtable_get_leaf(&pkvm_pgtable, (u64)va, &pte, &level));
+	hyp_spin_unlock(&pkvm_pgd_lock);
+
+	BUG_ON(!kvm_pte_valid(pte));
+
+	return kvm_pte_to_phys(pte) + offset_in_page(va);
 }

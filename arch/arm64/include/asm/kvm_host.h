@@ -75,6 +75,7 @@ static inline enum kvm_mode kvm_get_mode(void) { return KVM_MODE_NONE; };
 DECLARE_STATIC_KEY_FALSE(userspace_irqchip_in_use);
 
 extern unsigned int __ro_after_init kvm_sve_max_vl;
+extern unsigned int __ro_after_init kvm_host_sve_max_vl;
 int __init kvm_arm_init_sve(void);
 
 u32 __attribute_const__ kvm_target_cpu(void);
@@ -84,6 +85,7 @@ void kvm_arm_vcpu_destroy(struct kvm_vcpu *vcpu);
 struct kvm_hyp_memcache {
 	phys_addr_t head;
 	unsigned long nr_pages;
+	unsigned long flags;
 };
 
 static inline void push_hyp_memcache(struct kvm_hyp_memcache *mc,
@@ -135,8 +137,22 @@ static inline void __free_hyp_memcache(struct kvm_hyp_memcache *mc,
 		free_fn(pop_hyp_memcache(mc, to_va), arg);
 }
 
+#define HYP_MEMCACHE_ACCOUNT_KMEMCG BIT(1)
+#define HYP_MEMCACHE_ACCOUNT_STAGE2 BIT(2)
+
 void free_hyp_memcache(struct kvm_hyp_memcache *mc);
 int topup_hyp_memcache(struct kvm_hyp_memcache *mc, unsigned long min_pages);
+
+static inline void init_hyp_memcache(struct kvm_hyp_memcache *mc)
+{
+	memset(mc, 0, sizeof(*mc));
+}
+
+static inline void init_hyp_stage2_memcache(struct kvm_hyp_memcache *mc)
+{
+	init_hyp_memcache(mc);
+	mc->flags = HYP_MEMCACHE_ACCOUNT_KMEMCG | HYP_MEMCACHE_ACCOUNT_STAGE2;
+}
 
 struct kvm_vmid {
 	atomic64_t id;
@@ -195,11 +211,20 @@ struct kvm_smccc_features {
 	unsigned long vendor_hyp_bmap;
 };
 
+struct kvm_pinned_page {
+	struct rb_node		node;
+	struct page		*page;
+	u64			ipa;
+};
+
 typedef unsigned int pkvm_handle_t;
 
 struct kvm_protected_vm {
 	pkvm_handle_t handle;
-	struct kvm_hyp_memcache teardown_mc;
+	struct kvm_hyp_memcache stage2_teardown_mc;
+	struct rb_root pinned_pages;
+	gpa_t pvmfw_load_addr;
+	bool enabled;
 };
 
 struct kvm_arch {
@@ -243,6 +268,8 @@ struct kvm_arch {
 #define KVM_ARCH_FLAG_SMCCC_FILTER_CONFIGURED		7
 	/* Initial ID reg values loaded */
 #define KVM_ARCH_FLAG_ID_REGS_INITIALIZED		8
+	/* Guest has bought into the MMIO guard extension */
+#define KVM_ARCH_FLAG_MMIO_GUARD			9
 	unsigned long flags;
 
 	/* VM-wide vCPU feature set */
@@ -464,6 +491,48 @@ struct vcpu_reset_state {
 	bool		reset;
 };
 
+struct kvm_hyp_req {
+#define KVM_HYP_LAST_REQ	0
+#define KVM_HYP_REQ_TYPE_MEM	1
+#define KVM_HYP_REQ_TYPE_MAP	2
+	u8 type;
+	union {
+		struct {
+#define REQ_MEM_DEST_HYP_ALLOC		1
+#define REQ_MEM_DEST_VCPU_MEMCACHE	2
+#define REQ_MEM_DEST_HYP_IOMMU		3
+			u8	dest;
+			int	nr_pages;
+			int	sz_alloc; /* Size of the page. */
+		} mem;
+		struct {
+			unsigned long	guest_ipa;
+			size_t		size;
+		} map;
+	};
+};
+
+#define KVM_HYP_REQ_MAX (PAGE_SIZE / sizeof(struct kvm_hyp_req))
+/*
+ * De-serialize request from SMCCC return.
+ * See hyp-main.c for serialization.
+ */
+/* Register a2. */
+#define	SMCCC_REQ_TYPE_MASK		GENMASK_ULL(7, 0)
+#define SMCCC_REQ_DEST_MASK		GENMASK_ULL(15 , 8)
+/* Register a3. */
+#define SMCCC_REQ_NR_PAGES_MASK		GENMASK_ULL(31 , 0)
+#define SMCCC_REQ_SZ_ALLOC_MASK		GENMASK_ULL(63 , 32)
+
+static inline void hyp_reqs_smccc_decode(struct arm_smccc_res *res,
+					 struct kvm_hyp_req *req)
+{
+	req->type = FIELD_GET(SMCCC_REQ_TYPE_MASK, res->a2);
+	req->mem.dest = FIELD_GET(SMCCC_REQ_DEST_MASK, res->a2);
+	req->mem.nr_pages = FIELD_GET(SMCCC_REQ_NR_PAGES_MASK, res->a3);
+	req->mem.sz_alloc = FIELD_GET(SMCCC_REQ_SZ_ALLOC_MASK, res->a3);
+}
+
 struct kvm_vcpu_arch {
 	struct kvm_cpu_context ctxt;
 
@@ -539,7 +608,6 @@ struct kvm_vcpu_arch {
 	struct kvm_guest_debug_arch external_debug_state;
 
 	struct user_fpsimd_state *host_fpsimd_state;	/* hyp VA */
-	struct task_struct *parent_task;
 
 	struct {
 		/* {Break,watch}point registers */
@@ -571,8 +639,12 @@ struct kvm_vcpu_arch {
 	struct kvm_mp_state mp_state;
 	spinlock_t mp_state_lock;
 
-	/* Cache some mmu pages needed inside spinlock regions */
-	struct kvm_mmu_memory_cache mmu_page_cache;
+	union {
+		/* Cache some mmu pages needed inside spinlock regions */
+		struct kvm_mmu_memory_cache mmu_page_cache;
+		/* Pages to be donated to pkvm/EL2 if it runs out */
+		struct kvm_hyp_memcache stage2_mc;
+	};
 
 	/* feature flags */
 	DECLARE_BITMAP(features, KVM_VCPU_MAX_FEATURES);
@@ -591,6 +663,9 @@ struct kvm_vcpu_arch {
 
 	/* Per-vcpu CCSIDR override or NULL */
 	u32 *ccsidr;
+
+	/* PAGE_SIZE bound list of requests from the hypervisor to the host. */
+	struct kvm_hyp_req *hyp_reqs;
 };
 
 /*
@@ -665,9 +740,25 @@ struct kvm_vcpu_arch {
 		__vcpu_flags_preempt_enable();			\
 	} while (0)
 
+#define __vcpu_copy_flag(vt, vs, flagset, f, m)			\
+	do {							\
+		typeof(vs->arch.flagset) tmp, val;		\
+								\
+		__build_check_flag(vs, flagset, f, m);		\
+								\
+		val = READ_ONCE(vs->arch.flagset);		\
+		val &= (m);					\
+		tmp = READ_ONCE(vt->arch.flagset);		\
+		tmp &= ~(m);					\
+		tmp |= val;					\
+		WRITE_ONCE(vt->arch.flagset, tmp);		\
+	} while (0)
+
+
 #define vcpu_get_flag(v, ...)	__vcpu_get_flag((v), __VA_ARGS__)
 #define vcpu_set_flag(v, ...)	__vcpu_set_flag((v), __VA_ARGS__)
 #define vcpu_clear_flag(v, ...)	__vcpu_clear_flag((v), __VA_ARGS__)
+#define vcpu_copy_flag(vt, vs,...) __vcpu_copy_flag((vt), (vs), __VA_ARGS__)
 
 /* SVE exposed to guest */
 #define GUEST_HAS_SVE		__vcpu_single_flag(cflags, BIT(0))
@@ -687,6 +778,8 @@ struct kvm_vcpu_arch {
 #define INCREMENT_PC		__vcpu_single_flag(iflags, BIT(1))
 /* Target EL/MODE (not a single flag, but let's abuse the macro) */
 #define EXCEPT_MASK		__vcpu_single_flag(iflags, GENMASK(3, 1))
+/* Cover both PENDING_EXCEPTION and EXCEPT_MASK for global operations */
+#define PC_UPDATE_REQ		__vcpu_single_flag(iflags, GENMASK(3, 0))
 
 /* Helpers to encode exceptions with minimum fuss */
 #define __EXCEPT_MASK_VAL	unpack_vcpu_flag(EXCEPT_MASK)
@@ -718,8 +811,10 @@ struct kvm_vcpu_arch {
 #define DEBUG_STATE_SAVE_SPE	__vcpu_single_flag(iflags, BIT(5))
 /* Save TRBE context if active  */
 #define DEBUG_STATE_SAVE_TRBE	__vcpu_single_flag(iflags, BIT(6))
-/* vcpu running in HYP context */
+/* vcpu running in HYP context (VHE-only) */
 #define VCPU_HYP_CONTEXT	__vcpu_single_flag(iflags, BIT(7))
+/* pKVM host vcpu state is dirty, needs resync (nVHE-only) */
+#define PKVM_HOST_STATE_DIRTY	__vcpu_single_flag(iflags, BIT(7))
 
 /* SVE enabled for host EL0 */
 #define HOST_SVE_ENABLED	__vcpu_single_flag(sflags, BIT(0))
@@ -743,21 +838,23 @@ struct kvm_vcpu_arch {
 #define vcpu_sve_pffr(vcpu) (kern_hyp_va((vcpu)->arch.sve_state) +	\
 			     sve_ffr_offset((vcpu)->arch.sve_max_vl))
 
-#define vcpu_sve_max_vq(vcpu)	sve_vq_from_vl((vcpu)->arch.sve_max_vl)
-
-#define vcpu_sve_state_size(vcpu) ({					\
+#define _vcpu_sve_state_size(sve_max_vl) ({				\
 	size_t __size_ret;						\
-	unsigned int __vcpu_vq;						\
+	unsigned int __vq;						\
 									\
-	if (WARN_ON(!sve_vl_valid((vcpu)->arch.sve_max_vl))) {		\
+	if (WARN_ON(!sve_vl_valid(sve_max_vl))) {			\
 		__size_ret = 0;						\
 	} else {							\
-		__vcpu_vq = vcpu_sve_max_vq(vcpu);			\
-		__size_ret = SVE_SIG_REGS_SIZE(__vcpu_vq);		\
+		__vq = sve_vq_from_vl(sve_max_vl);			\
+		__size_ret = SVE_SIG_REGS_SIZE(__vq);			\
 	}								\
 									\
 	__size_ret;							\
 })
+
+#define vcpu_sve_max_vq(vcpu) sve_vq_from_vl((vcpu)->arch.sve_max_vl)
+
+#define vcpu_sve_state_size(vcpu) _vcpu_sve_state_size((vcpu)->arch.sve_max_vl)
 
 #define KVM_GUESTDBG_VALID_MASK (KVM_GUESTDBG_ENABLE | \
 				 KVM_GUESTDBG_USE_SW_BP | \
@@ -799,9 +896,6 @@ struct kvm_vcpu_arch {
 #define ctxt_sys_reg(c,r)	(*__ctxt_sys_reg(c,r))
 
 #define __vcpu_sys_reg(v,r)	(ctxt_sys_reg(&(v)->arch.ctxt, (r)))
-
-u64 vcpu_read_sys_reg(const struct kvm_vcpu *vcpu, int reg);
-void vcpu_write_sys_reg(struct kvm_vcpu *vcpu, u64 val, int reg);
 
 static inline bool __vcpu_read_sys_reg_from_cpu(int reg, u64 *val)
 {
@@ -892,8 +986,32 @@ static inline bool __vcpu_write_sys_reg_to_cpu(u64 val, int reg)
 	return true;
 }
 
+#define vcpu_read_sys_reg(__vcpu, reg)					\
+	({								\
+		u64 __val = 0x8badf00d8badf00d;				\
+									\
+		/* SYSREGS_ON_CPU is only used in VHE */		\
+		((!is_nvhe_hyp_code() &&				\
+		  vcpu_get_flag(__vcpu, SYSREGS_ON_CPU) &&		\
+		  __vcpu_read_sys_reg_from_cpu(reg, &__val))) ?		\
+		 __val							\
+		 :							\
+		 ctxt_sys_reg(&__vcpu->arch.ctxt, reg);			\
+	 })
+
+#define vcpu_write_sys_reg(__vcpu, __val, reg)				\
+	do {								\
+		/* SYSREGS_ON_CPU is only used in VHE */		\
+		if (is_nvhe_hyp_code() ||				\
+		    !vcpu_get_flag(__vcpu, SYSREGS_ON_CPU) ||		\
+		    !__vcpu_write_sys_reg_to_cpu(__val, reg))		\
+			ctxt_sys_reg(&__vcpu->arch.ctxt, reg) = __val;	\
+	} while (0)
+
 struct kvm_vm_stat {
 	struct kvm_vm_stat_generic generic;
+	atomic64_t protected_hyp_mem;
+	atomic64_t protected_shared_mem;
 };
 
 struct kvm_vcpu_stat {
@@ -1064,8 +1182,25 @@ void kvm_arm_setup_debug(struct kvm_vcpu *vcpu);
 void kvm_arm_clear_debug(struct kvm_vcpu *vcpu);
 void kvm_arm_reset_debug_ptr(struct kvm_vcpu *vcpu);
 
+#define __vcpu_save_guest_debug_regs(vcpu)				\
+	do {								\
+		u64 val = vcpu_read_sys_reg(vcpu, MDSCR_EL1);		\
+									\
+		(vcpu)->arch.guest_debug_preserved.mdscr_el1 = val;	\
+	} while(0)
+
+#define __vcpu_restore_guest_debug_regs(vcpu)				\
+	do {								\
+		u64 val = (vcpu)->arch.guest_debug_preserved.mdscr_el1;	\
+									\
+		vcpu_write_sys_reg(vcpu, val, MDSCR_EL1);		\
+	} while (0)
+
 #define kvm_vcpu_os_lock_enabled(vcpu)		\
 	(!!(__vcpu_sys_reg(vcpu, OSLSR_EL1) & OSLSR_EL1_OSLK))
+
+#define kvm_vcpu_needs_debug_regs(vcpu)		\
+	((vcpu)->guest_debug || kvm_vcpu_os_lock_enabled(vcpu))
 
 int kvm_arm_vcpu_arch_set_attr(struct kvm_vcpu *vcpu,
 			       struct kvm_device_attr *attr);
@@ -1085,7 +1220,6 @@ void kvm_arch_vcpu_load_fp(struct kvm_vcpu *vcpu);
 void kvm_arch_vcpu_ctxflush_fp(struct kvm_vcpu *vcpu);
 void kvm_arch_vcpu_ctxsync_fp(struct kvm_vcpu *vcpu);
 void kvm_arch_vcpu_put_fp(struct kvm_vcpu *vcpu);
-void kvm_vcpu_unshare_task_fp(struct kvm_vcpu *vcpu);
 
 static inline bool kvm_pmu_counter_deferred(struct perf_event_attr *attr)
 {
@@ -1121,10 +1255,7 @@ struct kvm *kvm_arch_alloc_vm(void);
 
 #define __KVM_HAVE_ARCH_FLUSH_REMOTE_TLBS_RANGE
 
-static inline bool kvm_vm_is_protected(struct kvm *kvm)
-{
-	return false;
-}
+#define kvm_vm_is_protected(kvm)	((kvm)->arch.pkvm.enabled)
 
 int kvm_arm_vcpu_finalize(struct kvm_vcpu *vcpu, int feature);
 bool kvm_arm_vcpu_is_finalized(struct kvm_vcpu *vcpu);

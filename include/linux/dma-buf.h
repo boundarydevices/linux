@@ -22,6 +22,8 @@
 #include <linux/fs.h>
 #include <linux/dma-fence.h>
 #include <linux/wait.h>
+#include <linux/workqueue.h>
+#include <linux/android_kabi.h>
 
 struct device;
 struct dma_buf;
@@ -356,6 +358,9 @@ struct dma_buf_ops {
 	 * will be populated with the buffer's flags.
 	 */
 	int (*get_flags)(struct dma_buf *dmabuf, unsigned long *flags);
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
 };
 
 /**
@@ -513,10 +518,21 @@ struct dma_buf {
 	 * `DMA-BUF statistics`_ for the uapi this enables.
 	 */
 	struct dma_buf_sysfs_entry {
-		struct kobject kobj;
+		union {
+			struct kobject kobj;
+
+			/** @sysfs_add_work:
+			 *
+			 * For deferred sysfs kobject creation using a workqueue.
+			 */
+			struct work_struct sysfs_add_work;
+		};
 		struct dma_buf *dmabuf;
 	} *sysfs_entry;
 #endif
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
 };
 
 /**
@@ -552,6 +568,8 @@ struct dma_buf_attach_ops {
 	 * point to the new location of the DMA-buf.
 	 */
 	void (*move_notify)(struct dma_buf_attachment *attach);
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 /**
@@ -589,6 +607,9 @@ struct dma_buf_attachment {
 	void *importer_priv;
 	void *priv;
 	unsigned long dma_map_attrs;
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
 };
 
 /**
@@ -612,6 +633,10 @@ struct dma_buf_export_info {
 	int flags;
 	struct dma_resv *resv;
 	void *priv;
+	unsigned long dma_map_attrs;
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
 };
 
 /**
@@ -666,6 +691,8 @@ dma_buf_attachment_is_dynamic(struct dma_buf_attachment *attach)
 	return !!attach->importer_ops;
 }
 
+int dma_buf_get_each(int (*callback)(const struct dma_buf *dmabuf,
+		     void *private), void *private);
 struct dma_buf_attachment *dma_buf_attach(struct dma_buf *dmabuf,
 					  struct device *dev);
 struct dma_buf_attachment *

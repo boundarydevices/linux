@@ -4745,7 +4745,11 @@ static int s_show(struct seq_file *m, void *v)
 		iter->leftover = ret;
 
 	} else {
-		print_trace_line(iter);
+		ret = print_trace_line(iter);
+		if (ret == TRACE_TYPE_PARTIAL_LINE) {
+			iter->seq.full = 0;
+			trace_seq_puts(&iter->seq, "[LINE TOO BIG]\n");
+		}
 		ret = trace_print_seq(m, &iter->seq);
 		/*
 		 * If we overflow the seq_file buffer, then it will
@@ -4985,6 +4989,12 @@ int tracing_release_file_tr(struct inode *inode, struct file *filp)
 	event_file_put(file);
 
 	return 0;
+}
+
+int tracing_single_release_file_tr(struct inode *inode, struct file *filp)
+{
+	tracing_release_file_tr(inode, filp);
+	return single_release(inode, filp);
 }
 
 static int tracing_mark_open(struct inode *inode, struct file *filp)
@@ -10085,7 +10095,11 @@ static struct notifier_block trace_die_notifier = {
 static int trace_die_panic_handler(struct notifier_block *self,
 				unsigned long ev, void *unused)
 {
-	if (!ftrace_dump_on_oops)
+	bool ftrace_check = false;
+
+	trace_android_vh_ftrace_oops_enter(&ftrace_check);
+
+	if (!ftrace_dump_on_oops || ftrace_check)
 		return NOTIFY_DONE;
 
 	/* The die notifier requires DIE_OOPS to trigger */
@@ -10094,6 +10108,7 @@ static int trace_die_panic_handler(struct notifier_block *self,
 
 	ftrace_dump(ftrace_dump_on_oops);
 
+	trace_android_vh_ftrace_oops_exit(&ftrace_check);
 	return NOTIFY_DONE;
 }
 
@@ -10113,6 +10128,8 @@ static int trace_die_panic_handler(struct notifier_block *self,
 void
 trace_printk_seq(struct trace_seq *s)
 {
+	bool dump_printk = true;
+
 	/* Probably should print a warning here. */
 	if (s->seq.len >= TRACE_MAX_PRINT)
 		s->seq.len = TRACE_MAX_PRINT;
@@ -10128,7 +10145,9 @@ trace_printk_seq(struct trace_seq *s)
 	/* should be zero ended, but we are paranoid. */
 	s->buffer[s->seq.len] = 0;
 
-	printk(KERN_TRACE "%s", s->buffer);
+	trace_android_vh_ftrace_dump_buffer(s, &dump_printk);
+	if (dump_printk)
+		printk(KERN_TRACE "%s", s->buffer);
 
 	trace_seq_init(s);
 }
@@ -10168,6 +10187,8 @@ void ftrace_dump(enum ftrace_dump_mode oops_dump_mode)
 	unsigned long flags;
 	int cnt = 0, cpu;
 	bool ftrace_check = true;
+	bool ftrace_size_check = false;
+	unsigned long size;
 
 	/* Only allow one dump user at a time. */
 	if (atomic_inc_return(&dump_running) != 1) {
@@ -10192,12 +10213,17 @@ void ftrace_dump(enum ftrace_dump_mode oops_dump_mode)
 
 	for_each_tracing_cpu(cpu) {
 		atomic_inc(&per_cpu_ptr(iter.array_buffer->data, cpu)->disabled);
+		size = ring_buffer_size(iter.array_buffer->buffer, cpu);
+		trace_android_vh_ftrace_size_check(size, &ftrace_size_check);
 	}
 
 	old_userobj = tr->trace_flags & TRACE_ITER_SYM_USEROBJ;
 
 	/* don't look at user memory in panic mode */
 	tr->trace_flags &= ~TRACE_ITER_SYM_USEROBJ;
+
+	if (ftrace_size_check)
+		goto out_enable;
 
 	switch (oops_dump_mode) {
 	case DUMP_ALL:

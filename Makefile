@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 VERSION = 6
 PATCHLEVEL = 6
-SUBLEVEL = 10
+SUBLEVEL = 17
 EXTRAVERSION =
 NAME = Hurr durr I'ma ninja sloth
 
@@ -584,7 +584,6 @@ KBUILD_CFLAGS += -fno-strict-aliasing
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_RUSTFLAGS := $(rust_common_flags) \
-		    --target=$(objtree)/scripts/target.json \
 		    -Cpanic=abort -Cembed-bitcode=n -Clto=n \
 		    -Cforce-unwind-tables=n -Ccodegen-units=1 \
 		    -Csymbol-mangling-version=v0 \
@@ -1002,8 +1001,19 @@ export CC_FLAGS_LTO
 endif
 
 ifdef CONFIG_CFI_CLANG
-CC_FLAGS_CFI	:= -fsanitize=kcfi
-KBUILD_CFLAGS	+= $(CC_FLAGS_CFI)
+CC_FLAGS_CFI   := -fsanitize=kcfi
+ifdef CONFIG_RUST
+# If Rust is enabled, this flag is required to support cross-language
+# integer types.
+# This addresses the problem that on e.g. i686, int != long, and Rust
+# maps both to i32.
+# See https://rcvalle.com/docs/rust-cfi-design-doc.pdf for details.
+CC_FLAGS_CFI   += -fsanitize-cfi-icall-experimental-normalize-integers
+RS_FLAGS_CFI   := -Zsanitizer=kcfi -Zsanitizer-cfi-normalize-integers
+KBUILD_RUSTFLAGS += $(RS_FLAGS_CFI)
+export RS_FLAGS_CFI
+endif
+KBUILD_CFLAGS  += $(CC_FLAGS_CFI)
 export CC_FLAGS_CFI
 endif
 
