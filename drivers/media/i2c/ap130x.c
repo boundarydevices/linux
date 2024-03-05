@@ -1162,10 +1162,7 @@ static int ap130x_stall(struct ap130x_device *ap130x, bool stall)
 			return ret;
 
 		msleep(200);
-
-		return ap130x_write(ap130x, AP130X_ADV_IRQ_SYS_INTE,
-			     AP130X_ADV_IRQ_SYS_INTE_SIPM |
-			     AP130X_ADV_IRQ_SYS_INTE_SIPS_FIFO_WRITE, NULL);
+		return ret;
 	} else {
 		return ap130x_write(ap130x, AP130X_SYS_START,
 				    AP130X_SYS_START_PLL_LOCK |
