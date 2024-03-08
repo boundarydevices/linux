@@ -155,7 +155,7 @@ static struct imx_info_list imx95_info = {
 				.init_fw = true,
 				.v2x_state_check = true,
 				.start_rng = ele_start_rng,
-				.enable_ele_trng = true,
+				.enable_ele_trng = false,
 				.imem_mgmt = false,
 				.mu_buff_size = 0,
 			},
