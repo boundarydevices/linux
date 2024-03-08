@@ -43,3 +43,6 @@
        /delete-node/ bluetooth;
 };
 
+&{/reserved-memory/linux,cma} {
+	status = "disabled";
+};
