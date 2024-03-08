@@ -1652,17 +1652,10 @@ static int ap130x_enum_frame_size(struct v4l2_subdev *sd,
 		if (i >= ARRAY_SIZE(supported_video_formats))
 			return -EINVAL;
 
-#if 0
 		fse->min_width = AP130X_MIN_WIDTH * ap130x->width_factor;
 		fse->min_height = AP130X_MIN_HEIGHT;
 		fse->max_width = AP130X_MAX_WIDTH;
 		fse->max_height = AP130X_MAX_HEIGHT;
-#else
-		fse->min_width = ap130x->sensor_info->resolution.width;
-		fse->min_height = ap130x->sensor_info->resolution.height;
-		fse->max_width = ap130x->sensor_info->resolution.width;
-		fse->max_height = ap130x->sensor_info->resolution.height;
-#endif
 	}
 
 	return 0;
