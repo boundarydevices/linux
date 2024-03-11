@@ -138,7 +138,6 @@ static struct snd_soc_dai_driver fsl_rpmsg_dai = {
 
 static const struct snd_soc_component_driver fsl_component = {
 	.name			= "fsl-rpmsg",
-	.legacy_dai_naming	= 1,
 };
 
 static const struct fsl_rpmsg_soc_data imx7ulp_data = {
@@ -194,6 +193,7 @@ static int fsl_rpmsg_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct snd_soc_dai_driver *dai_drv;
+	const char *dai_name;
 	struct fsl_rpmsg *rpmsg;
 	int ret;
 
@@ -229,6 +229,19 @@ static int fsl_rpmsg_probe(struct platform_device *pdev)
 				dai_drv->capture.rates = SNDRV_PCM_RATE_16000;
 		}
 	}
+
+	/* Use rpmsg channel name as cpu dai name */
+	ret = of_property_read_string(np, "fsl,rpmsg-channel-name", &dai_name);
+	if (ret) {
+		if (ret == -EINVAL) {
+			dai_name = "rpmsg-audio-channel";
+		} else {
+			dev_err(&pdev->dev, "Failed to get rpmsg channel name: %d!\n", ret);
+			return ret;
+		}
+	}
+	dai_drv->name = dai_name;
+
 	if (of_property_read_bool(np, "fsl,enable-lpa")) {
 		rpmsg->enable_lpa = 1;
 		rpmsg->buffer_size[SNDRV_PCM_STREAM_PLAYBACK] = LPA_LARGE_BUFFER_SIZE;
