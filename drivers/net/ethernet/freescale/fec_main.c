@@ -2013,6 +2013,7 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 
 		/* if any of the above changed restart the FEC */
 		if (status_change) {
+			netif_stop_queue(ndev);
 			napi_disable(&fep->napi);
 			netif_tx_lock_bh(ndev);
 			fec_restart(ndev);
@@ -2022,6 +2023,7 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 		}
 	} else {
 		if (fep->link) {
+			netif_stop_queue(ndev);
 			napi_disable(&fep->napi);
 			netif_tx_lock_bh(ndev);
 			fec_stop(ndev);
@@ -3750,14 +3752,15 @@ static u16 fec_enet_select_queue(struct net_device *ndev, struct sk_buff *skb,
 
 	/* VLAN is present in the payload.*/
 	if (eth_type_vlan(skb->protocol)) {
-		struct vlan_ethhdr *vhdr = (struct vlan_ethhdr *)skb->data;
+		struct vlan_ethhdr *vhdr = skb_vlan_eth_hdr(skb);
 
 		vlan_tag = ntohs(vhdr->h_vlan_TCI);
 	/*  VLAN is present in the skb but not yet pushed in the payload.*/
 	} else if (skb_vlan_tag_present(skb)) {
 		vlan_tag = skb->vlan_tci;
-	} else
+	} else {
 		return vlan_tag;
+	}
 
 	return fec_enet_vlan_pri_to_queue[vlan_tag >> 13];
 }

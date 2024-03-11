@@ -1538,7 +1538,6 @@ struct dc_link {
 	enum edp_revision edp_revision;
 	union dpcd_sink_ext_caps dpcd_sink_ext_caps;
 
-	struct backlight_settings backlight_settings;
 	struct psr_settings psr_settings;
 
 	struct replay_settings replay_settings;
@@ -1578,6 +1577,7 @@ struct dc_link {
 	struct phy_state phy_state;
 	// BW ALLOCATON USB4 ONLY
 	struct dc_dpia_bw_alloc dpia_bw_alloc_config;
+	bool skip_implict_edp_power_control;
 };
 
 /* Return an enumerated dc_link.
@@ -1596,6 +1596,9 @@ bool dc_get_edp_link_panel_inst(const struct dc *dc,
 void dc_get_edp_links(const struct dc *dc,
 		struct dc_link **edp_links,
 		int *edp_num);
+
+void dc_set_edp_power(const struct dc *dc, struct dc_link *edp_link,
+				 bool powerOn);
 
 /* The function initiates detection handshake over the given link. It first
  * determines if there are display connections over the link. If so it initiates
@@ -2113,11 +2116,11 @@ int dc_link_dp_dpia_handle_usb4_bandwidth_allocation_for_link(
  *
  * @dc: pointer to dc struct
  * @stream: pointer to all possible streams
- * @num_streams: number of valid DPIA streams
+ * @count: number of valid DPIA streams
  *
  * return: TRUE if bw used by DPIAs doesn't exceed available BW else return FALSE
  */
-bool dc_link_validate(struct dc *dc, const struct dc_stream_state *streams,
+bool dc_link_dp_dpia_validate(struct dc *dc, const struct dc_stream_state *streams,
 		const unsigned int count);
 
 /* Sink Interfaces - A sink corresponds to a display output device */
