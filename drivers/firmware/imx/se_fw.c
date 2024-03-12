@@ -675,8 +675,16 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 			}
 		}
 
-		if (b_desc->shared_buf_ptr)
-			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		/*
+		 * Variable "mu_buff_offset" is set while dealing with MU's device memory.
+		 * For device type memory, it is recommended to use memset_io.
+		 */
+		if (b_desc->shared_buf_ptr) {
+			if (dev_ctx->mu_buff_offset)
+				memset_io(b_desc->shared_buf_ptr, 0, b_desc->size);
+			else
+				memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		}
 
 		__list_del_entry(&b_desc->link);
 		devm_kfree(dev_ctx->dev, b_desc);
@@ -702,7 +710,6 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 	dev_ctx->non_secure_mem.pos = 0;
 
 	dev_ctx->pending_hdr = 0;
-	dev_ctx->mu_buff_offset = 0;
 
 exit:
 	/*
@@ -724,14 +731,24 @@ exit:
 		if (!b_desc)
 			continue;
 
-		if (b_desc->shared_buf_ptr)
-			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		/*
+		 * Variable "mu_buff_offset" is set while dealing with MU's device memory.
+		 * For device type memory, it is recommended to use memset_io.
+		 */
+		if (b_desc->shared_buf_ptr) {
+			if (dev_ctx->mu_buff_offset)
+				memset_io(b_desc->shared_buf_ptr, 0, b_desc->size);
+			else
+				memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		}
 
 		__list_del_entry(&b_desc->link);
 		devm_kfree(dev_ctx->dev, b_desc);
 	}
 	if (header.tag == ele_mu_priv->rsp_tag)
 		mutex_unlock(&ele_mu_priv->mu_cmd_lock);
+
+	dev_ctx->mu_buff_offset = 0;
 
 	up(&dev_ctx->fops_lock);
 	return err;
@@ -826,7 +843,7 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 		addr = get_mu_buf(priv->tx_chan);
 		addr = addr + dev_ctx->mu_buff_offset;
 		dev_ctx->mu_buff_offset = dev_ctx->mu_buff_offset + io.length;
-		if (dev_ctx->mu_buff_offset >= imx_info->mu_buff_size) {
+		if (dev_ctx->mu_buff_offset > imx_info->mu_buff_size) {
 			err = -ENOMEM;
 			goto exit;
 		}
@@ -1119,8 +1136,16 @@ static int ele_mu_fops_close(struct inode *nd, struct file *fp)
 		if (!b_desc)
 			continue;
 
-		if (b_desc->shared_buf_ptr)
-			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		/*
+		 * Variable "mu_buff_offset" is set while dealing with MU's device memory.
+		 * For device type memory, it is recommended to use memset_io.
+		 */
+		if (b_desc->shared_buf_ptr) {
+			if (dev_ctx->mu_buff_offset)
+				memset_io(b_desc->shared_buf_ptr, 0, b_desc->size);
+			else
+				memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		}
 
 		__list_del_entry(&b_desc->link);
 		devm_kfree(dev_ctx->dev, b_desc);
