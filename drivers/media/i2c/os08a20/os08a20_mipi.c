@@ -748,6 +748,74 @@ static int os08a20_set_test_pattern(struct os08a20 *sensor, void *arg)
 	return ret;
 }
 
+static u32 os08a20_code2bpp(const u32 code)
+{
+	switch (code) {
+	case MEDIA_BUS_FMT_SBGGR10_1X10:
+		return 10;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+		return 12;
+	default:
+		return 0;
+	}
+}
+
+/* needs sensor lock */
+static int os08a20_update_current_mode(struct os08a20 *sensor, u32 w, u32 h,
+				       u32 bpp)
+{
+	int ret = 0;
+	struct device *dev = &sensor->i2c_client->dev;
+	struct vvcam_mode_info_s *mode = NULL;
+	unsigned int i;
+
+	for (i = 0 ; i < ARRAY_SIZE(pos08a20_mode_info); i++) {
+		if (pos08a20_mode_info[i].size.bounds_width == w &&
+		    pos08a20_mode_info[i].size.bounds_height == h &&
+		    pos08a20_mode_info[i].bit_width == bpp) {
+			mode = &pos08a20_mode_info[i];
+			break;
+		}
+	}
+	if (!mode) {
+		dev_err(dev, "%s:couldn't find fmt %d x %d, bpp=%d\n",
+			__func__, w, h, bpp);
+		ret = -EINVAL;
+		goto out;
+	}
+	memcpy(&sensor->cur_mode, mode, sizeof(struct vvcam_mode_info_s));
+
+	dev_info(dev, "%s:set sensor format %d x %d, bpp=%d\n",
+		 __func__, sensor->cur_mode.size.bounds_width,
+		 sensor->cur_mode.size.bounds_height, bpp);
+out:
+	return ret;
+}
+
+/* needs sensor lock */
+static int os08a20_apply_current_mode(struct os08a20 *sensor)
+{
+	struct device *dev = &sensor->i2c_client->dev;
+	struct vvcam_sccb_data_s *preg_data = NULL;
+	int ret = 0;
+
+	pm_runtime_get_noresume(dev);
+
+	os08a20_write_reg(sensor, 0x103, 0x01);
+	msleep(20);
+
+	preg_data = (struct vvcam_sccb_data_s *)sensor->cur_mode.preg_data;
+	ret = os08a20_write_reg_arry(sensor, preg_data,
+				     sensor->cur_mode.reg_data_count);
+	if (ret < 0)
+		dev_err(dev, "%s:os08a20_write_reg_arry error\n", __func__);
+
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+
+	return ret;
+}
+
 static inline struct v4l2_subdev *ctrl_to_sd(struct v4l2_ctrl *ctrl)
 {
 	return &container_of(ctrl->handler, struct os08a20,
@@ -898,42 +966,27 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	int ret = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
-	struct device *dev = &sensor->i2c_client->dev;
-	struct vvcam_sccb_data_s *preg_data = 0;
+	u32 bpp = os08a20_code2bpp(fmt->format.code);
 
 	mutex_lock(&sensor->lock);
+	ret = os08a20_update_current_mode(sensor, fmt->format.width,
+					  fmt->format.height,
+					  bpp);
 
-	if (fmt->format.width != sensor->cur_mode.size.bounds_width ||
-	    fmt->format.height != sensor->cur_mode.size.bounds_height) {
-		dev_err(dev, "%s:set sensor format %dx%d error\n",
-			__func__, fmt->format.width, fmt->format.height);
-		mutex_unlock(&sensor->lock);
-		return -EINVAL;
-	}
+	if (ret)
+		goto unlock;
 
-	pm_runtime_get_noresume(&sensor->i2c_client->dev);
-
-	os08a20_write_reg(sensor, 0x103, 0x01);
-	msleep(20);
-
-	preg_data = (struct vvcam_sccb_data_s *)sensor->cur_mode.preg_data;
-	ret = os08a20_write_reg_arry(sensor, preg_data,
-				     sensor->cur_mode.reg_data_count);
-
-	pm_runtime_mark_last_busy(&sensor->i2c_client->dev);
-	pm_runtime_put_autosuspend(&sensor->i2c_client->dev);
-
-	if (ret < 0) {
-		dev_err(dev, "%s:os08a20_write_reg_arry error\n", __func__);
-		mutex_unlock(&sensor->lock);
-		return -EINVAL;
-	}
+	ret = os08a20_apply_current_mode(sensor);
+	if (ret)
+		goto unlock;
 
 	os08a20_get_format_code(sensor, &fmt->format.code);
 	fmt->format.field = V4L2_FIELD_NONE;
 	sensor->format = fmt->format;
+unlock:
 	mutex_unlock(&sensor->lock);
-	return 0;
+
+	return ret;
 }
 
 static int os08a20_get_fmt(struct v4l2_subdev *sd,
