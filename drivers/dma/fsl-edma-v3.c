@@ -244,7 +244,6 @@ struct fsl_edma3_engine {
 	int			errirq;
 	#define MAX_CHAN_NUM	64
 	struct fsl_edma3_reg_save edma_regs[MAX_CHAN_NUM];
-	bool			swap;	/* remote/local swapped on Audio edma */
 	bool                    bus_axi;
 	const struct fsl_edma3_drvdata *drvdata;
 	struct clk		*clk_mp;
@@ -325,18 +324,10 @@ static void fsl_edma3_enable_request(struct fsl_edma3_chan *fsl_chan)
 	u32 val;
 
 	val = readl(addr + EDMA_CH_SBR);
-	/* Remote/local swapped wrongly on iMX8 QM Audio edma */
-	if (fsl_chan->edma3->swap) {
-		if (!fsl_chan->is_rxchan)
-			val |= EDMA_CH_SBR_RD;
-		else
-			val |= EDMA_CH_SBR_WR;
-	} else {
-		if (fsl_chan->is_rxchan)
-			val |= EDMA_CH_SBR_RD;
-		else
-			val |= EDMA_CH_SBR_WR;
-	}
+	if (fsl_chan->is_rxchan)
+		val |= EDMA_CH_SBR_RD;
+	else
+		val |= EDMA_CH_SBR_WR;
 
 	if (fsl_chan->is_remote)
 		val &= ~(EDMA_CH_SBR_RD | EDMA_CH_SBR_WR);
@@ -1330,7 +1321,6 @@ static void fsl_edma3_issue_work(struct work_struct *work)
 
 static const struct of_device_id fsl_edma3_dt_ids[] = {
 	{ .compatible = "fsl,imx8qm-edma", .data = &fsl_edma_imx8q},
-	{ .compatible = "fsl,imx8qm-adma", .data = &fsl_edma_imx8q},
 	{ .compatible = "fsl,imx8ulp-edma", .data = &fsl_edma_imx8ulp},
 	{ .compatible = "fsl,imx93-edma", .data = &fsl_edma_imx93},
 	{ .compatible = "fsl,imx95-edma", .data = &fsl_edma_imx95},
@@ -1369,7 +1359,6 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 	if (of_property_read_bool(np, "shared-interrupt"))
 		fsl_edma3->irqflag = IRQF_SHARED;
 
-	fsl_edma3->swap = of_device_is_compatible(np, "fsl,imx8qm-adma");
 	fsl_edma3->n_chans = chans;
 	fsl_edma3->drvdata = (const struct fsl_edma3_drvdata *)of_id->data;
 
