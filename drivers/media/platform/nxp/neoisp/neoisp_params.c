@@ -2,7 +2,7 @@
 /*
  * NEOISP module parameters definition and default values
  *
- * Copyright 2023 NXP
+ * Copyright 2023-2024 NXP
  */
 
 #include "neoisp.h"
@@ -15,10 +15,10 @@ struct neoisp_mod_params_s mod_params = {
 	},
 	.conf = {
 		.img_conf_cam0_ibpp0 = 2,
-		.img_conf_cam0_inalign0 = 0,
+		.img_conf_cam0_inalign0 = 1,
 		.img_conf_cam0_lpalign0 = 0,
 		.img_conf_cam0_ibpp1 = 2,
-		.img_conf_cam0_inalign1 = 0,
+		.img_conf_cam0_inalign1 = 1,
 		.img_conf_cam0_lpalign1 = 0,
 		.img0_in_ls_cam0_ls = 0,
 		.img1_in_ls_cam0_ls = 0,
