@@ -339,12 +339,18 @@ static int handle_hyp_req_mem(struct kvm_vcpu *vcpu,
 		return __pkvm_topup_hyp_alloc(req->mem.nr_pages);
 	case REQ_MEM_DEST_VCPU_MEMCACHE:
 		return topup_hyp_memcache(&vcpu->arch.stage2_mc,
-					  req->mem.nr_pages);
+					  req->mem.nr_pages, 0);
 	};
 
 	pr_warn("Unknown kvm_hyp_req mem dest: %d\n", req->mem.dest);
 
 	return -EINVAL;
+}
+
+static int handle_hyp_req_map(struct kvm_vcpu *vcpu,
+			      struct kvm_hyp_req *req)
+{
+	return pkvm_mem_abort_range(vcpu, req->map.guest_ipa, req->map.size);
 }
 
 static int handle_hyp_req(struct kvm_vcpu *vcpu)
@@ -359,6 +365,9 @@ static int handle_hyp_req(struct kvm_vcpu *vcpu)
 		switch (hyp_req->type) {
 		case KVM_HYP_REQ_TYPE_MEM:
 			ret = handle_hyp_req_mem(vcpu, hyp_req);
+			break;
+		case KVM_HYP_REQ_TYPE_MAP:
+			ret = handle_hyp_req_map(vcpu, hyp_req);
 			break;
 		default:
 			pr_warn("Unknown kvm_hyp_req type: %d\n", hyp_req->type);
@@ -453,11 +462,19 @@ void handle_exit_early(struct kvm_vcpu *vcpu, int exception_index)
 void __noreturn __cold nvhe_hyp_panic_handler(u64 esr, u64 spsr,
 					      u64 elr_virt, u64 elr_phys,
 					      u64 par, uintptr_t vcpu,
-					      u64 far, u64 hpfar) {
+					      u64 far, u64 hpfar)
+{
 	u64 elr_in_kimg = __phys_to_kimg(elr_phys);
-	u64 hyp_offset = elr_in_kimg - kaslr_offset() - elr_virt;
+	u64 kaslr_off = kaslr_offset();
+	u64 hyp_offset = elr_in_kimg - kaslr_off - elr_virt;
 	u64 mode = spsr & PSR_MODE_MASK;
 	u64 panic_addr = elr_virt + hyp_offset;
+	u64 mod_addr = pkvm_el2_mod_kern_va(elr_virt);
+
+	if (mod_addr) {
+		panic_addr = mod_addr;
+		kaslr_off = 0;
+	}
 
 	if (mode != PSR_MODE_EL2t && mode != PSR_MODE_EL2h) {
 		kvm_err("Invalid host exception to nVHE hyp!\n");
@@ -479,10 +496,10 @@ void __noreturn __cold nvhe_hyp_panic_handler(u64 esr, u64 spsr,
 			kvm_err("nVHE hyp BUG at: %s:%u!\n", file, line);
 		else
 			kvm_err("nVHE hyp BUG at: [<%016llx>] %pB!\n", panic_addr,
-					(void *)(panic_addr + kaslr_offset()));
+					(void *)(panic_addr + kaslr_off));
 	} else {
 		kvm_err("nVHE hyp panic at: [<%016llx>] %pB!\n", panic_addr,
-				(void *)(panic_addr + kaslr_offset()));
+				(void *)(panic_addr + kaslr_off));
 	}
 
 	/* Dump the nVHE hypervisor backtrace */

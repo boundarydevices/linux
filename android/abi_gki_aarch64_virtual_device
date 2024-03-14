@@ -278,9 +278,13 @@
   of_device_is_compatible
   of_find_property
   of_property_read_variable_u32_array
+  page_pinner_inited
+  __page_pinner_put_page
   page_pool_alloc_frag
   page_pool_destroy
   page_pool_put_defragged_page
+  page_shift_compat_enabled
+  page_shift_compat
   param_ops_bool
   param_ops_int
   param_ops_uint

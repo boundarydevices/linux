@@ -469,23 +469,29 @@ int pkvm_create_stack(phys_addr_t phys, unsigned long *haddr)
 	return ret;
 }
 
-static void *admit_host_page(void *arg)
+static void *admit_host_page(void *arg, unsigned long order)
 {
+	phys_addr_t p;
 	struct kvm_hyp_memcache *host_mc = arg;
+	unsigned long mc_order;
 
 	if (!host_mc->nr_pages)
 		return NULL;
 
+	mc_order = FIELD_GET(HYP_MC_ORDER_MASK, host_mc->head);
+	BUG_ON(order != mc_order);
+
+	p = FIELD_GET(HYP_MC_PTR_MASK, host_mc->head);
 	/*
 	 * The host still owns the pages in its memcache, so we need to go
 	 * through a full host-to-hyp donation cycle to change it. Fortunately,
 	 * __pkvm_host_donate_hyp() takes care of races for us, so if it
 	 * succeeds we're good to go.
 	 */
-	if (__pkvm_host_donate_hyp(hyp_phys_to_pfn(host_mc->head), 1))
+	if (__pkvm_host_donate_hyp(hyp_phys_to_pfn(p), 1 << order))
 		return NULL;
 
-	return pop_hyp_memcache(host_mc, hyp_phys_to_virt);
+	return pop_hyp_memcache(host_mc, hyp_phys_to_virt, &order);
 }
 
 /* Refill our local memcache by poping pages from the one provided by the host. */
@@ -496,7 +502,7 @@ int refill_memcache(struct kvm_hyp_memcache *mc, unsigned long min_pages,
 	int ret;
 
 	ret =  __topup_hyp_memcache(mc, min_pages, admit_host_page,
-				    hyp_virt_to_phys, &tmp);
+				    hyp_virt_to_phys, &tmp, 0);
 	*host_mc = tmp;
 
 	return ret;
@@ -514,4 +520,45 @@ phys_addr_t __pkvm_private_range_pa(void *va)
 	BUG_ON(!kvm_pte_valid(pte));
 
 	return kvm_pte_to_phys(pte) + offset_in_page(va);
+}
+
+/* The host passed a mc, fill a pool with the pages in it. */
+int refill_hyp_pool(struct hyp_pool *pool, struct kvm_hyp_memcache *host_mc)
+{
+	unsigned long order;
+	void *p;
+
+	while (host_mc->nr_pages) {
+		order = host_mc->head & (PAGE_SIZE - 1);
+		p = admit_host_page(host_mc, order);
+		hyp_virt_to_page(p)->order = order;
+		hyp_set_page_refcounted(hyp_virt_to_page(p));
+		hyp_put_page(pool, p);
+	}
+
+	return 0;
+}
+
+/*
+ * Remove target pages from the pool and put them in a memcache,
+ * so the host can reclaim them.
+ */
+int reclaim_hyp_pool(struct hyp_pool *pool, struct kvm_hyp_memcache *host_mc,
+		     int nr_pages)
+{
+	void *p;
+	struct hyp_page *page;
+
+	while (nr_pages > 0) {
+		p = hyp_alloc_pages(pool, 0);
+		if (!p)
+			return -ENOMEM;
+		page = hyp_virt_to_page(p);
+		nr_pages -= (1 << page->order);
+		push_hyp_memcache(host_mc, p, hyp_virt_to_phys, page->order);
+		WARN_ON(__pkvm_hyp_donate_host(hyp_virt_to_pfn(p), 1 << page->order));
+		memset(page, 0, sizeof(struct hyp_page));
+	}
+
+	return 0;
 }

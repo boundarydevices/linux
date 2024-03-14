@@ -665,7 +665,7 @@ static int init_pkvm_hyp_vcpu_sve(struct pkvm_hyp_vcpu *hyp_vcpu, struct kvm_vcp
 	if (pkvm_hyp_vcpu_is_protected(hyp_vcpu)) {
 		struct pkvm_hyp_vm *hyp_vm = pkvm_hyp_vcpu_to_hyp_vm(hyp_vcpu);
 
-		sve_state = hyp_alloc_account(sve_state_size,
+		sve_state = hyp_alloc_account(PAGE_ALIGN(sve_state_size),
 					      hyp_vm->host_kvm);
 		if (!sve_state) {
 			ret = hyp_alloc_errno();
@@ -1020,8 +1020,11 @@ int __pkvm_finalize_teardown_vm(pkvm_handle_t handle)
 
 		vcpu_mc = &hyp_vcpu->vcpu.arch.stage2_mc;
 		while (vcpu_mc->nr_pages) {
-			addr = pop_hyp_memcache(vcpu_mc, hyp_phys_to_virt);
-			push_hyp_memcache(mc, addr, hyp_virt_to_phys);
+			unsigned long order;
+			addr = pop_hyp_memcache(vcpu_mc, hyp_phys_to_virt, &order);
+			/* We don't expect vcpu to have higher order pages. */
+			WARN_ON(order);
+			push_hyp_memcache(mc, addr, hyp_virt_to_phys, order);
 			unmap_donated_memory_noclear(addr, PAGE_SIZE);
 		}
 
@@ -1421,30 +1424,6 @@ static bool pkvm_handle_psci(struct pkvm_hyp_vcpu *hyp_vcpu)
 	return pvm_psci_not_supported(hyp_vcpu);
 }
 
-static u64 __pkvm_memshare_page_req(struct pkvm_hyp_vcpu *hyp_vcpu, u64 ipa)
-{
-	struct kvm_vcpu *vcpu = &hyp_vcpu->vcpu;
-	u64 elr;
-
-	/* Fake up a data abort (Level 3 translation fault on write) */
-	vcpu->arch.fault.esr_el2 = (u32)ESR_ELx_EC_DABT_LOW << ESR_ELx_EC_SHIFT |
-				   ESR_ELx_WNR | ESR_ELx_FSC_FAULT |
-				   FIELD_PREP(ESR_ELx_FSC_LEVEL, 3);
-
-	/* Shuffle the IPA around into the HPFAR */
-	vcpu->arch.fault.hpfar_el2 = (ipa >> 8) & HPFAR_MASK;
-
-	/* This is a virtual address. 0's good. Let's go with 0. */
-	vcpu->arch.fault.far_el2 = 0;
-
-	/* Rewind the ELR so we return to the HVC once the IPA is mapped */
-	elr = read_sysreg(elr_el2);
-	elr -= 4;
-	write_sysreg(elr, elr_el2);
-
-	return ARM_EXCEPTION_TRAP;
-}
-
 static int pkvm_handle_empty_memcache(struct pkvm_hyp_vcpu *hyp_vcpu,
 				      u64 *exit_code)
 {
@@ -1466,27 +1445,43 @@ static int pkvm_handle_empty_memcache(struct pkvm_hyp_vcpu *hyp_vcpu,
 
 static bool pkvm_memshare_call(struct pkvm_hyp_vcpu *hyp_vcpu, u64 *exit_code)
 {
+	struct pkvm_hyp_vm *hyp_vm = pkvm_hyp_vcpu_to_hyp_vm(hyp_vcpu);
 	struct kvm_vcpu *vcpu = &hyp_vcpu->vcpu;
 	u64 ipa = smccc_get_arg1(vcpu);
-	u64 arg2 = smccc_get_arg2(vcpu);
+	u64 nr_pages = smccc_get_arg2(vcpu);
 	u64 arg3 = smccc_get_arg3(vcpu);
+	struct kvm_hyp_req *req;
+	u64 nr_shared;
 	int err;
 
-	if (arg2 || arg3)
+	/* Legacy guests have arg2 set to 0 */
+	if (nr_pages == 0)
+		nr_pages = 1;
+
+	if (arg3 || !PAGE_ALIGNED(ipa))
 		goto out_guest_err;
 
-	err = __pkvm_guest_share_host(hyp_vcpu, ipa);
+	err = __pkvm_guest_share_host(hyp_vcpu, ipa, nr_pages, &nr_shared);
 	switch (err) {
 	case 0:
-		/* Success! Now tell the host. */
-		goto out_host;
+		atomic64_add(nr_shared * PAGE_SIZE,
+			     &hyp_vm->host_kvm->stat.protected_shared_mem);
+		smccc_set_retval(vcpu, SMCCC_RET_SUCCESS, nr_shared, 0, 0);
+
+		return true;
 	case -EFAULT:
+		req = pkvm_hyp_req_reserve(hyp_vcpu, KVM_HYP_REQ_TYPE_MAP);
+		if (!req)
+			goto out_guest_err;
+
+		req->map.guest_ipa = ipa;
+		req->map.size = nr_pages << PAGE_SHIFT;
+
 		/*
-		 * Convert the exception into a data abort so that the page
-		 * being shared is mapped into the guest next time.
+		 * We're about to go back to the host... let's not waste time
+		 * and check for the memcache while at it.
 		 */
-		*exit_code = __pkvm_memshare_page_req(hyp_vcpu, ipa);
-		goto out_host;
+		fallthrough;
 	case -ENOMEM:
 		if (pkvm_handle_empty_memcache(hyp_vcpu, exit_code))
 			goto out_guest_err;
@@ -1504,40 +1499,86 @@ out_host:
 
 static bool pkvm_memunshare_call(struct pkvm_hyp_vcpu *hyp_vcpu)
 {
+	struct pkvm_hyp_vm *hyp_vm = pkvm_hyp_vcpu_to_hyp_vm(hyp_vcpu);
 	struct kvm_vcpu *vcpu = &hyp_vcpu->vcpu;
 	u64 ipa = smccc_get_arg1(vcpu);
-	u64 arg2 = smccc_get_arg2(vcpu);
+	u64 nr_pages = smccc_get_arg2(vcpu);
 	u64 arg3 = smccc_get_arg3(vcpu);
+	u64 nr_unshared;
 	int err;
 
-	if (arg2 || arg3)
+	/* Legacy guests have arg2 set to 0 */
+	if (nr_pages == 0)
+		nr_pages = 1;
+
+	if (arg3 || !PAGE_ALIGNED(ipa))
 		goto out_guest_err;
 
-	err = __pkvm_guest_unshare_host(hyp_vcpu, ipa);
+	err = __pkvm_guest_unshare_host(hyp_vcpu, ipa, nr_pages, &nr_unshared);
 	if (err)
 		goto out_guest_err;
 
-	return false;
+	atomic64_add(nr_unshared * PAGE_SIZE,
+		     &hyp_vm->host_kvm->stat.protected_shared_mem);
+	smccc_set_retval(vcpu, SMCCC_RET_SUCCESS, nr_unshared, 0, 0);
+	return true;
 
 out_guest_err:
 	smccc_set_retval(vcpu, SMCCC_RET_INVALID_PARAMETER, 0, 0, 0);
 	return true;
 }
 
-static bool pkvm_install_ioguard_page(struct pkvm_hyp_vcpu *hyp_vcpu, u64 *exit_code)
+static bool pkvm_install_ioguard_page(struct pkvm_hyp_vcpu *hyp_vcpu,
+				      u64 *exit_code)
 {
-	u64 retval = SMCCC_RET_SUCCESS;
 	u64 ipa = smccc_get_arg1(&hyp_vcpu->vcpu);
-	int ret;
+	u64 nr_pages = smccc_get_arg2(&hyp_vcpu->vcpu);
+	u32 fn = smccc_get_function(&hyp_vcpu->vcpu);
+	u64 retval = SMCCC_RET_SUCCESS;
+	u64 nr_guarded = 0;
+	int ret = -EINVAL;
 
-	ret = __pkvm_install_ioguard_page(hyp_vcpu, ipa);
+	/* Legacy non-range version, arg2|arg3 might be garbage */
+	if (fn == ARM_SMCCC_VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID)
+		nr_pages = 1;
+	else if (smccc_get_arg3(&hyp_vcpu->vcpu))
+		goto out_guest_err;
+
+	ret = __pkvm_install_ioguard_page(hyp_vcpu, ipa, nr_pages, &nr_guarded);
 	if (ret == -ENOMEM && !pkvm_handle_empty_memcache(hyp_vcpu, exit_code))
 		return false;
 
+out_guest_err:
 	if (ret)
 		retval = SMCCC_RET_INVALID_PARAMETER;
 
-	smccc_set_retval(&hyp_vcpu->vcpu, retval, 0, 0, 0);
+	smccc_set_retval(&hyp_vcpu->vcpu, retval, nr_guarded, 0, 0);
+	return true;
+}
+
+static bool pkvm_remove_ioguard_page(struct pkvm_hyp_vcpu *hyp_vcpu,
+				     u64 *exit_code)
+{
+	u64 ipa = smccc_get_arg1(&hyp_vcpu->vcpu);
+	u64 nr_pages = smccc_get_arg2(&hyp_vcpu->vcpu);
+	u32 fn = smccc_get_function(&hyp_vcpu->vcpu);
+	u64 retval = SMCCC_RET_SUCCESS;
+	u64 nr_unguarded = 0;
+	int ret = -EINVAL;
+
+	/* Legacy non-range version, arg2|arg3 might be garbage */
+	if (fn == ARM_SMCCC_VENDOR_HYP_KVM_MMIO_GUARD_UNMAP_FUNC_ID)
+		nr_pages = 1;
+	else if (smccc_get_arg3(&hyp_vcpu->vcpu))
+		goto out_guest_err;
+
+	ret = __pkvm_remove_ioguard_page(hyp_vcpu, ipa, nr_pages, &nr_unguarded);
+
+out_guest_err:
+	if (ret)
+		retval = SMCCC_RET_INVALID_PARAMETER;
+
+	smccc_set_retval(&hyp_vcpu->vcpu, retval, nr_unguarded, 0, 0);
 	return true;
 }
 
@@ -1551,7 +1592,7 @@ static bool pkvm_meminfo_call(struct pkvm_hyp_vcpu *hyp_vcpu)
 	if (arg1 || arg2 || arg3)
 		goto out_guest_err;
 
-	smccc_set_retval(vcpu, PAGE_SIZE, 0, 0, 0);
+	smccc_set_retval(vcpu, PAGE_SIZE, KVM_FUNC_HAS_RANGE, 0, 0);
 	return true;
 
 out_guest_err:
@@ -1652,6 +1693,8 @@ bool kvm_handle_pvm_hvc64(struct kvm_vcpu *vcpu, u64 *exit_code)
 		val[0] |= BIT(ARM_SMCCC_KVM_FUNC_MMIO_GUARD_ENROLL);
 		val[0] |= BIT(ARM_SMCCC_KVM_FUNC_MMIO_GUARD_MAP);
 		val[0] |= BIT(ARM_SMCCC_KVM_FUNC_MMIO_GUARD_UNMAP);
+		val[0] |= BIT(ARM_SMCCC_KVM_FUNC_MMIO_RGUARD_MAP);
+		val[0] |= BIT(ARM_SMCCC_KVM_FUNC_MMIO_RGUARD_UNMAP);
 		val[0] |= BIT(ARM_SMCCC_KVM_FUNC_MEM_RELINQUISH);
 		break;
 	case ARM_SMCCC_VENDOR_HYP_KVM_MMIO_GUARD_ENROLL_FUNC_ID:
@@ -1659,13 +1702,11 @@ bool kvm_handle_pvm_hvc64(struct kvm_vcpu *vcpu, u64 *exit_code)
 		val[0] = SMCCC_RET_SUCCESS;
 		break;
 	case ARM_SMCCC_VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID:
+	case ARM_SMCCC_VENDOR_HYP_KVM_MMIO_RGUARD_MAP_FUNC_ID:
 		return pkvm_install_ioguard_page(hyp_vcpu, exit_code);
 	case ARM_SMCCC_VENDOR_HYP_KVM_MMIO_GUARD_UNMAP_FUNC_ID:
-		if (__pkvm_remove_ioguard_page(hyp_vcpu, vcpu_get_reg(vcpu, 1)))
-			val[0] = SMCCC_RET_INVALID_PARAMETER;
-		else
-			val[0] = SMCCC_RET_SUCCESS;
-		break;
+	case ARM_SMCCC_VENDOR_HYP_KVM_MMIO_RGUARD_UNMAP_FUNC_ID:
+		return pkvm_remove_ioguard_page(hyp_vcpu, exit_code);
 	case ARM_SMCCC_VENDOR_HYP_KVM_MMIO_GUARD_INFO_FUNC_ID:
 	case ARM_SMCCC_VENDOR_HYP_KVM_HYP_MEMINFO_FUNC_ID:
 		return pkvm_meminfo_call(hyp_vcpu);

@@ -94,7 +94,7 @@
   cfg80211_disconnected
   cfg80211_external_auth_request
   cfg80211_find_elem_match
-  cfg80211_get_bss
+  __cfg80211_get_bss
   cfg80211_ibss_joined
   cfg80211_inform_bss_frame_data
   cfg80211_mgmt_tx_status_ext
@@ -1162,6 +1162,8 @@
   of_reserved_mem_lookup
   of_root
   of_usb_host_tpl_support
+  page_pinner_inited
+  __page_pinner_put_page
   panic
   panic_notifier_list
   param_array_ops
@@ -1969,6 +1971,8 @@
   wiphy_unregister
   woken_wake_function
   work_busy
+  ww_mutex_lock
+  ww_mutex_unlock
   __xfrm_state_destroy
   xfrm_state_lookup_byspi
   xfrm_stateonly_find

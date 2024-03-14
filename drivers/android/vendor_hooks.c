@@ -7,6 +7,7 @@
  */
 
 #include <linux/iova.h>
+#include <linux/futex.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/hooks/vendor_hooks.h>
@@ -31,6 +32,7 @@
 #include <trace/hooks/cpuidle_psci.h>
 #include <trace/hooks/vmscan.h>
 #include <trace/hooks/avc.h>
+#include <trace/hooks/creds.h>
 #include <trace/hooks/selinux.h>
 #include <trace/hooks/syscall_check.h>
 #include <trace/hooks/gic.h>
@@ -54,6 +56,7 @@
 #include <trace/hooks/bug.h>
 #include <trace/hooks/softlockup.h>
 #include <trace/hooks/power.h>
+#include <trace/hooks/gzvm.h>
 
 /*
  * Export tracepoints that act as a bare tracehook (ie: have no trace event
@@ -63,6 +66,9 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mutex_wait_start);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mutex_wait_finish);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rtmutex_wait_start);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rtmutex_wait_finish);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mutex_opt_spin_start);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mutex_opt_spin_finish);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mutex_can_spin_on_owner);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_read_wait_start);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_read_wait_finish);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_write_wait_start);
@@ -71,6 +77,9 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_arch_set_freq_scale);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_binder_transaction_init);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_binder_set_priority);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_binder_restore_priority);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_opt_spin_start);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_opt_spin_finish);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_can_spin_on_owner);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_cpu_idle_enter);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_cpu_idle_exit);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mpam_set);
@@ -124,6 +133,10 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_selinux_avc_node_replace);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_selinux_avc_lookup);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_selinux_is_initialized);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_shmem_get_folio);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_commit_creds);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_exit_creds);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_override_creds);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_revert_creds);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_check_mmap_file);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_check_file_open);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_disable_thermal_cooling_stats);
@@ -159,6 +172,13 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_wake);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_write_finished);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_alter_rwsem_list_add);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_alter_futex_plist_add);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_futex_sleep_start);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_do_futex);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_futex_wait_start);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_futex_wait_end);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_futex_wake_traverse_plist);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_futex_wake_this);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_futex_wake_up_q_finish);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_ctl_dirty_rate);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_mmc_resume);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_mmc_suspend);
@@ -175,3 +195,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_do_el1_undef);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_do_el1_bti);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_do_el1_fpac);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_panic_unhandled);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_gzvm_vcpu_exit_reason);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_alter_mutex_list_add);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mutex_unlock_slowpath);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_binder_alloc_new_buf_locked);

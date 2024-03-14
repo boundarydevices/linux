@@ -82,6 +82,9 @@ u32 __attribute_const__ kvm_target_cpu(void);
 int kvm_reset_vcpu(struct kvm_vcpu *vcpu);
 void kvm_arm_vcpu_destroy(struct kvm_vcpu *vcpu);
 
+/* Head holds page head and it's order. */
+#define HYP_MC_PTR_MASK			GENMASK_ULL(63, PAGE_SHIFT)
+#define HYP_MC_ORDER_MASK		GENMASK_ULL(PAGE_SHIFT - 1, 0)
 struct kvm_hyp_memcache {
 	phys_addr_t head;
 	unsigned long nr_pages;
@@ -90,20 +93,25 @@ struct kvm_hyp_memcache {
 
 static inline void push_hyp_memcache(struct kvm_hyp_memcache *mc,
 				     phys_addr_t *p,
-				     phys_addr_t (*to_pa)(void *virt))
+				     phys_addr_t (*to_pa)(void *virt),
+				     unsigned long order)
 {
 	*p = mc->head;
-	mc->head = to_pa(p);
+	mc->head = FIELD_PREP(HYP_MC_PTR_MASK, to_pa(p)) |
+		   FIELD_PREP(HYP_MC_ORDER_MASK, order);
 	mc->nr_pages++;
 }
 
 static inline void *pop_hyp_memcache(struct kvm_hyp_memcache *mc,
-				     void *(*to_va)(phys_addr_t phys))
+				     void *(*to_va)(phys_addr_t phys),
+				     unsigned long *order)
 {
-	phys_addr_t *p = to_va(mc->head);
+	phys_addr_t *p = to_va(FIELD_GET(HYP_MC_PTR_MASK, mc->head));
 
 	if (!mc->nr_pages)
 		return NULL;
+
+	*order = FIELD_GET(HYP_MC_ORDER_MASK, mc->head);
 
 	mc->head = *p;
 	mc->nr_pages--;
@@ -113,35 +121,41 @@ static inline void *pop_hyp_memcache(struct kvm_hyp_memcache *mc,
 
 static inline int __topup_hyp_memcache(struct kvm_hyp_memcache *mc,
 				       unsigned long min_pages,
-				       void *(*alloc_fn)(void *arg),
+				       void *(*alloc_fn)(void *arg, unsigned long order),
 				       phys_addr_t (*to_pa)(void *virt),
-				       void *arg)
+				       void *arg,
+				       unsigned long order)
 {
 	while (mc->nr_pages < min_pages) {
-		phys_addr_t *p = alloc_fn(arg);
+		phys_addr_t *p = alloc_fn(arg, order);
 
 		if (!p)
 			return -ENOMEM;
-		push_hyp_memcache(mc, p, to_pa);
+		push_hyp_memcache(mc, p, to_pa, order);
 	}
 
 	return 0;
 }
 
 static inline void __free_hyp_memcache(struct kvm_hyp_memcache *mc,
-				       void (*free_fn)(void *virt, void *arg),
+				       void (*free_fn)(void *virt, void *arg, unsigned long order),
 				       void *(*to_va)(phys_addr_t phys),
 				       void *arg)
 {
-	while (mc->nr_pages)
-		free_fn(pop_hyp_memcache(mc, to_va), arg);
+	unsigned long order;
+	void *p;
+
+	while (mc->nr_pages) {
+		p = pop_hyp_memcache(mc, to_va, &order);
+		free_fn(p, arg, order);
+	}
 }
 
 #define HYP_MEMCACHE_ACCOUNT_KMEMCG BIT(1)
 #define HYP_MEMCACHE_ACCOUNT_STAGE2 BIT(2)
 
 void free_hyp_memcache(struct kvm_hyp_memcache *mc);
-int topup_hyp_memcache(struct kvm_hyp_memcache *mc, unsigned long min_pages);
+int topup_hyp_memcache(struct kvm_hyp_memcache *mc, unsigned long min_pages, unsigned long order);
 
 static inline void init_hyp_memcache(struct kvm_hyp_memcache *mc)
 {
@@ -483,6 +497,12 @@ extern s64 kvm_nvhe_sym(hyp_physvirt_offset);
 
 extern u64 kvm_nvhe_sym(hyp_cpu_logical_map)[NR_CPUS];
 #define hyp_cpu_logical_map CHOOSE_NVHE_SYM(hyp_cpu_logical_map)
+
+struct kvm_iommu_driver {
+	int (*init_driver)(void);
+	void (*remove_driver)(void);
+	pkvm_handle_t (*get_iommu_id)(struct device *dev);
+};
 
 struct vcpu_reset_state {
 	unsigned long	pc;
@@ -1047,7 +1067,18 @@ void kvm_arm_resume_guest(struct kvm *kvm);
 #define vcpu_has_run_once(vcpu)	!!rcu_access_pointer((vcpu)->pid)
 
 #ifndef __KVM_NVHE_HYPERVISOR__
-#define kvm_call_hyp_nvhe(f, ...)						\
+#define kvm_call_hyp_nvhe_smccc(f, ...)					\
+	({								\
+		struct arm_smccc_res res;				\
+									\
+		arm_smccc_1_1_hvc(KVM_HOST_SMCCC_FUNC(f),		\
+				  ##__VA_ARGS__, &res);			\
+		WARN_ON(res.a0 != SMCCC_RET_SUCCESS);			\
+									\
+		res;							\
+	})
+
+#define kvm_call_hyp_nvhe(f, ...)					\
 	({								\
 		struct arm_smccc_res res;				\
 									\
@@ -1284,5 +1315,26 @@ static inline void kvm_hyp_reserve(void) { }
 
 void kvm_arm_vcpu_power_off(struct kvm_vcpu *vcpu);
 bool kvm_arm_vcpu_stopped(struct kvm_vcpu *vcpu);
+
+int kvm_iommu_init_driver(void);
+void kvm_iommu_remove_driver(void);
+
+int pkvm_iommu_suspend(struct device *dev);
+int pkvm_iommu_resume(struct device *dev);
+
+struct kvm_iommu_ops;
+
+int kvm_iommu_init_hyp(struct kvm_iommu_ops *hyp_ops,
+		       unsigned long init_arg);
+
+int kvm_iommu_register_driver(struct kvm_iommu_driver *kern_ops);
+
+/* Allocator interface IDs. */
+#define HYP_ALLOC_MGT_HEAP_ID		0
+#define HYP_ALLOC_MGT_IOMMU_ID		1
+
+unsigned long __pkvm_reclaim_hyp_alloc_mgt(unsigned long nr_pages);
+int __pkvm_topup_hyp_alloc_mgt(unsigned long id, unsigned long nr_pages,
+			       unsigned long sz_alloc);
 
 #endif /* __ARM64_KVM_HOST_H__ */

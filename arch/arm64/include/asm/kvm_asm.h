@@ -72,6 +72,7 @@ enum __kvm_host_smccc_func {
 	__KVM_HOST_SMCCC_FUNC___pkvm_unmap_module_page,
 	__KVM_HOST_SMCCC_FUNC___pkvm_init_module,
 	__KVM_HOST_SMCCC_FUNC___pkvm_register_hcall,
+	__KVM_HOST_SMCCC_FUNC___pkvm_iommu_init,
 	__KVM_HOST_SMCCC_FUNC___pkvm_prot_finalize,
 
 	/* Hypercalls available after pKVM finalisation */
@@ -100,10 +101,17 @@ enum __kvm_host_smccc_func {
 	__KVM_HOST_SMCCC_FUNC___pkvm_enable_tracing,
 	__KVM_HOST_SMCCC_FUNC___pkvm_swap_reader_tracing,
 	__KVM_HOST_SMCCC_FUNC___pkvm_enable_event,
-	__KVM_HOST_SMCCC_FUNC___pkvm_hyp_alloc_refill,
-	__KVM_HOST_SMCCC_FUNC___pkvm_hyp_alloc_reclaimable,
-	__KVM_HOST_SMCCC_FUNC___pkvm_hyp_alloc_reclaim,
-
+	__KVM_HOST_SMCCC_FUNC___pkvm_hyp_alloc_mgt_refill,
+	__KVM_HOST_SMCCC_FUNC___pkvm_hyp_alloc_mgt_reclaimable,
+	__KVM_HOST_SMCCC_FUNC___pkvm_hyp_alloc_mgt_reclaim,
+	__KVM_HOST_SMCCC_FUNC___pkvm_host_iommu_alloc_domain,
+	__KVM_HOST_SMCCC_FUNC___pkvm_host_iommu_free_domain,
+	__KVM_HOST_SMCCC_FUNC___pkvm_host_iommu_attach_dev,
+	__KVM_HOST_SMCCC_FUNC___pkvm_host_iommu_detach_dev,
+	__KVM_HOST_SMCCC_FUNC___pkvm_host_iommu_map_pages,
+	__KVM_HOST_SMCCC_FUNC___pkvm_host_iommu_unmap_pages,
+	__KVM_HOST_SMCCC_FUNC___pkvm_host_iommu_iova_to_phys,
+	__KVM_HOST_SMCCC_FUNC___pkvm_host_hvc_pd,
 	/*
 	 * Start of the dynamically registered hypercalls. Start a bit
 	 * further, just in case some modules...

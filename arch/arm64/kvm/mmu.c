@@ -327,10 +327,11 @@ static struct rb_node *find_first_ppage_node(struct rb_root *root, u64 ipa)
 	return prev;
 }
 
-#define for_ppage_node_in_range(kvm, start, end, __node)				\
-	for (__node = find_first_ppage_node(&(kvm)->arch.pkvm.pinned_pages, start);	\
+#define for_ppage_node_in_range(kvm, start, end, __node, temp)				\
+	for (__node = find_first_ppage_node(&(kvm)->arch.pkvm.pinned_pages, start),	\
+	     temp = __node ? rb_next(__node) : NULL;					\
 	     __node;									\
-	     __node = rb_next(__node))							\
+	     __node = temp)								\
 		if (rb_entry(__node, struct kvm_pinned_page, node)->ipa < start)	\
 			continue;							\
 		else if (rb_entry(__node, struct kvm_pinned_page, node)->ipa >= end)	\
@@ -340,10 +341,10 @@ static struct rb_node *find_first_ppage_node(struct rb_root *root, u64 ipa)
 static int pkvm_unmap_range(struct kvm *kvm, u64 start, u64 end)
 {
 	struct kvm_pinned_page *ppage;
-	struct rb_node *node;
+	struct rb_node *node, *temp;
 	int ret;
 
-	for_ppage_node_in_range(kvm, start, end, node) {
+	for_ppage_node_in_range(kvm, start, end, node, temp) {
 		ppage = rb_entry(node, struct kvm_pinned_page, node);
 		ret = pkvm_unmap_guest(kvm, ppage);
 		if (ret)
@@ -1155,7 +1156,7 @@ void kvm_free_stage2_pgd(struct kvm_s2_mmu *mmu)
 	}
 }
 
-static void hyp_mc_free_fn(void *addr, void *flags)
+static void hyp_mc_free_fn(void *addr, void *flags, unsigned long order)
 {
 	if (!addr)
 		return;
@@ -1163,10 +1164,10 @@ static void hyp_mc_free_fn(void *addr, void *flags)
 	if ((unsigned long)flags & HYP_MEMCACHE_ACCOUNT_STAGE2)
 		kvm_account_pgtable_pages(addr, -1);
 
-	free_page((unsigned long)addr);
+	free_pages((unsigned long)addr, order);
 }
 
-static void *hyp_mc_alloc_fn(void *flags)
+static void *hyp_mc_alloc_fn(void *flags, unsigned long order)
 {
 	unsigned long __flags = (unsigned long)flags;
 	gfp_t gfp_mask;
@@ -1175,7 +1176,7 @@ static void *hyp_mc_alloc_fn(void *flags)
 	gfp_mask = __flags & HYP_MEMCACHE_ACCOUNT_KMEMCG ?
 		   GFP_KERNEL_ACCOUNT : GFP_KERNEL;
 
-	addr = (void *)__get_free_page(gfp_mask);
+	addr = (void *)__get_free_pages(gfp_mask, order);
 
 	if (addr && __flags & HYP_MEMCACHE_ACCOUNT_STAGE2)
 		kvm_account_pgtable_pages(addr, 1);
@@ -1192,16 +1193,21 @@ void free_hyp_memcache(struct kvm_hyp_memcache *mc)
 				    kvm_host_va, (void *)flags);
 }
 
-int topup_hyp_memcache(struct kvm_hyp_memcache *mc, unsigned long min_pages)
+int topup_hyp_memcache(struct kvm_hyp_memcache *mc, unsigned long min_pages,
+		       unsigned long order)
 {
 	unsigned long flags = mc->flags;
 
 	if (!is_protected_kvm_enabled())
 		return 0;
 
+	if (order > PAGE_SHIFT)
+		return -E2BIG;
+
 	return __topup_hyp_memcache(mc, min_pages, hyp_mc_alloc_fn,
-				    kvm_host_pa, (void *)flags);
+				    kvm_host_pa, (void *)flags, order);
 }
+EXPORT_SYMBOL(topup_hyp_memcache);
 
 /**
  * kvm_phys_addr_ioremap - map a device range to guest IPA
@@ -1252,10 +1258,10 @@ int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
 static int pkvm_wp_range(struct kvm *kvm, u64 start, u64 end)
 {
 	struct kvm_pinned_page *ppage;
-	struct rb_node *node;
+	struct rb_node *node, *temp;
 	int ret;
 
-	for_ppage_node_in_range(kvm, start, end, node) {
+	for_ppage_node_in_range(kvm, start, end, node, temp) {
 		ppage = rb_entry(node, struct kvm_pinned_page, node);
 		ret = kvm_call_hyp_nvhe(__pkvm_wrprotect,
 					kvm->arch.pkvm.handle,
@@ -1599,16 +1605,42 @@ static int pkvm_host_map_guest(u64 pfn, u64 gfn, enum kvm_pgtable_prot prot)
 	return (ret == -EPERM) ? -EAGAIN : ret;
 }
 
+#define node_ppage(__node) \
+	(container_of(__node, struct kvm_pinned_page, node))
+
+static int cmp_ppage_ipa(const void *key, const struct rb_node *node)
+{
+	return (s64)key - (s64)node_ppage(node)->ipa;
+}
+
 static int cmp_ppages(struct rb_node *node, const struct rb_node *parent)
 {
-	struct kvm_pinned_page *a = container_of(node, struct kvm_pinned_page, node);
-	struct kvm_pinned_page *b = container_of(parent, struct kvm_pinned_page, node);
+	return cmp_ppage_ipa((void *)(node_ppage(node))->ipa, parent);
+}
 
-	if (a->ipa < b->ipa)
-		return -1;
-	if (a->ipa > b->ipa)
-		return 1;
-	return 0;
+static struct kvm_pinned_page *
+find_ppage_or_above(struct kvm *kvm, phys_addr_t ipa)
+{
+	struct rb_node *node = kvm->arch.pkvm.pinned_pages.rb_node;
+
+	while (node) {
+		int ret = cmp_ppage_ipa((void *)ipa, node);
+
+		if (!ret) {
+			break;
+		} else if (ret > 0) {
+			node = node->rb_right;
+		} else if (ret < 0) {
+			if (!node->rb_left)
+				break;
+			node = node->rb_left;
+		}
+	}
+
+	if (!node)
+		return NULL;
+
+	return node_ppage(node);
 }
 
 static int insert_ppage(struct kvm *kvm, struct kvm_pinned_page *ppage)
@@ -1617,11 +1649,6 @@ static int insert_ppage(struct kvm *kvm, struct kvm_pinned_page *ppage)
 		return -EEXIST;
 
 	return 0;
-}
-
-static int cmp_ppage_ipa(const void *key, const struct rb_node *node)
-{
-	return (s64)key - (s64)container_of(node, struct kvm_pinned_page, node)->ipa;
 }
 
 static struct kvm_pinned_page *find_ppage(struct kvm *kvm, u64 ipa)
@@ -1665,7 +1692,7 @@ static int pkvm_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	u64 pfn;
 
 	nr_pages = hyp_memcache->nr_pages;
-	ret = topup_hyp_memcache(hyp_memcache, kvm_mmu_cache_min_pages(kvm));
+	ret = topup_hyp_memcache(hyp_memcache, kvm_mmu_cache_min_pages(kvm), 0);
 	if (ret)
 		return -ENOMEM;
 
@@ -1736,6 +1763,64 @@ free_ppage:
 	kfree(ppage);
 
 	return ret;
+}
+
+int pkvm_mem_abort_range(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa, size_t size)
+{
+	phys_addr_t ipa_end = fault_ipa + size - 1;
+	struct kvm_pinned_page *ppage;
+	int err = 0, idx;
+
+	if (!PAGE_ALIGNED(size) || !PAGE_ALIGNED(fault_ipa))
+		return -EINVAL;
+
+	if (ipa_end >= BIT_ULL(get_kvm_ipa_limit()) ||
+	    ipa_end >= kvm_phys_size(vcpu->kvm) ||
+	    ipa_end <= fault_ipa)
+		return -EINVAL;
+
+	idx = srcu_read_lock(&vcpu->kvm->srcu);
+
+	read_lock(&vcpu->kvm->mmu_lock);
+	ppage = find_ppage_or_above(vcpu->kvm, fault_ipa);
+
+	while (size) {
+		if (ppage && ppage->ipa == fault_ipa) {
+			ppage = node_ppage(rb_next(&ppage->node));
+		} else {
+			gfn_t gfn = gpa_to_gfn(fault_ipa);
+			struct kvm_memory_slot *memslot;
+			unsigned long hva;
+			bool writable;
+
+			memslot = gfn_to_memslot(vcpu->kvm, gfn);
+			hva = gfn_to_hva_memslot_prot(memslot, gfn, &writable);
+			if (kvm_is_error_hva(hva) || !writable) {
+				err = -EINVAL;
+				goto end;
+			}
+
+			read_unlock(&vcpu->kvm->mmu_lock);
+			err = pkvm_mem_abort(vcpu, fault_ipa, hva);
+			read_lock(&vcpu->kvm->mmu_lock);
+			if (err)
+				goto end;
+
+			/*
+			 * We had to release the mmu_lock so let's update the
+			 * reference.
+			 */
+			ppage = find_ppage_or_above(vcpu->kvm, fault_ipa + PAGE_SIZE);
+		}
+
+		size = size_sub(size, PAGE_SIZE);
+		fault_ipa += PAGE_SIZE;
+	}
+end:
+	read_unlock(&vcpu->kvm->mmu_lock);
+	srcu_read_unlock(&vcpu->kvm->srcu, idx);
+
+	return err;
 }
 
 static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
