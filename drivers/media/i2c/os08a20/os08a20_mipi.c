@@ -104,6 +104,13 @@ struct os08a20_capture_properties {
 struct os08a20_ctrls {
 	struct v4l2_ctrl_handler handler;
 	struct v4l2_ctrl *link_freq;
+	struct v4l2_ctrl *hdr_mode;
+};
+
+/* align with enum sensor_hdr_mode_e */
+static const char * const os08a20_hdr_mode_menu[] = {
+	"NO HDR",		/* SENSOR_MODE_LINEAR */
+	"HDR Stitch",		/* SENSOR_MODE_HDR_STITCH */
 };
 
 struct os08a20 {
@@ -124,6 +131,7 @@ struct os08a20 {
 
 	struct v4l2_mbus_framefmt format;
 	struct vvcam_mode_info_s cur_mode;
+	enum sensor_hdr_mode_e hdr;
 	struct sensor_blc_s blc;
 	struct sensor_white_balance_s wb;
 	struct mutex lock; /* sensor lock */
@@ -762,7 +770,7 @@ static u32 os08a20_code2bpp(const u32 code)
 
 /* needs sensor lock */
 static int os08a20_update_current_mode(struct os08a20 *sensor, u32 w, u32 h,
-				       u32 bpp)
+				       u32 bpp, enum sensor_hdr_mode_e hdr)
 {
 	int ret = 0;
 	struct device *dev = &sensor->i2c_client->dev;
@@ -772,22 +780,42 @@ static int os08a20_update_current_mode(struct os08a20 *sensor, u32 w, u32 h,
 	for (i = 0 ; i < ARRAY_SIZE(pos08a20_mode_info); i++) {
 		if (pos08a20_mode_info[i].size.bounds_width == w &&
 		    pos08a20_mode_info[i].size.bounds_height == h &&
-		    pos08a20_mode_info[i].bit_width == bpp) {
+		    pos08a20_mode_info[i].bit_width == bpp &&
+		    pos08a20_mode_info[i].hdr_mode == hdr) {
 			mode = &pos08a20_mode_info[i];
 			break;
 		}
 	}
 	if (!mode) {
-		dev_err(dev, "%s:couldn't find fmt %d x %d, bpp=%d\n",
+		dev_warn(dev, "%s:couldn't find fmt %d x %d, bpp=%d, hdr=%d\n",
+			 __func__, w, h, bpp, hdr);
+		/* loosen-up, search any mode, no matter what hdr_mode */
+		for (i = 0 ; i < ARRAY_SIZE(pos08a20_mode_info); i++) {
+			if (pos08a20_mode_info[i].size.bounds_width == w &&
+			    pos08a20_mode_info[i].size.bounds_height == h &&
+			    pos08a20_mode_info[i].bit_width == bpp) {
+				mode = &pos08a20_mode_info[i];
+				break;
+			}
+		}
+	}
+	if (!mode) {
+		dev_err(dev, "%s:couldn't find fmt %d x %d, bpp=%d, hdr=any\n",
 			__func__, w, h, bpp);
 		ret = -EINVAL;
 		goto out;
 	}
-	memcpy(&sensor->cur_mode, mode, sizeof(struct vvcam_mode_info_s));
 
-	dev_info(dev, "%s:set sensor format %d x %d, bpp=%d\n",
+	memcpy(&sensor->cur_mode, mode, sizeof(struct vvcam_mode_info_s));
+	if (sensor->hdr != hdr) {
+		sensor->hdr = hdr;
+		/* Update controls to reflect new mode */
+		__v4l2_ctrl_s_ctrl(sensor->ctrls.hdr_mode, hdr);
+	}
+
+	dev_info(dev, "%s:set sensor format %d x %d, bpp=%d, hdr=%d\n",
 		 __func__, sensor->cur_mode.size.bounds_width,
-		 sensor->cur_mode.size.bounds_height, bpp);
+		 sensor->cur_mode.size.bounds_height, bpp, sensor->hdr);
 out:
 	return ret;
 }
@@ -824,7 +852,38 @@ static inline struct v4l2_subdev *ctrl_to_sd(struct v4l2_ctrl *ctrl)
 
 static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 {
-	return 0;
+	struct v4l2_subdev *sd = ctrl_to_sd(ctrl);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct os08a20 *sensor = client_to_os08a20(client);
+	int ret = 0;
+
+	/* s_ctrl holds sensor lock */
+	switch (ctrl->id) {
+	case V4L2_CID_HDR_SENSOR_MODE:
+		sensor->hdr = ctrl->val;
+		if (sensor->hdr == sensor->cur_mode.hdr_mode)
+			break;
+
+		/* update and apply current mode if hdr mode mismatches */
+		ret = os08a20_update_current_mode(sensor, sensor->cur_mode.size.bounds_width,
+						  sensor->cur_mode.size.bounds_height,
+						  sensor->cur_mode.bit_width,
+						  sensor->hdr);
+		if (ret) { /* don't panic, a saving S_FMT may come later */
+			ret = 0;
+			break;
+		}
+
+		/* in case s_ctrl comes after S_FMT, update sensor mode */
+		ret = os08a20_apply_current_mode(sensor);
+		/* TODO check if other controls will need to be updated */
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
 }
 
 static const struct v4l2_ctrl_ops os08a20_ctrl_ops = {
@@ -860,6 +919,10 @@ static int os08a20_init_controls(struct os08a20 *sensor)
 					ARRAY_SIZE(os08a20_csi2_link_freqs) - 1,
 					OS08A20_DEFAULT_LINK_FREQ,
 					os08a20_csi2_link_freqs);
+
+	ctrls->hdr_mode = v4l2_ctrl_new_std_menu_items(hdl, ops, V4L2_CID_HDR_SENSOR_MODE,
+				     ARRAY_SIZE(os08a20_hdr_mode_menu) - 1, 0,
+				     SENSOR_MODE_LINEAR, os08a20_hdr_mode_menu);
 
 	if (hdl->error) {
 		ret = hdl->error;
@@ -971,7 +1034,7 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	mutex_lock(&sensor->lock);
 	ret = os08a20_update_current_mode(sensor, fmt->format.width,
 					  fmt->format.height,
-					  bpp);
+					  bpp, sensor->hdr);
 
 	if (ret)
 		goto unlock;
@@ -1463,6 +1526,7 @@ static int os08a20_probe(struct i2c_client *client)
 
 	memcpy(&sensor->cur_mode, &pos08a20_mode_info[0],
 	       sizeof(struct vvcam_mode_info_s));
+	sensor->hdr = SENSOR_MODE_LINEAR;
 
 	mutex_init(&sensor->lock);
 	dev_info(dev, "%s camera mipi os08a20, is found\n", __func__);
