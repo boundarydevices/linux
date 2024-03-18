@@ -427,3 +427,5 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-revb4-powersave-non-rpmsg.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-revb4-powersave.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8ulp-watch.dtb imx8ulp-evk-lpd.dtb imx8ulp-evk-g1120b0mipi.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-iw612.dtb
+
+dtb-$(CONFIG_ARCH_MXC) += imx8ulp-nitrogen-som.dtb \
