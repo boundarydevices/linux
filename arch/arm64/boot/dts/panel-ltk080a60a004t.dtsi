@@ -1,0 +1,22 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	aliases {
+		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
+	};
+
+	mipi_cmds_ltk080a60a004t: mipi-cmds-ltk080a60a004t {
+		alias = <&mipi_cmds_ltk080a60a004t>;
+		delay-prepare = <100>;
+		delay-unprepare = <2>;
+		mipi-cmds-enable = /bits/ 8 <
+			DELAY(2)
+		>;
+		mipi-cmds-disable = /bits/ 8 <
+			DELAY(50)
+		>;
+		min-hs-clock-multiple = <8>;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
+	};
+};
