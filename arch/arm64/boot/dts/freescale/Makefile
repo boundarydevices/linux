@@ -427,3 +427,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8ulp-watch.dtb imx8ulp-evk-lpd.dtb imx8ulp-evk-g112
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-iw612.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8ulp-nitrogen-som.dtb imx8ulp-nitrogen-som-m33.dtb \
+			  imx8ulp-tag.dtb imx8ulp-tag-m33.dtb \
