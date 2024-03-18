@@ -53,34 +53,38 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
 
-			dry_ct_in1 {
-				label = "dry_ct_in1";
-				gpios = <&gpio4 15 GPIO_ACTIVE_LOW>;
-				linux,code = <KEY_FN_F1>;
-			};
-
-			temp1_warn {
-				label = "temp1_warn";
-				gpios = <&gpio4 17 GPIO_ACTIVE_LOW>;
-				linux,code = <KEY_FN_F2>;
-			};
-
 			5v_status {
 				label = "5v_status";
 				gpios = <&gpio4 18 GPIO_ACTIVE_HIGH>;
-				linux,code = <KEY_FN_F3>;
+				linux,code = <KEY_FN_F1>;
 			};
 
 			48v_status {
 				label = "48v_status";
 				gpios = <&gpio4 2 GPIO_ACTIVE_HIGH>;
+				linux,code = <KEY_FN_F2>;
+			};
+
+			ch1_input { /* dry_ct_in1 */
+				label = "ch1_input";
+				gpios = <&gpio4 15 GPIO_ACTIVE_LOW>;
 				linux,code = <KEY_FN_F4>;
 			};
 
-			48v_fault {
-				label = "48v_fault";
+			/* No ch1_16v_fault on this board (F5) */
+
+			ch1_48v_fault { /* 48v_fault */
+				label = "ch1_48v_fault";
 				gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
-				linux,code = <KEY_FN_F5>;
+				linux,code = <KEY_FN_F6>;
+			};
+
+			/* No ch2_input, ch2_16v_fault, ch2_48v_fault on this board */
+
+			temp1_warn {
+				label = "temp1_warn";
+				gpios = <&gpio4 17 GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_FN_F10>;
 			};
 	};
 
