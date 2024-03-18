@@ -182,6 +182,7 @@
 		regulator-name = "PCIE_WLAN_EN";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
+		vin-supply = <&reg_m2_pwr>;
 		gpio = <&i2c7_pcal6524 6 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		regulator-always-on;
@@ -211,7 +212,6 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = <&i2c7_pcal6524 20 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	reg_slot_pwr: regulator-slot-pwr {
