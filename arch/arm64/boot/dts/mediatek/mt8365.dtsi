@@ -30,6 +30,10 @@
 		dsi0 = &dsi0;
 		dpi0 = &dpi0;
 		lvds = &lvds;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
 	};
 
 	cluster0_opp: opp_table0 {
