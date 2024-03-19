@@ -32,7 +32,6 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
-#include <linux/spi/spi.h>
 
 #include <uapi/linux/media-bus-format.h>
 #include <video/display_timing.h>
@@ -116,7 +115,6 @@ struct cmds {
 struct interface_cmds {
 	struct cmds i2c;
 	struct cmds mipi;
-	struct cmds spi;
 };
 
 struct panel_common {
@@ -149,13 +147,9 @@ struct panel_common {
 	struct gpio_desc *gpd_display_enable;
 	struct gpio_desc *reset;
 	struct videomode vm;
-	struct spi_device *spi;
-	unsigned spi_max_frequency;
 	struct i2c_adapter *i2c;
 	unsigned i2c_max_frequency;
 	unsigned i2c_address;
-	unsigned char spi_9bit;
-	unsigned spi_bits;
 	struct interface_cmds cmds_init;
 	struct interface_cmds cmds_enable;
 	struct interface_cmds cmds_enable2;
@@ -171,151 +165,6 @@ static inline struct panel_common *to_panel_common(struct drm_panel *panel)
 	return container_of(panel, struct panel_common, base);
 }
 
-static int spi_send(struct panel_common *panel, int rx)
-{
-	struct mipi_dsi_device *dsi;
-	u8 *p = panel->tx_buf;
-	struct spi_transfer t;
-	struct spi_message m;
-	int ret;
-
-	if (!panel->spi || !panel->spi_bits)
-		return 0;
-	memset(&t, 0, sizeof(t));
-	t.speed_hz = panel->spi_max_frequency;
-	t.tx_buf = panel->tx_buf;
-	t.rx_buf = (rx) ? panel->rx_buf : NULL;
-	t.len = (panel->spi_bits + 7) >> 3;
-
-	panel->spi_bits = 0;
-	spi_message_init_with_transfers(&m, &t, 1);
-	ret = spi_sync(panel->spi, &m);
-	dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
-	if (ret) {
-		dev_err(&dsi->dev,
-			"spi(%d), (%d)%02x %02x %02x %02x %02x %02x\n",
-			ret, t.len, p[0], p[1], p[2], p[3], p[4], p[5]);
-	} else {
-		pr_debug("spi(%d), (%d)%02x %02x %02x %02x %02x %02x  "
-			"%02x %02x %02x %02x %02x %02x\n",
-			ret, t.len, p[0], p[1], p[2], p[3], p[4], p[5],
-			p[6], p[7], p[8], p[9], p[10], p[11]);
-	}
-	return ret;
-}
-
-static int store_9bit(struct panel_common *panel, const u8 *p, unsigned l)
-{
-	int i = 0;
-	u8 * buf = panel->tx_buf;
-	unsigned val = 0;
-	int bits = l * 9;
-	int v_bits;
-	int ret = 0;
-
-	i = panel->spi_bits;
-	if ((i + bits) > sizeof(panel->tx_buf) * 8) {
-		ret = spi_send(panel, 0);
-		i = 0;
-		if (bits > sizeof(panel->tx_buf) * 8) {
-			struct mipi_dsi_device *dsi;
-
-			dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
-			dev_err(&dsi->dev, "too many bytes (%d)\n", l);
-			return -EINVAL;
-		}
-	}
-
-	panel->spi_bits = i + bits;
-	buf += i >> 3;
-	v_bits = (i & 7);
-	if (v_bits) {
-		bits += v_bits;
-		val = *buf;
-		val >>= (8 - v_bits);
-	}
-	val = (val << 9);
-	v_bits += 9;
-	if (l) {
-		val |= *p++;
-		l--;
-	}
-	while (bits > 0) {
-		*buf++ = val >> (v_bits - 8);
-		bits -= 8;
-		v_bits -= 8;
-		if (v_bits < 8) {
-			val = (val << 9);
-			v_bits += 9;
-			if (l) {
-				val |= 0x100;
-				val |= *p++;
-				l--;
-			}
-		}
-	}
-	return ret;
-}
-
-static int store_high(struct panel_common *panel, int bits)
-{
-	int i;
-	u8 * buf = panel->tx_buf;
-	unsigned val = 0;
-	int v_bits;
-
-	i = panel->spi_bits;
-	if ((i + bits) > sizeof(panel->tx_buf) * 8) {
-		struct mipi_dsi_device *dsi;
-
-		dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
-		dev_err(&dsi->dev, "too many bits (%d)\n", bits);
-		return -EINVAL;
-	}
-
-	panel->spi_bits = i + bits;
-
-	buf += i >> 3;
-	v_bits = (i & 7);
-	if (v_bits) {
-		bits += v_bits;
-		val = *buf;
-		val >>= (8 - v_bits);
-	}
-
-	while (bits > 0) {
-		if (v_bits < 8) {
-			val = (val << 24) | 0xffffff;
-			v_bits += 24;
-		}
-		*buf++ = val >> (v_bits - 8);
-		bits -= 8;
-		v_bits -= 8;
-	}
-	return 0;
-}
-
-static void extract_data(u8 *dst, unsigned bytes, u8 * buf, unsigned start_bit)
-{
-	unsigned val = 0;
-	int v_bits;
-
-	buf += start_bit >> 3;
-	v_bits = (start_bit & 7);
-	if (v_bits) {
-		val = *buf++;
-		v_bits = 8 - v_bits;
-	}
-	while (bytes > 0) {
-		if (v_bits < 8) {
-			val = (val << 8) | *buf++;
-			v_bits += 8;
-		}
-		*dst++ = val >> (v_bits - 8);
-		v_bits -= 8;
-		bytes--;
-	}
-}
 int common_i2c_write(struct panel_common *panel, const u8 *tx, unsigned tx_len)
 {
 	u8 *buf = panel->tx_buf;
@@ -408,7 +257,6 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 	if (!cmd || !length)
 		return 0;
 
-	panel->spi_bits = 0;
 	dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
 	while (1) {
 		len = *cmd++;
@@ -461,18 +309,6 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 			if (!skip) {
 				if (type == TYPE_I2C) {
 					ret = common_i2c_write(panel, p, l);
-				} else if (type == TYPE_SPI) {
-					if (panel->spi_9bit) {
-						ret = store_9bit(panel, p, l);
-					} else {
-						if (l < sizeof(panel->tx_buf)) {
-							memcpy(panel->tx_buf, p, l);
-							panel->spi_bits = l * 8;
-							ret = spi_send(panel, 0);
-						} else {
-							ret = -EINVAL;
-						}
-					}
 				} else {
 					if (generic) {
 						ret = mipi_dsi_generic_write(dsi, p, l);
@@ -497,18 +333,6 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 			if (!skip) {
 				if (type == TYPE_I2C) {
 					ret = common_i2c_read(panel, cmd, match_index, data, len);
-				} else if (type == TYPE_SPI) {
-					if (panel->spi_9bit) {
-						spi_send(panel, 0);
-						store_9bit(panel, cmd, match_index);
-					} else {
-						memcpy(panel->tx_buf, cmd, match_index);
-						panel->spi_bits = match_index * 8;
-					}
-					l = panel->spi_bits;
-					store_high(panel, len * 8);
-					ret = spi_send(panel, 1);
-					extract_data(data, len, panel->rx_buf, l);
 				} else if (generic) {
 					ret =  mipi_dsi_generic_read(dsi, cmd, 2, data, len);
 					/* if an error is pending before BTA, an error report can happen */
@@ -539,8 +363,6 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 			l = len = len + match_index;
 		} else if (len == S_DELAY) {
 			if (!skip) {
-				if (type == TYPE_SPI)
-					spi_send(panel, 0);
 				msleep(cmd[0]);
 			}
 			len = 1;
@@ -694,8 +516,6 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 			break;
 		skip = 0;
 	}
-	if (!match && type == TYPE_SPI)
-		match = spi_send(panel, 0);
 	return match;
 };
 
@@ -707,8 +527,6 @@ static int send_all_cmd_lists(struct panel_common *panel, struct interface_cmds 
 		ret = send_cmd_list(panel,  &msc->i2c, TYPE_I2C, "i2c");
 	if (!ret)
 		ret = send_cmd_list(panel,  &msc->mipi, TYPE_MIPI, "mipi");
-	if (!ret && panel->spi)
-		ret = send_cmd_list(panel,  &msc->spi, TYPE_SPI, "spi");
 	return ret;
 }
 
@@ -1174,11 +992,9 @@ static void init_common(struct panel_common *p, struct device_node *np, struct p
 static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		struct mipi_dsi_device *dsi)
 {
-	struct device_node *spi_node;
 	struct device_node *np = dev->of_node;
 	struct device_node *i2c_node;
 	struct device_node *sn65_np;
-	struct spi_device *spi = NULL;
 	struct i2c_adapter *i2c = NULL;
 	struct panel_common *panel;
 	struct display_timing dt;
@@ -1292,19 +1108,6 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 				panel->i2c = i2c;
 			}
 
-			spi_node = of_parse_phandle(cmds_np, "spi", 0);
-			if (spi_node) {
-				spi = of_find_spi_device_by_node(spi_node);
-				of_node_put(spi_node);
-
-				if (!spi) {
-					pr_debug("%s:spi deferred\n", __func__);
-					err = -EPROBE_DEFER;
-					goto free_i2c;
-				}
-				panel->spi = spi;
-			}
-
 			if (i2c) {
 				check_for_cmds(cmds_np, "i2c-cmds-init",
 				       &panel->cmds_init.i2c);
@@ -1327,19 +1130,6 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 			check_for_cmds(cmds_np, "mipi-cmds-disable",
 				       &panel->cmds_disable.mipi);
 
-			if (spi) {
-				if (of_property_read_bool(cmds_np, "spi-9-bit"))
-					panel->spi_9bit = 1;
-				check_for_cmds(cmds_np, "spi-cmds-init",
-				       &panel->cmds_init.spi);
-				check_for_cmds(cmds_np, "spi-cmds-enable",
-				       &panel->cmds_enable.spi);
-				check_for_cmds(cmds_np, "spi-cmds-enable2",
-				       &panel->cmds_enable2.spi);
-				check_for_cmds(cmds_np, "spi-cmds-disable",
-				       &panel->cmds_disable.spi);
-				of_property_read_u32(cmds_np, "spi-max-frequency", &panel->spi_max_frequency);
-			}
 			init_common(panel, cmds_np, ds, dm, dsi);
 		}
 		pr_info("%s: delay %d %d, %d %d\n", __func__,
@@ -1365,21 +1155,21 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 	panel->supply = devm_regulator_get(dev, "power");
 	if (IS_ERR(panel->supply)) {
 		err = PTR_ERR(panel->supply);
-		goto free_spi;
+		goto free_i2c;
 	}
 
 	panel->reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(panel->reset)) {
 		err = PTR_ERR(panel->reset);
 		dev_err(dev, "failed to request reset: %d\n", err);
-		goto free_spi;
+		goto free_i2c;
 	}
 
 	panel->gpd_power = devm_gpiod_get_optional(dev, "power", GPIOD_OUT_LOW);
 	if (IS_ERR(panel->gpd_power)) {
 		err = PTR_ERR(panel->gpd_power);
 		dev_err(dev, "failed to request power: %d\n", err);
-		goto free_spi;
+		goto free_i2c;
 	}
 
 	panel->gpd_prepare_enable = devm_gpiod_get_optional(dev, "enable",
@@ -1388,7 +1178,7 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		err = PTR_ERR(panel->gpd_prepare_enable);
 		if (err != -EPROBE_DEFER)
 			dev_err(dev, "failed to request GPIO: %d\n", err);
-		goto free_spi;
+		goto free_i2c;
 	}
 
 	err = of_drm_get_panel_orientation(np, &panel->orientation);
@@ -1490,9 +1280,6 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 free_ddc:
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
-free_spi:
-	if (spi)
-		put_device(&spi->dev);
 free_i2c:
 	if (i2c)
 		put_device(&i2c->dev);
@@ -1510,8 +1297,6 @@ static int panel_common_remove(struct device *dev)
 
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
-	if (panel->spi)
-		put_device(&panel->spi->dev);
 	if (panel->i2c)
 		put_device(&panel->i2c->dev);
 
