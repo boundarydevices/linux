@@ -66,15 +66,13 @@ free:
 }
 
 /* MTCL : Country List Table for 6G band */
-static int
+static void
 mt792x_asar_acpi_read_mtcl(struct mt792x_dev *dev, u8 **table, u8 *version)
 {
-	int ret;
-
-	*version = ((ret = mt792x_acpi_read(dev, MT792x_ACPI_MTCL, table, NULL)) < 0)
-		   ? 1 : 2;
-
-	return ret;
+	if (mt792x_acpi_read(dev, MT792x_ACPI_MTCL, table, NULL) < 0)
+		*version = 1;
+	else
+		*version = 2;
 }
 
 /* MTDS : Dynamic SAR Power Table */
@@ -168,16 +166,16 @@ int mt792x_init_acpi_sar(struct mt792x_dev *dev)
 	if (!asar)
 		return -ENOMEM;
 
-	ret = mt792x_asar_acpi_read_mtcl(dev, (u8 **)&asar->countrylist, &asar->ver);
-	if (ret) {
-		devm_kfree(dev->mt76.dev, asar->countrylist);
-		asar->countrylist = NULL;
-	}
+	mt792x_asar_acpi_read_mtcl(dev, (u8 **)&asar->countrylist, &asar->ver);
 
+	/* MTDS is mandatory. Return error if table is invalid */
 	ret = mt792x_asar_acpi_read_mtds(dev, (u8 **)&asar->dyn, asar->ver);
 	if (ret) {
 		devm_kfree(dev->mt76.dev, asar->dyn);
-		asar->dyn = NULL;
+		devm_kfree(dev->mt76.dev, asar->countrylist);
+		devm_kfree(dev->mt76.dev, asar);
+
+		return ret;
 	}
 
 	/* MTGS is optional */
@@ -292,7 +290,7 @@ int mt792x_init_acpi_sar_power(struct mt792x_phy *phy, bool set_default)
 	const struct cfg80211_sar_capa *capa = phy->mt76->hw->wiphy->sar_capa;
 	int i;
 
-	if (!phy->acpisar || !((struct mt792x_acpi_sar *)phy->acpisar)->dyn)
+	if (!phy->acpisar)
 		return 0;
 
 	/* When ACPI SAR enabled in HW, we should apply rules for .frp
