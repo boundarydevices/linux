@@ -973,8 +973,6 @@ static void init_common(struct panel_common *p, struct device_node *np, struct p
 	of_property_read_u32(np, "delay-disable", &ds->delay.disable);
 	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
 	of_property_read_u32(np, "delay-before-backlight-on", &ds->delay.before_backlight_on);
-	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
-	of_property_read_u32(np, "mipi-dsi-multiple", &dm->mipi_dsi_multiple);
 	of_property_read_u32(np, "mipi-delay-between-cmds", &p->mipi_delay_between_cmds);
 	of_property_read_u32(np, "enable-high-duration-us", &p->enable_high_duration_us);
 	of_property_read_u32(np, "enable-low-duration-us", &p->enable_low_duration_us);
@@ -1380,8 +1378,6 @@ static int panel_common_dsi_probe(struct mipi_dsi_device *dsi)
 			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_BURST;
 		if (of_property_read_bool(np, "mode-video-hse"))
 			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HSE;
-		if (of_property_read_bool(np, "mode-video-mbc"))
-			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_MBC;
 		if (of_property_read_bool(np, "mode-video-sync-pulse"))
 			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_SYNC_PULSE;
 	}
