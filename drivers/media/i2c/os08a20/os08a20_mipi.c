@@ -1083,6 +1083,49 @@ static int os08a20_enum_mbus_code(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int os08a20_enum_frame_size(struct v4l2_subdev *sd,
+				   struct v4l2_subdev_state *sd_state,
+				   struct v4l2_subdev_frame_size_enum *fse)
+{
+	struct os08a20_framesize {
+		u32 w;
+		u32 h;
+	};
+	static const struct os08a20_framesize os08a20_frame_sizes_10bpp[] = {
+		{.w = 1920, .h = 1080},
+		{.w = 3840, .h = 2160},
+	};
+	static const struct os08a20_framesize os08a20_frame_sizes_12bpp[] = {
+		{.w = 3840, .h = 2160},
+	};
+	const struct os08a20_framesize *pos08a20_frame_sizes = NULL;
+
+	if (fse->pad != 0)
+		return -EINVAL;
+
+	switch (fse->code) {
+	case MEDIA_BUS_FMT_SBGGR10_1X10:
+		pos08a20_frame_sizes = os08a20_frame_sizes_10bpp;
+		if (fse->index >= ARRAY_SIZE(os08a20_frame_sizes_10bpp))
+			return -EINVAL;
+		break;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+		pos08a20_frame_sizes = os08a20_frame_sizes_12bpp;
+		if (fse->index >= ARRAY_SIZE(os08a20_frame_sizes_12bpp))
+			return -EINVAL;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	fse->min_width = pos08a20_frame_sizes[fse->index].w;
+	fse->max_width = fse->min_width;
+	fse->min_height = pos08a20_frame_sizes[fse->index].h;
+	fse->max_height = fse->min_height;
+
+	return 0;
+}
+
 static int os08a20_set_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_subdev_state *state,
 			   struct v4l2_subdev_format *fmt)
@@ -1268,10 +1311,11 @@ static const struct v4l2_subdev_video_ops os08a20_subdev_video_ops = {
 };
 
 static const struct v4l2_subdev_pad_ops os08a20_subdev_pad_ops = {
-	.enum_mbus_code = os08a20_enum_mbus_code,
-	.set_fmt = os08a20_set_fmt,
-	.get_fmt = os08a20_get_fmt,
-	.get_frame_desc	= os08a20_get_frame_desc,
+	.enum_mbus_code		= os08a20_enum_mbus_code,
+	.set_fmt		= os08a20_set_fmt,
+	.get_fmt		= os08a20_get_fmt,
+	.get_frame_desc		= os08a20_get_frame_desc,
+	.enum_frame_size	= os08a20_enum_frame_size,
 };
 
 static const struct v4l2_subdev_core_ops os08a20_subdev_core_ops = {
