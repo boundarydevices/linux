@@ -731,7 +731,8 @@ struct v4l2_subdev_krouting {
 /**
  * struct v4l2_subdev_state - Used for storing subdev state information.
  *
- * @lock: mutex for the state
+ * @_lock: default for 'lock'
+ * @lock: mutex for the state. May be replaced by the user.
  * @sd: the sub-device which the state is related to
  * @pads: &struct v4l2_subdev_pad_config array
  * @routing: routing table for the subdev
@@ -742,7 +743,8 @@ struct v4l2_subdev_krouting {
  * %V4L2_SUBDEV_FORMAT_ACTIVE it is safe to pass %NULL.
  */
 struct v4l2_subdev_state {
-	struct mutex lock;
+	struct mutex _lock;
+	struct mutex *lock;
 	struct v4l2_subdev *sd;
 	struct v4l2_subdev_pad_config *pads;
 	struct v4l2_subdev_krouting routing;
@@ -1037,6 +1039,7 @@ struct v4l2_subdev {
 	struct v4l2_async_notifier *notifier;
 	struct v4l2_async_notifier *subdev_notifier;
 	struct v4l2_subdev_platform_data *pdata;
+	struct mutex *state_lock;
 
 	/*
 	 * The fields below are private, and should only be accessed via

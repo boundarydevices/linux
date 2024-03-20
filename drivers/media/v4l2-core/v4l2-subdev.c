@@ -1322,7 +1322,12 @@ __v4l2_subdev_state_alloc(struct v4l2_subdev *sd, const char *lock_name,
 	if (!state)
 		return ERR_PTR(-ENOMEM);
 
-	__mutex_init(&state->lock, lock_name, lock_key);
+	__mutex_init(&state->_lock, lock_name, lock_key);
+
+	if (sd->state_lock)
+		state->lock = sd->state_lock;
+	else
+		state->lock = &state->_lock;
 
 	state->sd = sd;
 
@@ -1358,7 +1363,7 @@ void __v4l2_subdev_state_free(struct v4l2_subdev_state *state)
 	if (!state)
 		return;
 
-	mutex_destroy(&state->lock);
+	mutex_destroy(&state->_lock);
 
 	kvfree(state->routing.routes);
 	kvfree(state->stream_configs.configs);
@@ -1454,7 +1459,7 @@ EXPORT_SYMBOL_GPL(__v4l2_subdev_state_get_format);
 
 struct v4l2_subdev_state *v4l2_subdev_lock_active_state(struct v4l2_subdev *sd)
 {
-	mutex_lock(&sd->state->lock);
+	mutex_lock(&sd->state->_lock);
 
 	return sd->state;
 }
@@ -1462,13 +1467,13 @@ EXPORT_SYMBOL_GPL(v4l2_subdev_lock_active_state);
 
 void v4l2_subdev_lock_state(struct v4l2_subdev_state *state)
 {
-	mutex_lock(&state->lock);
+	mutex_lock(state->lock);
 }
 EXPORT_SYMBOL_GPL(v4l2_subdev_lock_state);
 
 void v4l2_subdev_unlock_state(struct v4l2_subdev_state *state)
 {
-	mutex_unlock(&state->lock);
+	mutex_unlock(state->lock);
 }
 EXPORT_SYMBOL_GPL(v4l2_subdev_unlock_state);
 
