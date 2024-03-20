@@ -2136,7 +2136,7 @@ static int thp7312_probe(struct i2c_client *client)
 	}
 
 	thp7312->sd.ctrl_handler = &thp7312->ctrl_handler;
-	thp7312->sd_state.lock = thp7312->ctrl_handler.lock;
+	thp7312->sd.state_lock = thp7312->ctrl_handler.lock;
 
 	ret = v4l2_subdev_init_finalize(&thp7312->sd);
 	if (ret < 0) {
