@@ -1776,7 +1776,6 @@
 					     <GIC_SPI 326 IRQ_TYPE_EDGE_RISING>;
 				interrupt-names = "eventq", "gerror", "priq", "cmdq-sync";
 				#iommu-cells = <1>;
-				status = "disabled";
 			};
 		};
 
@@ -2507,6 +2506,7 @@
 			#size-cells = <2>;
 			ranges;
 			power-domains = <&scmi_devpd IMX95_PD_HSIO_TOP>;
+			dma-ranges = <0x0 0x0 0x0 0x0 0x10 0x0>;
 			status = "disabled";
 
 			usb3_dwc3: usb@4c100000 {
@@ -2523,6 +2523,7 @@
 				snps,parkmode-disable-ss-quirk;
 				snps,tx-max-burst = /bits/ 8 <4>;
 				snps,tx-thr-num-pkt = /bits/ 8 <1>;
+				iommus = <&smmu 0xe>;
 			};
 		};
 
@@ -2537,6 +2538,7 @@
 			power-domains = <&scmi_devpd IMX95_PD_HSIO_TOP>;
 			phys = <&usbphynop>;
 			fsl,usbmisc = <&usbmisc 0>;
+			iommus = <&smmu 0xf>;
 			status = "disabled";
 		};
 
@@ -2558,8 +2560,8 @@
 			device_type = "pci";
 			linux,pci-domain = <0>;
 			msi-parent = <&its>;
-			msi-map = <0x0 &its 0x19 0x1>,
-				  <0x100  &its 0x20 0x8>;
+			msi-map = <0x0 &its 0x10 0x1>,
+				  <0x100 &its 0x11 0x7>;
 			msi-map-mask = <0x1ff>; /* Suppose only 1 physic device connect */
 			bus-range = <0x00 0xff>;
 			ranges = <0x81000000 0x0 0x00000000 0x0 0x6ff00000 0 0x00100000>,
@@ -2590,11 +2592,10 @@
 			ctrl-ssr = <&serdes0_ssr>;
 			power-domains = <&scmi_devpd IMX95_PD_HSIO_TOP>;
 			power-domain-names = "pd_pcie";
-			/* 0x30~0x37 stream id for pci0 */
-			/*
-			 * iommu-map = <0x000 &apps_smmu 0x30 0x1>,
-			 * <0x100 &apps_smmu 0x31 0x1>;
-			 */
+			/* 0x10~0x17 stream id for pci0 */
+			iommu-map = <0x000 &smmu 0x10 0x1>,
+				    <0x100 &smmu 0x11 0x7>;
+			iommu-map-mask = <0x1ff>;
 			status = "disabled";
 		};
 
@@ -2642,11 +2643,10 @@
 			ctrl-ssr = <&serdes1_ssr>;
 			power-domains = <&scmi_devpd IMX95_PD_HSIO_TOP>;
 			power-domain-names = "pd_pcie";
-			/* 0x38~0x3F stream id for pci1 */
-			/*
-			 * iommu-map = <0x000 &apps_smmu 0x38 0x1>,
-			 * <0x100 &apps_smmu 0x39 0x1>;
-			 */
+			/* 0x18~0x1F stream id for pci1 */
+			iommu-map = <0x000 &smmu 0x18 0x1>,
+				    <0x100 &smmu 0x19 0x7>;
+			iommu-map-mask = <0x1ff>;
 			status = "disabled";
 		};
 
