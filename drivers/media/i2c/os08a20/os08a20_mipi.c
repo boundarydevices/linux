@@ -1070,15 +1070,15 @@ static int os08a20_enum_mbus_code(struct v4l2_subdev *sd,
 				  struct v4l2_subdev_state *state,
 				  struct v4l2_subdev_mbus_code_enum *code)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct os08a20 *sensor = client_to_os08a20(client);
+	static const u32 os08a20_mbus_codes[2] = {
+		MEDIA_BUS_FMT_SBGGR10_1X10,
+		MEDIA_BUS_FMT_SBGGR12_1X12,
+	};
 
-	u32 cur_code = MEDIA_BUS_FMT_SBGGR12_1X12;
-
-	if (code->index > 0)
+	if (code->index >= ARRAY_SIZE(os08a20_mbus_codes))
 		return -EINVAL;
-	os08a20_get_format_code(sensor, &cur_code);
-	code->code = cur_code;
+
+	code->code = os08a20_mbus_codes[code->index];
 
 	return 0;
 }
