@@ -318,6 +318,34 @@ static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 		pck->ctrl_cam0_order1 = 1;
 		pck->ctrl_cam0_order2 = 3;
 		break;
+	case V4L2_PIX_FMT_BGRX32:
+		pck->ctrl_cam0_type = 1;
+		pck->ch12_ctrl_cam0_subsample = 0;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 2;
+		pck->ctrl_cam0_order1 = 1;
+		pck->ctrl_cam0_order2 = 0;
+		/* add 0-padding */
+		pck->ctrl_cam0_a0s = 8;
+		break;
+	case V4L2_PIX_FMT_RGBX32:
+		pck->ctrl_cam0_type = 1;
+		pck->ch12_ctrl_cam0_subsample = 0;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 0;
+		pck->ctrl_cam0_order1 = 1;
+		pck->ctrl_cam0_order2 = 2;
+		/* add 0-padding */
+		pck->ctrl_cam0_a0s = 8;
+		break;
+	case V4L2_PIX_FMT_BGR24:
+		pck->ctrl_cam0_type = 1;
+		pck->ch12_ctrl_cam0_subsample = 0;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 2;
+		pck->ctrl_cam0_order1 = 1;
+		pck->ctrl_cam0_order2 = 0;
+		break;
 	default: /* all other pixel formats */
 		pck->ctrl_cam0_type = 1;
 		pck->ch12_ctrl_cam0_subsample = 0;
