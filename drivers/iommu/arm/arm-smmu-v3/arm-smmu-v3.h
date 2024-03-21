@@ -682,6 +682,7 @@ struct arm_smmu_device {
 
 	struct rb_root			streams;
 	struct mutex			streams_mutex;
+	bool				bypass;
 };
 
 struct arm_smmu_stream {
