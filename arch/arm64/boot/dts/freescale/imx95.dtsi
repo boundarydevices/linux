@@ -289,6 +289,16 @@
 		clock-output-names = "dummy";
 	};
 
+	mqs1: mqs1 {
+		compatible = "fsl,imx95-mqs";
+		status = "disabled";
+	};
+
+	mqs2: mqs2 {
+		compatible = "fsl,imx95-mqs";
+		status = "disabled";
+	};
+
 	sai1_mclk: sai-mclk1 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
