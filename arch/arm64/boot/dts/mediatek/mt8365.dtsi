@@ -496,8 +496,10 @@
 
 				power-domain@MT8365_POWER_DOMAIN_MFG {
 					reg = <MT8365_POWER_DOMAIN_MFG>;
-					clocks = <&topckgen CLK_TOP_MFG_SEL>;
-					clock-names = "mfg";
+					clocks = <&topckgen CLK_TOP_MFG_SEL>,
+						 <&mfgcfg CLK_MFG_BG3D>,
+						 <&mfgcfg CLK_MFG_MBIST_DIAG>;
+					clock-names = "mfg", "mfg_bg3d", "mfg_mbist_diag";
 					#power-domain-cells = <0>;
 					mediatek,infracfg = <&infracfg>;
 				};
