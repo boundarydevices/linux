@@ -25,21 +25,26 @@
 #define REMAINING(x)		le32_get_bits((x), GENMASK(31, 16))
 #define RETURNED(x)		le32_get_bits((x), GENMASK(11, 0))
 
+#define CONFIG_TYPE_MASK	GENMASK(7, 0)
+#define SKIP_CONFIGS_MASK	GENMASK(15, 8)
+#define SELECTOR_TYPE_MASK	GENMASK(17, 16)
+#define CONFIG_FLAG_MASK	GENMASK(19, 18)
+
 enum scmi_pinctrl_protocol_cmd {
 	PINCTRL_ATTRIBUTES = 0x3,
 	PINCTRL_LIST_ASSOCIATIONS = 0x4,
-	PINCTRL_CONFIG_GET = 0x5,
-	PINCTRL_CONFIG_SET = 0x6,
-	PINCTRL_FUNCTION_SELECT = 0x7,
-	PINCTRL_REQUEST = 0x8,
-	PINCTRL_RELEASE = 0x9,
-	PINCTRL_NAME_GET = 0xa,
-	PINCTRL_SET_PERMISSIONS = 0xb
+	PINCTRL_SETTINGS_GET = 0x5,
+	PINCTRL_SETTINGS_CONFIGURE = 0x6,
+	PINCTRL_REQUEST = 0x7,
+	PINCTRL_RELEASE = 0x8,
+	PINCTRL_NAME_GET = 0x9,
+	PINCTRL_SET_PERMISSIONS = 0xa
 };
 
 #define MAX_CONFIG_ENTRY 10
 struct scmi_msg_conf_set {
 	__le32 identifier;
+	__le32 function_id;
 	__le32 attributes;
 	__le32 config_value[MAX_CONFIG_ENTRY * 2];
 };
@@ -47,6 +52,12 @@ struct scmi_msg_conf_set {
 struct scmi_msg_conf_get {
 	__le32 identifier;
 	__le32 attributes;
+};
+
+struct scmi_msg_conf_get_rsp {
+	__le32 function_selected;
+	__le32 num_configs;
+	__le32 config_value[MAX_CONFIG_ENTRY * 2];
 };
 
 struct scmi_msg_pinctrl_protocol_attributes {
@@ -73,12 +84,6 @@ struct scmi_msg_pinctrl_list_assoc {
 struct scmi_resp_pinctrl_list_assoc {
 	__le32 flags;
 	__le16 array[];
-};
-
-struct scmi_msg_func_set {
-	__le32 identifier;
-	__le32 function_id;
-	__le32 flags;
 };
 
 struct scmi_msg_request {
@@ -305,9 +310,10 @@ static int scmi_pinctrl_config_get(const struct scmi_protocol_handle *ph,
 				   u8 config_type, unsigned long *config_value)
 {
 	int ret;
-	/*u32 attributes;*/
+	u32 attributes;
 	struct scmi_xfer *t;
 	struct scmi_msg_conf_get *tx;
+	struct scmi_msg_conf_get_rsp *rsp;
 
 	if (!config_value || type == FUNCTION_TYPE)
 		return -EINVAL;
@@ -316,21 +322,26 @@ static int scmi_pinctrl_config_get(const struct scmi_protocol_handle *ph,
 	if (ret)
 		return ret;
 
-	ret = ph->xops->xfer_get_init(ph, PINCTRL_CONFIG_GET, sizeof(*tx), sizeof(__le32), &t);
+	ret = ph->xops->xfer_get_init(ph, PINCTRL_SETTINGS_GET, sizeof(*tx), sizeof(__le32), &t);
 	if (ret)
 		return ret;
 
 	tx = t->tx.buf;
+	rsp = t->rx.buf;
+	/* Only support 1 entry */
 	tx->identifier = cpu_to_le32(selector);
-	/*
-	attributes = FIELD_PREP(REG_TYPE_BITS, type) |
-		FIELD_PREP(REG_CONFIG, config_type);
+	attributes = FIELD_PREP(CONFIG_TYPE_MASK, config_type) |
+		FIELD_PREP(SELECTOR_TYPE_MASK, type);
 	tx->attributes = cpu_to_le32(attributes);
-	*/
 
 	ret = ph->xops->do_xfer(ph, t);
-	if (!ret)
-		*config_value = get_unaligned_le32(t->rx.buf);
+	if (!ret) {
+		if ((rsp->num_configs & 0xFF) != 1)
+			return -EINVAL;
+		if ((rsp->config_value[0] & 0xFF) != config_type)
+			return -EINVAL;
+		*config_value = rsp->config_value[1];
+	}
 
 	ph->xops->xfer_put(ph, t);
 	return ret;
@@ -353,12 +364,13 @@ static int scmi_pinctrl_config_set(const struct scmi_protocol_handle *ph,
 	if (ret)
 		return ret;
 
-	ret = ph->xops->xfer_get_init(ph, PINCTRL_CONFIG_SET, sizeof(*tx), 0, &t);
+	ret = ph->xops->xfer_get_init(ph, PINCTRL_SETTINGS_CONFIGURE, sizeof(*tx), 0, &t);
 	if (ret)
 		return ret;
 
 	tx = t->tx.buf;
 	tx->identifier = cpu_to_le32(selector);
+	tx->function_id = 0xFFFFFFFF;
 	for (int i = 0; i < num_configs; i++) {
 		tx->config_value[i * 2] = cpu_to_le32(pinconf_to_config_param(configs[i]));
 		tx->config_value[i * 2 + 1] = cpu_to_le32(pinconf_to_config_argument(configs[i]));
@@ -371,37 +383,6 @@ static int scmi_pinctrl_config_set(const struct scmi_protocol_handle *ph,
 	ret = ph->xops->do_xfer(ph, t);
 
 	ph->xops->xfer_put(ph, t);
-	return ret;
-}
-
-static int scmi_pinctrl_function_select(const struct scmi_protocol_handle *ph,
-					u32 identifier,
-					enum scmi_pinctrl_selector_type type,
-					u32 function_id)
-{
-	int ret;
-	struct scmi_xfer *t;
-	struct scmi_msg_func_set *tx;
-
-	if (type == FUNCTION_TYPE)
-		return -EINVAL;
-
-	ret = scmi_pinctrl_validate_id(ph, identifier, type);
-	if (ret)
-		return ret;
-
-	ret = ph->xops->xfer_get_init(ph, PINCTRL_FUNCTION_SELECT, sizeof(*tx), 0, &t);
-	if (ret)
-		return ret;
-
-	tx = t->tx.buf;
-	tx->identifier = cpu_to_le32(identifier);
-	tx->function_id = cpu_to_le32(function_id);
-	tx->flags = cpu_to_le32(type);
-
-	ret = ph->xops->do_xfer(ph, t);
-	ph->xops->xfer_put(ph, t);
-
 	return ret;
 }
 
@@ -647,8 +628,7 @@ static int scmi_pinctrl_function_groups_get(const struct scmi_protocol_handle *p
 static int scmi_pinctrl_mux_set(const struct scmi_protocol_handle *ph,
 				u32 selector, u32 group)
 {
-	return scmi_pinctrl_function_select(ph, group, GROUP_TYPE,
-					    selector);
+	return -EOPNOTSUPP;
 }
 
 static int scmi_pinctrl_get_pin_info(const struct scmi_protocol_handle *ph,
