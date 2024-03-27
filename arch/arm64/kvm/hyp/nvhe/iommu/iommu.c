@@ -84,16 +84,29 @@ int kvm_iommu_request(struct kvm_hyp_req *req)
 
 int kvm_iommu_refill(struct kvm_hyp_memcache *host_mc)
 {
+	if (!kvm_iommu_ops)
+		return -EINVAL;
+
+	/* Paired with smp_wmb() in kvm_iommu_init() */
+	smp_rmb();
 	return refill_hyp_pool(&iommu_host_pool, host_mc);
 }
 
 void kvm_iommu_reclaim(struct kvm_hyp_memcache *host_mc, int target)
 {
+	if (!kvm_iommu_ops)
+		return;
+
+	smp_rmb();
 	reclaim_hyp_pool(&iommu_host_pool, host_mc, target);
 }
 
 int kvm_iommu_reclaimable(void)
 {
+	if (!kvm_iommu_ops)
+		return 0;
+
+	smp_rmb();
 	return hyp_pool_free_pages(&iommu_host_pool);
 }
 
@@ -453,7 +466,6 @@ phys_addr_t kvm_iommu_iova_to_phys(pkvm_handle_t domain_id, unsigned long iova)
 	phys_addr_t phys = 0;
 	struct kvm_hyp_iommu_domain *domain;
 
-	hyp_spin_lock(&iommu_domains_lock);
 	domain = handle_to_domain( domain_id);
 
 	if (!domain || domain_get(domain))
@@ -463,7 +475,6 @@ phys_addr_t kvm_iommu_iova_to_phys(pkvm_handle_t domain_id, unsigned long iova)
 		goto out_unlock;
 
 	phys = domain->pgtable->ops.iova_to_phys(&domain->pgtable->ops, iova);
-
 
 out_unlock:
 	domain_put(domain);
@@ -551,7 +562,11 @@ int kvm_iommu_init(struct kvm_iommu_ops *ops, unsigned long init_arg)
 		return ret;
 
 	ret = hyp_pool_init_empty(&iommu_host_pool, 64 /* order = 6*/);
+	if (!ret) {
+		/* Ensure iommu_host_pool is ready _before_ iommu_ops is set */
+		smp_wmb();
+		kvm_iommu_ops = ops;
+	}
 
-	kvm_iommu_ops = ops;
 	return ret;
 }

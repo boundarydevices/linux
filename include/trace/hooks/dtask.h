@@ -17,6 +17,7 @@ struct mutex;
 struct rt_mutex_base;
 struct rw_semaphore;
 struct task_struct;
+struct percpu_rw_semaphore;
 
 DECLARE_HOOK(android_vh_mutex_wait_start,
 	TP_PROTO(struct mutex *lock),
@@ -66,6 +67,9 @@ DECLARE_HOOK(android_vh_rwsem_can_spin_on_owner,
 DECLARE_HOOK(android_vh_sched_show_task,
 	TP_PROTO(struct task_struct *task),
 	TP_ARGS(task));
+DECLARE_HOOK(android_vh_percpu_rwsem_wq_add,
+	TP_PROTO(struct percpu_rw_semaphore *sem, bool reader),
+	TP_ARGS(sem, reader));
 
 struct mutex_waiter;
 DECLARE_HOOK(android_vh_alter_mutex_list_add,
@@ -78,6 +82,31 @@ DECLARE_HOOK(android_vh_mutex_unlock_slowpath,
 	TP_PROTO(struct mutex *lock),
 	TP_ARGS(lock));
 
+DECLARE_HOOK(android_vh_exit_signal_whether_wake,
+	TP_PROTO(struct task_struct *p, bool *wake),
+	TP_ARGS(p, wake));
+
+DECLARE_HOOK(android_vh_exit_check,
+	TP_PROTO(struct task_struct *p),
+	TP_ARGS(p));
+
+DECLARE_HOOK(android_vh_freeze_whether_wake,
+	TP_PROTO(struct task_struct *t, bool *wake),
+	TP_ARGS(t, wake));
+
+DECLARE_HOOK(android_vh_record_mutex_lock_starttime,
+	TP_PROTO(u64 lock, unsigned long settime_jiffies),
+	TP_ARGS(lock, settime_jiffies));
+DECLARE_HOOK(android_vh_record_rtmutex_lock_starttime,
+	TP_PROTO(u64 lock, unsigned long settime_jiffies),
+	TP_ARGS(lock, settime_jiffies));
+DECLARE_HOOK(android_vh_record_rwsem_lock_starttime,
+	TP_PROTO(u64 sem, unsigned long settime_jiffies),
+	TP_ARGS(sem, settime_jiffies));
+DECLARE_HOOK(android_vh_record_pcpu_rwsem_starttime,
+	TP_PROTO(u64 sem, unsigned long settime_jiffies),
+	TP_ARGS(sem, settime_jiffies));
 #endif /* _TRACE_HOOK_DTASK_H */
+
 /* This part must be outside protection */
 #include <trace/define_trace.h>
