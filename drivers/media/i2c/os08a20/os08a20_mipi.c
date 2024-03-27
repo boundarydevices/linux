@@ -756,6 +756,66 @@ static int os08a20_set_test_pattern(struct os08a20 *sensor, void *arg)
 	return ret;
 }
 
+#define OS08A20_REG_CORE1		0x3661
+#define OS08A20_STG_HDR_ALIGN_EN	BIT(0)
+
+#define OS08A20_REG_FORMAT2		0x3821
+#define OS08A20_STG_HDR_EN		BIT(5)
+
+#define OS08A20_REG_MIPI_CTRL_13	0x4813
+#define OS08A20_MISTERY_BIT3		BIT(3)
+
+#define OS08A20_REG_MIPI_CTRL_6E	0x486e
+#define OS08A20_MIPI_VC_ENABLE		BIT(2)
+
+static int os08a20_enable_staggered_hdr(struct os08a20 *sensor)
+{
+	int ret = 0;
+	u8 reg_val = 0;
+
+	ret |= os08a20_read_reg(sensor, OS08A20_REG_CORE1, &reg_val);
+	ret |= os08a20_write_reg(sensor, OS08A20_REG_CORE1,
+			  reg_val | OS08A20_STG_HDR_ALIGN_EN);
+
+	ret |= os08a20_read_reg(sensor, OS08A20_REG_FORMAT2, &reg_val);
+	ret |= os08a20_write_reg(sensor, OS08A20_REG_FORMAT2,
+			  reg_val | OS08A20_STG_HDR_EN);
+
+	ret |= os08a20_read_reg(sensor, OS08A20_REG_MIPI_CTRL_13, &reg_val);
+	ret |= os08a20_write_reg(sensor, OS08A20_REG_MIPI_CTRL_13,
+			  reg_val | OS08A20_MISTERY_BIT3);
+
+	ret |= os08a20_read_reg(sensor, OS08A20_REG_MIPI_CTRL_6E, &reg_val);
+	ret |= os08a20_write_reg(sensor, OS08A20_REG_MIPI_CTRL_6E,
+			  reg_val | OS08A20_MIPI_VC_ENABLE);
+
+	return ret;
+}
+
+static int os08a20_disable_staggered_hdr(struct os08a20 *sensor)
+{
+	int ret = 0;
+	u8 reg_val = 0;
+
+	ret |= os08a20_read_reg(sensor, OS08A20_REG_CORE1, &reg_val);
+	ret |= os08a20_write_reg(sensor, OS08A20_REG_CORE1,
+			  reg_val & ~OS08A20_STG_HDR_ALIGN_EN);
+
+	ret |= os08a20_read_reg(sensor, OS08A20_REG_FORMAT2, &reg_val);
+	ret |= os08a20_write_reg(sensor, OS08A20_REG_FORMAT2,
+			  reg_val & ~OS08A20_STG_HDR_EN);
+
+	ret |= os08a20_read_reg(sensor, OS08A20_REG_MIPI_CTRL_13, &reg_val);
+	ret |= os08a20_write_reg(sensor, OS08A20_REG_MIPI_CTRL_13,
+			  reg_val & ~OS08A20_MISTERY_BIT3);
+
+	ret |= os08a20_read_reg(sensor, OS08A20_REG_MIPI_CTRL_6E, &reg_val);
+	ret |= os08a20_write_reg(sensor, OS08A20_REG_MIPI_CTRL_6E,
+			  reg_val & ~OS08A20_MIPI_VC_ENABLE);
+
+	return ret;
+}
+
 static u32 os08a20_code2bpp(const u32 code)
 {
 	switch (code) {
@@ -768,56 +828,42 @@ static u32 os08a20_code2bpp(const u32 code)
 	}
 }
 
-/* needs sensor lock */
-static int os08a20_update_current_mode(struct os08a20 *sensor, u32 w, u32 h,
-				       u32 bpp, enum sensor_hdr_mode_e hdr)
+/* needs sensor lock & never fails */
+static void os08a20_update_current_mode(struct os08a20 *sensor, u32 w, u32 h,
+					u32 bpp, enum sensor_hdr_mode_e hdr)
 {
-	int ret = 0;
 	struct device *dev = &sensor->i2c_client->dev;
 	struct vvcam_mode_info_s *mode = NULL;
 	unsigned int i;
 
+	/* try an exact match, including by bpp(if valid) and hdr_mode */
 	for (i = 0 ; i < ARRAY_SIZE(pos08a20_mode_info); i++) {
 		if (pos08a20_mode_info[i].size.bounds_width == w &&
 		    pos08a20_mode_info[i].size.bounds_height == h &&
-		    pos08a20_mode_info[i].bit_width == bpp &&
-		    pos08a20_mode_info[i].hdr_mode == hdr) {
+		    (!bpp || pos08a20_mode_info[i].bit_width == bpp)) {
+			/* fallback mode with possibly a different hdr_mode */
 			mode = &pos08a20_mode_info[i];
-			break;
+			if (pos08a20_mode_info[i].hdr_mode == hdr)
+				break; /* matched requested hdr mode */
 		}
 	}
-	if (!mode) {
-		dev_warn(dev, "%s:couldn't find fmt %d x %d, bpp=%d, hdr=%d\n",
-			 __func__, w, h, bpp, hdr);
-		/* loosen-up, search any mode, no matter what hdr_mode */
-		for (i = 0 ; i < ARRAY_SIZE(pos08a20_mode_info); i++) {
-			if (pos08a20_mode_info[i].size.bounds_width == w &&
-			    pos08a20_mode_info[i].size.bounds_height == h &&
-			    pos08a20_mode_info[i].bit_width == bpp) {
-				mode = &pos08a20_mode_info[i];
-				break;
-			}
-		}
-	}
-	if (!mode) {
-		dev_err(dev, "%s:couldn't find fmt %d x %d, bpp=%d, hdr=any\n",
-			__func__, w, h, bpp);
-		ret = -EINVAL;
+	if (mode)
 		goto out;
-	}
 
-	memcpy(&sensor->cur_mode, mode, sizeof(struct vvcam_mode_info_s));
-	if (sensor->hdr != hdr) {
-		sensor->hdr = hdr;
-		/* Update controls to reflect new mode */
-		__v4l2_ctrl_s_ctrl(sensor->ctrls.hdr_mode, hdr);
-	}
-
-	dev_info(dev, "%s:set sensor format %d x %d, bpp=%d, hdr=%d\n",
-		 __func__, sensor->cur_mode.size.bounds_width,
-		 sensor->cur_mode.size.bounds_height, bpp, sensor->hdr);
+	/* don't fail, fallback to nearest size */
+	mode = v4l2_find_nearest_size(pos08a20_mode_info,
+				      ARRAY_SIZE(pos08a20_mode_info),
+				      size.bounds_width, size.bounds_height,
+				      w, h);
 out:
-	return ret;
+	memcpy(&sensor->cur_mode, mode, sizeof(struct vvcam_mode_info_s));
+
+	dev_dbg(dev, "%s: set sensor format %d x %d, bpp=%d, hdr=%d",
+		__func__, sensor->cur_mode.size.bounds_width,
+		sensor->cur_mode.size.bounds_height,
+		sensor->cur_mode.bit_width, sensor->cur_mode.hdr_mode);
+	dev_dbg(dev, "(%d x %d, bpp=%d, hdr=%d was requested)\n",
+		w, h, bpp, hdr);
 }
 
 /* needs sensor lock */
@@ -836,8 +882,27 @@ static int os08a20_apply_current_mode(struct os08a20 *sensor)
 	ret = os08a20_write_reg_arry(sensor, preg_data,
 				     sensor->cur_mode.reg_data_count);
 	if (ret < 0)
-		dev_err(dev, "%s:os08a20_write_reg_arry error\n", __func__);
+		goto out;
 
+	if (sensor->hdr == sensor->cur_mode.hdr_mode)
+		goto out;
+
+	/* current mode does not match requested hdr mode */
+	if (sensor->hdr == SENSOR_MODE_HDR_STITCH) {
+		ret = os08a20_enable_staggered_hdr(sensor);
+		if (ret < 0)
+			goto out;
+	} else	if (sensor->hdr == SENSOR_MODE_LINEAR) {
+		ret = os08a20_disable_staggered_hdr(sensor);
+		if (ret < 0)
+			goto out;
+	}
+out:
+	if (ret < 0)
+		dev_err(dev, "%s: Failed to apply mode %dx%d,bpp=%d,hdr=%d\n",
+			__func__, sensor->cur_mode.size.bounds_width,
+			sensor->cur_mode.size.bounds_height,
+			sensor->cur_mode.bit_width, sensor->cur_mode.hdr_mode);
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
 
@@ -865,14 +930,10 @@ static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 			break;
 
 		/* update and apply current mode if hdr mode mismatches */
-		ret = os08a20_update_current_mode(sensor, sensor->cur_mode.size.bounds_width,
-						  sensor->cur_mode.size.bounds_height,
-						  sensor->cur_mode.bit_width,
-						  sensor->hdr);
-		if (ret) { /* don't panic, a saving S_FMT may come later */
-			ret = 0;
-			break;
-		}
+		os08a20_update_current_mode(sensor, sensor->cur_mode.size.bounds_width,
+					    sensor->cur_mode.size.bounds_height,
+					    sensor->cur_mode.bit_width,
+					    sensor->hdr);
 
 		/* in case s_ctrl comes after S_FMT, update sensor mode */
 		ret = os08a20_apply_current_mode(sensor);
@@ -1032,12 +1093,9 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 	u32 bpp = os08a20_code2bpp(fmt->format.code);
 
 	mutex_lock(&sensor->lock);
-	ret = os08a20_update_current_mode(sensor, fmt->format.width,
-					  fmt->format.height,
-					  bpp, sensor->hdr);
-
-	if (ret)
-		goto unlock;
+	os08a20_update_current_mode(sensor, fmt->format.width,
+				    fmt->format.height,
+				    bpp, sensor->hdr);
 
 	ret = os08a20_apply_current_mode(sensor);
 	if (ret)
