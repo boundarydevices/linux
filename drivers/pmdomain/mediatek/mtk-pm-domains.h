@@ -43,6 +43,7 @@
 #define PWR_STATUS_USB			BIT(25)
 
 #define SPM_MAX_BUS_PROT_DATA		6
+#define SPM_MAX_SMI_RESET_DATA		6
 
 enum scpsys_bus_prot_flags {
 	BUS_PROT_REG_UPDATE = BIT(1),
@@ -79,6 +80,16 @@ enum scpsys_bus_prot_flags {
 				INFRA_TOPAXI_PROTECTEN,		\
 				INFRA_TOPAXI_PROTECTSTA1)
 
+#define SMI_RESET_WR(_mask, _addr) {		\
+		.smi_reset_mask = (_mask),	\
+		.smi_reset_addr = _addr,	\
+	}
+
+struct smi_reset_data {
+	u32 smi_reset_mask;
+	u32 smi_reset_addr;
+};
+
 struct scpsys_bus_prot_data {
 	u32 bus_prot_set_clr_mask;
 	u32 bus_prot_set;
@@ -110,6 +121,7 @@ struct scpsys_domain_data {
 	u32 ext_buck_iso_mask;
 	u16 caps;
 	const struct scpsys_bus_prot_data bp_cfg[SPM_MAX_BUS_PROT_DATA];
+	const struct smi_reset_data reset_smi[SPM_MAX_SMI_RESET_DATA];
 	int pwr_sta_offs;
 	int pwr_sta2nd_offs;
 };

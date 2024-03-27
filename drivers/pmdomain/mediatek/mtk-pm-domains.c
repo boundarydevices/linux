@@ -48,6 +48,8 @@ struct scpsys_domain {
 	struct regmap *infracfg_nao;
 	struct regmap *infracfg;
 	struct regmap *smi;
+	struct regmap **larb;
+	int num_larb;
 	struct regulator *supply;
 };
 
@@ -230,6 +232,39 @@ static int scpsys_regulator_disable(struct regulator *supply)
 	return supply ? regulator_disable(supply) : 0;
 }
 
+static int _scpsys_smi_larb_reset(const struct smi_reset_data bpd,
+				  struct regmap *regmap)
+{
+	int ret;
+	u32 mask = bpd.smi_reset_mask;
+
+	if (!mask)
+		return 0;
+
+	ret = regmap_set_bits(regmap, bpd.smi_reset_addr, mask);
+	if (ret)
+		return ret;
+
+	ret = regmap_clear_bits(regmap, bpd.smi_reset_addr, mask);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int scpsys_smi_larb_reset(struct scpsys_domain *pd)
+{
+	int ret, i;
+
+	for (i = 0; i < pd->num_larb; i++) {
+		ret = _scpsys_smi_larb_reset(pd->data->reset_smi[i], pd->larb[i]);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int scpsys_power_on(struct generic_pm_domain *genpd)
 {
 	struct scpsys_domain *pd = container_of(genpd, struct scpsys_domain, genpd);
@@ -276,6 +311,10 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
 	}
 
 	ret = scpsys_sram_enable(pd);
+	if (ret < 0)
+		goto err_disable_subsys_clks;
+
+	ret = scpsys_smi_larb_reset(pd);
 	if (ret < 0)
 		goto err_disable_subsys_clks;
 
@@ -355,6 +394,7 @@ generic_pm_domain *scpsys_add_one_domain(struct scpsys *scpsys, struct device_no
 	struct scpsys_domain *pd;
 	struct device_node *root_node = scpsys->dev->of_node;
 	struct device_node *smi_node;
+	struct device_node *larb_node;
 	struct property *prop;
 	const char *clk_name;
 	int i, ret, num_clks;
@@ -416,6 +456,25 @@ generic_pm_domain *scpsys_add_one_domain(struct scpsys *scpsys, struct device_no
 		of_node_put(smi_node);
 		if (IS_ERR(pd->smi))
 			return ERR_CAST(pd->smi);
+	}
+
+	pd->num_larb = of_count_phandle_with_args(node, "mediatek,larb", NULL);
+	if (pd->num_larb > 0) {
+		pd->larb = devm_kcalloc(scpsys->dev, pd->num_larb, sizeof(*pd->larb), GFP_KERNEL);
+		if (!pd->larb)
+			return ERR_PTR(-ENOMEM);
+
+		for (i = 0; i < pd->num_larb; i++) {
+			larb_node = of_parse_phandle(node, "mediatek,larb", i);
+			if (!larb_node)
+				return ERR_PTR(-EINVAL);
+
+			pd->larb[i] = device_node_to_regmap(larb_node);
+			if (IS_ERR(pd->larb[i]))
+				return ERR_CAST(pd->larb[i]);
+		}
+	} else {
+		pd->num_larb = 0;
 	}
 
 	if (MTK_SCPD_CAPS(pd, MTK_SCPD_HAS_INFRA_NAO)) {
