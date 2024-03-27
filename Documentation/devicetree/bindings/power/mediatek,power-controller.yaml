@@ -125,6 +125,10 @@ $defs:
         $ref: /schemas/types.yaml#/definitions/phandle
         description: phandle to the device containing the SMI register range.
 
+      mediatek,larb:
+        $ref: /schemas/types.yaml#/definitions/phandle
+        description: phandle to the device containing the LARB register range.
+
     required:
       - reg
 
