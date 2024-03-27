@@ -575,6 +575,18 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8188[] = {
 		.pwr_sta2nd_offs = 0x170,
 		.sram_pdn_bits = BIT(8),
 		.sram_pdn_ack_bits = BIT(12),
+		.bp_cfg = {
+			BUS_PROT_WR(SMI,
+				    MT8188_SMI_COMMON_SMI_CLAMP_DIP_TO_VDO0,
+				    MT8188_SMI_COMMON_CLAMP_EN_SET,
+				    MT8188_SMI_COMMON_CLAMP_EN_CLR,
+				    MT8188_SMI_COMMON_CLAMP_EN_STA),
+			BUS_PROT_WR(SMI,
+				    MT8188_SMI_COMMON_SMI_CLAMP_DIP_TO_VPP1,
+				    MT8188_SMI_COMMON_CLAMP_EN_SET,
+				    MT8188_SMI_COMMON_CLAMP_EN_CLR,
+				    MT8188_SMI_COMMON_CLAMP_EN_STA),
+		},
 		.reset_smi = {
 			SMI_RESET_WR(MT8188_SMI_LARB10_RESET,
 				     MT8188_SMI_LARB10_RESET_ADDR),
@@ -587,7 +599,7 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8188[] = {
 			SMI_RESET_WR(MT8188_SMI_LARB15_RESET,
 				     MT8188_SMI_LARB15_RESET_ADDR),
 		},
-		.caps = MTK_SCPD_KEEP_DEFAULT_OFF,
+		.caps = MTK_SCPD_KEEP_DEFAULT_OFF | MTK_SCPD_CLAMP_PROTECTION,
 	},
 	[MT8188_POWER_DOMAIN_IPE] = {
 		.name = "ipe",
@@ -597,11 +609,18 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8188[] = {
 		.pwr_sta2nd_offs = 0x170,
 		.sram_pdn_bits = BIT(8),
 		.sram_pdn_ack_bits = BIT(12),
+		.bp_cfg = {
+			BUS_PROT_WR(SMI,
+				    MT8188_SMI_COMMON_SMI_CLAMP_IPE_TO_VPP1,
+				    MT8188_SMI_COMMON_CLAMP_EN_SET,
+				    MT8188_SMI_COMMON_CLAMP_EN_CLR,
+				    MT8188_SMI_COMMON_CLAMP_EN_STA),
+		},
 		.reset_smi = {
 			SMI_RESET_WR(MT8188_SMI_LARB12_RESET,
 				     MT8188_SMI_LARB12_RESET_ADDR),
 		},
-		.caps = MTK_SCPD_KEEP_DEFAULT_OFF,
+		.caps = MTK_SCPD_KEEP_DEFAULT_OFF | MTK_SCPD_CLAMP_PROTECTION,
 	},
 	[MT8188_POWER_DOMAIN_CAM_VCORE] = {
 		.name = "cam_vcore",
@@ -680,13 +699,20 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8188[] = {
 		.pwr_sta2nd_offs = 0x170,
 		.sram_pdn_bits = BIT(8),
 		.sram_pdn_ack_bits = BIT(12),
+		.bp_cfg = {
+			BUS_PROT_WR(SMI,
+				    MT8188_SMI_COMMON_SMI_CLAMP_IPE_TO_VPP1,
+				    MT8188_SMI_COMMON_CLAMP_EN_SET,
+				    MT8188_SMI_COMMON_CLAMP_EN_CLR,
+				    MT8188_SMI_COMMON_CLAMP_EN_STA),
+		},
 		.reset_smi = {
 			SMI_RESET_WR(MT8188_SMI_LARB16A_RESET,
 				     MT8188_SMI_LARB16A_RESET_ADDR),
 			SMI_RESET_WR(MT8188_SMI_LARB17A_RESET,
 				     MT8188_SMI_LARB17A_RESET_ADDR),
 		},
-		.caps = MTK_SCPD_KEEP_DEFAULT_OFF,
+		.caps = MTK_SCPD_KEEP_DEFAULT_OFF | MTK_SCPD_CLAMP_PROTECTION,
 	},
 	[MT8188_POWER_DOMAIN_CAM_SUBB] = {
 		.name = "cam_subb",
@@ -696,13 +722,20 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8188[] = {
 		.pwr_sta2nd_offs = 0x170,
 		.sram_pdn_bits = BIT(8),
 		.sram_pdn_ack_bits = BIT(12),
+		.bp_cfg = {
+			BUS_PROT_WR(SMI,
+				    MT8188_SMI_COMMON_SMI_CLAMP_CAM_SUBB_TO_VDO0,
+				    MT8188_SMI_COMMON_CLAMP_EN_SET,
+				    MT8188_SMI_COMMON_CLAMP_EN_CLR,
+				    MT8188_SMI_COMMON_CLAMP_EN_STA),
+		},
 		.reset_smi = {
 			SMI_RESET_WR(MT8188_SMI_LARB16B_RESET,
 				     MT8188_SMI_LARB16B_RESET_ADDR),
 			SMI_RESET_WR(MT8188_SMI_LARB17B_RESET,
 				     MT8188_SMI_LARB17B_RESET_ADDR),
 		},
-		.caps = MTK_SCPD_KEEP_DEFAULT_OFF,
+		.caps = MTK_SCPD_KEEP_DEFAULT_OFF | MTK_SCPD_CLAMP_PROTECTION,
 	},
 };
 

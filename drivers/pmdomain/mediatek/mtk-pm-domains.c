@@ -47,9 +47,10 @@ struct scpsys_domain {
 	struct clk_bulk_data *subsys_clks;
 	struct regmap *infracfg_nao;
 	struct regmap *infracfg;
-	struct regmap *smi;
+	struct regmap **smi;
 	struct regmap **larb;
 	int num_larb;
+	int num_smi;
 	struct regulator *supply;
 };
 
@@ -122,29 +123,19 @@ static int scpsys_sram_disable(struct scpsys_domain *pd)
 					MTK_POLL_TIMEOUT);
 }
 
-static struct regmap *scpsys_bus_protect_get_regmap(struct scpsys_domain *pd,
-						    const struct scpsys_bus_prot_data *bpd)
-{
-	if (bpd->flags & BUS_PROT_COMPONENT_SMI)
-		return pd->smi;
-	else
-		return pd->infracfg;
-}
-
 static struct regmap *scpsys_bus_protect_get_sta_regmap(struct scpsys_domain *pd,
 							const struct scpsys_bus_prot_data *bpd)
 {
 	if (bpd->flags & BUS_PROT_STA_COMPONENT_INFRA_NAO)
 		return pd->infracfg_nao;
 	else
-		return scpsys_bus_protect_get_regmap(pd, bpd);
+		return pd->infracfg;
 }
 
 static int scpsys_bus_protect_clear(struct scpsys_domain *pd,
-				    const struct scpsys_bus_prot_data *bpd)
+				    const struct scpsys_bus_prot_data *bpd,
+					struct regmap *sta_regmap, struct regmap *regmap)
 {
-	struct regmap *sta_regmap = scpsys_bus_protect_get_sta_regmap(pd, bpd);
-	struct regmap *regmap = scpsys_bus_protect_get_regmap(pd, bpd);
 	u32 sta_mask = bpd->bus_prot_sta_mask;
 	u32 expected_ack;
 	u32 val;
@@ -165,10 +156,9 @@ static int scpsys_bus_protect_clear(struct scpsys_domain *pd,
 }
 
 static int scpsys_bus_protect_set(struct scpsys_domain *pd,
-				  const struct scpsys_bus_prot_data *bpd)
+				  const struct scpsys_bus_prot_data *bpd,
+				  struct regmap *sta_regmap, struct regmap *regmap)
 {
-	struct regmap *sta_regmap = scpsys_bus_protect_get_sta_regmap(pd, bpd);
-	struct regmap *regmap = scpsys_bus_protect_get_regmap(pd, bpd);
 	u32 sta_mask = bpd->bus_prot_sta_mask;
 	u32 val;
 
@@ -182,19 +172,32 @@ static int scpsys_bus_protect_set(struct scpsys_domain *pd,
 					MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
 }
 
-static int scpsys_bus_protect_enable(struct scpsys_domain *pd)
+static int scpsys_clamp_bus_protection_enable(struct scpsys_domain *pd, bool is_smi)
 {
+	int smi_count = 0;
+
 	for (int i = 0; i < SPM_MAX_BUS_PROT_DATA; i++) {
 		const struct scpsys_bus_prot_data *bpd = &pd->data->bp_cfg[i];
+		struct regmap *sta_regmap, *regmap;
+		bool is_smi = bpd->flags & BUS_PROT_COMPONENT_SMI;
 		int ret;
 
 		if (!bpd->bus_prot_set_clr_mask)
 			break;
 
+		if (is_smi) {
+			sta_regmap = pd->smi[smi_count];
+			regmap = pd->smi[smi_count];
+			smi_count++;
+		} else {
+			sta_regmap = scpsys_bus_protect_get_sta_regmap(pd, bpd);
+			regmap = pd->infracfg;
+		}
+
 		if (bpd->flags & BUS_PROT_INVERTED)
-			ret = scpsys_bus_protect_clear(pd, bpd);
+			ret = scpsys_bus_protect_clear(pd, bpd, sta_regmap, regmap);
 		else
-			ret = scpsys_bus_protect_set(pd, bpd);
+			ret = scpsys_bus_protect_set(pd, bpd, sta_regmap, regmap);
 		if (ret)
 			return ret;
 	}
@@ -202,19 +205,32 @@ static int scpsys_bus_protect_enable(struct scpsys_domain *pd)
 	return 0;
 }
 
-static int scpsys_bus_protect_disable(struct scpsys_domain *pd)
+static int scpsys_clamp_bus_protection_disable(struct scpsys_domain *pd, bool is_smi)
 {
+	int smi_count = pd->num_smi - 1;
+
 	for (int i = SPM_MAX_BUS_PROT_DATA - 1; i >= 0; i--) {
 		const struct scpsys_bus_prot_data *bpd = &pd->data->bp_cfg[i];
+		struct regmap *sta_regmap, *regmap;
+		bool is_smi = bpd->flags & BUS_PROT_COMPONENT_SMI;
 		int ret;
 
 		if (!bpd->bus_prot_set_clr_mask)
 			continue;
 
+		if (is_smi) {
+			sta_regmap = pd->smi[smi_count];
+			regmap = pd->smi[smi_count];
+			smi_count--;
+		} else {
+			sta_regmap = scpsys_bus_protect_get_sta_regmap(pd, bpd);
+			regmap = pd->infracfg;
+		}
+
 		if (bpd->flags & BUS_PROT_INVERTED)
-			ret = scpsys_bus_protect_set(pd, bpd);
+			ret = scpsys_bus_protect_set(pd, bpd, sta_regmap, regmap);
 		else
-			ret = scpsys_bus_protect_clear(pd, bpd);
+			ret = scpsys_bus_protect_clear(pd, bpd, sta_regmap, regmap);
 		if (ret)
 			return ret;
 	}
@@ -272,6 +288,12 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
 	bool tmp;
 	int ret;
 
+	if (MTK_SCPD_CAPS(pd, MTK_SCPD_CLAMP_PROTECTION)) {
+		ret = scpsys_clamp_bus_protection_enable(pd, true);
+		if (ret)
+			return ret;
+	}
+
 	ret = scpsys_regulator_enable(pd->supply);
 	if (ret)
 		return ret;
@@ -318,7 +340,13 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
 	if (ret < 0)
 		goto err_disable_subsys_clks;
 
-	ret = scpsys_bus_protect_disable(pd);
+	if (MTK_SCPD_CAPS(pd, MTK_SCPD_CLAMP_PROTECTION)) {
+		ret = scpsys_clamp_bus_protection_disable(pd, true);
+		if (ret)
+			return ret;
+	}
+
+	ret = scpsys_clamp_bus_protection_disable(pd, false);
 	if (ret < 0)
 		goto err_disable_sram;
 
@@ -332,7 +360,7 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
 	return 0;
 
 err_enable_bus_protect:
-	scpsys_bus_protect_enable(pd);
+	scpsys_clamp_bus_protection_enable(pd, false);
 err_disable_sram:
 	scpsys_sram_disable(pd);
 err_disable_subsys_clks:
@@ -353,7 +381,13 @@ static int scpsys_power_off(struct generic_pm_domain *genpd)
 	bool tmp;
 	int ret;
 
-	ret = scpsys_bus_protect_enable(pd);
+	if (MTK_SCPD_CAPS(pd, MTK_SCPD_CLAMP_PROTECTION)) {
+		ret = scpsys_clamp_bus_protection_enable(pd, true);
+		if (ret)
+			return ret;
+	}
+
+	ret = scpsys_clamp_bus_protection_enable(pd, false);
 	if (ret < 0)
 		return ret;
 
@@ -450,12 +484,23 @@ generic_pm_domain *scpsys_add_one_domain(struct scpsys *scpsys, struct device_no
 	if (IS_ERR(pd->infracfg))
 		return ERR_CAST(pd->infracfg);
 
-	smi_node = of_parse_phandle(node, "mediatek,smi", 0);
-	if (smi_node) {
-		pd->smi = device_node_to_regmap(smi_node);
-		of_node_put(smi_node);
-		if (IS_ERR(pd->smi))
-			return ERR_CAST(pd->smi);
+	pd->num_smi = of_count_phandle_with_args(node, "mediatek,smi", NULL);
+	if (pd->num_smi > 0) {
+		pd->smi = devm_kcalloc(scpsys->dev, pd->num_smi, sizeof(*pd->smi), GFP_KERNEL);
+		if (!pd->smi)
+			return ERR_PTR(-ENOMEM);
+
+		for (i = 0; i < pd->num_smi; i++) {
+			smi_node = of_parse_phandle(node, "mediatek,smi", i);
+			if (!smi_node)
+				return ERR_PTR(-EINVAL);
+
+			pd->smi[i] = device_node_to_regmap(smi_node);
+			if (IS_ERR(pd->smi[i]))
+				return ERR_CAST(pd->smi[i]);
+		}
+	} else {
+		pd->num_smi = 0;
 	}
 
 	pd->num_larb = of_count_phandle_with_args(node, "mediatek,larb", NULL);
