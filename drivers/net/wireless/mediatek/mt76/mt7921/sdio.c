@@ -153,6 +153,7 @@ static int mt7921s_probe(struct sdio_func *func,
 		    (mt76_rr(dev, MT_HW_REV) & 0xff);
 	dev_dbg(mdev->dev, "ASIC revision: %04x\n", mdev->rev);
 
+	mdev->dev->of_node = func->card->host->parent->of_node;
 	mdev->sdio.parse_irq = mt7921s_parse_intr;
 	mdev->sdio.intr_data = devm_kmalloc(mdev->dev,
 					    sizeof(struct mt7921_sdio_intr),
