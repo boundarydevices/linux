@@ -669,6 +669,7 @@
 	vmmc-supply = <&sdio_fixed_3v3>;
 	vqmmc-supply = <&mt6359_vcn18_ldo_reg>; // VCN18_WIFI
 	mmc-pwrseq = <&wifi_pwrseq>;
+#include "mt7921-mt320-tables.dtsi"
 };
 
 &spi0 {
