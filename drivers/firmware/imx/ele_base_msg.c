@@ -239,10 +239,6 @@ int ele_get_trng_state(struct device *dev)
 	if (ret)
 		goto exit;
 
-	ret = imx_ele_msg_send_rcv(priv);
-	if (ret < 0)
-		goto exit;
-
 	ret  = validate_rsp_hdr(priv,
 				priv->rx_msg->header,
 				ELE_GET_TRNG_STATE_REQ,
@@ -332,7 +328,7 @@ int ele_service_swap(struct device *dev,
 				    ELE_SERVICE_SWAP_REQ_MSG_SZ,
 				    true);
 	if (ret)
-		return ret;
+		goto exit;
 
 	priv->tx_msg->data[0] = flag;
 	priv->tx_msg->data[1] = addr_size;
@@ -342,7 +338,7 @@ int ele_service_swap(struct device *dev,
 						 ELE_SERVICE_SWAP_REQ_MSG_SZ);
 	ret = imx_ele_msg_send_rcv(priv);
 	if (ret < 0)
-		return ret;
+		goto exit;
 
 	ret  = validate_rsp_hdr(priv,
 				priv->rx_msg->header,
@@ -350,7 +346,7 @@ int ele_service_swap(struct device *dev,
 				ELE_SERVICE_SWAP_RSP_MSG_SZ,
 				true);
 	if (ret)
-		return ret;
+		goto exit;
 
 	status = RES_STATUS(priv->rx_msg->data[0]);
 	if (status != priv->success_tag) {
@@ -363,6 +359,8 @@ int ele_service_swap(struct device *dev,
 		else
 			ret = 0;
 	}
+exit:
+	imx_se_free_tx_rx_buf(priv);
 
 	return ret;
 }
