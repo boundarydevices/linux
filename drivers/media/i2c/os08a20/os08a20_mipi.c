@@ -1460,7 +1460,7 @@ static long os08a20_priv_ioctl(struct v4l2_subdev *sd,
 		ret = os08a20_set_test_pattern(sensor, arg);
 		break;
 	default:
-		ret = -EINVAL;
+		ret = -ENOTTY;
 		break;
 	}
 
