@@ -78,7 +78,7 @@ static int pinctrl_scmi_get_group_pins(struct pinctrl_dev *pctldev,
 }
 
 #ifdef CONFIG_OF
-#ifdef CONFIG_PINCTRL_IMX
+#if IS_ENABLED(CONFIG_PINCTRL_IMX)
 extern int imx_scmi_dt_node_to_map(struct pinctrl_dev *pctldev, struct device_node *np,
 				   struct pinctrl_map **map, unsigned int *num_maps);
 #else
