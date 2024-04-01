@@ -303,8 +303,8 @@ int max9271_verify_id(struct max9271_device *dev)
 		return ret;
 	}
 
-	if (ret != MAX9271_ID) {
-		dev_err(&dev->client->dev, "MAX9271 ID mismatch (0x%02x)\n",
+	if (ret != MAX9271_ID && ret != MAX96705_ID) {
+		dev_err(&dev->client->dev, "MAX9271/MAX96705 ID mismatch (0x%02x)\n",
 			ret);
 		return -ENXIO;
 	}

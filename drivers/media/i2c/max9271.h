@@ -49,6 +49,7 @@
 #define MAX9271_REV_HIVTH		BIT(0)
 /* Register 0x09 */
 #define MAX9271_ID			0x09
+#define MAX96705_ID			0x41
 /* Register 0x0d */
 #define MAX9271_I2CLOCACK		BIT(7)
 #define MAX9271_I2CSLVSH_1046NS_469NS	(3 << 5)
