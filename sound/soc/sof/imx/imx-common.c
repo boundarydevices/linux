@@ -79,14 +79,8 @@ int imx8_parse_clocks(struct snd_sof_dev *sdev, struct imx_clocks *clks)
 	int ret;
 
 	ret = devm_clk_bulk_get(sdev->dev, clks->num_dsp_clks, clks->dsp_clks);
-	if (ret) {
-		dev_err(sdev->dev, "Failed to request DSP clocks\n");
-		return ret;
-	}
-
-	ret = devm_clk_bulk_get_optional(sdev->dev, clks->num_aux_clks, clks->aux_clks);
 	if (ret)
-		dev_err(sdev->dev, "Failed to request aux clocks\n");
+		dev_err(sdev->dev, "Failed to request DSP clocks\n");
 
 	return ret;
 }
@@ -94,19 +88,12 @@ EXPORT_SYMBOL(imx8_parse_clocks);
 
 int imx8_enable_clocks(struct snd_sof_dev *sdev, struct imx_clocks *clks)
 {
-	int ret;
-
-	ret = clk_bulk_prepare_enable(clks->num_aux_clks, clks->aux_clks);
-	if (ret)
-		return ret;
-
 	return clk_bulk_prepare_enable(clks->num_dsp_clks, clks->dsp_clks);
 }
 EXPORT_SYMBOL(imx8_enable_clocks);
 
 void imx8_disable_clocks(struct snd_sof_dev *sdev, struct imx_clocks *clks)
 {
-	clk_bulk_disable_unprepare(clks->num_aux_clks, clks->aux_clks);
 	clk_bulk_disable_unprepare(clks->num_dsp_clks, clks->dsp_clks);
 }
 EXPORT_SYMBOL(imx8_disable_clocks);
