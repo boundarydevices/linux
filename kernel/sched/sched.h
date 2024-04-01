@@ -3955,4 +3955,13 @@ static inline void *android_task_vendor_data(struct task_struct *p)
 }
 #endif
 
+#ifdef CONFIG_RT_SOFTIRQ_AWARE_SCHED
+extern bool cpu_busy_with_softirqs(int cpu);
+#else
+static inline bool cpu_busy_with_softirqs(int cpu)
+{
+	return false;
+}
+#endif /* CONFIG_RT_SOFTIRQ_AWARE_SCHED */
+
 #endif /* _KERNEL_SCHED_SCHED_H */
