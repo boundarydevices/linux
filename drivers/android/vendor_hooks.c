@@ -20,6 +20,7 @@
 #include <trace/hooks/epoch.h>
 #include <trace/hooks/cpufreq.h>
 #include <trace/hooks/preemptirq.h>
+#include <trace/hooks/fips140.h>
 #include <trace/hooks/ufshcd.h>
 #include <trace/hooks/cgroup.h>
 #include <trace/hooks/sys.h>
@@ -138,6 +139,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_ftrace_oops_exit);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_ftrace_size_check);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_ftrace_format_check);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_ftrace_dump_buffer);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_sha256);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mem_cgroup_free);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mem_cgroup_alloc);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_cma_alloc_bypass);
