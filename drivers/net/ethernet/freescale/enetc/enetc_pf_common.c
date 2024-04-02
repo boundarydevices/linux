@@ -244,7 +244,7 @@ int enetc_pf_set_features(struct net_device *ndev, netdev_features_t features)
 
 	if (changed & NETIF_F_HW_VLAN_CTAG_FILTER) {
 		struct enetc_pf *pf = enetc_si_priv(priv->si);
-		bool en = !!(features & NETIF_F_HW_VLAN_CTAG_FILTER);
+		bool en = !(features & NETIF_F_HW_VLAN_CTAG_FILTER);
 
 		enetc_set_si_vlan_promisc(pf, 0, en);
 	}
