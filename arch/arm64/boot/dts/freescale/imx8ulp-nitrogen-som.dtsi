@@ -7,66 +7,6 @@
 #include "imx8ulp.dtsi"
 #include "imx8ulp-rpmsg.dtsi"
 
-&iomuxc1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog_som>;
-
-	pinctrl_hog_som: hog-somgrp {
-		fsl,pins = <
-			MX8ULP_PAD_PTF29__PTF29		0x7	/* pmic_mode0 */
-			MX8ULP_PAD_PTF30__PTF30		0x7	/* pmic_mode1 */
-			MX8ULP_PAD_PTF31__PTF31		0x7	/* pmic_mode2 */
-			MX8ULP_PAD_PTF27__PTF27		0x7
-		>;
-	};
-
-	pinctrl_lpi2c5: lpi2c5grp {
-		fsl,pins = <
-			MX8ULP_PAD_PTE20__LPI2C5_SCL	0x27
-			MX8ULP_PAD_PTE21__LPI2C5_SDA	0x27
-		>;
-	};
-
-	pinctrl_lpi2c6: lpi2c6grp {
-		fsl,pins = <
-			MX8ULP_PAD_PTF16__LPI2C6_SCL	0x27
-			MX8ULP_PAD_PTF17__LPI2C6_SDA	0x27
-		>;
-	};
-
-	pinctrl_lpi2c6_haptics: lpi2c6-hapticsgrp {
-		fsl,pins = <
-#define GP_I2C6_HAPTICS_EN	<&gpiod 11 GPIO_ACTIVE_HIGH>
-			MX8ULP_PAD_PTD11__PTD11		0x02
-		>;
-	};
-
-	pinctrl_lpi2c6_hd3ss3220: lpi2c6-hd3ss3220grp {
-		fsl,pins = <
-#define GPIRQ_HD3SS3220		<&gpioe 1 IRQ_TYPE_LEVEL_LOW>
-			MX8ULP_PAD_PTE1__PTE1		0x7
-			/* id pin, not needed */
-			MX8ULP_PAD_PTD12__PTD12		0x3
-		>;
-	};
-
-	pinctrl_usdhc0: usdhc0grp {
-		fsl,pins = <
-			MX8ULP_PAD_PTD2__SDHC0_CLK	0x10002
-			MX8ULP_PAD_PTD1__SDHC0_CMD	0x3
-			MX8ULP_PAD_PTD10__SDHC0_D0	0x3
-			MX8ULP_PAD_PTD9__SDHC0_D1	0x3
-			MX8ULP_PAD_PTD8__SDHC0_D2	0x3
-			MX8ULP_PAD_PTD7__SDHC0_D3	0x3
-			MX8ULP_PAD_PTD6__SDHC0_D4	0x3
-			MX8ULP_PAD_PTD5__SDHC0_D5	0x3
-			MX8ULP_PAD_PTD4__SDHC0_D6	0x3
-			MX8ULP_PAD_PTD3__SDHC0_D7	0x3
-			MX8ULP_PAD_PTD0__SDHC0_RESET_B  0x3
-		>;
-	};
-};
-
 / {
 	connector {
 		compatible = "usb-c-connector";
@@ -231,6 +171,64 @@
 	status = "okay";
 };
 
+&iomuxc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog_som>;
+
+	pinctrl_hog_som: hog-somgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF29__PTF29		0x7	/* pmic_mode0 */
+			MX8ULP_PAD_PTF30__PTF30		0x7	/* pmic_mode1 */
+			MX8ULP_PAD_PTF31__PTF31		0x7	/* pmic_mode2 */
+			MX8ULP_PAD_PTF27__PTF27		0x7
+		>;
+	};
+
+	pinctrl_lpi2c5: lpi2c5grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE20__LPI2C5_SCL	0x27
+			MX8ULP_PAD_PTE21__LPI2C5_SDA	0x27
+		>;
+	};
+
+	pinctrl_lpi2c6: lpi2c6grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF16__LPI2C6_SCL	0x27
+			MX8ULP_PAD_PTF17__LPI2C6_SDA	0x27
+		>;
+	};
+
+	pinctrl_lpi2c6_haptics: lpi2c6-hapticsgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTD11__PTD11		0x02
+		>;
+	};
+
+	pinctrl_lpi2c6_hd3ss3220: lpi2c6-hd3ss3220grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE1__PTE1		0x7
+			/* id pin, not needed */
+			MX8ULP_PAD_PTD12__PTD12		0x3
+		>;
+	};
+
+	pinctrl_usdhc0: usdhc0grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTD2__SDHC0_CLK	0x10002
+			MX8ULP_PAD_PTD1__SDHC0_CMD	0x3
+			MX8ULP_PAD_PTD10__SDHC0_D0	0x3
+			MX8ULP_PAD_PTD9__SDHC0_D1	0x3
+			MX8ULP_PAD_PTD8__SDHC0_D2	0x3
+			MX8ULP_PAD_PTD7__SDHC0_D3	0x3
+			MX8ULP_PAD_PTD6__SDHC0_D4	0x3
+			MX8ULP_PAD_PTD5__SDHC0_D5	0x3
+			MX8ULP_PAD_PTD4__SDHC0_D6	0x3
+			MX8ULP_PAD_PTD3__SDHC0_D7	0x3
+			MX8ULP_PAD_PTD0__SDHC0_RESET_B  0x3
+		>;
+	};
+};
+
 &lpi2c5 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -254,7 +252,7 @@
 		compatible = "ti,drv2605";
 		reg = <0x5a>;
 		vbat-supply = <&reg_vref_3p3v>;
-		enable-gpio = GP_I2C6_HAPTICS_EN;
+		enable-gpio = <&gpiod 11 GPIO_ACTIVE_HIGH>;
 		mode = <DRV260X_LRA_MODE>;
 		library-sel = <DRV260X_LIB_LRA>;
 		pinctrl-names = "default";
@@ -266,7 +264,7 @@
 	hd3ss3220@60 {
 		/* tusb320 is compatible with hd3ss3220 */
 		compatible = "ti,hd3ss3220";
-		interrupts-extended = GPIRQ_HD3SS3220;
+		interrupts-extended = <&gpioe 1 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_lpi2c6_hd3ss3220>;
 		reg = <0x60>;
