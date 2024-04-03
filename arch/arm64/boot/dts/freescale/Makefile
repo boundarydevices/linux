@@ -456,4 +456,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-son.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8ulp-tag.dtb imx8ulp-tag-m33.dtb \
-			  imx8ulp-nitrogen-som.dtb imx8ulp-nitrogen-som-m33.dtb \
+			  imx8ulp-nitrogen-som.dtb \
