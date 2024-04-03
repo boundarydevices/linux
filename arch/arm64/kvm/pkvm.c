@@ -254,7 +254,7 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 		WARN_ON(kvm_call_hyp_nvhe(__pkvm_reclaim_dying_guest_page,
 					  host_kvm->arch.pkvm.handle,
 					  page_to_pfn(ppage->page),
-					  ppage->ipa));
+					  ppage->ipa >> PAGE_SHIFT));
 		cond_resched();
 
 		unpin_user_pages_dirty_lock(&ppage->page, 1, ppage->dirty);
