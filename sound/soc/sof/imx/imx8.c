@@ -42,25 +42,6 @@
 #define MBOX_OFFSET	0x800000
 #define MBOX_SIZE	0x1000
 
-/* DSP clocks */
-static struct clk_bulk_data imx8_dsp_clks[] = {
-	{ .id = "ipg" },
-	{ .id = "ocram" },
-	{ .id = "core" },
-};
-
-static struct clk_bulk_data imx8_aux_clks[] = {
-	{ .id = "esai0_core" },
-	{ .id = "esai0_extal" },
-	{ .id = "esai0_fsys" },
-	{ .id = "esai0_spba" },
-	{ .id = "sai1_bus" },
-	{ .id = "sai1_mclk0" },
-	{ .id = "sai1_mclk1" },
-	{ .id = "sai1_mclk2" },
-	{ .id = "sai1_mclk3" },
-};
-
 #ifdef CONFIG_EXTCON
 struct extcon_dev *sof_imx8_edev;
 static const unsigned int sof_imx8_extcon_cables[] = {
@@ -85,7 +66,8 @@ struct imx8_priv {
 	struct device **pd_dev;
 	struct device_link **link;
 
-	struct imx_clocks *clks;
+	struct clk_bulk_data *clks;
+	int clk_num;
 };
 
 static int imx8_get_mailbox_offset(struct snd_sof_dev *sdev)
@@ -217,10 +199,6 @@ static int imx8_probe(struct snd_sof_dev *sdev)
 	if (!priv)
 		return -ENOMEM;
 
-	priv->clks = devm_kzalloc(&pdev->dev, sizeof(*priv->clks), GFP_KERNEL);
-	if (!priv->clks)
-		return -ENOMEM;
-
 	sdev->num_cores = 1;
 	sdev->pdata->hw_pdata = priv;
 	priv->dev = sdev->dev;
@@ -334,21 +312,18 @@ static int imx8_probe(struct snd_sof_dev *sdev)
 	/* set default mailbox offset for FW ready message */
 	sdev->dsp_box.offset = MBOX_OFFSET;
 
-	/* init clocks info */
-	priv->clks->dsp_clks = imx8_dsp_clks;
-	priv->clks->num_dsp_clks = ARRAY_SIZE(imx8_dsp_clks);
-
-	priv->clks->aux_clks = imx8_aux_clks;
-	priv->clks->num_aux_clks = ARRAY_SIZE(imx8_aux_clks);
-
-	ret = imx8_parse_clocks(sdev, priv->clks);
-
-	if (ret < 0)
+	ret = devm_clk_bulk_get_all(sdev->dev, &priv->clks);
+	if (ret < 0) {
+		dev_err(sdev->dev, "failed to fetch clocks: %d\n", ret);
 		goto exit_pdev_unregister;
+	}
+	priv->clk_num = ret;
 
-	ret = imx8_enable_clocks(sdev, priv->clks);
-	if (ret < 0)
+	ret = clk_bulk_prepare_enable(priv->clk_num, priv->clks);
+	if (ret < 0) {
+		dev_err(sdev->dev, "failed to enable clocks: %d\n", ret);
 		goto exit_pdev_unregister;
+	}
 
 #ifdef CONFIG_EXTCON
 	sof_imx8_edev  = devm_extcon_dev_allocate(&pdev->dev, sof_imx8_extcon_cables);
@@ -382,7 +357,7 @@ static int imx8_remove(struct snd_sof_dev *sdev)
 	struct imx8_priv *priv = sdev->pdata->hw_pdata;
 	int i;
 
-	imx8_disable_clocks(sdev, priv->clks);
+	clk_bulk_disable_unprepare(priv->clk_num, priv->clks);
 	platform_device_unregister(priv->ipc_dev);
 
 	for (i = 0; i < priv->num_domains; i++) {
@@ -414,7 +389,7 @@ static void imx8_suspend(struct snd_sof_dev *sdev)
 	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
 		imx_dsp_free_channel(priv->dsp_ipc, i);
 
-	imx8_disable_clocks(sdev, priv->clks);
+	clk_bulk_disable_unprepare(priv->clk_num, priv->clks);
 }
 
 static int imx8_resume(struct snd_sof_dev *sdev)
@@ -423,9 +398,11 @@ static int imx8_resume(struct snd_sof_dev *sdev)
 	int ret;
 	int i;
 
-	ret = imx8_enable_clocks(sdev, priv->clks);
-	if (ret < 0)
+	ret = clk_bulk_prepare_enable(priv->clk_num, priv->clks);
+	if (ret < 0) {
+		dev_err(sdev->dev, "failed to enable clocks: %d\n", ret);
 		return ret;
+	}
 
 	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
 		imx_dsp_request_channel(priv->dsp_ipc, i);

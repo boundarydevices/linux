@@ -8,6 +8,7 @@
 #ifndef __FSL_XCVR_H
 #define __FSL_XCVR_H
 
+#include <drm/drm_bridge.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
 #include <sound/dmaengine_pcm.h>
@@ -170,6 +171,7 @@
 					 FSL_XCVR_IRQ_MUTE | \
 					 FSL_XCVR_IRQ_FIFO_UOFL_ERR | \
 					 FSL_XCVR_IRQ_HOST_WAKEUP | \
+					 FSL_XCVR_IRQ_CMDC_STATUS_UPD |\
 					 FSL_XCVR_IRQ_ARC_MODE)
 
 #define FSL_XCVR_ISR_CMDC_TX_EN		BIT(3)
@@ -327,6 +329,8 @@ struct fsl_xcvr {
 	u8 cap_ds[FSL_XCVR_CAPDS_SIZE];
 	struct snd_pcm_hw_constraint_list spdif_constr_rates;
 	u32 spdif_constr_rates_list[SPDIF_NUM_RATES];
+	struct work_struct work;
+	struct drm_bridge *bridge;
 };
 
 const struct attribute_group *fsl_xcvr_get_attr_grp(void);

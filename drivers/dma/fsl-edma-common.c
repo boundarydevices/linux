@@ -705,7 +705,6 @@ void fsl_edma_free_chan_resources(struct dma_chan *chan)
 	dma_pool_destroy(fsl_chan->tcd_pool);
 	fsl_chan->tcd_pool = NULL;
 	fsl_chan->is_sw = false;
-	fsl_chan->srcid = 0;
 }
 EXPORT_SYMBOL_GPL(fsl_edma_free_chan_resources);
 

@@ -3,6 +3,7 @@
  * i.MX8 ISI - Input crossbar switch
  *
  * Copyright (c) 2022 Laurent Pinchart <laurent.pinchart@ideasonboard.com>
+ * Copyright 2023 NXP
  */
 
 #include <linux/device.h>

@@ -13,11 +13,11 @@
 #define FALLING_EDGE		BIT(0)
 #define RISING_EDGE		BIT(1)
 
-#define BRD_SM_CTRL_SD3_WAKE		6	/*!< PCAL6408A-0 */
-#define BRD_SM_CTRL_PCIE1_WAKE		7	/*!< PCAL6408A-4 */
-#define BRD_SM_CTRL_BT_WAKE		8	/*!< PCAL6408A-5 */
-#define BRD_SM_CTRL_PCIE2_WAKE		9	/*!< PCAL6408A-6 */
-#define BRD_SM_CTRL_BUTTON		10	/*!< PCAL6408A-7 */
+#define BRD_SM_CTRL_SD3_WAKE		0x8000	/*!< PCAL6408A-0 */
+#define BRD_SM_CTRL_PCIE1_WAKE		0x8001	/*!< PCAL6408A-4 */
+#define BRD_SM_CTRL_BT_WAKE		0x8002	/*!< PCAL6408A-5 */
+#define BRD_SM_CTRL_PCIE2_WAKE		0x8003	/*!< PCAL6408A-6 */
+#define BRD_SM_CTRL_BUTTON		0x8004	/*!< PCAL6408A-7 */
 
 / {
 	model = "NXP i.MX95 19X19 board";
@@ -111,18 +111,6 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = <&i2c4_gpio_expander_21 1 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
-		regulator-always-on;
-	};
-
-	reg_audio_slot: regulator-audio-slot {
-		compatible = "regulator-fixed";
-		regulator-name = "audio-wm8962";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&i2c4_gpio_expander_21 7 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		regulator-always-on;
-		status = "disabled";
 	};
 
 	reg_1p8v: regulator-1p8v {
@@ -243,7 +231,6 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = <&i2c5_gpio_expander_21 1 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	reg_aqr_en: regulator-aqr-en {
@@ -262,7 +249,6 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		gpio = <&i2c7_pcal6524 13 GPIO_ACTIVE_LOW>;
-		regulator-always-on;
 	};
 
 	reg_serdes_en: regulator-mac-en {
@@ -923,7 +909,7 @@
 	pinctrl_enetc0: enetc0grp {
 		fsl,pins = <
 			IMX95_PAD_ENET1_MDC__NETCMIX_TOP_NETC_MDC		0x57e
-			IMX95_PAD_ENET1_MDIO__NETCMIX_TOP_NETC_MDIO		0x57e
+			IMX95_PAD_ENET1_MDIO__NETCMIX_TOP_NETC_MDIO		0x97e
 			IMX95_PAD_ENET1_TD3__NETCMIX_TOP_ETH0_RGMII_TD3		0x57e
 			IMX95_PAD_ENET1_TD2__NETCMIX_TOP_ETH0_RGMII_TD2		0x57e
 			IMX95_PAD_ENET1_TD1__NETCMIX_TOP_ETH0_RGMII_TD1		0x57e

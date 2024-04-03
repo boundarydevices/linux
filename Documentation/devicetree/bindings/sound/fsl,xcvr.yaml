@@ -74,6 +74,11 @@ properties:
   resets:
     maxItems: 1
 
+  hdmi-phandle:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description:
+      Phandle to the HDMI controller.
+
 required:
   - compatible
   - reg
@@ -109,4 +114,5 @@ examples:
            dmas = <&sdma2 30 2 0>, <&sdma2 31 2 0>;
            dma-names = "rx", "tx";
            resets = <&audiomix_reset 0>;
+           hdmi-phandle = <&hdmi>;
     };

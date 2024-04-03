@@ -2,7 +2,7 @@
 /*
  * SCMI Message Protocol driver NXP extension header
  *
- * Copyright (C) 2018-2021 ARM Ltd.
+ * Copyright 2023 NXP
  */
 
 #ifndef _LINUX_SCMI_NXP_PROTOCOL_H

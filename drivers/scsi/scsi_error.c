@@ -67,7 +67,6 @@ extern void *sg_io_buffer_hack;
 #define sg_io_buffer_hack NULL
 #endif
 
-/* called with shost->host_lock held */
 void scsi_eh_wakeup(struct Scsi_Host *shost, unsigned int busy)
 {
 	lockdep_assert_held(shost->host_lock);

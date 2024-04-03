@@ -571,6 +571,7 @@ int wave6_vpu_dec_give_command(struct vpu_instance *inst, enum codec_command cmd
 		return -EINVAL;
 
 	p_dec_info = &inst->codec_info->dec_info;
+
 	switch (cmd) {
 	case ENABLE_DEC_THUMBNAIL_MODE:
 		p_dec_info->thumbnail_mode = 1;
@@ -1084,6 +1085,7 @@ int wave6_vpu_enc_give_command(struct vpu_instance *inst, enum codec_command cmd
 		return -EINVAL;
 
 	p_enc_info = &inst->codec_info->enc_info;
+
 	switch (cmd) {
 	case ENABLE_ROTATION:
 		p_enc_info->rotation_enable = true;
@@ -1134,6 +1136,22 @@ int wave6_vpu_enc_issue_seq_init(struct vpu_instance *inst)
 	return ret;
 }
 
+int wave6_vpu_enc_update_seq(struct vpu_instance *inst)
+{
+	int ret;
+	struct vpu_device *vpu_dev = inst->dev;
+
+	ret = mutex_lock_interruptible(&vpu_dev->hw_lock);
+	if (ret)
+		return ret;
+
+	ret = wave6_vpu_enc_change_seq(inst);
+
+	mutex_unlock(&vpu_dev->hw_lock);
+
+	return ret;
+}
+
 int wave6_vpu_enc_complete_seq_init(struct vpu_instance *inst, struct enc_initial_info *info)
 {
 	struct enc_info *p_enc_info = &inst->codec_info->enc_info;
@@ -1162,6 +1180,32 @@ int wave6_vpu_enc_complete_seq_init(struct vpu_instance *inst, struct enc_initia
 	return 0;
 }
 
+int wave6_vpu_enc_complete_seq_update(struct vpu_instance *inst, struct enc_initial_info *info)
+{
+	struct enc_info *p_enc_info = &inst->codec_info->enc_info;
+	int ret;
+	struct vpu_device *vpu_dev = inst->dev;
+
+	if (!info)
+		return -EINVAL;
+
+	ret = mutex_lock_interruptible(&vpu_dev->hw_lock);
+	if (ret)
+		return ret;
+
+	ret = wave6_vpu_enc_get_seq_info(inst, info);
+	if (ret) {
+		p_enc_info->initial_info_obtained = false;
+		mutex_unlock(&vpu_dev->hw_lock);
+		return ret;
+	}
+
+	mutex_unlock(&vpu_dev->hw_lock);
+
+	return 0;
+}
+
+
 const char *wave6_vpu_instance_state_name(u32 state)
 {
 	switch (state) {
@@ -1183,6 +1227,8 @@ void wave6_vpu_set_instance_state(struct vpu_instance *inst, u32 state)
 		wave6_vpu_instance_state_name(state));
 
 	inst->state = state;
+	if (state == VPU_INST_STATE_PIC_RUN && !inst->performance.ts_first)
+		inst->performance.ts_first = ktime_get_raw();
 }
 
 void wave6_vpu_wait_active(struct vpu_instance *inst)

@@ -1354,7 +1354,7 @@ static int imx6_pcie_config_sid(struct imx6_pcie *imx6_pcie)
 					       smmu_size / sizeof(u32)))
 			return -EINVAL;
 
-		of_property_read_u32(dev->of_node, "smmu_map_mask",
+		of_property_read_u32(dev->of_node, "iommu-map-mask",
 				     &smmu_map_mask);
 	}
 

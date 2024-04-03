@@ -133,6 +133,7 @@ int scmi_imx_bbm_pwrkey_event(struct scmi_imx_bbm *bbnsm)
 		bbnsm->keystate = 1;
 		input_event(input, EV_KEY, bbnsm->keycode, 1);
 		input_sync(input);
+		bbnsm->suspended = false;
 	}
 
 	return 0;
@@ -288,10 +289,6 @@ static int __maybe_unused scmi_imx_bbm_suspend(struct device *dev)
 
 static int __maybe_unused scmi_imx_bbm_resume(struct device *dev)
 {
-	struct scmi_imx_bbm *bbnsm = dev_get_drvdata(dev);
-
-	bbnsm->suspended = false;
-
 	return 0;
 }
 

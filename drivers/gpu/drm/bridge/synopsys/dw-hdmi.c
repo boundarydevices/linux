@@ -2994,6 +2994,9 @@ static struct edid *dw_hdmi_bridge_get_edid(struct drm_bridge *bridge,
 {
 	struct dw_hdmi *hdmi = bridge->driver_private;
 
+	if (!connector)
+		return dw_hdmi_get_edid(hdmi, &hdmi->connector);
+
 	return dw_hdmi_get_edid(hdmi, connector);
 }
 

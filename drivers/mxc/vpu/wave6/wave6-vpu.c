@@ -8,11 +8,10 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
-#include <linux/of_address.h>
-#include <linux/of_platform.h>
 #include <linux/firmware.h>
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
+#include <linux/of_platform.h>
 #include <linux/debugfs.h>
 #include "wave6-vpu.h"
 #include "wave6-regdefine.h"
@@ -85,6 +84,8 @@ static irqreturn_t wave6_vpu_irq_thread(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+
+
 static u32 wave6_vpu_read_reg(struct device *dev, u32 addr)
 {
 	struct vpu_device *vpu_dev = dev_get_drvdata(dev);
@@ -108,11 +109,10 @@ static void wave6_vpu_on_boot(struct device *dev)
 	u32 hw_version;
 	int ret;
 
-	wave6_enable_interrupt(vpu_dev);
-
 	product_code = wave6_vdi_readl(vpu_dev, W6_VPU_RET_PRODUCT_VERSION);
 	vpu_dev->product = wave_vpu_get_product_id(vpu_dev);
 
+	wave6_enable_interrupt(vpu_dev);
 	ret = wave6_vpu_get_version(vpu_dev, &version, &revision);
 	if (ret) {
 		dev_err(dev, "wave6_vpu_get_version fail\n");
@@ -122,24 +122,34 @@ static void wave6_vpu_on_boot(struct device *dev)
 	hw_version = wave6_vdi_readl(vpu_dev, W6_RET_CONF_REVISION);
 
 	if (vpu_dev->product_code != product_code ||
-	    vpu_dev->fw_version != revision ||
+	    vpu_dev->fw_version != version ||
+	    vpu_dev->fw_revision != revision ||
 	    vpu_dev->hw_version != hw_version) {
 		vpu_dev->product_code = product_code;
-		vpu_dev->fw_version = revision;
+		vpu_dev->fw_version = version;
+		vpu_dev->fw_revision = revision;
 		vpu_dev->hw_version = hw_version;
-		dev_info(dev, "product: %08x(0x%x), fw_version : %08x(r%d), hw_version : 0x%x\n",
-			 vpu_dev->product, vpu_dev->product_code,
-			 version, revision,
+		dev_info(dev,
+			 "product: 0x%x, fw_version : v%d.%d.%d_g%08x(r%d), hw_version : 0x%x\n",
+			 vpu_dev->product_code,
+			 (version >> 24) & 0xFF,
+			 (version >> 16) & 0xFF,
+			 (version >> 0) & 0xFFFF,
+			 wave6_vdi_readl(vpu_dev, W6_RET_SHA_ID),
+			 revision,
 			 vpu_dev->hw_version);
 	}
+
+	if (vpu_dev->num_clks)
+		vpu_dev->vpu_clk_rate = clk_get_rate(vpu_dev->clks[0].clk);
 }
 
 static int wave6_vpu_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct vpu_device *dev;
-	struct platform_device *pctrl;
 	const struct wave6_match_data *match_data;
+	struct platform_device *pctrl;
 
 	match_data = device_get_match_data(&pdev->dev);
 	if (!match_data) {
@@ -176,7 +186,7 @@ static int wave6_vpu_probe(struct platform_device *pdev)
 	dev->entity.read_reg = wave6_vpu_read_reg;
 	dev->entity.write_reg = wave6_vpu_write_reg;
 	dev->entity.on_boot = wave6_vpu_on_boot;
-	if (wave6_vpu_ctrl_get_state(dev->ctrl, &dev->entity) < 0) {
+	if (wave6_vpu_ctrl_get_state(dev->ctrl) < 0) {
 		dev_info(&pdev->dev, "vpu ctrl is not ready, defer probe\n");
 		return -EPROBE_DEFER;
 	}
@@ -290,6 +300,7 @@ static int wave6_vpu_runtime_suspend(struct device *dev)
 	wave6_vpu_ctrl_put_sync(vpu_dev->ctrl, &vpu_dev->entity);
 	if (vpu_dev->num_clks)
 		clk_bulk_disable_unprepare(vpu_dev->num_clks, vpu_dev->clks);
+
 	return 0;
 }
 
@@ -310,7 +321,11 @@ static int wave6_vpu_runtime_resume(struct device *dev)
 		}
 	}
 
-	return wave6_vpu_ctrl_resume_and_get(vpu_dev->ctrl, &vpu_dev->entity);
+	ret = wave6_vpu_ctrl_resume_and_get(vpu_dev->ctrl, &vpu_dev->entity);
+	if (ret && vpu_dev->num_clks)
+		clk_bulk_disable_unprepare(vpu_dev->num_clks, vpu_dev->clks);
+
+	return ret;
 }
 #endif
 
@@ -318,11 +333,15 @@ static int wave6_vpu_runtime_resume(struct device *dev)
 static int wave6_vpu_suspend(struct device *dev)
 {
 	struct vpu_device *vpu_dev = dev_get_drvdata(dev);
+	int ret;
 
 	dprintk(dev, "suspend\n");
 	v4l2_m2m_suspend(vpu_dev->m2m_dev);
 
-	return pm_runtime_force_suspend(dev);
+	ret = pm_runtime_force_suspend(dev);
+	if (ret)
+		v4l2_m2m_resume(vpu_dev->m2m_dev);
+	return ret;
 }
 
 static int wave6_vpu_resume(struct device *dev)
@@ -338,7 +357,6 @@ static int wave6_vpu_resume(struct device *dev)
 	v4l2_m2m_resume(vpu_dev->m2m_dev);
 	return 0;
 }
-
 #endif
 static const struct dev_pm_ops wave6_vpu_pm_ops = {
 	SET_RUNTIME_PM_OPS(wave6_vpu_runtime_suspend, wave6_vpu_runtime_resume, NULL)

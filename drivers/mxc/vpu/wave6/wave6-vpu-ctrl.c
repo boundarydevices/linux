@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause)
+/*
+ * Wave6 series multi-standard codec IP - vpu control device
+ *
+ * Copyright (C) 2021 CHIPS&MEDIA INC
+ */
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/of_address.h>
+#include <linux/of_device.h>
 #include <linux/firmware.h>
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
@@ -75,6 +82,11 @@ struct vpu_ctrl {
 	struct loger_t *loger;
 	struct dentry *debugfs;
 #endif
+};
+
+static const struct vpu_ctrl_resource wave633c_ctrl_data = {
+	.fw_name = "wave633c_codec_fw.bin",
+	.sram_size = 0x18000,
 };
 
 #if WAVE6_ENABLE_SW_UART
@@ -195,17 +207,8 @@ static void wave6_vpu_ctrl_writel(struct device *dev, u32 addr, u32 data)
 	struct vpu_ctrl *ctrl = dev_get_drvdata(dev);
 
 	writel(data, ctrl->reg_base + addr);
-}
 
-/*
- *static u32 wave6_vpu_ctrl_readl(struct device *dev, u32 addr)
- *{
- *        struct vpu_ctrl *ctrl = dev_get_drvdata(dev);
- *
- *        return readl(ctrl->reg_base + addr);
- *}
- *
- */
+}
 
 static void byte_swap(unsigned char *data, int len)
 {
@@ -355,12 +358,17 @@ static int wave6_vpu_ctrl_check_result(struct wave6_vpu_entity *entity)
 	return entity->read_reg(entity->dev, W6_RET_FAIL_REASON);
 }
 
+static u32 wave6_vpu_ctrl_get_code_buf_size(struct vpu_ctrl *ctrl)
+{
+	return min_t(u32, ctrl->boot_mem.size, WAVE6_MAX_CODE_BUF_SIZE);
+}
+
 static void wave6_vpu_ctrl_remap_code_buffer(struct vpu_ctrl *ctrl)
 {
 	dma_addr_t code_base = ctrl->boot_mem.dma_addr;
 	u32 i, reg_val, remap_size;
 
-	for (i = 0; i < WAVE6_MAX_CODE_BUF_SIZE / W6_REMAP_MAX_SIZE; i++) {
+	for (i = 0; i < wave6_vpu_ctrl_get_code_buf_size(ctrl) / W6_REMAP_MAX_SIZE; i++) {
 		remap_size = (W6_REMAP_MAX_SIZE >> 12) & 0x1ff;
 		reg_val = 0x80000000 |
 			  (WAVE6_UPPER_PROC_AXI_ID << 20) |
@@ -430,7 +438,14 @@ static void wave6_vpu_ctrl_load_firmware(const struct firmware *fw, void *contex
 	u32 product_code;
 	int ret;
 
-	pm_runtime_resume_and_get(ctrl->dev);
+	ret = pm_runtime_resume_and_get(ctrl->dev);
+	if (ret) {
+		dev_err(ctrl->dev, "pm runtime resume fail, ret = %d\n", ret);
+		wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_OFF);
+		ctrl->current_entity = NULL;
+		release_firmware(fw);
+		return;
+	}
 
 	dprintk(ctrl->dev, "loading firmware\n");
 
@@ -439,7 +454,7 @@ static void wave6_vpu_ctrl_load_firmware(const struct firmware *fw, void *contex
 		goto error;
 	}
 
-	if (fw->size * 2 > ctrl->boot_mem.size) {
+	if (fw->size + WAVE6_EXTRA_CODE_BUF_SIZE > wave6_vpu_ctrl_get_code_buf_size(ctrl)) {
 		dev_err(ctrl->dev, "firmware size (%ld > %zd) is too big\n",
 			fw->size, ctrl->boot_mem.size);
 		goto error;
@@ -453,7 +468,6 @@ static void wave6_vpu_ctrl_load_firmware(const struct firmware *fw, void *contex
 
 	wave6_swap_endian(product_code, (u8 *)fw->data, fw->size, VDI_128BIT_LITTLE_ENDIAN);
 	memcpy(ctrl->boot_mem.vaddr, fw->data, fw->size);
-
 	wave6_vpu_ctrl_remap_code_buffer(ctrl);
 	ret = wave6_vpu_ctrl_init_vpu(ctrl);
 	if (ret)
@@ -542,9 +556,18 @@ static int wave6_vpu_ctrl_try_boot(struct vpu_ctrl *ctrl, struct wave6_vpu_entit
 		wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_OFF);
 
 	if (entity->read_reg(entity->dev, W6_VPU_REG_GLOBAL_WR)) {
+		u32 val;
+
 		/* the vcpu may be booted by other vm */
 		wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_PREPARE);
-		return 0;
+		ret = read_poll_timeout(entity->read_reg, val, val != 0,
+					10, W6_VCPU_BOOT_TIMEOUT, false,
+					entity->dev, W6_VCPU_CUR_PC);
+		if (!ret)
+			wave6_vpu_ctrl_boot_done(ctrl);
+		else
+			wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_OFF);
+		return ret;
 	}
 	entity->write_reg(entity->dev, W6_VPU_REG_GLOBAL_WR, 1);
 
@@ -554,11 +577,14 @@ static int wave6_vpu_ctrl_try_boot(struct vpu_ctrl *ctrl, struct wave6_vpu_entit
 		return 0;
 	}
 
-	if (ctrl->state == WAVE6_VPU_STATE_SLEEP)
-		return wave6_vpu_ctrl_wakeup(ctrl, entity);
+	if (ctrl->state == WAVE6_VPU_STATE_SLEEP) {
+		ret = wave6_vpu_ctrl_wakeup(ctrl, entity);
+		entity->write_reg(entity->dev, W6_VPU_REG_GLOBAL_WR, 0);
+		return ret;
+	}
 
-	ctrl->current_entity = entity;
 	wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_PREPARE);
+	ctrl->current_entity = entity;
 	ret = request_firmware_nowait(THIS_MODULE,
 				      FW_ACTION_UEVENT,
 				      ctrl->res->fw_name,
@@ -601,7 +627,17 @@ int wave6_vpu_ctrl_resume_and_get(struct device *dev, struct wave6_vpu_entity *e
 
 	mutex_lock(&ctrl->ctrl_lock);
 
-	pm_runtime_resume_and_get(ctrl->dev);
+	ret = pm_runtime_resume_and_get(ctrl->dev);
+	if (ret) {
+		dev_err(dev, "pm runtime resume fail, ret = %d\n", ret);
+		mutex_unlock(&ctrl->ctrl_lock);
+		return ret;
+	}
+
+#if WAVE6_ENABLE_SW_UART
+	wave6_vpu_ctrl_start_loger(ctrl, entity);
+#endif
+
 	entity->booted = false;
 
 	boot_flag = list_empty(&ctrl->entities) ? true : false;
@@ -612,9 +648,8 @@ int wave6_vpu_ctrl_resume_and_get(struct device *dev, struct wave6_vpu_entity *e
 	if (ctrl->state == WAVE6_VPU_STATE_ON)
 		wave6_vpu_ctrl_on_boot(entity);
 
-#if WAVE6_ENABLE_SW_UART
-	wave6_vpu_ctrl_start_loger(ctrl, entity);
-#endif
+	if (ret)
+		pm_runtime_put_sync(ctrl->dev);
 
 	mutex_unlock(&ctrl->ctrl_lock);
 
@@ -637,10 +672,6 @@ void wave6_vpu_ctrl_put_sync(struct device *dev, struct wave6_vpu_entity *entity
 	if (!wave6_vpu_ctrl_find_entity(ctrl, entity))
 		goto exit;
 
-#if WAVE6_ENABLE_SW_UART
-	wave6_vpu_ctrl_stop_loger(ctrl, entity);
-#endif
-
 	list_del_init(&entity->list);
 	if (list_empty(&ctrl->entities)) {
 		if (!entity->read_reg(entity->dev, W6_VCPU_CUR_PC))
@@ -649,7 +680,12 @@ void wave6_vpu_ctrl_put_sync(struct device *dev, struct wave6_vpu_entity *entity
 			wave6_vpu_ctrl_sleep(ctrl, entity);
 	}
 
-	pm_runtime_put_sync(ctrl->dev);
+#if WAVE6_ENABLE_SW_UART
+	wave6_vpu_ctrl_stop_loger(ctrl, entity);
+#endif
+
+	if (!pm_runtime_suspended(ctrl->dev))
+		pm_runtime_put_sync(ctrl->dev);
 exit:
 	mutex_unlock(&ctrl->ctrl_lock);
 }
@@ -670,9 +706,8 @@ int wave6_vpu_ctrl_wait_done(struct device *dev, struct wave6_vpu_entity *entity
 	if (ctrl->state == WAVE6_VPU_STATE_ON)
 		return 0;
 
-	ret = read_poll_timeout(entity->read_reg, val, val != 0,
-				10, W6_VCPU_BOOT_TIMEOUT, false,
-				entity->dev, W6_VCPU_CUR_PC);
+	ret = read_poll_timeout(wave6_vpu_ctrl_get_state, val, val == WAVE6_VPU_STATE_ON,
+				10, W6_VCPU_BOOT_TIMEOUT, false, dev);
 	if (ret) {
 		dev_err(ctrl->dev, "fail to wait vcpu boot done\n");
 		wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_OFF);
@@ -687,7 +722,7 @@ int wave6_vpu_ctrl_wait_done(struct device *dev, struct wave6_vpu_entity *entity
 }
 EXPORT_SYMBOL_GPL(wave6_vpu_ctrl_wait_done);
 
-int wave6_vpu_ctrl_get_state(struct device *dev, struct wave6_vpu_entity *entity)
+int wave6_vpu_ctrl_get_state(struct device *dev)
 {
 	struct vpu_ctrl *ctrl = dev_get_drvdata(dev);
 
@@ -754,6 +789,7 @@ static void wave6_vpu_ctrl_init_reserved_boot_region(struct vpu_ctrl *ctrl)
 		 ctrl->boot_mem.size);
 }
 
+
 static int wave6_vpu_ctrl_probe(struct platform_device *pdev)
 {
 	struct vpu_ctrl *ctrl;
@@ -773,18 +809,18 @@ static int wave6_vpu_ctrl_probe(struct platform_device *pdev)
 	if (!ctrl)
 		return -ENOMEM;
 
+	dev_set_drvdata(&pdev->dev, ctrl);
 	ctrl->dev = &pdev->dev;
 	ctrl->res = res;
-
 	ctrl->reg_base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(ctrl->reg_base))
 		return PTR_ERR(ctrl->reg_base);
-
 	ret = devm_clk_bulk_get_all(&pdev->dev, &ctrl->clks);
 	if (ret < 0) {
 		dev_warn(&pdev->dev, "unable to get clocks: %d\n", ret);
 		ret = 0;
 	}
+
 	ctrl->num_clks = ret;
 
 	np = of_parse_phandle(pdev->dev.of_node, "boot", 0);
@@ -823,7 +859,6 @@ static int wave6_vpu_ctrl_probe(struct platform_device *pdev)
 
 	mutex_init(&ctrl->ctrl_lock);
 	INIT_LIST_HEAD(&ctrl->entities);
-	dev_set_drvdata(&pdev->dev, ctrl);
 
 #if WAVE6_ENABLE_SW_UART
 	wave6_vpu_ctrl_init_loger(ctrl);
@@ -857,14 +892,12 @@ static int wave6_vpu_ctrl_remove(struct platform_device *pdev)
 			      (unsigned long)ctrl->sram_buf.vaddr,
 			      ctrl->sram_buf.size);
 	}
-
 	if (ctrl->boot_mem.dma_addr)
 		dma_unmap_resource(&pdev->dev,
 				   ctrl->boot_mem.dma_addr,
 				   ctrl->boot_mem.size,
 				   DMA_BIDIRECTIONAL,
 				   0);
-
 	mutex_destroy(&ctrl->ctrl_lock);
 
 	return 0;
@@ -897,16 +930,10 @@ static int wave6_vpu_ctrl_resume(struct device *dev)
 {
 	return 0;
 }
-
 #endif
 static const struct dev_pm_ops wave6_vpu_ctrl_pm_ops = {
 	SET_RUNTIME_PM_OPS(wave6_vpu_ctrl_runtime_suspend, wave6_vpu_ctrl_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(wave6_vpu_ctrl_suspend, wave6_vpu_ctrl_resume)
-};
-
-static const struct vpu_ctrl_resource wave633c_ctrl_data = {
-	.fw_name = "wave633c_codec_fw.bin",
-	.sram_size = 0x18000,
 };
 
 static const struct of_device_id wave6_ctrl_ids[] = {

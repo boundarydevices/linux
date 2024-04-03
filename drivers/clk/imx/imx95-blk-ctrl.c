@@ -231,6 +231,7 @@ static int imx95_bc_probe(struct platform_device *pdev)
 	if (!bc)
 		return -ENOMEM;
 	bc->dev = dev;
+	dev_set_drvdata(&pdev->dev, bc);
 
 	spin_lock_init(&bc->lock);
 
@@ -299,6 +300,9 @@ static int imx95_bc_probe(struct platform_device *pdev)
 		goto cleanup;
 	}
 
+	if (pm_runtime_enabled(bc->dev))
+		clk_disable_unprepare(bc->clk_apb);
+
 	return 0;
 
 cleanup:
@@ -313,6 +317,27 @@ cleanup:
 
 	return ret;
 }
+
+#ifdef CONFIG_PM
+static int imx95_bc_runtime_suspend(struct device *dev)
+{
+	struct imx95_blk_ctrl *bc = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(bc->clk_apb);
+	return 0;
+}
+
+static int imx95_bc_runtime_resume(struct device *dev)
+{
+	struct imx95_blk_ctrl *bc = dev_get_drvdata(dev);
+
+	return clk_prepare_enable(bc->clk_apb);
+}
+#endif
+
+static const struct dev_pm_ops imx95_bc_pm_ops = {
+	SET_RUNTIME_PM_OPS(imx95_bc_runtime_suspend, imx95_bc_runtime_resume, NULL)
+};
 
 static const struct of_device_id imx95_bc_of_match[] = {
 	{ .compatible = "fsl,imx95-vpumix-blk-ctrl", .data = &vpublk_dev_data },
@@ -330,6 +355,7 @@ static struct platform_driver imx95_bc_driver = {
 	.driver = {
 		.name = "imx95-dispmix-blk-ctrl",
 		.of_match_table = of_match_ptr(imx95_bc_of_match),
+		.pm = &imx95_bc_pm_ops,
 	},
 };
 module_platform_driver(imx95_bc_driver);

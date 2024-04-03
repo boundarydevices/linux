@@ -40,29 +40,6 @@
 #define MBOX_OFFSET		0x800000
 #define MBOX_SIZE		0x1000
 
-static struct clk_bulk_data imx8ulp_dsp_clks[] = {
-	{ .id = "core" },
-	{ .id = "ipg" },
-	{ .id = "ocram" },
-	{ .id = "mu" },
-};
-
-static struct clk_bulk_data imx8ulp_aux_clks[] = {
-	{ .id = "bus" },
-	{ .id = "mclk0" },
-	{ .id = "mclk1" },
-	{ .id = "edma-mp-clk" },
-
-	{ .id = "edma2-chan0-clk" },
-	{ .id = "edma2-chan1-clk" },
-	{ .id = "edma2-chan2-clk" },
-	{ .id = "edma2-chan3-clk" },
-	{ .id = "edma2-chan4-clk" },
-	{ .id = "edma2-chan5-clk" },
-	{ .id = "edma2-chan6-clk" },
-	{ .id = "edma2-chan7-clk" },
-};
-
 struct imx8ulp_priv {
 	struct device *dev;
 	struct snd_sof_dev *sdev;
@@ -72,7 +49,8 @@ struct imx8ulp_priv {
 	struct platform_device *ipc_dev;
 
 	struct regmap *regmap;
-	struct imx_clocks *clks;
+	struct clk_bulk_data *clks;
+	int clk_num;
 };
 
 static void imx8ulp_sim_lpav_start(struct imx8ulp_priv *priv)
@@ -191,10 +169,6 @@ static int imx8ulp_probe(struct snd_sof_dev *sdev)
 	if (!priv)
 		return -ENOMEM;
 
-	priv->clks = devm_kzalloc(&pdev->dev, sizeof(*priv->clks), GFP_KERNEL);
-	if (!priv->clks)
-		return -ENOMEM;
-
 	sdev->num_cores = 1;
 	sdev->pdata->hw_pdata = priv;
 	priv->dev = sdev->dev;
@@ -275,19 +249,18 @@ static int imx8ulp_probe(struct snd_sof_dev *sdev)
 		goto exit_pdev_unregister;
 	}
 
-	priv->clks->dsp_clks = imx8ulp_dsp_clks;
-	priv->clks->num_dsp_clks = ARRAY_SIZE(imx8ulp_dsp_clks);
-
-	priv->clks->aux_clks = imx8ulp_aux_clks;
-	priv->clks->num_aux_clks = ARRAY_SIZE(imx8ulp_aux_clks);
-
-	ret = imx8_parse_clocks(sdev, priv->clks);
-	if (ret < 0)
+	ret = devm_clk_bulk_get_all(sdev->dev, &priv->clks);
+	if (ret < 0) {
+		dev_err(sdev->dev, "failed to fetch clocks: %d\n", ret);
 		goto exit_pdev_unregister;
+	}
+	priv->clk_num = ret;
 
-	ret = imx8_enable_clocks(sdev, priv->clks);
-	if (ret < 0)
+	ret = clk_bulk_prepare_enable(priv->clk_num, priv->clks);
+	if (ret < 0) {
+		dev_err(sdev->dev, "failed to enable clocks: %d\n", ret);
 		goto exit_pdev_unregister;
+	}
 
 	return 0;
 
@@ -301,7 +274,7 @@ static int imx8ulp_remove(struct snd_sof_dev *sdev)
 {
 	struct imx8ulp_priv *priv = sdev->pdata->hw_pdata;
 
-	imx8_disable_clocks(sdev, priv->clks);
+	clk_bulk_disable_unprepare(priv->clk_num, priv->clks);
 	platform_device_unregister(priv->ipc_dev);
 
 	return 0;
@@ -324,7 +297,7 @@ static int imx8ulp_suspend(struct snd_sof_dev *sdev)
 	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
 		imx_dsp_free_channel(priv->dsp_ipc, i);
 
-	imx8_disable_clocks(sdev, priv->clks);
+	clk_bulk_disable_unprepare(priv->clk_num, priv->clks);
 
 	return 0;
 }
@@ -332,9 +305,13 @@ static int imx8ulp_suspend(struct snd_sof_dev *sdev)
 static int imx8ulp_resume(struct snd_sof_dev *sdev)
 {
 	struct imx8ulp_priv *priv = (struct imx8ulp_priv *)sdev->pdata->hw_pdata;
-	int i;
+	int i, ret;
 
-	imx8_enable_clocks(sdev, priv->clks);
+	ret = clk_bulk_prepare_enable(priv->clk_num, priv->clks);
+	if (ret < 0) {
+		dev_err(sdev->dev, "failed to enable clocks: %d\n", ret);
+		return ret;
+	}
 
 	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
 		imx_dsp_request_channel(priv->dsp_ipc, i);
