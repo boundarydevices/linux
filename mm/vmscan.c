@@ -74,6 +74,8 @@
 #undef CREATE_TRACE_POINTS
 #include <trace/hooks/vmscan.h>
 
+EXPORT_TRACEPOINT_SYMBOL_GPL(mm_vmscan_kswapd_wake);
+
 struct scan_control {
 	/* How many pages shrink_list() should reclaim */
 	unsigned long nr_to_reclaim;
@@ -1534,6 +1536,11 @@ static enum folio_references folio_check_references(struct folio *folio,
 {
 	int referenced_ptes, referenced_folio;
 	unsigned long vm_flags;
+	int ret = 0;
+
+	trace_android_vh_check_folio_look_around_ref(folio, &ret);
+	if (ret)
+		return ret;
 
 	referenced_ptes = folio_referenced(folio, 1, sc->target_mem_cgroup,
 					   &vm_flags);
@@ -7215,6 +7222,7 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
 
 	return nr_reclaimed;
 }
+EXPORT_SYMBOL_GPL(try_to_free_mem_cgroup_pages);
 #endif
 
 static void kswapd_age_node(struct pglist_data *pgdat, struct scan_control *sc)

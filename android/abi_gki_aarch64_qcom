@@ -7,6 +7,7 @@
   add_timer
   add_uevent_var
   add_wait_queue
+  adjust_managed_page_count
   alloc_chrdev_region
   alloc_io_pgtable_ops
   __alloc_pages
@@ -50,6 +51,7 @@
   bitmap_print_to_pagebuf
   bitmap_release_region
   __bitmap_set
+  bitmap_zalloc
   blk_execute_rq_nowait
   blk_get_queue
   blk_mq_free_request
@@ -451,6 +453,7 @@
   down
   down_read
   down_read_interruptible
+  down_timeout
   down_write
   d_path
   dput
@@ -1121,6 +1124,7 @@
   of_reserved_mem_device_release
   of_reserved_mem_lookup
   of_root
+  of_translate_address
   of_translate_dma_region
   overflowuid
   page_frag_alloc_align
@@ -1429,6 +1433,7 @@
   rproc_coredump_add_segment
   rproc_coredump_cleanup
   rproc_coredump_set_elf_info
+  rproc_coredump_using_sections
   rproc_del
   rproc_free
   rproc_get_by_child
@@ -1773,6 +1778,7 @@
   __traceiter_android_vh_ftrace_size_check
   __traceiter_android_vh_ipi_stop
   __traceiter_android_vh_jiffies_update
+  __traceiter_android_vh_mpam_set
   __traceiter_android_vh_printk_hotplug
   __traceiter_android_vh_rproc_recovery
   __traceiter_android_vh_rproc_recovery_set
@@ -1861,6 +1867,7 @@
   __tracepoint_android_vh_ftrace_size_check
   __tracepoint_android_vh_ipi_stop
   __tracepoint_android_vh_jiffies_update
+  __tracepoint_android_vh_mpam_set
   __tracepoint_android_vh_printk_hotplug
   __tracepoint_android_vh_rproc_recovery
   __tracepoint_android_vh_rproc_recovery_set
@@ -2047,6 +2054,7 @@
   wait_for_completion
   wait_for_completion_interruptible
   wait_for_completion_interruptible_timeout
+  wait_for_completion_state
   wait_for_completion_timeout
   wait_for_device_probe
   __wake_up

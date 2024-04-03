@@ -28,6 +28,8 @@
 #include <linux/init_syscalls.h>
 
 #include "hyp_constants.h"
+#include "kvm_ptdump.h"
+#include "hyp_trace.h"
 
 DEFINE_STATIC_KEY_FALSE(kvm_protected_mode_initialized);
 
@@ -277,6 +279,8 @@ out_free:
 
 	atomic64_sub(host_kvm->arch.pkvm.stage2_teardown_mc.nr_pages << PAGE_SHIFT,
 		     &host_kvm->stat.protected_hyp_mem);
+	atomic64_sub(host_kvm->arch.pkvm.stage2_teardown_mc.nr_pages << PAGE_SHIFT,
+		     &host_kvm->stat.protected_pgtable_mem);
 	free_hyp_memcache(&host_kvm->arch.pkvm.stage2_teardown_mc);
 
 	kvm_for_each_vcpu(idx, host_vcpu, host_kvm) {
@@ -344,6 +348,7 @@ static int __pkvm_create_hyp_vm(struct kvm *host_kvm)
 		__pkvm_vcpu_hyp_created(host_vcpu);
 	}
 
+	atomic64_set(&host_kvm->stat.protected_pgtable_mem, pgd_sz);
 	kvm_account_pgtable_pages(pgd, pgd_sz >> PAGE_SHIFT);
 
 	return 0;
@@ -440,6 +445,8 @@ static int __init finalize_pkvm(void)
 	kmemleak_free_part(__hyp_bss_start, __hyp_bss_end - __hyp_bss_start);
 	kmemleak_free_part(__hyp_rodata_start, __hyp_rodata_end - __hyp_rodata_start);
 	kmemleak_free_part_phys(hyp_mem_base, hyp_mem_size);
+
+	kvm_ptdump_host_register();
 
 	ret = pkvm_drop_host_privileges();
 	if (ret) {
@@ -829,6 +836,7 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 		{ &mod->text, KVM_PGTABLE_PROT_R | KVM_PGTABLE_PROT_X },
 		{ &mod->bss, KVM_PGTABLE_PROT_R | KVM_PGTABLE_PROT_W },
 		{ &mod->rodata, KVM_PGTABLE_PROT_R },
+		{ &mod->event_ids, KVM_PGTABLE_PROT_R },
 		{ &mod->data, KVM_PGTABLE_PROT_R | KVM_PGTABLE_PROT_W },
 	};
 	void *start, *end, *hyp_va;
@@ -892,6 +900,12 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 	 * inaccessible.
 	 */
 	kmemleak_free_part(start, size);
+
+	ret = hyp_trace_init_mod_events(mod->hyp_events,
+					mod->event_ids.start,
+					mod->nr_hyp_events);
+	if (ret)
+		kvm_err("Failed to init module events: %d\n", ret);
 
 	ret = pkvm_map_module_sections(secs_map + secs_first, hyp_va,
 				       ARRAY_SIZE(secs_map) - secs_first);

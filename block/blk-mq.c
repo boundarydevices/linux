@@ -40,7 +40,6 @@
 #include "blk-stat.h"
 #include "blk-mq-sched.h"
 #include "blk-rq-qos.h"
-#include "blk-ioprio.h"
 
 static DEFINE_PER_CPU(struct llist_head, blk_cpu_done);
 static DEFINE_PER_CPU(call_single_data_t, blk_cpu_csd);
@@ -767,11 +766,16 @@ static void req_bio_endio(struct request *rq, struct bio *bio,
 		/*
 		 * Partial zone append completions cannot be supported as the
 		 * BIO fragments may end up not being written sequentially.
+		 * For such case, force the completed nbytes to be equal to
+		 * the BIO size so that bio_advance() sets the BIO remaining
+		 * size to 0 and we end up calling bio_endio() before returning.
 		 */
-		if (bio->bi_iter.bi_size != nbytes)
+		if (bio->bi_iter.bi_size != nbytes) {
 			bio->bi_status = BLK_STS_IOERR;
-		else
+			nbytes = bio->bi_iter.bi_size;
+		} else {
 			bio->bi_iter.bi_sector = rq->__sector;
+		}
 	}
 
 	bio_advance(bio, nbytes);
@@ -2949,14 +2953,6 @@ static bool blk_mq_can_use_cached_rq(struct request *rq, struct blk_plug *plug,
 	return true;
 }
 
-static void bio_set_ioprio(struct bio *bio)
-{
-	/* Nobody set ioprio so far? Initialize it based on task's nice value */
-	if (IOPRIO_PRIO_CLASS(bio->bi_ioprio) == IOPRIO_CLASS_NONE)
-		bio->bi_ioprio = get_current_ioprio();
-	blkcg_set_ioprio(bio);
-}
-
 /**
  * blk_mq_submit_bio - Create and send a request to block device.
  * @bio: Bio pointer.
@@ -2981,7 +2977,6 @@ void blk_mq_submit_bio(struct bio *bio)
 	blk_status_t ret;
 
 	bio = blk_queue_bounce(bio, q);
-	bio_set_ioprio(bio);
 
 	if (plug) {
 		rq = rq_list_peek(&plug->cached_rq);
@@ -2993,6 +2988,8 @@ void blk_mq_submit_bio(struct bio *bio)
 			bio = __bio_split_to_limits(bio, &q->limits, &nr_segs);
 			if (!bio)
 				return;
+		} else if (bio->bi_vcnt == 1) {
+			nr_segs = blk_segments(&q->limits, bio->bi_io_vec[0].bv_len);
 		}
 		if (!bio_integrity_prep(bio))
 			return;
@@ -3008,6 +3005,8 @@ void blk_mq_submit_bio(struct bio *bio)
 			bio = __bio_split_to_limits(bio, &q->limits, &nr_segs);
 			if (!bio)
 				goto fail;
+		} else if (bio->bi_vcnt == 1) {
+			nr_segs = blk_segments(&q->limits, bio->bi_io_vec[0].bv_len);
 		}
 		if (!bio_integrity_prep(bio))
 			goto fail;
