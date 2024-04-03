@@ -1838,7 +1838,7 @@ unlock:
 	return ret;
 }
 
-int __pkvm_host_wrprotect_guest(u64 gfn, struct pkvm_hyp_vm *vm)
+int __pkvm_host_wrprotect_guest(u64 gfn, u8 order, struct pkvm_hyp_vm *vm)
 {
 	u64 ipa = hyp_pfn_to_phys(gfn);
 	u64 phys;
@@ -1847,11 +1847,11 @@ int __pkvm_host_wrprotect_guest(u64 gfn, struct pkvm_hyp_vm *vm)
 	host_lock_component();
 	guest_lock_component(vm);
 
-	ret = __check_host_unshare_guest(vm, &phys, ipa, 0);
+	ret = __check_host_unshare_guest(vm, &phys, ipa, order);
 	if (ret)
 		goto unlock;
 
-	ret = kvm_pgtable_stage2_wrprotect(&vm->pgt, ipa, PAGE_SIZE);
+	ret = kvm_pgtable_stage2_wrprotect(&vm->pgt, ipa, PAGE_SIZE << order);
 unlock:
 	guest_unlock_component(vm);
 	host_unlock_component();
