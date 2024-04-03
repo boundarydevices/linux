@@ -16,6 +16,7 @@
 #include <asm/kvm_arm.h>
 #include <asm/kvm_mmu.h>
 #include <asm/kvm_pgtable.h>
+#include <asm/kvm_pkvm.h>
 #include <asm/kvm_ras.h>
 #include <asm/kvm_asm.h>
 #include <asm/kvm_emulate.h>
@@ -306,20 +307,25 @@ INTERVAL_TREE_DEFINE(struct kvm_pinned_page, node, u64, __subtree_last,
 		     __pinned_page_start, __pinned_page_end, /* empty */,
 		     kvm_pinned_pages);
 
+static int __pkvm_unmap_guest_call(u64 pfn, u64 gfn, u8 order, void *args)
+{
+	struct kvm *kvm = args;
+
+	return kvm_call_hyp_nvhe(__pkvm_host_unmap_guest, kvm->arch.pkvm.handle,
+				 gfn, order);
+}
+
 static int pkvm_unmap_guest(struct kvm *kvm, struct kvm_pinned_page *ppage)
 {
 	struct mm_struct *mm = kvm->mm;
 	int ret;
 
-	ret = kvm_call_hyp_nvhe(__pkvm_host_unmap_guest,
-				kvm->arch.pkvm.handle,
-				ppage->ipa >> PAGE_SHIFT);
+	ret = pkvm_call_hyp_nvhe_ppage(ppage, __pkvm_unmap_guest_call, kvm, true);
 	if (ret)
 		return ret;
 
 	unpin_user_pages_dirty_lock(&ppage->page, 1, ppage->dirty);
 	kvm_pinned_pages_remove(ppage, &kvm->arch.pkvm.pinned_pages);
-	kfree(ppage);
 
 	/*
 	 * pkvm_unmap_guest() is only called with the mmu_lock held, and in
@@ -327,8 +333,10 @@ static int pkvm_unmap_guest(struct kvm *kvm, struct kvm_pinned_page *ppage)
 	 * in stage2_apply_range()).
 	 */
 	write_unlock(&kvm->mmu_lock);
-	account_locked_vm(mm, 1, false);
+	account_locked_vm(mm, 1 << ppage->order, false);
 	write_lock(&kvm->mmu_lock);
+
+	kfree(ppage);
 
 	return 0;
 }
@@ -344,6 +352,9 @@ static int pkvm_unmap_range(struct kvm *kvm, u64 start, u64 end)
 	int ret;
 
 	for_ppage_node_in_range(kvm, start, end, ppage, tmp) {
+		if (WARN_ON(end < ppage->ipa + (PAGE_SIZE << ppage->order)))
+			return -EINVAL;
+
 		ret = pkvm_unmap_guest(kvm, ppage);
 		if (ret)
 			return ret;

@@ -1767,13 +1767,14 @@ static int guest_get_valid_pte(struct pkvm_hyp_vm *vm, u64 *phys, u64 ipa, u8 or
  * Ideally we would like to use check_unshare()... but this wouldn't let us
  * restrict the unshare range to the actual guest stage-2 mapping.
  */
-static int __check_host_unshare_guest(struct pkvm_hyp_vm *vm, u64 *phys, u64 ipa)
+static int __check_host_unshare_guest(struct pkvm_hyp_vm *vm, u64 *phys, u64 ipa,
+				      u8 order)
 {
 	enum pkvm_page_state state;
 	kvm_pte_t pte;
 	int ret;
 
-	ret = guest_get_valid_pte(vm, phys, ipa, 0, &pte);
+	ret = guest_get_valid_pte(vm, phys, ipa, order, &pte);
 	if (ret)
 		return ret;
 
@@ -1781,10 +1782,11 @@ static int __check_host_unshare_guest(struct pkvm_hyp_vm *vm, u64 *phys, u64 ipa
 	if (state != PKVM_PAGE_SHARED_BORROWED)
 		return -EPERM;
 
-	return __host_check_page_state_range(*phys, PAGE_SIZE, PKVM_PAGE_SHARED_OWNED);
+	return __host_check_page_state_range(*phys, PAGE_SIZE << order,
+					     PKVM_PAGE_SHARED_OWNED);
 }
 
-int __pkvm_host_unshare_guest(u64 gfn, struct pkvm_hyp_vm *hyp_vm)
+int __pkvm_host_unshare_guest(struct pkvm_hyp_vm *hyp_vm, u64 gfn, u8 order)
 {
 	u64 ipa = hyp_pfn_to_phys(gfn);
 	u64 phys;
@@ -1793,7 +1795,7 @@ int __pkvm_host_unshare_guest(u64 gfn, struct pkvm_hyp_vm *hyp_vm)
 	host_lock_component();
 	guest_lock_component(hyp_vm);
 
-	ret = __check_host_unshare_guest(hyp_vm, &phys, ipa);
+	ret = __check_host_unshare_guest(hyp_vm, &phys, ipa, order);
 	if (ret)
 		goto unlock;
 
@@ -1801,7 +1803,8 @@ int __pkvm_host_unshare_guest(u64 gfn, struct pkvm_hyp_vm *hyp_vm)
 	if (ret)
 		goto unlock;
 
-	WARN_ON(__host_set_page_state_range(phys, PAGE_SIZE, PKVM_PAGE_OWNED));
+	WARN_ON(__host_set_page_state_range(phys, PAGE_SIZE << order,
+					    PKVM_PAGE_OWNED));
 
 unlock:
 	guest_unlock_component(hyp_vm);
@@ -1823,7 +1826,7 @@ int __pkvm_host_relax_guest_perms(u64 gfn, enum kvm_pgtable_prot prot, struct pk
 	host_lock_component();
 	guest_lock_component(vm);
 
-	ret = __check_host_unshare_guest(vm, &phys, ipa);
+	ret = __check_host_unshare_guest(vm, &phys, ipa, 0);
 	if (ret)
 		goto unlock;
 
@@ -1844,7 +1847,7 @@ int __pkvm_host_wrprotect_guest(u64 gfn, struct pkvm_hyp_vm *vm)
 	host_lock_component();
 	guest_lock_component(vm);
 
-	ret = __check_host_unshare_guest(vm, &phys, ipa);
+	ret = __check_host_unshare_guest(vm, &phys, ipa, 0);
 	if (ret)
 		goto unlock;
 
