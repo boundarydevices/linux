@@ -13,6 +13,7 @@
 #define VPU_DEC_DEV_NAME "C&M Wave6 VPU decoder"
 #define VPU_DEC_DRV_NAME "wave6-dec"
 #define V4L2_CID_VPU_THUMBNAIL_MODE (V4L2_CID_USER_BASE + 0x1001)
+#define V4L2_CID_VPU_SECURE_MODE (V4L2_CID_USER_BASE + 0x10b7)
 
 static const struct vpu_format wave6_vpu_dec_fmt_list[2][6] = {
 	[VPU_FMT_TYPE_CODEC] = {
@@ -1297,6 +1298,9 @@ static int wave6_vpu_dec_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDEO_HEADER_MODE:
 		inst->header_separate = (ctrl->val == V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE);
 		break;
+	case V4L2_CID_VPU_SECURE_MODE:
+		inst->secure_mode = ctrl->val;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1318,6 +1322,17 @@ static const struct v4l2_ctrl_config wave6_vpu_thumbnail_mode = {
 	.max = 1,
 	.step = 1,
 	.flags = V4L2_CTRL_FLAG_WRITE_ONLY,
+};
+
+static const struct v4l2_ctrl_config wave6_vpu_secure_mode = {
+	.ops = &wave6_vpu_dec_ctrl_ops,
+	.id = V4L2_CID_VPU_SECURE_MODE,
+	.name = "secure mode",
+	.type = V4L2_CTRL_TYPE_BOOLEAN,
+	.def = 0,
+	.min = 0,
+	.max = 1,
+	.step = 1,
 };
 
 static void wave6_set_dec_openparam(struct dec_open_param *open_param,
@@ -1909,6 +1924,8 @@ static int wave6_vpu_open_dec(struct file *filp)
 			       ~((1 << V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE) |
 				 (1 << V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME)),
 			       V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME);
+
+	v4l2_ctrl_new_custom(&inst->v4l2_ctrl_hdl, &wave6_vpu_secure_mode, NULL);
 
 	if (inst->v4l2_ctrl_hdl.error) {
 		ret = -ENODEV;
