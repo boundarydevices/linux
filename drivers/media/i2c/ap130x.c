@@ -21,6 +21,7 @@
 #include <linux/regulator/consumer.h>
 
 #include <media/media-entity.h>
+#include <media/mipi-csi2.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-fwnode.h>
@@ -361,6 +362,7 @@ enum {
 struct ap130x_format_info {
 	unsigned int code;
 	u16 out_fmt;
+	u32 data_type;
 };
 
 struct ap130x_format {
@@ -468,10 +470,12 @@ static const struct ap130x_format_info supported_video_formats[] = {
 		.code = MEDIA_BUS_FMT_UYVY8_1X16,
 		.out_fmt = AP130X_PREVIEW_OUT_FMT_FT_YUV_JFIF
 			 | AP130X_PREVIEW_OUT_FMT_FST_YUV_422,
+		.data_type = MIPI_CSI2_DT_YUV422_8B,
 	}, {
 		.code = MEDIA_BUS_FMT_UYYVYY8_0_5X24,
 		.out_fmt = AP130X_PREVIEW_OUT_FMT_FT_YUV_JFIF
 			 | AP130X_PREVIEW_OUT_FMT_FST_YUV_420,
+		.data_type = MIPI_CSI2_DT_YUV420_8B,
 	},
 };
 
@@ -1761,6 +1765,34 @@ static int ap130x_get_selection(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int ap130x_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
+				 struct v4l2_mbus_frame_desc *fd)
+{
+	struct ap130x_device *ap130x = to_ap130x(sd);
+	const struct ap130x_format_info *info;
+
+	if (pad != AP130X_PAD_SOURCE || !fd)
+		return -EINVAL;
+
+	info = ap130x->formats[pad].info;
+
+	memset(fd, 0x0, sizeof(*fd));
+
+	mutex_lock(&ap130x->lock);
+
+	fd->entry[0].flags = 0;
+	fd->entry[0].pixelcode = info->code;
+	fd->entry[0].bus.csi2.vc = 0;
+	fd->entry[0].bus.csi2.dt = info->data_type;
+
+	mutex_unlock(&ap130x->lock);
+
+	fd->type = V4L2_MBUS_FRAME_DESC_TYPE_CSI2;
+	fd->num_entries = 1;
+
+	return 0;
+}
+
 static int ap130x_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct ap130x_device *ap130x = to_ap130x(sd);
@@ -2087,6 +2119,7 @@ static const struct v4l2_subdev_pad_ops ap130x_pad_ops = {
 	.set_fmt = ap130x_set_fmt,
 	.get_selection = ap130x_get_selection,
 	.set_selection = ap130x_get_selection,
+	.get_frame_desc = ap130x_get_frame_desc,
 };
 
 static const struct v4l2_subdev_video_ops ap130x_video_ops = {
