@@ -92,6 +92,19 @@ HYP_EVENT(__hyp_printk,
 		__entry->a, __entry->b, __entry->c, __entry->d)
 );
 
+HYP_EVENT(psci_mem_protect,
+	HE_PROTO(u64 count, u64 was),
+	HE_STRUCT(
+		he_field(u64, count)
+		he_field(u64, was)
+	),
+	HE_ASSIGN(
+		__entry->count = count;
+		__entry->was = was;
+	),
+	HE_PRINTK("count=%llu was=%llu", __entry->count, __entry->was)
+);
+
 #ifdef CONFIG_PROTECTED_NVHE_TESTING
 HYP_EVENT(selftest,
 	  HE_PROTO(void),
