@@ -304,11 +304,34 @@ static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 	case V4L2_PIX_FMT_NV12:
 		pck->ctrl_cam0_type = 0;
 		pck->ch12_ctrl_cam0_subsample = 2;
-		pck->ch12_ctrl_cam0_obpp = 6;
 		/* set channels orders */
-		pck->ctrl_cam0_order0 = 0;
+		pck->ctrl_cam0_order0 = 2;
 		pck->ctrl_cam0_order1 = 0;
 		pck->ctrl_cam0_order2 = 1;
+		break;
+	case V4L2_PIX_FMT_NV21:
+		pck->ctrl_cam0_type = 0;
+		pck->ch12_ctrl_cam0_subsample = 2;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 2;
+		pck->ctrl_cam0_order1 = 1;
+		pck->ctrl_cam0_order2 = 0;
+		break;
+	case V4L2_PIX_FMT_NV16:
+		pck->ctrl_cam0_type = 0;
+		pck->ch12_ctrl_cam0_subsample = 1;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 2;
+		pck->ctrl_cam0_order1 = 0;
+		pck->ctrl_cam0_order2 = 1;
+		break;
+	case V4L2_PIX_FMT_NV61:
+		pck->ctrl_cam0_type = 0;
+		pck->ch12_ctrl_cam0_subsample = 1;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 2;
+		pck->ctrl_cam0_order1 = 1;
+		pck->ctrl_cam0_order2 = 0;
 		break;
 	case V4L2_PIX_FMT_YUYV:
 		pck->ctrl_cam0_type = 1;
@@ -317,6 +340,42 @@ static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 		pck->ctrl_cam0_order0 = 0;
 		pck->ctrl_cam0_order1 = 1;
 		pck->ctrl_cam0_order2 = 3;
+		break;
+	case V4L2_PIX_FMT_YVYU:
+		pck->ctrl_cam0_type = 1;
+		pck->ch12_ctrl_cam0_subsample = 1;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 0;
+		pck->ctrl_cam0_order1 = 3;
+		pck->ctrl_cam0_order2 = 1;
+		break;
+	case V4L2_PIX_FMT_UYVY:
+		pck->ctrl_cam0_type = 1;
+		pck->ch12_ctrl_cam0_subsample = 1;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 1;
+		pck->ctrl_cam0_order1 = 0;
+		pck->ctrl_cam0_order2 = 2;
+		break;
+	case V4L2_PIX_FMT_YUVX32:
+		pck->ctrl_cam0_type = 1;
+		pck->ch12_ctrl_cam0_subsample = 0;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 0;
+		pck->ctrl_cam0_order1 = 1;
+		pck->ctrl_cam0_order2 = 2;
+		/* add 0-padding */
+		pck->ctrl_cam0_a0s = 8;
+		break;
+	case V4L2_PIX_FMT_VUYX32:
+		pck->ctrl_cam0_type = 1;
+		pck->ch12_ctrl_cam0_subsample = 0;
+		/* set channels orders */
+		pck->ctrl_cam0_order0 = 2;
+		pck->ctrl_cam0_order1 = 1;
+		pck->ctrl_cam0_order2 = 0;
+		/* add 0-padding */
+		pck->ctrl_cam0_a0s = 8;
 		break;
 	case V4L2_PIX_FMT_BGRX32:
 		pck->ctrl_cam0_type = 1;
@@ -465,17 +524,18 @@ static int neoisp_set_pipe_conf(struct neoisp_dev_s *neoispd)
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG1_IN_ADDR_CAM0_IDX], 0u);
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG1_IN_LS_CAM0_IDX], 0u);
 
-	/* rgb output image address */
-	if (out_pixfmt == V4L2_PIX_FMT_NV12) {
+	/* rgb/yuv output image address */
+	if (out_pixfmt == V4L2_PIX_FMT_NV12 || out_pixfmt == V4L2_PIX_FMT_NV21 ||
+		out_pixfmt == V4L2_PIX_FMT_NV16 || out_pixfmt == V4L2_PIX_FMT_NV61) {
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH0_ADDR_CAM0_IDX],
 				NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(get_addr(buf_out, 0)));
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH0_LS_CAM0_IDX],
-				NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(width));
+				NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(obpp * width));
 
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH1_ADDR_CAM0_IDX],
 				NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(get_addr(buf_out, 1)));
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH1_LS_CAM0_IDX],
-				NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(width / 2));
+				NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(obpp * width));
 	} else {
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH0_ADDR_CAM0_IDX], 0u);
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH0_LS_CAM0_IDX], 0u);
