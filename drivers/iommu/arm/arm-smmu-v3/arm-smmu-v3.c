@@ -3980,7 +3980,7 @@ static const struct of_device_id arm_smmu_of_match[] = {
 MODULE_DEVICE_TABLE(of, arm_smmu_of_match);
 
 static const struct dev_pm_ops arm_smmu_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(arm_smmu_suspend, arm_smmu_resume)
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(arm_smmu_suspend, arm_smmu_resume)
 };
 
 static void arm_smmu_driver_unregister(struct platform_driver *drv)
