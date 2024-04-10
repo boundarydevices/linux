@@ -377,11 +377,23 @@ int imx_pcm512x_rpmsg_init_data(struct platform_device *pdev, void ** _data){
 int imx_pcm512x_rpmsg_probe(struct platform_device *pdev, void *_data){
 
 	struct imx_pcm512x_data *data = (struct imx_pcm512x_data *)_data;
-	struct device *dev = pdev->dev.parent;
-	struct platform_device *rpmsg_pdev = to_platform_device(dev);
-	struct device_node *np = rpmsg_pdev->dev.of_node;
+	struct snd_soc_dai *cpu_dai;
+	struct device_node *np = NULL;
 	struct device_node *bitclkmaster = NULL, *framemaster = NULL, *codec_np = NULL;
 	int    ret = 0;
+
+	data->dai.cpus->dai_name = pdev->dev.platform_data;
+	cpu_dai = snd_soc_find_dai(data->dai.cpus);
+	if (!cpu_dai) {
+		ret = -EPROBE_DEFER;
+		goto fail;
+	}
+	np = cpu_dai->dev->of_node;
+	if (!np) {
+		dev_err(&pdev->dev, "failed to parse CPU DAI device node\n");
+		ret = -ENODEV;
+		goto fail;
+	}
 
 	codec_np = data->dai.codecs->of_node;
 	data->dac_gain_limit = of_property_read_bool(np, "dac,24db_digital_gain");
