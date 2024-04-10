@@ -613,6 +613,8 @@ void handle_host_mem_abort(struct kvm_cpu_context *host_ctxt)
 
 	esr = read_sysreg_el2(SYS_ESR);
 	if (!__get_fault_info(esr, &fault)) {
+		/* Setting the address to an invalid value for use in tracing. */
+		addr = (u64)-1;
 		/*
 		 * We've presumably raced with a page-table change which caused
 		 * AT to fail, try again.
