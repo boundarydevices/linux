@@ -97,27 +97,6 @@ const struct neoisp_fmt_s formats_vcap[NEOISP_FMT_VCAP_COUNT] = {
 		.is_rgb = 0,
 		.type = NEOISP_FMT_VIDEO_CAPTURE
 	}, {
-		.fourcc = V4L2_PIX_FMT_Y10,      /* 10-bit Greyscale */
-		.align = 32,
-		.bit_depth = 10,
-		.num_planes = 1,
-		.is_rgb = 0,
-		.type = NEOISP_FMT_VIDEO_CAPTURE
-	}, {
-		.fourcc = V4L2_PIX_FMT_Y12,      /* 12-bit Greyscale */
-		.align = 32,
-		.bit_depth = 12,
-		.num_planes = 1,
-		.is_rgb = 0,
-		.type = NEOISP_FMT_VIDEO_CAPTURE
-	}, {
-		.fourcc = V4L2_PIX_FMT_Y14,      /* 14-bit Greyscale */
-		.align = 32,
-		.bit_depth = 14,
-		.num_planes = 1,
-		.is_rgb = 0,
-		.type = NEOISP_FMT_VIDEO_CAPTURE
-	}, {
 		.fourcc = V4L2_PIX_FMT_YUV24,    /* 24-bit YUV 4:4:4 8-8-8 */
 		.align = 32,
 		.bit_depth = 24,

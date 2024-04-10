@@ -35,7 +35,7 @@
 #define NEOISP_MAX_CTRLS         (1)
 #define NEOISP_CTRL_PARAMS       (0)
 
-#define NEOISP_FMT_VCAP_COUNT    (13)
+#define NEOISP_FMT_VCAP_COUNT    (10)
 #define NEOISP_FMT_VOUT_COUNT    (24)
 #define NEOISP_FMT_MCAP_COUNT    (1)
 #define NEOISP_FMT_MOUT_COUNT    (1)
@@ -69,9 +69,6 @@
 		((x) == V4L2_PIX_FMT_NV12) || \
 		((x) == V4L2_PIX_FMT_NV16) || \
 		((x) == V4L2_PIX_FMT_UYVY) || \
-		((x) == V4L2_PIX_FMT_Y10) || \
-		((x) == V4L2_PIX_FMT_Y12) || \
-		((x) == V4L2_PIX_FMT_Y14) || \
 		((x) == V4L2_PIX_FMT_YUYV) || \
 		((x) == V4L2_PIX_FMT_YUV24) || \
 		((x) == V4L2_PIX_FMT_YUYV))
