@@ -29,7 +29,7 @@
 	panel@0 {
 		compatible = "raydium,rm692c9";
 		reg = <0>;
-		reset-gpio = <&adp5585gpio 4 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&adp5585gpio 4 GPIO_ACTIVE_LOW>;
 		dsi-lanes = <4>;
 		v3p3-supply = <&reg_3p3v>;
 		v1p8-supply = <&reg_1p8v>;
@@ -52,6 +52,24 @@
 				remote-endpoint = <&panel_in>;
 			};
 		};
+	};
+};
+
+&lpi2c2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <400000>;
+
+	focaltech_touch: focaltech@38 {
+		compatible = "focaltech,fts";
+		reg = <0x38>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_mipi_dsi_csi>;
+		irq-gpio = <&gpio3 27 GPIO_ACTIVE_HIGH>;
+		touchscreen-size-x = <1080>;
+		touchscreen-size-y = <1920>;
+		max-touch-number = <10>;
+		status = "okay";
 	};
 };
 

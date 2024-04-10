@@ -53,7 +53,7 @@ int v2x_start_rng(struct device *dev)
 		 * S-TRNG at bit 1
 		 * Any of the bit is set, it in progress.
 		 */
-		if (priv->rx_msg->data[0] & 0x3)
+		if (priv->rx_msg->data[1] & 0x3)
 			goto exit;
 
 		dev_err(dev, "Command Id[%d], Response Failure = 0x%x",

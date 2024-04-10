@@ -52,6 +52,14 @@ config IMX_NEUTRON_REMOTEPROC
 	  Say y here to support iMX's neutron npu via the remote
 	  processor framework.
 
+config IMX_ISP_REMOTEPROC
+	tristate "i.MX ISP remoteproc support"
+	depends on ARCH_MXC
+	select MAILBOX
+	help
+	  Say y here to support iMX's ISP remote processors via the remote
+	  processor framework.
+
 	  It's safe to say N here.
 
 config INGENIC_VPU_RPROC

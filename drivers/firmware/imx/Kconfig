@@ -59,3 +59,14 @@ config IMX_ELE_TRNG
 	help
 	  This driver provides kernel-side support for the Random Number generation,
           through NXP hardware IP for secure-enclave called EdgeLock Enclave.
+
+config IMX_ISPMU
+	tristate "IMX ISP MU Protocol driver"
+	depends on IMX_MBOX
+	help
+	  The ISP Firmware is a low-level code that manages the ISP core
+	  and runs on a dedicated Cortex-M core to provide queue and resource
+	  management of the ISP core.
+
+	  This driver manages the IPC interface between host CPU and the
+	  ISP firmware running on M0+ core.

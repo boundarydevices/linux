@@ -1,0 +1,99 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/firmware/nxp,isp-mu.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: NXP i.MX ISP Firmware Communication Protocol
+
+maintainers:
+  - Robert Chiras <robert.chiras@nxp.com>
+
+description:
+The ISP firmware is a free-RTOS code running on M0 core inside the Camera
+domain on i.MX95. Inside the Camera domain, there are multiple Messaging Units
+used by the firmware in order to communicate with other cores willing to submit
+jobs to ISP core.
+This driver is using the mailbox system in order to send/receive messages to
+and from ISP firmware.
+It also provides the ISP firmware protocol used for communication with it.
+
+properties:
+  compatible:
+    const: nxp,imx-isp-mu
+
+  mboxes:
+    description:
+      A list of phandles of TX MU channels followed by a list of phandles of
+      RX MU channels. The number of expected tx and rx channels is 1 TX and
+      1 RX channels, per instance.
+    oneOf:
+      - items:
+          - description: TX MU channel
+          - description: RX MU channel
+
+  mbox-names:
+    oneOf:
+      - items:
+          - const: tx0
+          - const: rx0
+          - const: tx1
+          - const: rx1
+          - const: tx2
+          - const: rx2
+          - const: tx3
+          - const: rx3
+          - const: tx4
+          - const: rx4
+          - const: tx5
+          - const: rx5
+          - const: tx6
+          - const: rx6
+          - const: tx7
+          - const: rx7
+          - const: tx8
+          - const: rx8
+
+required:
+  - compatible
+  - mbox-names
+  - mboxes
+
+additionalProperties: false
+
+examples:
+  - |
+
+
+    isp-mu {
+        compatible = "nxp,imx-isp-mu";
+        mboxes = <&cameramix_mu1 0 3
+                  &cameramix_mu1 1 3
+                  &cameramix_mu2 0 3
+                  &cameramix_mu2 1 3
+                  &cameramix_mu3 0 3
+                  &cameramix_mu3 1 3
+                  &cameramix_mu4 0 3
+                  &cameramix_mu4 1 3
+                  &cameramix_mu5 0 3
+                  &cameramix_mu5 1 3
+                  &cameramix_mu6 0 3
+                  &cameramix_mu6 1 3
+                  &cameramix_mu7 0 3
+                  &cameramix_mu7 1 3
+                  &cameramix_mu8 0 3
+                  &cameramix_mu8 1 3
+                  &cameramix_mu9 0 3
+                  &cameramix_mu9 1 3>;
+        mbox-names = "tx0", "rx0",
+                     "tx1", "rx1",
+                     "tx2", "rx2",
+                     "tx3", "rx3",
+                     "tx4", "rx4",
+                     "tx5", "rx5",
+                     "tx6", "rx6",
+                     "tx7", "rx7",
+                     "tx8", "rx8";
+    };
+
+

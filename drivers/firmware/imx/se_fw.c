@@ -1,20 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2021-2023 NXP
+ * Copyright 2021-2024 NXP
  */
 
-#include <linux/dma-mapping.h>
+#include <linux/clk.h>
 #include <linux/completion.h>
+#include <linux/delay.h>
 #include <linux/dev_printk.h>
+#include <linux/dma-mapping.h>
 #include <linux/errno.h>
 #include <linux/export.h>
+#include <linux/firmware.h>
 #include <linux/firmware/imx/ele_base_msg.h>
-#include <linux/firmware/imx/v2x_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
 #include <linux/firmware/imx/se_fw_inc.h>
+#include <linux/firmware/imx/v2x_base_msg.h>
 #include <linux/genalloc.h>
-#include <linux/io.h>
 #include <linux/init.h>
+#include <linux/io.h>
 #include <linux/miscdevice.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
@@ -25,9 +28,9 @@
 #include <linux/string.h>
 #include <linux/sys_soc.h>
 
-#include "se_fw.h"
 #include "ele_common.h"
 #include "ele_fw_api.h"
+#include "se_fw.h"
 
 static uint32_t v2x_fw_state;
 
@@ -37,6 +40,7 @@ static uint32_t v2x_fw_state;
 #define SOC_VER_MASK			0xFFFF0000
 #define SOC_ID_MASK			0x0000FFFF
 #define RESERVED_DMA_POOL		BIT(1)
+#define IMX_ELE_FW_DIR                 "/lib/firmware/imx/ele/"
 
 struct imx_info {
 	const uint8_t pdev_name[2][10];
@@ -61,6 +65,7 @@ struct imx_info {
 	int (*start_rng)(struct device *dev);
 	bool enable_ele_trng;
 	bool imem_mgmt;
+	uint8_t *fw_name_in_rfs;
 };
 
 struct imx_info_list {
@@ -98,6 +103,8 @@ static struct imx_info_list imx8ulp_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = true,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = IMX_ELE_FW_DIR\
+						  "mx8ulpa2ext-ahab-container.img",
 			},
 	},
 };
@@ -128,6 +135,7 @@ static struct imx_info_list imx93_info = {
 				.enable_ele_trng = true,
 				.imem_mgmt = false,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = NULL,
 			},
 	},
 };
@@ -158,6 +166,7 @@ static struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-fw0", "mu0"},
@@ -181,6 +190,7 @@ static struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-fw6", "mu6"},
@@ -204,6 +214,7 @@ static struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 				.mu_buff_size = 256,
+				.fw_name_in_rfs = NULL,
 			},
 	}
 };
@@ -257,6 +268,8 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 		dev_ctx = priv->cmd_receiver_dev;
 	} else if (header.tag == priv->rsp_tag) {
 		if (priv->waiting_rsp_dev) {
+			/* Capture response timer for user space interaction */
+			ktime_get_ts64(&priv->time_frame.t_end);
 			dev_dbg(dev, "Selecting rsp waiter\n");
 			dev_ctx = priv->waiting_rsp_dev;
 			is_response = true;
@@ -569,6 +582,11 @@ static ssize_t ele_mu_fops_write(struct file *fp, const char __user *buf,
 	dev_dbg(ele_mu_priv->dev,
 		"%s: sending message\n",
 			dev_ctx->miscdev.name);
+
+	/* Capture request timer here to not include time for mutex lock */
+	if (header.tag == ele_mu_priv->cmd_tag)
+		ktime_get_ts64(&ele_mu_priv->time_frame.t_start);
+
 	err = mbox_send_message(ele_mu_priv->tx_chan, dev_ctx->temp_cmd);
 	if (err < 0) {
 		dev_err(ele_mu_priv->dev,
@@ -675,8 +693,16 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 			}
 		}
 
-		if (b_desc->shared_buf_ptr)
-			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		/*
+		 * Variable "mu_buff_offset" is set while dealing with MU's device memory.
+		 * For device type memory, it is recommended to use memset_io.
+		 */
+		if (b_desc->shared_buf_ptr) {
+			if (dev_ctx->mu_buff_offset)
+				memset_io(b_desc->shared_buf_ptr, 0, b_desc->size);
+			else
+				memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		}
 
 		__list_del_entry(&b_desc->link);
 		devm_kfree(dev_ctx->dev, b_desc);
@@ -702,7 +728,6 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 	dev_ctx->non_secure_mem.pos = 0;
 
 	dev_ctx->pending_hdr = 0;
-	dev_ctx->mu_buff_offset = 0;
 
 exit:
 	/*
@@ -724,14 +749,24 @@ exit:
 		if (!b_desc)
 			continue;
 
-		if (b_desc->shared_buf_ptr)
-			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		/*
+		 * Variable "mu_buff_offset" is set while dealing with MU's device memory.
+		 * For device type memory, it is recommended to use memset_io.
+		 */
+		if (b_desc->shared_buf_ptr) {
+			if (dev_ctx->mu_buff_offset)
+				memset_io(b_desc->shared_buf_ptr, 0, b_desc->size);
+			else
+				memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		}
 
 		__list_del_entry(&b_desc->link);
 		devm_kfree(dev_ctx->dev, b_desc);
 	}
 	if (header.tag == ele_mu_priv->rsp_tag)
 		mutex_unlock(&ele_mu_priv->mu_cmd_lock);
+
+	dev_ctx->mu_buff_offset = 0;
 
 	up(&dev_ctx->fops_lock);
 	return err;
@@ -826,7 +861,7 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 		addr = get_mu_buf(priv->tx_chan);
 		addr = addr + dev_ctx->mu_buff_offset;
 		dev_ctx->mu_buff_offset = dev_ctx->mu_buff_offset + io.length;
-		if (dev_ctx->mu_buff_offset >= imx_info->mu_buff_size) {
+		if (dev_ctx->mu_buff_offset > imx_info->mu_buff_size) {
 			err = -ENOMEM;
 			goto exit;
 		}
@@ -996,6 +1031,34 @@ exit:
 	return err;
 }
 
+/* IOCTL to provide request and response timestamps from FW for a crypto
+ * operation
+ */
+static int ele_mu_ioctl_get_time(struct ele_mu_device_ctx *dev_ctx, unsigned long arg)
+{
+	struct ele_mu_priv *priv = dev_get_drvdata(dev_ctx->dev);
+	int err = -EINVAL;
+	struct ele_time_frame time_frame;
+
+	if (!priv) {
+		err = -EINVAL;
+		goto exit;
+	}
+
+	time_frame.t_start = priv->time_frame.t_start;
+	time_frame.t_end = priv->time_frame.t_end;
+	err = (int)copy_to_user((u8 *)arg, (u8 *)(&time_frame), sizeof(time_frame));
+	if (err) {
+		dev_err(dev_ctx->priv->dev,
+			"%s: Failed to copy timer to user\n",
+			dev_ctx->miscdev.name);
+		err  = -EFAULT;
+		goto exit;
+	}
+exit:
+	return err;
+}
+
 /* Open a char device. */
 static int ele_mu_fops_open(struct inode *nd, struct file *fp)
 {
@@ -1119,8 +1182,16 @@ static int ele_mu_fops_close(struct inode *nd, struct file *fp)
 		if (!b_desc)
 			continue;
 
-		if (b_desc->shared_buf_ptr)
-			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		/*
+		 * Variable "mu_buff_offset" is set while dealing with MU's device memory.
+		 * For device type memory, it is recommended to use memset_io.
+		 */
+		if (b_desc->shared_buf_ptr) {
+			if (dev_ctx->mu_buff_offset)
+				memset_io(b_desc->shared_buf_ptr, 0, b_desc->size);
+			else
+				memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		}
 
 		__list_del_entry(&b_desc->link);
 		devm_kfree(dev_ctx->dev, b_desc);
@@ -1163,6 +1234,9 @@ static long ele_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 
 	case ELE_MU_IOCTL_GET_SOC_INFO:
 		err = ele_mu_ioctl_get_soc_info_handler(dev_ctx, arg);
+		break;
+	case ELE_MU_IOCTL_GET_TIMER:
+		err = ele_mu_ioctl_get_time(dev_ctx, arg);
 		break;
 
 	default:
@@ -1367,6 +1441,60 @@ static int init_device_context(struct device *dev)
 	return ret;
 }
 
+static void se_load_firmware(const struct firmware *fw, void *context)
+{
+	struct ele_mu_priv *priv = context;
+	const struct imx_info *info = priv->info;
+	const char *ele_fw_name = info->fw_name_in_rfs;
+	uint8_t *ele_fw_buf;
+	phys_addr_t ele_fw_phyaddr;
+
+	if (!fw) {
+		if (priv->fw_fail)
+			dev_dbg(priv->dev,
+				 "External FW not found, using ROM FW.\n");
+		else {
+			/*add a bit delay to wait for firmware priv released */
+			msleep(20);
+
+			/* Load firmware one more time if timeout */
+			request_firmware_nowait(THIS_MODULE,
+					FW_ACTION_UEVENT, info->fw_name_in_rfs,
+					priv->dev, GFP_KERNEL, priv,
+					se_load_firmware);
+			priv->fw_fail++;
+			dev_dbg(priv->dev, "Value of retries = 0x%x\n",
+				priv->fw_fail);
+		}
+
+		return;
+	}
+
+	/* allocate buffer to store the ELE FW */
+	ele_fw_buf = dmam_alloc_coherent(priv->dev, fw->size,
+					 &ele_fw_phyaddr,
+					 GFP_KERNEL);
+	if (!ele_fw_buf) {
+		dev_err(priv->dev, "Failed to alloc ELE fw buffer memory\n");
+		goto exit;
+	}
+
+	memcpy(ele_fw_buf, fw->data, fw->size);
+
+	if (ele_fw_authenticate(priv->dev, ele_fw_phyaddr))
+		dev_err(priv->dev,
+			"Failed to authenticate & load ELE firmware %s.\n",
+			ele_fw_name);
+
+exit:
+	dmam_free_coherent(priv->dev,
+			   fw->size,
+			   ele_fw_buf,
+			   ele_fw_phyaddr);
+
+	release_firmware(fw);
+}
+
 static int se_fw_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1513,6 +1641,17 @@ static int se_fw_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (info->fw_name_in_rfs) {
+		ret = request_firmware_nowait(THIS_MODULE,
+					      FW_ACTION_UEVENT,
+					      info->fw_name_in_rfs,
+					      dev, GFP_KERNEL, priv,
+					      se_load_firmware);
+		if (ret)
+			dev_warn(dev, "Failed to get firmware [%s].\n",
+				 info->fw_name_in_rfs);
+	}
+
 	/* start ele rng */
 	if (info->start_rng) {
 		ret = info->start_rng(dev);
@@ -1558,7 +1697,10 @@ exit:
 	/* if execution control reaches here, ele-mu probe fail.
 	 * hence doing the cleanup
 	 */
-	return se_probe_cleanup(pdev);
+	if (se_probe_cleanup(pdev))
+		dev_err(dev, "Failed clean-up.\n");
+
+	return ret;
 }
 
 /**

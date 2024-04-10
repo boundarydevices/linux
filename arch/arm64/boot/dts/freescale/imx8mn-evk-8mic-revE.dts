@@ -127,7 +127,7 @@
 	pca995btw: pca9955btw@7 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "nxp,pca9955btw";
+		compatible = "nxp,pca9955b";
 		reg = <0x07>;
 		led@0 {
 			label = "green0";

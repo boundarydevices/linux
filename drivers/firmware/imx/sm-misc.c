@@ -42,8 +42,8 @@ static int scmi_imx_misc_ctrl_probe(struct scmi_device *sdev)
 {
 	const struct scmi_handle *handle = sdev->handle;
 	struct device_node *np = sdev->dev.of_node;
-	u32 src_id, evt_id, wu_num;
-	int ret, i;
+	u32 src_id, evt_id;
+	int ret, i, wu_num;
 
 	if (!handle)
 		return -ENODEV;

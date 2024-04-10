@@ -8,3 +8,4 @@ sec_enclave-objs		= se_fw.o ele_common.o ele_base_msg.o ele_fw_api.o v2x_base_ms
 obj-${CONFIG_IMX_SEC_ENCLAVE}	+= sec_enclave.o
 sec_enclave-${CONFIG_IMX_ELE_TRNG} += ele_trng.o
 obj-$(CONFIG_IMX_SCMI_BBM_CONTROL) += sm-bbm.o
+obj-$(CONFIG_IMX_ISPMU)		+= isp-mu.o

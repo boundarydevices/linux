@@ -126,7 +126,7 @@
 			reg = <0x3d>;
 			adi,addr-cec = <0x3b>;
 			adi,dsi-lanes = <4>;
-			status = "okay";
+			status = "disabled";
 
 			port {
 				adv7535_to_dsi: endpoint {
@@ -138,6 +138,7 @@
 		lsm6dsm@6a {
 			compatible = "st,lsm6dso";
 			reg = <0x6a>;
+			status = "disabled";
 		};
 	};
 };

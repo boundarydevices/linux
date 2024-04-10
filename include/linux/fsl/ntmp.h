@@ -604,12 +604,13 @@ static inline int ntmp_sgit_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 	return 0;
 }
 
-static int ntmp_sgclt_add_entry(struct netc_cbdr *cbdr, struct ntmp_sgclt_cfg *cfg)
+static inline int ntmp_sgclt_add_entry(struct netc_cbdr *cbdr,
+				       struct ntmp_sgclt_cfg *cfg)
 {
 	return 0;
 }
 
-static int ntmp_sgclt_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
+static inline int ntmp_sgclt_delete_entry(struct netc_cbdr *cbdr, u32 entry_id)
 {
 	return 0;
 }
