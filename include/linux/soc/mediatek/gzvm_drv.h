@@ -30,6 +30,8 @@ struct gzvm_driver {
 
 	struct kobject *sysfs_root_dir;
 	u32 demand_paging_batch_pages;
+
+	struct dentry *gzvm_debugfs_dir;
 };
 
 /*
@@ -66,6 +68,9 @@ struct gzvm_driver {
 #define GZVM_BLOCK_BASED_DEMAND_PAGE_SIZE	(PMD_SIZE) /* 2MB */
 #define GZVM_DRV_DEMAND_PAGING_BATCH_PAGES	\
 	(GZVM_BLOCK_BASED_DEMAND_PAGE_SIZE / PAGE_SIZE)
+
+#define GZVM_MAX_DEBUGFS_DIR_NAME_SIZE  20
+#define GZVM_MAX_DEBUGFS_VALUE_SIZE	20
 
 enum gzvm_demand_paging_mode {
 	GZVM_FULLY_POPULATED = 0,
@@ -132,6 +137,11 @@ struct gzvm_pinned_page {
 	u64 ipa;
 };
 
+struct gzvm_vm_stat {
+	u64 protected_hyp_mem;
+	u64 protected_shared_mem;
+};
+
 /**
  * struct gzvm: the following data structures are for data transferring between
  * driver and hypervisor, and they're aligned with hypervisor definitions.
@@ -156,6 +166,8 @@ struct gzvm_pinned_page {
  * @demand_page_buffer: the mailbox for transferring large portion pages
  * @demand_paging_lock: lock for preventing multiple cpu using the same demand
  * page mailbox at the same time
+ * @stat: information for VM memory statistics
+ * @debug_dir: debugfs directory node for VM memory statistics
  */
 struct gzvm {
 	struct gzvm_driver *gzvm_drv;
@@ -188,6 +200,9 @@ struct gzvm {
 	u32 demand_page_gran;
 	u64 *demand_page_buffer;
 	struct mutex  demand_paging_lock;
+
+	struct gzvm_vm_stat stat;
+	struct dentry *debug_dir;
 };
 
 long gzvm_dev_ioctl_check_extension(struct gzvm *gzvm, unsigned long args);
@@ -213,6 +228,7 @@ int gzvm_arch_destroy_vm(u16 vm_id);
 int gzvm_arch_map_guest(u16 vm_id, int memslot_id, u64 pfn, u64 gfn,
 			u64 nr_pages);
 int gzvm_arch_map_guest_block(u16 vm_id, int memslot_id, u64 gfn, u64 nr_pages);
+int gzvm_arch_get_statistics(struct gzvm *gzvm);
 int gzvm_vm_ioctl_arch_enable_cap(struct gzvm *gzvm,
 				  struct gzvm_enable_cap *cap,
 				  void __user *argp);

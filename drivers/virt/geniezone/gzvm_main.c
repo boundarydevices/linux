@@ -3,6 +3,7 @@
  * Copyright (c) 2023 MediaTek Inc.
  */
 
+#include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/file.h>
 #include <linux/kdev_t.h>
@@ -78,6 +79,25 @@ static int gzvm_drv_sysfs_init(void)
 static void gzvm_drv_sysfs_exit(void)
 {
 	kobject_del(gzvm_drv.sysfs_root_dir);
+}
+
+static int gzvm_drv_debug_init(void)
+{
+	if (!debugfs_initialized()) {
+		pr_warn("debugfs not initialized!\n");
+		return 0;
+	}
+
+	gzvm_drv.gzvm_debugfs_dir = debugfs_create_dir("gzvm", NULL);
+	if (!gzvm_drv.gzvm_debugfs_dir)
+		return -ENOMEM;
+
+	return 0;
+}
+
+static void gzvm_drv_debug_exit(void)
+{
+	debugfs_remove_recursive(gzvm_drv.gzvm_debugfs_dir);
 }
 
 /**
@@ -221,6 +241,10 @@ static int gzvm_drv_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	ret = gzvm_drv_debug_init();
+	if (ret)
+		return ret;
+
 	ret = gzvm_drv_sysfs_init();
 	if (ret)
 		return ret;
@@ -236,6 +260,7 @@ static void gzvm_drv_remove(struct platform_device *pdev)
 {
 	gzvm_drv_irqfd_exit();
 	misc_deregister(&gzvm_dev);
+	gzvm_drv_debug_exit();
 	gzvm_drv_sysfs_exit();
 }
 
