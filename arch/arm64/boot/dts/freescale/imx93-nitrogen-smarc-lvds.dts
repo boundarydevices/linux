@@ -8,7 +8,8 @@
 #include "imx93-nitrogen-smarc.dts"
 
 / {
-	bd-variant = "Nitrogen93 SMARC LVDS";
+	model = "Boundary Devices Nitrogen93 SMARC LVDS";
+	compatible = "fsl,imx93-nitrogen-smarc", "fsl,imx93";
 
 	lvds_backlight: lvds_backlight {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;

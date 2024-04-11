@@ -17,8 +17,7 @@
 };
 
 / {
-	model = "Boundary Devices Nitrogen93 SMARC";
-	bd-variant = "Nitrogen93 SMARC DSI 8\"";
+	model = "Boundary Devices Nitrogen93 SMARC DSI 8\"";
 	compatible = "fsl,imx93-nitrogen-smarc", "fsl,imx93";
 
 	chosen {
