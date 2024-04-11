@@ -1133,6 +1133,13 @@ static int neoisp_s_fmt_vid_out(struct file *file, void *priv,
 	return 0;
 }
 
+static void neoisp_set_ctx_default_params(struct neoisp_dev_s *neoispd, int ctx_id)
+{
+	memcpy(&neoispd->node_group[ctx_id].params[VB2_MAX_FRAME],
+		&neoisp_default_params,
+		sizeof(neoisp_default_params));
+}
+
 static int neoisp_node_streamon(struct file *file, void *priv,
 		enum v4l2_buf_type type)
 {
@@ -1163,6 +1170,10 @@ static int neoisp_node_streamoff(struct file *file, void *priv,
 		enum v4l2_buf_type type)
 {
 	struct neoisp_node_s *node = video_drvdata(file);
+	struct neoisp_dev_s *neoispd = node->node_group->neoisp_dev;
+
+	if (node->id == NEOISP_INPUT0_NODE)
+		neoisp_set_ctx_default_params(neoispd, node->node_group->id);
 
 	return vb2_streamoff(&node->queue, type);
 }
