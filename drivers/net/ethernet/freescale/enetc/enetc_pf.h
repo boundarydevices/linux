@@ -13,6 +13,7 @@
 
 enum enetc_vf_flags {
 	ENETC_VF_FLAG_PF_SET_MAC	= BIT(0),
+	ENETC_VF_FLAG_TRUSTED		= BIT(1)
 };
 
 struct enetc_vf_state {
@@ -112,6 +113,7 @@ int enetc_pf_set_vf_mac(struct net_device *ndev, int vf, u8 *mac);
 int enetc_pf_set_vf_vlan(struct net_device *ndev, int vf, u16 vlan,
 			 u8 qos, __be16 proto);
 int enetc_pf_set_vf_spoofchk(struct net_device *ndev, int vf, bool en);
+int enetc_pf_set_vf_trust(struct net_device *ndev, int vf, bool setting);
 int enetc_pf_set_features(struct net_device *ndev, netdev_features_t features);
 int enetc_pf_setup_tc(struct net_device *ndev, enum tc_setup_type type,
 		      void *type_data);
@@ -136,4 +138,12 @@ static inline bool enetc_pf_is_owned_by_mcore(struct pci_dev *pdev)
 		return true;
 
 	return false;
+}
+
+static inline bool enetc_pf_is_vf_trusted(struct enetc_pf *pf, int vf_id)
+{
+	if (vf_id >= pf->total_vfs)
+		return false;
+
+	return !!(pf->vf_state[vf_id].flags & ENETC_VF_FLAG_TRUSTED);
 }
