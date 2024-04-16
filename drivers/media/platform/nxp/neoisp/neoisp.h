@@ -12,6 +12,7 @@
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-v4l2.h>
+#include <uapi/linux/nxp_neoisp.h>
 #include "neoisp_regs.h"
 
 /*
@@ -109,6 +110,19 @@ enum neoisp_node_e {
 /*
  * structs
  */
+
+/*
+ * struct neoisp_info_s - ISP Hardware various information
+ *
+ * @isp_ver: ISP version
+ *
+ * This structure contains information about the ISP specific to a particular
+ * ISP model, version, or integration in a particular SoC.
+ */
+struct neoisp_info_s {
+	enum neoisp_version_e neoisp_hw_ver;
+};
+
 struct neoisp_node_desc_s {
 	const char *ent_name;
 	enum v4l2_buf_type buf_type;
