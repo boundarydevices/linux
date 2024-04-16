@@ -57,6 +57,18 @@
 		#size-cells = <2>;
 		ranges;
 
+		adsp_dma_mem_reserved: adsp-dma-mem-region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x61000000 0 0x100000>;
+			no-map;
+		};
+
+		adsp_mem_reserved: adsp-mem-region {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0 0x60000000 0 0xa00000>;
+		};
+
 		apu_reserve_memory: apu-reserve-memory{
 			compatible = "shared-dma-pool";
 			size = <0 0x1400000>; //20 MB
@@ -311,6 +323,11 @@
 	mediatek,dmic-iir-on;
 	mediatek,dmic-clk-mono;
 	status = "okay";
+};
+
+&adsp {
+	memory-region = <&adsp_dma_mem_reserved>,
+		<&adsp_mem_reserved>;
 };
 
 &eth {
