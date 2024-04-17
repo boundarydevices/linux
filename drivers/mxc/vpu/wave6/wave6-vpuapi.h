@@ -1177,6 +1177,7 @@ struct vpu_device {
 	struct delayed_work task_timer;
 	struct wave6_vpu_entity entity;
 	struct dentry *debugfs;
+	struct device *trusty_dev;
 };
 
 struct vpu_instance;
