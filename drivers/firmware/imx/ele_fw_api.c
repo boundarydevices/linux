@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright 2023 NXP
+ * Copyright 2023-2024 NXP
  */
 
 #include <linux/dma-mapping.h>
@@ -103,7 +103,9 @@ int ele_get_random(struct device *dev,
 	/* bit 1(blocking reseed): wait for trng entropy,
 	 * then reseed rng context.
 	 */
-	tx_msg->flags = BIT(1);
+	if (get_se_soc_id(dev) != SOC_ID_OF_IMX95)
+		tx_msg->flags = BIT(1);
+
 	tx_msg->data[0] = dst_dma;
 	tx_msg->data[1] = len;
 	ret = imx_ele_msg_send_rcv(priv);
