@@ -2769,6 +2769,31 @@ static const struct panel_desc innolux_zj070na_01p = {
 	},
 };
 
+static const struct drm_display_mode ivo_m101nwwb_mode = {
+	.clock = 71107,
+	.hdisplay = 1280,
+	.hsync_start = 1280 + 151,
+	.hsync_end = 1280 + 151 + 4,
+	.htotal = 1280 + 151 + 4 + 5,
+	.vdisplay = 800,
+	.vsync_start = 800 + 2,
+	.vsync_end = 800 + 2 + 1,
+	.vtotal = 800 + 2 + 1 + 8,
+};
+
+static const struct panel_desc ivo_m101nwwb = {
+	.modes = &ivo_m101nwwb_mode,
+	.num_modes = 1,
+	.bpc = 8,
+	.size = {
+		.width = 216,
+		.height = 135,
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
+
 static const struct display_timing jdi_tx26d202vm0bwa_timing = {
 	.pixelclock = { 151820000, 156720000, 159780000 },
 	.hactive = { 1920, 1920, 1920 },
@@ -4828,6 +4853,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "hit,tx23d38vm0caa",
 		.data = &hitachi_tx23d38vm0caa
+	}, {
+		.compatible = "infovision,ivo-m101nwwb",
+		.data = &ivo_m101nwwb,
 	}, {
 		.compatible = "innolux,at043tn24",
 		.data = &innolux_at043tn24,
