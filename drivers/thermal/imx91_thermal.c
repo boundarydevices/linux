@@ -121,7 +121,8 @@ static int imx91_tmu_get_temp(struct thermal_zone_device *tz, int *temp)
 	return 0;
 }
 
-static int imx91_tmu_get_trend(struct thermal_zone_device *tz, const struct thermal_trip *trip, enum thermal_trend *trend)
+static int imx91_tmu_get_trend(struct thermal_zone_device *tz,
+		const struct thermal_trip *trip, enum thermal_trend *trend)
 {
 	int trip_temp;
 	struct tmu_sensor *sensor = tz->devdata;
@@ -129,7 +130,8 @@ static int imx91_tmu_get_trend(struct thermal_zone_device *tz, const struct ther
 	if (!sensor->tzd)
 		return 0;
 
-	trip_temp = (trip->type == THERMAL_TRIP_PASSIVE) ? sensor->temp_passive : sensor->temp_critical;
+	trip_temp = (trip->type == THERMAL_TRIP_PASSIVE) ?
+					sensor->temp_passive : sensor->temp_critical;
 
 	if (sensor->tzd->temperature >= (trip_temp - TMU_TEMP_PASSIVE_COOL_DELTA))
 		*trend = THERMAL_TREND_RAISING;
@@ -172,12 +174,11 @@ static int imx91_init_from_nvmem_cells(struct imx91_tmu *tmu)
 	if (ret)
 		return ret;
 
-	if (trim1 == 0 || trim1 == 0) {
+	if (trim1 == 0 || trim2 == 0)
 		return -EINVAL;
-	} else {
-		writel_relaxed(trim1, tmu->base + TRIM1);
-		writel_relaxed(trim2, tmu->base + TRIM2);
-	}
+
+	writel_relaxed(trim1, tmu->base + TRIM1);
+	writel_relaxed(trim2, tmu->base + TRIM2);
 
 	return 0;
 }
@@ -221,11 +222,10 @@ static int imx91_tmu_probe(struct platform_device *pdev)
 		if (ret)
 			continue;
 
-		if (trip.type == THERMAL_TRIP_CRITICAL) {
+		if (trip.type == THERMAL_TRIP_CRITICAL)
 			tmu->sensors.temp_critical = trip.temperature;
-		} else if(trip.type == THERMAL_TRIP_PASSIVE) {
+		else if (trip.type == THERMAL_TRIP_PASSIVE)
 			tmu->sensors.temp_passive = trip.temperature;
-		}
 	}
 
 	platform_set_drvdata(pdev, tmu);
