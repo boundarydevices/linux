@@ -1662,6 +1662,19 @@ static int os08a20_get_cap_prop(struct os08a20 *sensor,
 	return ret;
 }
 
+static void os08a20_update_pad_format(struct os08a20 *sensor,
+				      struct v4l2_mbus_framefmt *fmt)
+{
+	fmt->width = sensor->cur_mode.size.bounds_width;
+	fmt->height = sensor->cur_mode.size.bounds_height;
+	os08a20_get_format_code(sensor, &fmt->code);
+	fmt->field = V4L2_FIELD_NONE;
+	fmt->colorspace = V4L2_COLORSPACE_RAW;
+	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
+	fmt->quantization = V4L2_QUANTIZATION_FULL_RANGE;
+	fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
+}
+
 static int os08a20_probe(struct i2c_client *client)
 {
 	int retval;
@@ -1816,6 +1829,7 @@ static int os08a20_probe(struct i2c_client *client)
 
 	memcpy(&sensor->cur_mode, &pos08a20_mode_info[0],
 	       sizeof(struct vvcam_mode_info_s));
+	os08a20_update_pad_format(sensor, &sensor->format);
 	sensor->hdr = SENSOR_MODE_LINEAR;
 	os08a20_update_controls(sensor);
 
