@@ -16,6 +16,10 @@ DECLARE_HOOK(android_vh_arch_set_freq_scale,
 		unsigned long *scale),
 	TP_ARGS(cpus, freq, max, scale));
 
+DECLARE_RESTRICTED_HOOK(android_rvh_cpu_capacity_show,
+	TP_PROTO(unsigned long *capacity, int cpu),
+	TP_ARGS(capacity, cpu), 1);
+
 #endif /* _TRACE_HOOK_TOPOLOGY_H */
 /* This part must be outside protection */
 #include <trace/define_trace.h>
