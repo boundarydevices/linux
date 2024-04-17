@@ -115,7 +115,7 @@ static const struct imx_info_list imx93_info = {
 	.info = {
 			{
 				.pdev_name = {"se-fw2", "mu2"},
-				.socdev = true,
+				.socdev = false,
 				.mu_id = 2,
 				.mu_did = 3,
 				.max_dev_ctx = 4,
@@ -146,7 +146,7 @@ static const struct imx_info_list imx95_info = {
 	.info = {
 			{
 				.pdev_name = {"se-fw2", "mu2"},
-				.socdev = true,
+				.socdev = false,
 				.mu_id = 2,
 				.mu_did = 3,
 				.max_dev_ctx = 4,
@@ -359,8 +359,8 @@ void free_phybuf_mem_pool(struct device *dev,
 	gen_pool_free(mem_pool, (unsigned long)buf, size);
 }
 
-static int imx_soc_device_register(struct device *dev,
-				   struct imx_info *info)
+static int imx_fetch_soc_info(struct device *dev,
+			      struct imx_info *info)
 {
 	struct soc_device_attribute *attr;
 	struct soc_device *sdev = NULL;
@@ -454,6 +454,9 @@ static int imx_soc_device_register(struct device *dev,
 				   get_info_data,
 				   get_info_addr);
 	}
+
+	if (!info->socdev)
+		return 0;
 
 	sdev = soc_device_register(attr);
 	if (IS_ERR(sdev)) {
@@ -1612,13 +1615,11 @@ static int se_fw_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (info->socdev) {
-		ret = imx_soc_device_register(dev, info);
-		if (ret) {
-			dev_err(dev,
-				"failed[%d] to register SoC device\n", ret);
-			goto exit;
-		}
+	ret = imx_fetch_soc_info(dev, info);
+	if (ret) {
+		dev_err(dev,
+			"failed[%d] to register SoC device\n", ret);
+		goto exit;
 	}
 
 	/* Assumed v2x_state_check is enabled for i.MX95 only. */
