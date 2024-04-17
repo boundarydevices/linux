@@ -36,7 +36,6 @@ static uint32_t v2x_fw_state;
 
 #define SOC_ID_OF_IMX8ULP		0x084D
 #define SOC_ID_OF_IMX93			0x9300
-#define SOC_ID_OF_IMX95			0x9500
 #define SOC_VER_MASK			0xFFFF0000
 #define SOC_ID_MASK			0x0000FFFF
 #define RESERVED_DMA_POOL		BIT(1)
@@ -225,6 +224,25 @@ static const struct of_device_id se_fw_match[] = {
 	{ .compatible = "fsl,imx95-se-fw", .data = (void *)&imx95_info},
 	{},
 };
+
+/*
+ * get_se_soc_id() - to fetch the soc_id of the platform
+ *
+ * @dev  : reference to the device for se interface.
+ *
+ * This function returns the SoC ID.
+ *
+ * Context: Other module, requiring to access the secure services based on SoC Id.
+ *
+ * Return: SoC Id of the device.
+ */
+uint32_t get_se_soc_id(struct device *dev)
+{
+	struct imx_info_list *info_list
+		= (struct imx_info_list *) device_get_match_data(dev);
+
+	return info_list->soc_id;
+}
 
 static struct imx_info *get_imx_info(struct imx_info_list *info_list,
 				     const uint8_t *pdev_name,
