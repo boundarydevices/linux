@@ -1050,7 +1050,9 @@ F: drivers/mtd/spi-nor/spansion.c
 thermal
 M: Jacky Bai <ping.bai@nxp.com>
 M: Alice Guo <alice.guo@nxp.com>
+M: Pengfei Li <pengfei.li_1@nxp.com>
 F: drivers/thermal/
+F: Documentation/devicetree/bindings/thermal/imx91-thermal.yaml
 
 timer
 M: Jacky Bai <ping.bai@nxp.com>
