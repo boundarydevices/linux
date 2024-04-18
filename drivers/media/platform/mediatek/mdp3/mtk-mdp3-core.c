@@ -102,6 +102,7 @@ int mdp_vpu_get_locked(struct mdp_dev *mdp)
 {
 	int ret = 0;
 
+	mutex_lock(&mdp->vpu_lock);
 	if (mdp->vpu_count++ == 0) {
 		ret = rproc_boot(mdp->rproc_handle);
 		if (ret) {
@@ -122,6 +123,7 @@ int mdp_vpu_get_locked(struct mdp_dev *mdp)
 			goto err_init_vpu;
 		}
 	}
+	mutex_unlock(&mdp->vpu_lock);
 	return 0;
 
 err_init_vpu:
@@ -129,6 +131,7 @@ err_init_vpu:
 err_reg_vpu:
 err_load_vpu:
 	mdp->vpu_count--;
+	mutex_unlock(&mdp->vpu_lock);
 	return ret;
 }
 
