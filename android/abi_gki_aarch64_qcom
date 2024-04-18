@@ -165,6 +165,7 @@
   consume_skb
   contig_page_data
   _copy_from_iter
+  copy_from_kernel_nofault
   __copy_overflow
   _copy_to_iter
   __cpu_active_mask
@@ -2082,3 +2083,4 @@
   xhci_remove_secondary_interrupter
   xhci_stop_endpoint_sync
   zap_vma_ptes
+  kvfree_sensitive

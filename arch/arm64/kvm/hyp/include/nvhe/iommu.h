@@ -2,6 +2,8 @@
 #ifndef __ARM64_KVM_NVHE_IOMMU_H__
 #define __ARM64_KVM_NVHE_IOMMU_H__
 
+#include <asm/kvm_pgtable.h>
+
 #include <kvm/iommu.h>
 #include <linux/io-pgtable.h>
 
@@ -15,6 +17,7 @@ int kvm_arm_io_pgtable_free(struct io_pgtable *iop);
 #endif /* CONFIG_ARM_SMMU_V3_PKVM */
 
 int kvm_iommu_init(struct kvm_iommu_ops *ops,
+		   struct kvm_hyp_memcache *atomic_mc,
 		   unsigned long init_arg);
 int kvm_iommu_init_device(struct kvm_hyp_iommu *iommu);
 void *kvm_iommu_donate_pages(u8 order, bool request);
@@ -24,6 +27,10 @@ int kvm_iommu_request(struct kvm_hyp_req *req);
 #define kvm_iommu_donate_page()			kvm_iommu_donate_pages(0, true)
 #define kvm_iommu_reclaim_page(p)		kvm_iommu_reclaim_pages(p, 0)
 #define kvm_iommu_donate_pages_request(order)	kvm_iommu_donate_pages(order, true)
+
+/* alloc/free from atomic pool. */
+void *kvm_iommu_donate_pages_atomic(u8 order);
+void kvm_iommu_reclaim_pages_atomic(void *p, u8 order);
 
 /* Hypercall handlers */
 int kvm_iommu_alloc_domain(pkvm_handle_t domain_id, u32 type);
@@ -43,6 +50,9 @@ void kvm_iommu_iotlb_gather_add_page(void *cookie,
 				     struct iommu_iotlb_gather *gather,
 				     unsigned long iova,
 				     size_t size);
+void kvm_iommu_host_stage2_idmap(phys_addr_t start, phys_addr_t end,
+				 enum kvm_pgtable_prot prot);
+int kvm_iommu_snapshot_host_stage2(struct kvm_hyp_iommu_domain *domain);
 
 struct kvm_iommu_ops {
 	int (*init)(unsigned long arg);
@@ -59,6 +69,8 @@ struct kvm_iommu_ops {
 	int (*resume)(struct kvm_hyp_iommu *iommu);
 	void (*iotlb_sync)(void *cookie,
 			   struct iommu_iotlb_gather *gather);
+	void (*host_stage2_idmap)(struct kvm_hyp_iommu_domain *domain,
+				  phys_addr_t start, phys_addr_t end, int prot);
 };
 
 extern struct kvm_iommu_ops *kvm_iommu_ops;

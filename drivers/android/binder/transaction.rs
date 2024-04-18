@@ -10,6 +10,7 @@ use kernel::{
     seq_print,
     sync::{Arc, SpinLock},
     task::Kuid,
+    time::{ktime_ms_delta, Ktime},
     types::ScopeGuard,
     uaccess::UserSliceWriter,
 };
@@ -48,6 +49,7 @@ pub(crate) struct Transaction {
     sender_euid: Kuid,
     txn_security_ctx_off: Option<usize>,
     pub(crate) oneway_spam_detected: bool,
+    start_time: Ktime,
 }
 
 kernel::list::impl_list_arc_safe! {
@@ -124,6 +126,7 @@ impl Transaction {
             set_priority_called: AtomicBool::new(false),
             txn_security_ctx_off,
             oneway_spam_detected,
+            start_time: Ktime::ktime_get(),
         }))?)
     }
 
@@ -164,6 +167,7 @@ impl Transaction {
             set_priority_called: AtomicBool::new(false),
             txn_security_ctx_off: None,
             oneway_spam_detected,
+            start_time: Ktime::ktime_get(),
         }))?)
     }
 
@@ -171,7 +175,7 @@ impl Transaction {
     pub(crate) fn debug_print_inner(&self, m: &mut SeqFile, prefix: &str) {
         seq_print!(
             m,
-            "{}{}: from {}:{} to {} code {:x} flags {:x} pri {}:{}",
+            "{}{}: from {}:{} to {} code {:x} flags {:x} pri {}:{} elapsed {}ms",
             prefix,
             self.debug_id,
             self.from.process.task.pid(),
@@ -180,7 +184,8 @@ impl Transaction {
             self.code,
             self.flags,
             self.priority.sched_policy,
-            self.priority.prio
+            self.priority.prio,
+            ktime_ms_delta(Ktime::ktime_get(), self.start_time),
         );
         if let Some(target_node) = &self.target_node {
             seq_print!(m, " node {}", target_node.debug_id);
@@ -277,13 +282,19 @@ impl Transaction {
                     }
                 }
                 match target_node.submit_oneway(self, &mut process_inner) {
-                    Ok(()) => return Ok(()),
+                    Ok(()) => {}
                     Err((err, work)) => {
                         drop(process_inner);
                         // Drop work after releasing process lock.
                         drop(work);
                         return Err(err);
                     }
+                }
+
+                if process_inner.is_frozen {
+                    return Err(BinderError::new_frozen_oneway());
+                } else {
+                    return Ok(());
                 }
             } else {
                 pr_err!("Failed to submit oneway transaction to node.");

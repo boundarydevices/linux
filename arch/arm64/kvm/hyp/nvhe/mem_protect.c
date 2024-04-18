@@ -161,16 +161,17 @@ static int prepopulate_host_stage2(void)
 
 	for (i = 0; i < hyp_memblock_nr; i++) {
 		reg = &hyp_memory[i];
-		ret = host_stage2_idmap_locked(addr, reg->base - addr, PKVM_HOST_MMIO_PROT);
+		ret = host_stage2_idmap_locked(addr, reg->base - addr, PKVM_HOST_MMIO_PROT, false);
 		if (ret)
 			return ret;
-		ret = host_stage2_idmap_locked(reg->base, reg->size, PKVM_HOST_MEM_PROT);
+		ret = host_stage2_idmap_locked(reg->base, reg->size, PKVM_HOST_MEM_PROT, false);
 		if (ret)
 			return ret;
 		addr = reg->base + reg->size;
 	}
 
-	return host_stage2_idmap_locked(addr, BIT(host_mmu.pgt.ia_bits) - addr, PKVM_HOST_MMIO_PROT);
+	return host_stage2_idmap_locked(addr, BIT(host_mmu.pgt.ia_bits) - addr,
+					PKVM_HOST_MMIO_PROT, false);
 }
 
 int kvm_host_prepare_stage2(void *pgt_pool_base)
@@ -438,7 +439,7 @@ int host_stage2_unmap_reg_locked(phys_addr_t start, u64 size)
 	if (ret)
 		return ret;
 
-	/* XXX: unmap from IOMMU once available */
+	kvm_iommu_host_stage2_idmap(start, start + size, 0);
 
 	return 0;
 }
@@ -555,10 +556,19 @@ static bool range_is_memory(u64 start, u64 end)
 }
 
 static inline int __host_stage2_idmap(u64 start, u64 end,
-				      enum kvm_pgtable_prot prot)
+				      enum kvm_pgtable_prot prot,
+				      bool update_iommu)
 {
-	return kvm_pgtable_stage2_map(&host_mmu.pgt, start, end - start, start,
-				      prot, &host_s2_pool, 0);
+	int ret;
+
+	ret = kvm_pgtable_stage2_map(&host_mmu.pgt, start, end - start, start,
+				     prot, &host_s2_pool, 0);
+	if (ret)
+		return ret;
+
+	if (update_iommu)
+		kvm_iommu_host_stage2_idmap(start, end, prot);
+	return 0;
 }
 
 /*
@@ -622,9 +632,10 @@ static int host_stage2_adjust_range(u64 addr, struct kvm_mem_range *range)
 }
 
 int host_stage2_idmap_locked(phys_addr_t addr, u64 size,
-			     enum kvm_pgtable_prot prot)
+			     enum kvm_pgtable_prot prot,
+			     bool update_iommu)
 {
-	return host_stage2_try(__host_stage2_idmap, addr, addr + size, prot);
+	return host_stage2_try(__host_stage2_idmap, addr, addr + size, prot, update_iommu);
 }
 
 #define KVM_MAX_OWNER_ID               FIELD_MAX(KVM_INVALID_PTE_OWNER_MASK)
@@ -645,6 +656,7 @@ static void __host_update_page_state(phys_addr_t addr, u64 size, enum pkvm_page_
 int host_stage2_set_owner_locked(phys_addr_t addr, u64 size, u8 owner_id)
 {
 	kvm_pte_t annotation;
+	enum kvm_pgtable_prot prot;
 	int ret;
 
 	if (owner_id > KVM_MAX_OWNER_ID)
@@ -662,6 +674,9 @@ int host_stage2_set_owner_locked(phys_addr_t addr, u64 size, u8 owner_id)
 		__host_update_page_state(addr, size, PKVM_PAGE_OWNED);
 	else
 		__host_update_page_state(addr, size, PKVM_NOPAGE);
+
+	prot = owner_id == PKVM_ID_HOST ? PKVM_HOST_MEM_PROT : 0;
+	kvm_iommu_host_stage2_idmap(addr, addr + size, prot);
 
 	return 0;
 }
@@ -709,13 +724,14 @@ static int host_stage2_idmap(u64 addr)
 	bool is_memory = !!find_mem_range(addr, &range);
 	enum kvm_pgtable_prot prot = default_host_prot(is_memory);
 	int ret;
+	bool update_iommu = !is_memory;
 
 	host_lock_component();
 	ret = host_stage2_adjust_range(addr, &range);
 	if (ret)
 		goto unlock;
 
-	ret = host_stage2_idmap_locked(range.start, range.end - range.start, prot);
+	ret = host_stage2_idmap_locked(range.start, range.end - range.start, prot, update_iommu);
 unlock:
 	host_unlock_component();
 
@@ -968,7 +984,7 @@ static int __host_set_page_state_range(u64 addr, u64 size,
 				       enum pkvm_page_state state)
 {
 	if (hyp_phys_to_page(addr)->host_state & PKVM_NOPAGE) {
-		int ret = host_stage2_idmap_locked(addr, size, PKVM_HOST_MEM_PROT);
+		int ret = host_stage2_idmap_locked(addr, size, PKVM_HOST_MEM_PROT, true);
 
 		if (ret)
 			return ret;
@@ -1090,7 +1106,7 @@ static int host_complete_share(const struct pkvm_checked_mem_transition *checked
 		return err;
 
 	if (checked_tx->tx->initiator.id == PKVM_ID_GUEST)
-		psci_mem_protect_dec(checked_tx->nr_pages * PAGE_SIZE);
+		psci_mem_protect_dec(checked_tx->nr_pages);
 
 	return 0;
 }
@@ -1101,7 +1117,7 @@ static int host_complete_unshare(const struct pkvm_checked_mem_transition *check
 	u8 owner_id = checked_tx->tx->initiator.id;
 
 	if (checked_tx->tx->initiator.id == PKVM_ID_GUEST)
-		psci_mem_protect_inc(checked_tx->nr_pages * PAGE_SIZE);
+		psci_mem_protect_inc(checked_tx->nr_pages);
 
 	return host_stage2_set_owner_locked(checked_tx->completer_addr, size,
 					    owner_id);
@@ -2128,17 +2144,22 @@ update:
 			addr, nr_pages << PAGE_SHIFT, PKVM_ID_PROTECTED);
 	} else {
 		ret = host_stage2_idmap_locked(
-			addr, nr_pages << PAGE_SHIFT, prot);
+			addr, nr_pages << PAGE_SHIFT, prot, false);
 	}
 
 	if (WARN_ON(ret) || !page)
 		goto unlock;
 
 	for (i = 0; i < nr_pages; i++) {
-		if (prot != KVM_PGTABLE_PROT_RWX)
+		if (prot != KVM_PGTABLE_PROT_RWX) {
+			/*
+			 * The MODULE_OWNED state is additive to the NOPAGE
+			 * state set by host_stage2_set_owner_locked() above.
+			 */
 			page[i].host_state |= PKVM_MODULE_OWNED_PAGE;
-		else
-			page[i].host_state &= ~PKVM_MODULE_OWNED_PAGE;
+		} else {
+			page[i].host_state = PKVM_PAGE_OWNED;
+		}
 	}
 
 unlock:
@@ -2734,11 +2755,10 @@ int __pkvm_remove_ioguard_page(struct pkvm_hyp_vcpu *hyp_vcpu, u64 ipa,
 
 	ret = kvm_pgtable_stage2_unmap(&vm->pgt, data.ipa_start, data.size);
 
-	guest_unlock_component(vm);
-
 	if (nr_unguarded)
 		*nr_unguarded = data.size >> PAGE_SHIFT;
 unlock:
+	guest_unlock_component(vm);
 	return WARN_ON(ret);
 }
 

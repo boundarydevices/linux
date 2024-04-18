@@ -16,7 +16,6 @@
   argv_free
   argv_split
   arm64_use_ng_mappings
-  __arm_smccc_hvc
   __arm_smccc_smc
   atomic_notifier_call_chain
   atomic_notifier_chain_register
@@ -88,7 +87,6 @@
   cpufreq_quick_get
   cpufreq_register_notifier
   cpufreq_unregister_notifier
-  __cpuhp_remove_state
   __cpuhp_setup_state
   cpu_number
   __cpu_online_mask
@@ -122,6 +120,7 @@
   device_destroy
   device_for_each_child
   device_initialize
+  device_property_present
   device_register
   device_remove_file
   device_set_wakeup_capable
@@ -356,6 +355,7 @@
   ida_alloc_range
   ida_free
   idr_alloc
+  idr_remove
   init_dummy_netdev
   init_net
   __init_rwsem
@@ -466,6 +466,7 @@
   memcpy
   __memcpy_fromio
   __memcpy_toio
+  memdup_user
   mem_section
   memset
   __memset_io
@@ -521,6 +522,7 @@
   of_find_node_by_name
   of_find_node_opts_by_path
   of_find_property
+  of_fwnode_ops
   of_get_child_by_name
   of_get_named_gpio
   of_get_next_available_child
@@ -579,6 +581,7 @@
   perf_trace_run_bpf_submit
   phy_power_off
   phy_power_on
+  phy_set_mode_ext
   pinconf_generic_dt_node_to_map
   pinctrl_dev_get_drvdata
   pinctrl_lookup_state
@@ -665,6 +668,7 @@
   regcache_mark_dirty
   regcache_sync
   __register_chrdev
+  register_chrdev_region
   register_die_notifier
   register_kretprobe
   register_netdev
@@ -725,12 +729,13 @@
   simple_attr_write
   simple_open
   simple_read_from_buffer
-  simple_strtoul
   simple_write_to_buffer
   single_open
   single_release
   skb_clone
+  skb_copy_expand
   skb_dequeue
+  skb_dequeue_tail
   skb_pull
   skb_push
   skb_put
@@ -842,12 +847,16 @@
   trace_handle_return
   __traceiter_android_vh_cpu_idle_enter
   __traceiter_android_vh_cpu_idle_exit
+  __traceiter_android_vh_cpuidle_psci_enter
+  __traceiter_android_vh_cpuidle_psci_exit
   __traceiter_clock_set_rate
   __traceiter_device_pm_callback_end
   __traceiter_device_pm_callback_start
   __traceiter_suspend_resume
   __tracepoint_android_vh_cpu_idle_enter
   __tracepoint_android_vh_cpu_idle_exit
+  __tracepoint_android_vh_cpuidle_psci_enter
+  __tracepoint_android_vh_cpuidle_psci_exit
   __tracepoint_clock_set_rate
   __tracepoint_device_pm_callback_end
   __tracepoint_device_pm_callback_start
@@ -869,14 +878,19 @@
   up
   up_read
   up_write
+  usb_enable_autosuspend
   usb_ep_alloc_request
   usb_ep_autoconfig
   usb_ep_free_request
   usb_ep_queue
   usb_function_register
   usb_function_unregister
+  usb_hcd_is_primary_hcd
+  usb_hub_find_child
   usb_interface_id
   usb_put_function_instance
+  usb_register_notify
+  usb_unregister_notify
   __usecs_to_jiffies
   usleep_range_state
   v4l2_ctrl_handler_free
@@ -954,7 +968,6 @@
   dev_get_by_name
   __napi_alloc_skb
   napi_build_skb
-  skb_dequeue_tail
 
 # required by cs_dsp.ko
   regmap_async_complete
@@ -1005,6 +1018,8 @@
   stack_trace_save_tsk
   touch_softlockup_watchdog
   __traceiter_android_rvh_arm64_serror_panic
+  __traceiter_android_rvh_do_el1_fpac
+  __traceiter_android_rvh_do_el1_undef
   __traceiter_android_rvh_handle_bad_stack
   __traceiter_android_vh_ipi_stop
   __traceiter_irq_handler_entry
@@ -1014,6 +1029,8 @@
   __traceiter_rwmmio_write
   __traceiter_sched_switch
   __tracepoint_android_rvh_arm64_serror_panic
+  __tracepoint_android_rvh_do_el1_fpac
+  __tracepoint_android_rvh_do_el1_undef
   __tracepoint_android_rvh_handle_bad_stack
   __tracepoint_android_vh_ipi_stop
   __tracepoint_irq_handler_entry
@@ -1025,7 +1042,6 @@
 
 # required by dwc3-exynos-usb.ko
   device_create_managed_software_node
-  device_property_present
   platform_device_add
   platform_device_add_resources
   platform_device_alloc
@@ -1038,10 +1054,6 @@
 
 # required by ehld.ko
   sprint_symbol
-  __traceiter_android_vh_cpuidle_psci_enter
-  __traceiter_android_vh_cpuidle_psci_exit
-  __tracepoint_android_vh_cpuidle_psci_enter
-  __tracepoint_android_vh_cpuidle_psci_exit
 
 # required by ems.ko
   activate_task
@@ -1061,6 +1073,7 @@
   cpufreq_register_governor
   cpufreq_remove_update_util_hook
   cpufreq_this_cpu_can_update
+  __cpuhp_remove_state
   cpuidle_governor_latency_req
   cpuidle_register_governor
   cpupri_find_fitness
@@ -1169,6 +1182,9 @@
   uclamp_eff_value
   update_rq_clock
   wake_up_if_idle
+
+# required by exynos-adv-tracer-s2d.ko
+  simple_strtoul
 
 # required by exynos-chipid_v2.ko
   soc_device_register
@@ -1351,6 +1367,15 @@
   pm_genpd_add_subdomain
   pm_genpd_init
 
+# required by exynos-pkvm-module.ko
+  __arm_smccc_hvc
+  kimage_vaddr
+  on_each_cpu_cond_mask
+  __pkvm_load_el2_module
+  __pkvm_register_el2_call
+
+# required by exynos-pkvm-s2mpu.ko
+  kvm_iommu_register_driver
 # required by exynos-reboot.ko
   pm_power_off
 
@@ -1359,6 +1384,19 @@
 
 # required by exynos-ssld.ko
   driver_register
+
+# required by exynos-usb-audio-offloading.ko
+  snd_ctl_add
+  snd_ctl_new1
+  snd_usb_autoresume
+  snd_usb_autosuspend
+  snd_usb_register_platform_ops
+  usb_altnum_to_altsetting
+  usb_choose_configuration
+  usb_ifnum_to_if
+  xhci_enable_interrupter
+  xhci_get_endpoint_index
+  xhci_get_ep_ctx
 
 # required by exynos9955_sound.ko
   clk_bulk_disable
@@ -1511,6 +1549,36 @@
   __tracepoint_android_vh_do_wake_up_sync
   __tracepoint_android_vh_set_wake_flags
 
+# required by i2c-dev.ko
+  bus_register_notifier
+  bus_unregister_notifier
+  cdev_device_add
+  cdev_device_del
+  i2c_adapter_type
+  i2c_bus_type
+  i2c_for_each_dev
+  i2c_get_adapter
+  i2c_put_adapter
+  i2c_smbus_xfer
+  i2c_verify_client
+
+# required by i3c-hci-exynos.ko
+  i3c_generic_ibi_alloc_pool
+  i3c_generic_ibi_free_pool
+  i3c_generic_ibi_get_free_slot
+  i3c_generic_ibi_recycle_slot
+  i3c_master_add_i3c_dev_locked
+  i3c_master_defslvs_locked
+  i3c_master_disec_locked
+  i3c_master_do_daa
+  i3c_master_enec_locked
+  i3c_master_entdaa_locked
+  i3c_master_get_free_addr
+  i3c_master_queue_ibi
+  i3c_master_register
+  i3c_master_set_info
+  i3c_master_unregister
+
 # required by irq-gic-v3-vh.ko
   __traceiter_android_rvh_gic_v3_set_affinity
   __tracepoint_android_rvh_gic_v3_set_affinity
@@ -1566,7 +1634,6 @@
 # required by npu.ko
   class_register
   devm_clk_put
-  register_chrdev_region
   vsprintf
 
 # required by pablo-libs.ko
@@ -1642,7 +1709,6 @@
   gpiochip_unlock_as_irq
   irq_domain_xlate_twocell
   irq_set_chained_handler_and_data
-  of_fwnode_ops
   of_node_name_eq
   pinctrl_add_gpio_range
   pinctrl_force_sleep
@@ -1747,6 +1813,8 @@
   iommu_group_set_iommudata
   iommu_report_device_fault
   of_find_node_with_property
+  __traceiter_android_rvh_iommu_dma_info_to_prot
+  __tracepoint_android_rvh_iommu_dma_info_to_prot
 
 # required by scaler.ko
   dma_fence_default_wait
@@ -1762,6 +1830,21 @@
   v4l2_m2m_try_schedule
   v4l_bound_align_image
   work_busy
+
+# required by scsc_bt.ko
+  crc_ccitt
+  param_ops_ullong
+  skb_split
+  tty_dev_name_to_number
+  tty_kclose
+  tty_kopen_exclusive
+  tty_lock
+  tty_mode_ioctl
+  tty_register_ldisc
+  tty_set_ldisc
+  tty_set_termios
+  tty_unlock
+  tty_unregister_ldisc
 
 # required by scsc_logring.ko
   dev_vprintk_emit
@@ -1788,44 +1871,6 @@
 
 # required by scsc_wlan.ko
   arp_tbl
-  __cfg80211_alloc_event_skb
-  __cfg80211_alloc_reply_skb
-  cfg80211_chandef_create
-  cfg80211_chandef_valid
-  cfg80211_check_station_change
-  cfg80211_ch_switch_notify
-  cfg80211_classify8021d
-  cfg80211_connect_done
-  cfg80211_conn_failed
-  cfg80211_del_sta_sinfo
-  cfg80211_disconnected
-  cfg80211_external_auth_request
-  cfg80211_find_elem_match
-  cfg80211_find_vendor_elem
-  __cfg80211_get_bss
-  cfg80211_inform_bss_data
-  cfg80211_inform_bss_frame_data
-  cfg80211_is_element_inherited
-  cfg80211_merge_profile
-  cfg80211_mgmt_tx_status_ext
-  cfg80211_michael_mic_failure
-  cfg80211_new_sta
-  cfg80211_put_bss
-  cfg80211_ready_on_channel
-  cfg80211_ref_bss
-  cfg80211_register_netdevice
-  cfg80211_remain_on_channel_expired
-  cfg80211_roamed
-  cfg80211_rx_mgmt_ext
-  cfg80211_scan_done
-  cfg80211_sched_scan_results
-  cfg80211_sched_scan_stopped
-  __cfg80211_send_event_skb
-  cfg80211_unregister_wdev
-  cfg80211_update_owe_info_event
-  cfg80211_vendor_cmd_reply
-  __cpuhp_state_add_instance
-  __cpuhp_state_remove_instance
   dev_alloc_name
   __dev_queue_xmit
   dev_set_threaded
@@ -1835,10 +1880,6 @@
   dst_release
   ether_setup
   for_each_kernel_tracepoint
-  ieee80211_channel_to_freq_khz
-  ieee80211_freq_khz_to_channel
-  ieee80211_get_channel_khz
-  ieee80211_operating_class_to_band
   in4_pton
   in6_pton
   ip_route_output_flow
@@ -1869,20 +1910,14 @@
   register_inet6addr_notifier
   register_inetaddr_notifier
   register_netdevice
-  regulatory_set_wiphy_regd
   rtnl_is_locked
   skb_copy
   skb_copy_bits
-  skb_copy_expand
   synchronize_net
   __tasklet_hi_schedule
   unregister_inet6addr_notifier
   unregister_inetaddr_notifier
   unregister_netdevice_queue
-  wiphy_free
-  wiphy_new_nm
-  wiphy_register
-  wiphy_unregister
 
 # required by sec_ts.ko
   input_allocate_device
@@ -1964,7 +1999,6 @@
   idr_find
   idr_for_each
   idr_get_next
-  idr_remove
   idr_replace
   jiffies64_to_msecs
   mark_page_accessed
@@ -1972,6 +2006,8 @@
   memremap
   memunmap
   mmu_notifier_synchronize
+  page_pinner_inited
+  __page_pinner_put_page
   param_get_charp
   param_ops_hexint
   param_set_charp
@@ -2165,7 +2201,6 @@
 # required by spidev.ko
   device_get_match_data
   device_property_match_string
-  memdup_user
   __spi_register_driver
   spi_setup
   spi_slave_abort
@@ -2240,10 +2275,34 @@
 
 # required by usb_notify_layer.ko
   kthread_complete_and_exit
-  usb_hub_find_child
-  usb_register_notify
   usb_speed_string
   usb_unregister_notify
+
+# required by xhci-exynos-audio.ko
+  dma_pool_alloc
+  dma_pool_free
+  __kmalloc_node
+  kmalloc_node_trace
+  xhci_add_endpoint
+  xhci_initialize_ring_info
+
+# required by xhci-exynos.ko
+  device_property_read_u32_array
+  device_set_wakeup_enable
+  devm_clk_get_optional
+  devm_usb_get_phy_by_phandle
+  of_usb_host_tpl_support
+  pci_bus_type
+  usb_add_hcd
+  __usb_create_hcd
+  usb_disabled
+  usb_put_hcd
+  usb_remove_hcd
+  xhci_gen_setup
+  xhci_init_driver
+  xhci_resume
+  xhci_run
+  xhci_suspend
 
 # required by xperf.ko
   cpufreq_quick_get_max

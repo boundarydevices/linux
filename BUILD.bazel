@@ -115,13 +115,16 @@ filegroup(
         "android/abi_gki_aarch64_exynos",
         "android/abi_gki_aarch64_exynosauto",
         "android/abi_gki_aarch64_galaxy",
+        "android/abi_gki_aarch64_honor",
         "android/abi_gki_aarch64_imx",
         "android/abi_gki_aarch64_mtk",
         "android/abi_gki_aarch64_oplus",
         "android/abi_gki_aarch64_pixel",
         "android/abi_gki_aarch64_qcom",
+        "android/abi_gki_aarch64_type_visibility",
         "android/abi_gki_aarch64_unisoc",
         "android/abi_gki_aarch64_virtual_device",
+        "android/abi_gki_aarch64_vivo",
         "android/abi_gki_aarch64_xiaomi",
     ],
     visibility = ["//visibility:public"],
@@ -137,20 +140,24 @@ define_common_kernels(target_configs = {
         "protected_modules_list": "android/gki_aarch64_protected_modules",
         "module_implicit_outs": get_gki_modules_list("arm64"),
         "make_goals": _GKI_AARCH64_MAKE_GOALS,
+        "extra_dist": [":test_mappings_zip"],
     },
     "kernel_aarch64_16k": {
         "kmi_symbol_list_strict_mode": False,
         "module_implicit_outs": get_gki_modules_list("arm64"),
         "make_goals": _GKI_AARCH64_MAKE_GOALS,
+        "extra_dist": [":test_mappings_zip"],
     },
     "kernel_riscv64": {
         "module_implicit_outs": get_gki_modules_list("riscv64"),
         "make_goals": _GKI_RISCV64_MAKE_GOALS,
+        "extra_dist": [":test_mappings_zip"],
     },
     "kernel_x86_64": {
         "kmi_symbol_list_strict_mode": False,
         "module_implicit_outs": get_gki_modules_list("x86_64"),
         "make_goals": _GKI_X86_64_MAKE_GOALS,
+        "extra_dist": [":test_mappings_zip"],
     },
 })
 
@@ -398,10 +405,12 @@ _DB845C_MODULE_OUTS = [
     "drivers/usb/host/ohci-pci.ko",
     "drivers/usb/host/ohci-platform.ko",
     "drivers/usb/typec/tcpm/qcom/qcom_pmic_tcpm.ko",
+    "net/mac80211/mac80211.ko",
     "net/qrtr/qrtr.ko",
     "net/qrtr/qrtr-mhi.ko",
     "net/qrtr/qrtr-smd.ko",
     "net/qrtr/qrtr-tun.ko",
+    "net/wireless/cfg80211.ko",
     "sound/soc/codecs/snd-soc-dmic.ko",
     "sound/soc/codecs/snd-soc-hdmi-codec.ko",
     "sound/soc/codecs/snd-soc-lpass-macro-common.ko",
@@ -2413,5 +2422,14 @@ pkg_files(
     srcs = _TEST_MAPPINGS,
     prefix = package_name(),
     renames = {file: file for file in _TEST_MAPPINGS},
-    visibility = ["//kernel/tests/test_mappings:__pkg__"],
+    visibility = ["//visibility:private"],
+)
+
+pkg_zip(
+    name = "test_mappings_zip",
+    srcs = [
+        ":test_mappings",
+    ],
+    out = "test_mappings.zip",
+    visibility = ["//visibility:public"],
 )

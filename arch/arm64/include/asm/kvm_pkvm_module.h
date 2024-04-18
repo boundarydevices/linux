@@ -11,6 +11,7 @@
 typedef void (*dyn_hcall_t)(struct user_pt_regs *);
 struct kvm_hyp_iommu;
 struct iommu_iotlb_gather;
+struct kvm_hyp_iommu_domain;
 
 #ifdef CONFIG_MODULES
 enum pkvm_psci_notification {
@@ -142,7 +143,9 @@ enum pkvm_psci_notification {
  * @__list_add_valid_or_report: Needed if the code uses linked lists.
  * @__list_del_entry_valid_or_report:
 				Needed if the code uses linked lists.
-* @iommu_iotlb_gather_add_page:	Add a page to the iotlb_gather druing unmap for the IOMMU.
+ * @iommu_iotlb_gather_add_page: Add a page to the iotlb_gather druing unmap for the IOMMU.
+ * @iommu_donate_pages_atomic:	Allocate memory from IOMMU identity pool.
+ * @iommu_reclaim_pages_atomic:	Reclaim memory from iommu_donate_pages_atomic()
  */
 struct pkvm_module_ops {
 	int (*create_private_mapping)(phys_addr_t phys, size_t size,
@@ -201,6 +204,10 @@ struct pkvm_module_ops {
 	int (*register_hyp_event_ids)(unsigned long start, unsigned long end);
 	void* (*tracing_reserve_entry)(unsigned long length);
 	void (*tracing_commit_entry)(void);
+	void * (*iommu_donate_pages_atomic)(u8 order);
+	void (*iommu_reclaim_pages_atomic)(void *p, u8 order);
+	int (*iommu_snapshot_host_stage2)(struct kvm_hyp_iommu_domain *domain);
+
 	ANDROID_KABI_RESERVE(1);
 	ANDROID_KABI_RESERVE(2);
 	ANDROID_KABI_RESERVE(3);

@@ -16,6 +16,8 @@ struct arm_lpae_io_pgtable {
 	int			bits_per_level;
 
 	void			*pgd;
+
+	bool			idmapped; /* Used by hypervisor */
 };
 
 /* Struct accessors */
@@ -188,5 +190,7 @@ void *__arm_lpae_alloc_pages(size_t size, gfp_t gfp, struct io_pgtable_cfg *cfg)
 void __arm_lpae_free_pages(void *pages, size_t size, struct io_pgtable_cfg *cfg);
 void __arm_lpae_sync_pte(arm_lpae_iopte *ptep, int num_entries,
 			 struct io_pgtable_cfg *cfg);
+int arm_lpae_mapping_exists(struct arm_lpae_io_pgtable *data);
+void arm_lpae_mapping_missing(struct arm_lpae_io_pgtable *data);
 
 #endif /* IO_PGTABLE_H_ */

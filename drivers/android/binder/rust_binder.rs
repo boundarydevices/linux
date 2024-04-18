@@ -64,22 +64,17 @@ trait DeliverToRead: ListArcSafe + Send + Sync {
 
     /// Cancels the given work item. This is called instead of [`DeliverToRead::do_work`] when work
     /// won't be delivered.
-    fn cancel(self: DArc<Self>) {}
+    fn cancel(self: DArc<Self>);
 
     /// Called when a work item is delivered directly to a specific thread, rather than to the
     /// process work list.
-    fn on_thread_selected(&self, _thread: &thread::Thread) {}
+    fn on_thread_selected(&self, _thread: &thread::Thread);
 
     /// Should we use `wake_up_interruptible_sync` or `wake_up_interruptible` when scheduling this
     /// work item?
     ///
     /// Generally only set to true for non-oneway transactions.
     fn should_sync_wakeup(&self) -> bool;
-
-    /// Get the debug name of this type.
-    fn debug_name(&self) -> &'static str {
-        core::any::type_name::<Self>()
-    }
 
     fn debug_print(&self, m: &mut SeqFile, prefix: &str, transaction_prefix: &str) -> Result<()>;
 }
@@ -176,6 +171,9 @@ impl DeliverToRead for DeliverCode {
         Ok(true)
     }
 
+    fn cancel(self: DArc<Self>) {}
+    fn on_thread_selected(&self, _thread: &thread::Thread) {}
+
     fn should_sync_wakeup(&self) -> bool {
         false
     }
@@ -207,10 +205,11 @@ struct BinderModule {}
 impl kernel::Module for BinderModule {
     fn init(_module: &'static kernel::ThisModule) -> Result<Self> {
         // SAFETY: This is the very first thing that happens in this module, so nothing else has
-        // called `init` yet. Furthermore, we cannot move a value in a global, so the `Contexts`
-        // will not be moved after this call.
+        // called `Contexts::init` yet. Furthermore, we cannot move a value in a global, so the
+        // `Contexts` will not be moved after this call.
         unsafe { crate::context::CONTEXTS.init() };
 
+        // SAFETY: This just accesses global booleans.
         #[cfg(CONFIG_ANDROID_BINDER_IPC)]
         unsafe {
             extern "C" {
@@ -301,10 +300,9 @@ unsafe extern "C" fn rust_binder_open(
         Ok(process) => process,
         Err(err) => return err.to_errno(),
     };
+
     // SAFETY: This file is associated with Rust binder, so we own the `private_data` field.
-    unsafe {
-        (*file_ptr).private_data = process.into_foreign().cast_mut();
-    }
+    unsafe { (*file_ptr).private_data = process.into_foreign().cast_mut() };
     0
 }
 
@@ -391,12 +389,18 @@ unsafe extern "C" fn rust_binder_flush(
 }
 
 #[no_mangle]
-unsafe extern "C" fn rust_binder_stats_show(_: *mut seq_file) -> core::ffi::c_int {
+unsafe extern "C" fn rust_binder_stats_show(
+    _: *mut seq_file,
+    _: *mut core::ffi::c_void,
+) -> core::ffi::c_int {
     0
 }
 
 #[no_mangle]
-unsafe extern "C" fn rust_binder_state_show(ptr: *mut seq_file) -> core::ffi::c_int {
+unsafe extern "C" fn rust_binder_state_show(
+    ptr: *mut seq_file,
+    _: *mut core::ffi::c_void,
+) -> core::ffi::c_int {
     // SAFETY: The caller ensures that the pointer is valid and exclusive for the duration in which
     // this method is called.
     let m = unsafe { SeqFile::from_raw(ptr) };
@@ -407,12 +411,18 @@ unsafe extern "C" fn rust_binder_state_show(ptr: *mut seq_file) -> core::ffi::c_
 }
 
 #[no_mangle]
-unsafe extern "C" fn rust_binder_transactions_show(_: *mut seq_file) -> core::ffi::c_int {
+unsafe extern "C" fn rust_binder_transactions_show(
+    _: *mut seq_file,
+    _: *mut core::ffi::c_void,
+) -> core::ffi::c_int {
     0
 }
 
 #[no_mangle]
-unsafe extern "C" fn rust_binder_transaction_log_show(_: *mut seq_file) -> core::ffi::c_int {
+unsafe extern "C" fn rust_binder_transaction_log_show(
+    _: *mut seq_file,
+    _: *mut core::ffi::c_void,
+) -> core::ffi::c_int {
     0
 }
 
