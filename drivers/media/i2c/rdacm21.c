@@ -17,6 +17,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/videodev2.h>
+#include <linux/of_device.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
@@ -74,6 +75,16 @@
 #define OV10640_CHIP_ID			0x300a
 #define OV10640_PIXEL_RATE		55000000
 
+enum model_id {
+	COMPAT_MODEL_RDACM21,
+	COMPAT_MODEL_AG190C,
+};
+
+struct rdacm21_info {
+	enum model_id model;
+	bool need_init_isp;
+};
+
 struct rdacm21_device {
 	struct device			*dev;
 	struct max9271_device		serializer;
@@ -82,6 +93,7 @@ struct rdacm21_device {
 	struct media_pad		pad;
 	struct v4l2_mbus_framefmt	fmt;
 	struct v4l2_ctrl_handler	ctrls;
+	struct rdacm21_info		*info;
 	u32				addrs[2];
 	u16				last_page;
 };
@@ -390,7 +402,8 @@ static int ov490_initialize(struct rdacm21_device *dev)
 	unsigned int i;
 	int ret;
 
-	ov10640_power_up(dev);
+	if (dev->info->need_init_isp)
+		ov10640_power_up(dev);
 
 	/*
 	 * Read OV490 Id to test communications. Give it up to 40msec to
@@ -433,19 +446,21 @@ static int ov490_initialize(struct rdacm21_device *dev)
 	if (ret)
 		return ret;
 
-	/* Program OV490 with register-value table. */
-	for (i = 0; i < ARRAY_SIZE(ov490_regs_wizard); ++i) {
-		ret = ov490_write(dev, ov490_regs_wizard[i].reg,
-				  ov490_regs_wizard[i].val);
-		if (ret < 0) {
-			dev_err(dev->dev,
-				"%s: register %u (0x%04x) write failed (%d)\n",
-				__func__, i, ov490_regs_wizard[i].reg, ret);
+	if (dev->info->need_init_isp) {
+		/* Program OV490 with register-value table. */
+		for (i = 0; i < ARRAY_SIZE(ov490_regs_wizard); ++i) {
+			ret = ov490_write(dev, ov490_regs_wizard[i].reg,
+					  ov490_regs_wizard[i].val);
+			if (ret < 0) {
+				dev_err(dev->dev,
+					"%s: register %u (0x%04x) write failed (%d)\n",
+					__func__, i, ov490_regs_wizard[i].reg, ret);
 
-			return -EIO;
+				return -EIO;
+			}
+
+			usleep_range(100, 150);
 		}
-
-		usleep_range(100, 150);
 	}
 
 	/*
@@ -462,8 +477,10 @@ static int ov490_initialize(struct rdacm21_device *dev)
 	ov490_read_reg(dev, OV490_ISP_VSIZE_LOW, &val);
 	dev->fmt.height |= val & 0xff;
 
-	/* Set bus width to 12 bits with [0:11] ordering. */
-	ov490_write_reg(dev, OV490_DVP_CTRL3, 0x10);
+	if (dev->info->need_init_isp) {
+		/* Set bus width to 12 bits with [0:11] ordering. */
+		ov490_write_reg(dev, OV490_DVP_CTRL3, 0x10);
+	}
 
 	dev_info(dev->dev, "Identified RDACM21 camera module\n");
 
@@ -493,18 +510,20 @@ static int rdacm21_initialize(struct rdacm21_device *dev)
 	if (ret)
 		return ret;
 
-	/*
-	 * Enable GPIO1 and hold OV490 in reset during max9271 configuration.
-	 * The reset signal has to be asserted for at least 250 useconds.
-	 */
-	ret = max9271_enable_gpios(&dev->serializer, MAX9271_GPIO1OUT);
-	if (ret)
-		return ret;
+	if (dev->info->need_init_isp) {
+		/*
+		 * Enable GPIO1 and hold OV490 in reset during max9271 configuration.
+		 * The reset signal has to be asserted for at least 250 useconds.
+		 */
+		ret = max9271_enable_gpios(&dev->serializer, MAX9271_GPIO1OUT);
+		if (ret)
+			return ret;
 
-	ret = max9271_clear_gpios(&dev->serializer, MAX9271_GPIO1OUT);
-	if (ret)
-		return ret;
-	usleep_range(250, 500);
+		ret = max9271_clear_gpios(&dev->serializer, MAX9271_GPIO1OUT);
+		if (ret)
+			return ret;
+		usleep_range(250, 500);
+	}
 
 	ret = max9271_configure_gmsl_link(&dev->serializer);
 	if (ret)
@@ -521,11 +540,13 @@ static int rdacm21_initialize(struct rdacm21_device *dev)
 		return ret;
 	dev->isp->addr = dev->addrs[1];
 
-	/* Release OV490 from reset and initialize it. */
-	ret = max9271_set_gpios(&dev->serializer, MAX9271_GPIO1OUT);
-	if (ret)
-		return ret;
-	usleep_range(3000, 5000);
+	if (dev->info->need_init_isp) {
+		/* Release OV490 from reset and initialize it. */
+		ret = max9271_set_gpios(&dev->serializer, MAX9271_GPIO1OUT);
+		if (ret)
+			return ret;
+		usleep_range(3000, 5000);
+	};
 
 	ret = ov490_initialize(dev);
 	if (ret)
@@ -558,6 +579,9 @@ static int rdacm21_probe(struct i2c_client *client)
 		dev_err(dev->dev, "Invalid DT reg property: %d\n", ret);
 		return -EINVAL;
 	}
+
+	dev->info = of_device_get_match_data(dev->dev);
+	dev_dbg(dev->dev, "Compatible Model: %u\n", dev->info->model);
 
 	/* Create the dummy I2C client for the sensor. */
 	dev->isp = i2c_new_dummy_device(client->adapter, OV490_I2C_ADDRESS);
@@ -626,8 +650,25 @@ static int rdacm21_remove(struct i2c_client *client)
 	return 0;
 }
 
+static const struct rdacm21_info rdacm21_info_rdacm21 = {
+	.model = COMPAT_MODEL_RDACM21,
+	.need_init_isp = true,
+};
+
+static const struct rdacm21_info rdacm21_info_ag190c = {
+	.model = COMPAT_MODEL_AG190C,
+	.need_init_isp = false,
+};
+
 static const struct of_device_id rdacm21_of_ids[] = {
-	{ .compatible = "imi,rdacm21" },
+	{
+		.compatible = "imi,rdacm21",
+		.data = &rdacm21_info_rdacm21,
+	},
+	{
+		.compatible = "abeo,ag190c",
+		.data = &rdacm21_info_ag190c,
+	},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, rdacm21_of_ids);
