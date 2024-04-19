@@ -59,6 +59,9 @@ description: -|
   deserializer's I2C bus corresponding to the GMSL link that the camera is
   attached to.
 
+  The ABEO AG190C is almost the same as RDACM21, but AG190C will automatically
+  configure the OV490 ISP and the OV10640 camera after power on.
+
 properties:
   '#address-cells':
     const: 1
@@ -70,6 +73,7 @@ properties:
     enum:
       - imi,rdacm20
       - imi,rdacm21
+      - abeo,ag190c
 
   reg:
     description: -|
@@ -80,6 +84,9 @@ properties:
       OV10635 image sensor and the optional third one to the embedded MCU.
 
       For RDACM21 the second entry is assigned to the OV490 ISP and the optional
+      third one ignored.
+
+      For AG190C the second entry is assigned to the OV490 ISP and the optional
       third one ignored.
 
     minItems: 2
