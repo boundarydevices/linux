@@ -11,7 +11,5 @@
 };
 
 &pcie1_ep {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcie1>;
 	status = "okay";
 };

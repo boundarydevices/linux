@@ -25,7 +25,7 @@ static inline int scmi_imx_misc_ctrl_get(u32 id, u32 *num, u32 *val)
 	return -EOPNOTSUPP;
 }
 
-static inline int scmi_imx_misc_ctrl_set(u32 id, u32 val);
+static inline int scmi_imx_misc_ctrl_set(u32 id, u32 val)
 {
 	return -EOPNOTSUPP;
 }

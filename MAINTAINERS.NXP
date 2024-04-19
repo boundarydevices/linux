@@ -286,6 +286,20 @@ M: G.n. Zhou <guoniu.zhou@nxp.com>
 F: Documentation/devicetree/bindings/media/imx8-parallel-csi.txt
 F: drivers/staging/media/imx/imx8-parallel-csi.c
 
+capture/ox03c10
+M: Laurentiu Palcu <laurentiu.palcu@oss.nxp.com>
+R: Robert Chiras <robert.chiras@nxp.com>
+R: Mirela Rabulea <mirela.rabulea@nxp.com>
+R: Oliver Brown <oliver.brown@nxp.com>
+R: G.n. Zhou <guoniu.zhou@nxp.com>
+F: drivers/media/i2c/mx95mbcam.c
+F: Documentation/devicetree/bindings/media/i2c/nxp,mx95mbcam.yaml
+F: drivers/media/i2c/ox03c10*
+F: include/uapi/linux/ox03c10.h
+F: drivers/media/i2c/max96717*
+F: drivers/media/i2c/max96724*
+F: Documentation/devicetree/bindings/media/i2c/maxim,max96724.yaml
+
 capture/neoisp
 M: Aymen SGHAIER <aymen.sghaier@nxp.com>
 M: Julien Vuillaumier <julien.vuillaumier@nxp.com>
@@ -1036,7 +1050,9 @@ F: drivers/mtd/spi-nor/spansion.c
 thermal
 M: Jacky Bai <ping.bai@nxp.com>
 M: Alice Guo <alice.guo@nxp.com>
+M: Pengfei Li <pengfei.li_1@nxp.com>
 F: drivers/thermal/
+F: Documentation/devicetree/bindings/thermal/imx91-thermal.yaml
 
 timer
 M: Jacky Bai <ping.bai@nxp.com>

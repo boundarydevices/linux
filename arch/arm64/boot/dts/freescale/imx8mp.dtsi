@@ -182,6 +182,15 @@
 			opp-suspend;
 		};
 
+		/* Only for Special Industrial part with 1.8G at OD */
+		opp-sc-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <950000>;
+			opp-supported-hw = <0x20>, <0x4>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+		};
+
 		opp-1800000000 {
 			opp-hz = /bits/ 64 <1800000000>;
 			opp-microvolt = <1000000>;
@@ -1925,7 +1934,6 @@
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
-				fsl,ratio-1-1;
 				power-domains = <&audiomix_pd>;
 				status = "disabled";
 			};
@@ -1939,7 +1947,6 @@
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
-				fsl,ratio-1-1;
 				power-domains = <&audiomix_pd>;
 				status = "disabled";
 			};
@@ -2129,8 +2136,11 @@
 
 		pcie_ep: pcie-ep@33800000 {
 			compatible = "fsl,imx8mp-pcie-ep";
-			reg = <0x33800000 0x000400000>, <0x18000000 0x08000000>;
-			reg-names = "dbi", "addr_space";
+			reg = <0x33800000 0x100000>,
+			      <0x33900000 0x100000>,
+			      <0x33b00000 0x100000>,
+			      <0x18000000 0x8000000>;
+			reg-names = "dbi", "dbi2", "atu", "addr_space";
 			clocks = <&clk IMX8MP_CLK_HSIO_ROOT>,
 				 <&clk IMX8MP_CLK_HSIO_AXI>,
 				 <&clk IMX8MP_CLK_PCIE_ROOT>;
