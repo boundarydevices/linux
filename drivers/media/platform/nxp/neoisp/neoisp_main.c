@@ -143,6 +143,11 @@ static const struct neoisp_fmt_s *neoisp_find_pixel_format(u32 pixel_format,
 	return NULL;
 }
 
+static int neoisp_node_link_state(struct neoisp_node_s *node)
+{
+	return (node->intf_link->flags & MEDIA_LNK_FL_ENABLED);
+}
+
 static int neoisp_node_queue_setup(struct vb2_queue *q, __u32 *nbuffers,
 		__u32 *nplanes, __u32 sizes[],
 		struct device *alloc_devs[])
@@ -621,14 +626,14 @@ static int neoisp_schedule_internal(struct neoisp_node_group_s *node_group, unsi
 		return 0;
 	}
 
-	if (!mod_params.test.disable_params) {
+	node = &node_group->node[NEOISP_PARAMS_NODE];
+	if (neoisp_node_link_state(node)) {
 		if ((BIT(NEOISP_PARAMS_NODE) & node_group->streaming_map)
 				!= BIT(NEOISP_PARAMS_NODE)) {
 			dev_dbg(&neoispd->pdev->dev, "Params is not disabled and not ready\n");
 			return 0;
 		}
 
-		node = &node_group->node[NEOISP_PARAMS_NODE];
 		spin_lock_irqsave(&node->ready_lock, flags1);
 		buf[NEOISP_PARAMS_NODE] =
 			list_first_entry_or_null(&node->ready_queue, struct neoisp_buffer_s,
@@ -1260,12 +1265,13 @@ static void neoisp_get_offsize(enum isp_block_map_e map, __u32 *offset, __u32 *s
 
 static void neoisp_get_stats(struct neoisp_dev_s *neoispd, struct neoisp_buffer_s *buf)
 {
+	struct neoisp_node_s *node = &neoispd->queued_job.node_group->node[NEOISP_STATS_NODE];
 	struct neoisp_meta_stats_s *dest = (struct neoisp_meta_stats_s *)get_vaddr(buf);
 	__u8 *src = (__u8 *)(uintptr_t)neoispd->mmio_tcm;
 	__u32 offset, size;
 
-	/* check if stats node */
-	if (mod_params.test.disable_stats)
+	/* check if stats node link is enabled */
+	if (!neoisp_node_link_state(node))
 		return;
 
 	if (IS_ERR_OR_NULL(dest) || IS_ERR_OR_NULL(src)) {
@@ -1497,12 +1503,13 @@ static void node_set_default_format(struct neoisp_node_s *node)
  * Initialise a struct neoisp_node_s and register it as /dev/video<N>
  * to represent one of the neoisp's input or output streams.
  */
-static int neoisp_init_node(struct neoisp_node_group_s *node_group, __u32 id)
+int neoisp_init_node(struct neoisp_node_group_s *node_group, __u32 id)
 {
 	bool output = NODE_DESC_IS_OUTPUT(&node_desc[id]);
 	struct neoisp_node_s *node = &node_group->node[id];
 	struct neoisp_dev_s *neoispd = node_group->neoisp_dev;
 	struct media_entity *entity = &node->vfd.entity;
+	struct media_pad *mpad;
 	struct video_device *vdev = &node->vfd;
 	struct vb2_queue *q = &node->queue;
 	int ret;
@@ -1565,14 +1572,20 @@ static int neoisp_init_node(struct neoisp_node_group_s *node_group, __u32 id)
 
 	if (output)
 		ret = media_create_pad_link(entity, 0, &node_group->sd.entity,
-				id, MEDIA_LNK_FL_IMMUTABLE |
-				MEDIA_LNK_FL_ENABLED);
+				id, node_desc[id].link_flags);
 	else
 		ret = media_create_pad_link(&node_group->sd.entity, id, entity,
-				0, MEDIA_LNK_FL_IMMUTABLE |
-				MEDIA_LNK_FL_ENABLED);
+				0, node_desc[id].link_flags);
 	if (ret)
 		goto err_unregister_video_dev;
+
+	media_entity_for_each_pad(&node_group->sd.entity, mpad)
+		if (mpad->index == id)
+			break;
+	if (output)
+		node->intf_link = media_entity_find_link(&node->pad, mpad);
+	else
+		node->intf_link = media_entity_find_link(mpad, &node->pad);
 
 	dev_dbg(&neoispd->pdev->dev,
 			"%s device node registered as /dev/video%d\n",
@@ -1586,6 +1599,7 @@ err_unregister_queue:
 	vb2_queue_release(&node->queue);
 	return ret;
 }
+
 static int neoisp_init_group(struct neoisp_dev_s *neoispd, struct neoisp_info_s *info, __u32 id)
 {
 	struct neoisp_node_group_s *node_group = &neoispd->node_group[id];

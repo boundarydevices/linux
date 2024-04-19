@@ -127,6 +127,7 @@ struct neoisp_node_desc_s {
 	const char *ent_name;
 	enum v4l2_buf_type buf_type;
 	__u32 caps;
+	__u32 link_flags;
 };
 
 struct neoisp_fmt_s {
