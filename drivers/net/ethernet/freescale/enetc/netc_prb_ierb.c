@@ -84,6 +84,7 @@ struct netc_prb_ierb {
 	struct clk *ipg_clk;
 
 	bool ierb_init;
+	atomic_t wakeonlan_count;
 	struct regmap *netcmix;
 	struct platform_device *pdev;
 	struct dentry *debugfs_root;
@@ -210,6 +211,7 @@ static int netc_ierb_init(struct platform_device *pdev)
 	}
 
 	pi->ierb_init = true;
+	atomic_set(&pi->wakeonlan_count, 0);
 
 	return 0;
 }
@@ -255,6 +257,43 @@ u64 netc_ierb_get_clk_config(void)
 	return clk_cfg;
 }
 EXPORT_SYMBOL_GPL(netc_ierb_get_clk_config);
+
+void netc_ierb_enable_wakeonlan(void)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+
+	if (!pi)
+		return;
+
+	atomic_inc(&pi->wakeonlan_count);
+}
+EXPORT_SYMBOL_GPL(netc_ierb_enable_wakeonlan);
+
+void netc_ierb_disable_wakeonlan(void)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+
+	if (!pi)
+		return;
+
+	atomic_dec(&pi->wakeonlan_count);
+	if (atomic_read(&pi->wakeonlan_count) < 0) {
+		atomic_set(&pi->wakeonlan_count, 0);
+		dev_warn(&pi->pdev->dev, "Wake-on-LAN count underflow.\n");
+	}
+}
+EXPORT_SYMBOL_GPL(netc_ierb_disable_wakeonlan);
+
+int netc_ierb_may_wakeonlan(void)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+
+	if (!pi)
+		return -ENXIO;
+
+	return atomic_read(&pi->wakeonlan_count);
+}
+EXPORT_SYMBOL_GPL(netc_ierb_may_wakeonlan);
 
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 static int netc_prb_show(struct seq_file *s, void *data)
@@ -540,6 +579,60 @@ static const struct of_device_id netc_prb_ierb_match[] = {
 };
 MODULE_DEVICE_TABLE(of, netc_prb_ierb_match);
 
+static int netc_prb_ierb_suspend_noirq(struct device *dev)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+
+	if (netc_ierb_may_wakeonlan())
+		return 0;
+
+	pi->ierb_init = false;
+
+	clk_disable_unprepare(pi->ipg_clk);
+
+	return 0;
+}
+
+static int netc_prb_ierb_resume_noirq(struct device *dev)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+	struct platform_device *pdev = pi->pdev;
+	int err;
+
+	if (netc_ierb_may_wakeonlan())
+		return 0;
+
+	err = clk_prepare_enable(pi->ipg_clk);
+	if (err) {
+		dev_err(dev, "Enable ipg_clk failed\n");
+		return err;
+	}
+
+	netc_netcmix_init(pdev);
+
+	err = netc_ierb_init(pdev);
+	if (err) {
+		dev_err(&pdev->dev, "Initializing IERB failed.\n");
+		goto disable_ipg_clk;
+	}
+
+	if (netc_prb_check_error(pi) < 0)
+		dev_warn(&pdev->dev,
+			 "The current IERB configuration is invalid.\n");
+
+	return 0;
+
+disable_ipg_clk:
+	clk_disable_unprepare(pi->ipg_clk);
+
+	return err;
+}
+
+static const struct dev_pm_ops __maybe_unused netc_prb_ierb_pm_ops = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(netc_prb_ierb_suspend_noirq,
+				      netc_prb_ierb_resume_noirq)
+};
+
 static struct platform_driver netc_prb_ierb_driver = {
 	.driver = {
 		.name = "fsl-netc-prb-ierb",
@@ -547,6 +640,7 @@ static struct platform_driver netc_prb_ierb_driver = {
 	},
 	.probe = netc_prb_ierb_probe,
 	.remove = netc_prb_ierb_remove,
+	.driver.pm = &netc_prb_ierb_pm_ops,
 };
 
 module_platform_driver(netc_prb_ierb_driver);
