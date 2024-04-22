@@ -423,7 +423,7 @@ static const struct of_device_id imx95_bc_of_match[] = {
 	{ .compatible = "fsl,imx95-netcmix-blk-ctrl", },
 	{ /* Sentinel */ },
 };
-MODULE_DEVICE_TABLE(of, imx95_blk_ctrl_match);
+MODULE_DEVICE_TABLE(of, imx95_bc_of_match);
 
 static struct platform_driver imx95_bc_driver = {
 	.probe = imx95_bc_probe,
