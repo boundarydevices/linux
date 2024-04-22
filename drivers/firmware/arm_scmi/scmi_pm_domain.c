@@ -28,10 +28,6 @@ static int scmi_pd_power(struct generic_pm_domain *domain, bool power_on)
 	u32 state, ret_state;
 	struct scmi_pm_domain *pd = to_scmi_pd(domain);
 
-	/* FIXME: temp workaround for netcmix pd always on */
-	if (!strcmp(pd->name, "netc") && !power_on)
-		return 0;
-
 	if (power_on)
 		state = SCMI_POWER_STATE_GENERIC_ON;
 	else
@@ -106,6 +102,10 @@ static int scmi_pm_domain_probe(struct scmi_device *sdev)
 		scmi_pd->genpd.name = scmi_pd->name;
 		scmi_pd->genpd.power_off = scmi_pd_power_off;
 		scmi_pd->genpd.power_on = scmi_pd_power_on;
+
+		/* FIXME: temp add WAKEUP flag for NETCMIX */
+		if (!strcmp(scmi_pd->name, "netc"))
+			scmi_pd->genpd.flags =  GENPD_FLAG_ACTIVE_WAKEUP;
 
 		pm_genpd_init(&scmi_pd->genpd, NULL,
 			      state == SCMI_POWER_STATE_GENERIC_OFF);
