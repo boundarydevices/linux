@@ -1211,6 +1211,31 @@ static const struct panel_desc bananapi_s070wv20_ct16 = {
 	},
 };
 
+static const struct drm_display_mode boundary_bd070_101_mode = {
+	.clock = 69143,
+	.hdisplay = 1280,
+	.hsync_start = 1280 + 151,
+	.hsync_end = 1280 + 151 + 4,
+	.htotal = 1280 + 151 + 4 + 5,
+	.vdisplay = 800,
+	.vsync_start = 800 + 2,
+	.vsync_end = 800 + 2 + 1,
+	.vtotal = 800 + 2 + 1 + 7,
+};
+
+static const struct panel_desc boundary_bd070_101 = {
+	.modes = &boundary_bd070_101_mode,
+	.num_modes = 1,
+	.bpc = 8,
+	.size = {
+		.width = 216,
+		.height = 135,
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
+
 static const struct drm_display_mode boe_ev121wxm_n10_1850_mode = {
 	.clock = 71143,
 	.hdisplay = 1280,
@@ -4078,6 +4103,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "bananapi,s070wv20-ct16",
 		.data = &bananapi_s070wv20_ct16,
+	}, {
+		.compatible = "boundary,bd070-101",
+		.data = &boundary_bd070_101,
 	}, {
 		.compatible = "boe,ev121wxm-n10-1850",
 		.data = &boe_ev121wxm_n10_1850,
