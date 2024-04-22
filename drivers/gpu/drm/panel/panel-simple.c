@@ -1476,6 +1476,31 @@ static const struct panel_desc boe_hv070wsa = {
 	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
 
+static const struct drm_display_mode boundary_bd070_101_mode = {
+	.clock = 69143,
+	.hdisplay = 1280,
+	.hsync_start = 1280 + 151,
+	.hsync_end = 1280 + 151 + 4,
+	.htotal = 1280 + 151 + 4 + 5,
+	.vdisplay = 800,
+	.vsync_start = 800 + 2,
+	.vsync_end = 800 + 2 + 1,
+	.vtotal = 800 + 2 + 1 + 7,
+};
+
+static const struct panel_desc boundary_bd070_101 = {
+	.modes = &boundary_bd070_101_mode,
+	.num_modes = 1,
+	.bpc = 8,
+	.size = {
+		.width = 216,
+		.height = 135,
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
+
 static const struct display_timing cct_cmt430b19n00_timing = {
 	.pixelclock = { 8000000, 9000000, 12000000 },
 	.hactive = { 480, 480, 480 },
@@ -4739,6 +4764,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "boe,hv070wsa-100",
 		.data = &boe_hv070wsa
+	}, {
+		.compatible = "boundary,bd070-101",
+		.data = &boundary_bd070_101,
 	}, {
 		.compatible = "cct,cmt430b19n00",
 		.data = &cct_cmt430b19n00,
