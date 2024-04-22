@@ -45,6 +45,7 @@ enum sgmii_speed {
 #define phylink_pcs_to_lynx(pl_pcs) container_of((pl_pcs), struct lynx_pcs, pcs)
 #define lynx_to_phylink_pcs(lynx) (&(lynx)->pcs)
 
+#ifndef CONFIG_IMX_GKI_FIX
 static void lynx_pcs_get_state_usxgmii(struct mdio_device *pcs,
 				       struct phylink_link_state *state)
 {
@@ -67,6 +68,7 @@ static void lynx_pcs_get_state_usxgmii(struct mdio_device *pcs,
 
 	phylink_decode_usxgmii_word(state, lpa);
 }
+#endif
 
 static void lynx_pcs_get_state_2500basex(struct mdio_device *pcs,
 					 struct phylink_link_state *state)
@@ -108,9 +110,11 @@ static void lynx_pcs_get_state(struct phylink_pcs *pcs,
 		lynx_pcs_get_state_2500basex(lynx->mdio, state);
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_10G_QXGMII:
 		lynx_pcs_get_state_usxgmii(lynx->mdio, state);
 		break;
+#endif
 	case PHY_INTERFACE_MODE_10GBASER:
 	case PHY_INTERFACE_MODE_25GBASER:
 		phylink_mii_c45_pcs_get_state(lynx->mdio, state);
@@ -164,6 +168,7 @@ static int lynx_pcs_config_giga(struct mdio_device *pcs,
 					  neg_mode);
 }
 
+#ifndef CONFIG_IMX_GKI_FIX
 static int lynx_pcs_config_usxgmii(struct mdio_device *pcs,
 				   phy_interface_t interface,
 				   const unsigned long *advertising,
@@ -184,6 +189,7 @@ static int lynx_pcs_config_usxgmii(struct mdio_device *pcs,
 				 MDIO_USXGMII_FULL_DUPLEX |
 				 ADVERTISE_SGMII | ADVERTISE_LPACK);
 }
+#endif
 
 static int lynx_pcs_config_c73(struct phylink_pcs *pcs, unsigned int neg_mode,
 			       const unsigned long *advertising)
@@ -236,9 +242,11 @@ static int lynx_pcs_config(struct phylink_pcs *pcs, unsigned int neg_mode,
 		}
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_10G_QXGMII:
 		return lynx_pcs_config_usxgmii(lynx->mdio, ifmode, advertising,
 					       neg_mode);
+#endif
 	case PHY_INTERFACE_MODE_10GBASER:
 	case PHY_INTERFACE_MODE_25GBASER:
 		/* Nothing to do here for 10GBASER and 25GBASER */

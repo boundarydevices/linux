@@ -583,8 +583,10 @@ static int aqr107_read_status(struct phy_device *phydev)
 	 * switching depending on link speed (all USXGMII variants are capable
 	 * of symbol replication).
 	 */
+#ifndef CONFIG_IMX_GKI_FIX
 	if (phydev->interface == PHY_INTERFACE_MODE_10G_QXGMII)
 		goto skip_iface_detection;
+#endif
 
 	val = phy_read_mmd(phydev, MDIO_MMD_PHYXS, MDIO_PHYXS_VEND_IF_STATUS);
 	if (val < 0)
@@ -620,7 +622,9 @@ static int aqr107_read_status(struct phy_device *phydev)
 		break;
 	}
 
+#ifndef CONFIG_IMX_GKI_FIX
 skip_iface_detection:
+#endif
 	/* Read possibly downshifted rate from vendor register */
 	return aqr107_read_rate(phydev);
 }
