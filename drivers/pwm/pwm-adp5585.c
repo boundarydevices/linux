@@ -212,7 +212,7 @@ static const struct of_device_id adp5585_pwm_of_match[] = {
 	{.compatible = "adp5585-pwm", },
 	{ /* sentinel */ }
 };
-MODULE_DEVICE_TABLE(of, adp5585_of_match);
+MODULE_DEVICE_TABLE(of, adp5585_pwm_of_match);
 
 static struct platform_driver adp5585_pwm_driver = {
 	.driver	= {
