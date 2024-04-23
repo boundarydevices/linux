@@ -35,6 +35,18 @@
 		#size-cells = <2>;
 		ranges;
 
+		adsp_mem_reserved: adsp-mem-region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60000000 0 0xd80000>;
+			no-map;
+		};
+
+		adsp_dma_mem_reserved: adsp-dma-mem-region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60e80000 0 0x0280000>;
+			no-map;
+		};
+
 		/* 12 MiB reserved for OP-TEE (BL32)
 		 * +-----------------------+ 0x43e0_0000
 		 * |      SHMEM 2MiB       |
@@ -63,7 +75,7 @@
 
 		snd_dma_mem_reserved: snd_dma_mem_region {
 			compatible = "shared-dma-pool";
-			reg = <0 0x60000000 0 0x1100000>;
+			reg = <0 0x60d80000 0 0x0100000>;
 			no-map;
 		};
 
@@ -1247,6 +1259,11 @@
 	memory-region = <&snd_dma_mem_reserved>;
 	mediatek,dmic-iir-on;
 	status = "okay";
+};
+
+&adsp {
+	memory-region = <&adsp_dma_mem_reserved>,
+		<&adsp_mem_reserved>;
 };
 
 &mt6359codec {
