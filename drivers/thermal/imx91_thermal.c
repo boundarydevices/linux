@@ -318,6 +318,7 @@ static int __maybe_unused imx91_tmu_suspend(struct device *dev)
 	struct imx91_tmu *tmu = dev_get_drvdata(dev);
 
 	/* disable tmu */
+	imx91_tmu_start(tmu, false);
 	imx91_tmu_enable(tmu, false);
 
 	clk_disable_unprepare(tmu->clk);
@@ -335,6 +336,7 @@ static int __maybe_unused imx91_tmu_resume(struct device *dev)
 		return ret;
 
 	imx91_tmu_enable(tmu, true);
+	imx91_tmu_start(tmu, true);
 
 	return 0;
 }
