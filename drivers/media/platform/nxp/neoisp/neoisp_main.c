@@ -1867,8 +1867,16 @@ static int __maybe_unused neoisp_runtime_resume(struct device *dev)
 
 	ret = clk_bulk_prepare_enable(neoisp_dev->num_clks, neoisp_dev->clks);
 
-	if (ret)
+	if (ret) {
+		dev_err(dev, "Failed to resume device. Could not re-enable clocks.\n");
 		return ret;
+	}
+
+	ret = neoisp_init_hw(neoisp_dev);
+	if (ret) {
+		dev_err(dev, "Failed to resume device. Could not re-initialize hardware.\n");
+		return ret;
+	}
 
 	return 0;
 }
