@@ -437,7 +437,7 @@
 &i2c4 { /* CSI1 I2C */
 	pinctrl-names = "default", "default";
 	pinctrl-0 = <&i2c4_pin>;
-	clock-frequency = <1000000>;
+	clock-frequency = <400000>;
 	status = "okay";
 
 };
