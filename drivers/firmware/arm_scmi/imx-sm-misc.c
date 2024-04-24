@@ -293,3 +293,4 @@ static const struct scmi_protocol scmi_imx_misc = {
 };
 
 module_scmi_protocol(scmi_imx_misc);
+MODULE_LICENSE("GPL");
