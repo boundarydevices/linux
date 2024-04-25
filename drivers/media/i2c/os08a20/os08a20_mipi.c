@@ -117,6 +117,8 @@ struct os08a20_ctrls {
 	struct v4l2_ctrl *link_freq;
 	struct v4l2_ctrl *hdr_mode;
 	struct v4l2_ctrl *pixel_rate;
+	struct v4l2_ctrl *gain;
+	struct v4l2_ctrl *exposure;
 	struct v4l2_ctrl *hblank;
 	struct v4l2_ctrl *vblank;
 };
@@ -882,6 +884,8 @@ static int os08a20_update_controls(struct os08a20 *sensor)
 	u32 vblank = vts - sensor->cur_mode.size.bounds_height;
 	u32 fps = sensor->cur_mode.ae_info.cur_fps / (1 << SENSOR_FIX_FRACBITS);
 	u64 pixel_rate = (sensor->cur_mode.h_bin) ? hts * vts * fps : 2 * hts * vts * fps;
+	u32 min_exp = 8;
+	u32 max_exp = vts - 8;
 
 	ret = __v4l2_ctrl_modify_range(sensor->ctrls.pixel_rate, pixel_rate,
 				       pixel_rate, 1, pixel_rate);
@@ -914,6 +918,14 @@ static int os08a20_update_controls(struct os08a20 *sensor)
 	}
 	__v4l2_ctrl_s_ctrl(sensor->ctrls.vblank, sensor->ctrls.vblank->default_value);
 
+	ret = __v4l2_ctrl_modify_range(sensor->ctrls.exposure, min_exp, max_exp,
+				       1, max_exp / 2);
+	if (ret) {
+		dev_err(dev, "Modify range for ctrl: exposure %u-%u failed\n",
+			min_exp, max_exp);
+		goto out;
+	}
+	__v4l2_ctrl_s_ctrl(sensor->ctrls.exposure, sensor->ctrls.exposure->default_value);
 out:
 	return ret;
 }
@@ -987,6 +999,8 @@ static int os08a20_apply_current_mode(struct os08a20 *sensor)
 		hts = (w + sensor->ctrls.hblank->cur.val) / 2;
 	ret = os08a20_set_hts(sensor, hts);
 	ret |= os08a20_set_vts(sensor, h + sensor->ctrls.vblank->cur.val);
+	ret |= os08a20_set_gain(sensor, sensor->ctrls.gain->cur.val);
+	ret |= os08a20_set_exp(sensor, sensor->ctrls.exposure->cur.val);
 	if (ret < 0)
 		goto out;
 
@@ -1055,6 +1069,12 @@ static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 		else
 			ret = os08a20_set_hts(sensor, (w + ctrl->val) / 2);
 		break;
+	case V4L2_CID_ANALOGUE_GAIN:
+		ret = os08a20_set_gain(sensor, ctrl->val);
+		break;
+	case V4L2_CID_EXPOSURE:
+		ret = os08a20_set_exp(sensor, ctrl->val);
+		break;
 	case V4L2_CID_PIXEL_RATE:
 		/* Read-only, but we adjust it based on mode. */
 		return 0;
@@ -1109,6 +1129,12 @@ static int os08a20_init_controls(struct os08a20 *sensor)
 
 	ctrls->vblank = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_VBLANK,
 					  0, 0, 1, 0);
+
+	ctrls->exposure = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_EXPOSURE,
+					    0, 0, 1, 0);
+
+	ctrls->gain = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_ANALOGUE_GAIN,
+					0, 0xFFFF, 1, 0x80);
 
 	ctrls->hdr_mode = v4l2_ctrl_new_std_menu_items(hdl, ops, V4L2_CID_HDR_SENSOR_MODE,
 				     ARRAY_SIZE(os08a20_hdr_mode_menu) - 1, 0,
