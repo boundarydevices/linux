@@ -1952,7 +1952,7 @@
 		};
 
 		neoisp0: isp@4ae00000 {
-			compatible = "nxp,neoisp";
+			compatible = "nxp,imx95-a0-neoisp";
 			#address-cells = <2>;
 			#size-cells = <2>;
 			reg = <0x0 0x4ae00000 0x0 0x8000>,
