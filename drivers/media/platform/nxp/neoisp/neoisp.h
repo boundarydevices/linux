@@ -35,7 +35,7 @@
 #define NEOISP_MAX_CTRLS         (1)
 #define NEOISP_CTRL_PARAMS       (0)
 
-#define NEOISP_FMT_VCAP_COUNT    (12)
+#define NEOISP_FMT_VCAP_COUNT    (15)
 #define NEOISP_FMT_VOUT_COUNT    (24)
 #define NEOISP_FMT_MCAP_COUNT    (1)
 #define NEOISP_FMT_MOUT_COUNT    (1)
@@ -67,14 +67,15 @@
 #define FMT_IS_YUV(x) ( \
 		((x) == V4L2_PIX_FMT_GREY) || \
 		((x) == V4L2_PIX_FMT_NV12) || \
+		((x) == V4L2_PIX_FMT_NV21) || \
 		((x) == V4L2_PIX_FMT_NV16) || \
+		((x) == V4L2_PIX_FMT_NV61) || \
 		((x) == V4L2_PIX_FMT_UYVY) || \
-		((x) == V4L2_PIX_FMT_Y10) || \
-		((x) == V4L2_PIX_FMT_Y12) || \
-		((x) == V4L2_PIX_FMT_Y14) || \
 		((x) == V4L2_PIX_FMT_YUYV) || \
 		((x) == V4L2_PIX_FMT_YUV24) || \
-		((x) == V4L2_PIX_FMT_YUYV))
+		((x) == V4L2_PIX_FMT_YUVX32) || \
+		((x) == V4L2_PIX_FMT_VUYX32) || \
+		((x) == V4L2_PIX_FMT_VYUY))
 
 /* For logging only */
 #define NODE_NAME(node) \
@@ -228,11 +229,6 @@ struct neoisp_mod_params_s {
 	struct neoisp_mparam_conf_s conf;
 	struct neoisp_mparam_packetizer_s pack;
 };
-
-/*
- * functions
- */
-int neoisp_set_params(struct neoisp_dev_s *neoispd, struct neoisp_meta_params_s *p);
 
 /*
  * globals

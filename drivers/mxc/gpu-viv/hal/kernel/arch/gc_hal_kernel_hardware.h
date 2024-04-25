@@ -52,7 +52,6 @@
 *
 *****************************************************************************/
 
-
 #ifndef __gc_hal_kernel_hardware_h_
 #define __gc_hal_kernel_hardware_h_
 
@@ -235,6 +234,8 @@ struct _gckHARDWARE {
     gctUINT32                   devID;
 
     gctBOOL                     largeVA;
+
+    gctBOOL                     supportUscReset;
 };
 
 gceSTATUS

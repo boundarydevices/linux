@@ -1212,22 +1212,6 @@ static const struct gpmi_devdata gpmi_devdata_imx6sx = {
 	.clks_count = ARRAY_SIZE(gpmi_clks_for_mx6),
 };
 
-static const struct gpmi_devdata gpmi_devdata_imx6ul = {
-	.type = IS_MX6UL,
-	.bch_max_ecc_strength = 40,
-	.max_chain_delay = 12000,
-	.clks = gpmi_clks_for_mx6,
-	.clks_count = ARRAY_SIZE(gpmi_clks_for_mx6),
-};
-
-static const struct gpmi_devdata gpmi_devdata_imx6ull = {
-	.type = IS_MX6ULL,
-	.bch_max_ecc_strength = 40,
-	.max_chain_delay = 12000,
-	.clks = gpmi_clks_for_mx6,
-	.clks_count = ARRAY_SIZE(gpmi_clks_for_mx6),
-};
-
 static const char * const gpmi_clks_for_mx7d[] = {
 	"gpmi_io", "gpmi_bch_apb",
 };
@@ -2802,8 +2786,6 @@ static const struct of_device_id gpmi_nand_id_table[] = {
 	{ .compatible = "fsl,imx6qp-gpmi-nand", .data = &gpmi_devdata_imx6qp, },
 	{ .compatible = "fsl,imx6sx-gpmi-nand", .data = &gpmi_devdata_imx6sx, },
 	{ .compatible = "fsl,imx7d-gpmi-nand", .data = &gpmi_devdata_imx7d, },
-	{ .compatible = "fsl,imx6ul-gpmi-nand", .data = &gpmi_devdata_imx6ul, },
-	{ .compatible = "fsl,imx6ull-gpmi-nand", .data = &gpmi_devdata_imx6ull, },
 	{ .compatible = "fsl,imx8qxp-gpmi-nand", .data = &gpmi_devdata_imx8qxp, },
 	{}
 };

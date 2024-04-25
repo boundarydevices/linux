@@ -1898,11 +1898,15 @@
 			#clock-cells = <1>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			assigned-clocks = <&scmi_clk IMX95_CLK_CAMAXI>,
-					  <&scmi_clk IMX95_CLK_CAMAPB>;
-			assigned-clock-parents = <&scmi_clk IMX95_CLK_SYSPLL1_PFD1>,
-						 <&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>;
-			assigned-clock-rates = <800000000>, <133333333>;
+			assigned-clocks =
+				<&scmi_clk IMX95_CLK_CAMAPB>,
+				<&scmi_clk IMX95_CLK_CAMAXI>,
+				<&scmi_clk IMX95_CLK_CAMISI>;
+			assigned-clock-parents =
+				<&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>,
+				<&scmi_clk IMX95_CLK_SYSPLL1_PFD1>,
+				<&scmi_clk IMX95_CLK_SYSPLL1_PFD2>;
+			assigned-clock-rates = <133333333>,<800000000>,<667000000>;
 
 			csi_pixel_formatter_0: formatter@20 {
 				compatible = "fsl,imx95-csi-formatter";
@@ -1953,7 +1957,6 @@
 			interrupts = <GIC_SPI 220 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
 			status = "disabled";
 		};
 
@@ -1963,7 +1966,6 @@
 			interrupts = <GIC_SPI 336 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
 			status = "disabled";
 		};
 
@@ -1973,7 +1975,6 @@
 			interrupts = <GIC_SPI 337 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
 			status = "disabled";
 		};
 
@@ -1983,7 +1984,6 @@
 			interrupts = <GIC_SPI 338 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
 			status = "disabled";
 		};
 
@@ -1993,7 +1993,6 @@
 			interrupts = <GIC_SPI 339 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
 			status = "disabled";
 		};
 
@@ -2003,7 +2002,6 @@
 			interrupts = <GIC_SPI 340 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
 			status = "disabled";
 		};
 
@@ -2013,7 +2011,6 @@
 			interrupts = <GIC_SPI 341 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
 			status = "disabled";
 		};
 
@@ -2023,7 +2020,6 @@
 			interrupts = <GIC_SPI 342 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
 			status = "disabled";
 		};
 
@@ -2032,40 +2028,6 @@
 			reg = <0x0 0x4ace0000 0x0 0x10000>;
 			interrupts = <GIC_SPI 343 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
-			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			#mbox-cells = <2>;
-			status = "disabled";
-		};
-
-		isp_mu: isp-mailbox {
-			compatible = "nxp,imx-isp-mu";
-			mboxes = <&cameramix_mu1 0 3
-				  &cameramix_mu1 1 3
-				  &cameramix_mu2 0 3
-				  &cameramix_mu2 1 3
-				  &cameramix_mu3 0 3
-				  &cameramix_mu3 1 3
-				  &cameramix_mu4 0 3
-				  &cameramix_mu4 1 3
-				  &cameramix_mu5 0 3
-				  &cameramix_mu5 1 3
-				  &cameramix_mu6 0 3
-				  &cameramix_mu6 1 3
-				  &cameramix_mu7 0 3
-				  &cameramix_mu7 1 3
-				  &cameramix_mu8 0 3
-				  &cameramix_mu8 1 3
-				  &cameramix_mu9 0 3
-				  &cameramix_mu9 1 3>;
-			mbox-names = "tx0", "rx0",
-				     "tx1", "rx1",
-				     "tx2", "rx2",
-				     "tx3", "rx3",
-				     "tx4", "rx4",
-				     "tx5", "rx5",
-				     "tx6", "rx6",
-				     "tx7", "rx7",
-				     "tx8", "rx8";
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
 			status = "disabled";
 		};
@@ -2077,11 +2039,12 @@
 			reg = <0x0 0x4add0000 0x0 0x10000>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			assigned-clocks = <&scmi_clk IMX95_CLK_CAMAXI>,
-					  <&scmi_clk IMX95_CLK_CAMAPB>;
-			assigned-clock-parents = <&scmi_clk IMX95_CLK_SYSPLL1_PFD1>,
-						 <&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>;
-			assigned-clock-rates = <800000000>, <133333333>;
+
+			interrupt-parent = <&gic>;
+			interrupts =
+				<GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 253 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		ocram_c: ocram@4af80000 {
@@ -2095,6 +2058,9 @@
 			nxp,ocram-cfg = <&ocram_c_config>;
 			nxp,isp-firmware = "imx9xm0p_isp_fw.bin";
 			clocks = <&scmi_clk IMX95_CLK_CAMCM0>;
+			assigned-clocks = <&scmi_clk IMX95_CLK_CAMCM0>;
+			assigned-clock-parents = <&scmi_clk IMX95_CLK_SYSPLL1_PFD2>;
+			assigned-clock-rates = <400000000>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
 			status = "disabled";
 
@@ -2207,9 +2173,6 @@
 			clocks = <&cameramix_csr IMX95_CLK_CAMBLK_CSI2_FOR0>,
 				 <&scmi_clk IMX95_CLK_CAMAPB>;
 			clock-names = "per", "pixel";
-			assigned-clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
-			assigned-clock-parents = <&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>;
-			assigned-clock-rates = <133330000>;
 			phys = <&dphy_rx>;
 			phy-names = "dphy-rx";
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
@@ -2236,9 +2199,6 @@
 			clocks = <&cameramix_csr IMX95_CLK_CAMBLK_CSI2_FOR1>,
 				 <&scmi_clk IMX95_CLK_CAMAPB>;
 			clock-names = "per", "pixel";
-			assigned-clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
-			assigned-clock-parents = <&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>;
-			assigned-clock-rates = <133330000>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
 			status = "disabled";
 
@@ -2269,9 +2229,6 @@
 				     <GIC_SPI 350 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_CAMISI>;
 			clock-names = "axi";
-			assigned-clocks = <&scmi_clk IMX95_CLK_CAMISI>;
-			assigned-clock-parents = <&scmi_clk IMX95_CLK_SYSPLL1_PFD2>;
-			assigned-clock-rates = <667000000>;
 			fsl,blk-ctrl = <&cameramix_csr>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
 			status = "disabled";
@@ -3165,6 +3122,10 @@
 			clock-names = "npu", "npu_apb";
 			power-domains = <&scmi_devpd IMX95_PD_NPU>;
 		};
+	};
+
+	rpmsg-lifecycle {
+		compatible = "nxp,rpmsg-lifecycle";
 	};
 
 	ele_fw2: se-fw2 {

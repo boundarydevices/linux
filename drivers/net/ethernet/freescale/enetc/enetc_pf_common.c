@@ -1618,10 +1618,10 @@ int enetc_sriov_configure(struct pci_dev *pdev, int num_vfs)
 	pf = enetc_si_priv(si);
 
 	if (!num_vfs) {
+		pci_disable_sriov(pdev);
 		enetc_msg_psi_free(pf);
 		kfree(pf->vf_state);
 		pf->num_vfs = 0;
-		pci_disable_sriov(pdev);
 	} else {
 		pf->num_vfs = num_vfs;
 

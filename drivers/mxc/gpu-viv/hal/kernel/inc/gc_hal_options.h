@@ -52,7 +52,6 @@
 *
 *****************************************************************************/
 
-
 #ifndef __gc_hal_options_h_
 #define __gc_hal_options_h_
 
@@ -1608,6 +1607,15 @@
  *
  *   Calculating the time taken by 2D driver
  */
+
+ /*
+  *   gcdLOCAL_MEMORY_USAGE
+  *
+  *   Record usage of local memory and pass to kernel
+  */
+#ifndef gcdLOCAL_MEMORY_USAGE
+#    define gcdLOCAL_MEMORY_USAGE                 1
+#endif
 
 #endif /* __gc_hal_options_h_ */
 

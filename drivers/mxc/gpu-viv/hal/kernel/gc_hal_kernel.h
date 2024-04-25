@@ -52,7 +52,6 @@
 *
 *****************************************************************************/
 
-
 #ifndef __gc_hal_kernel_h_
 #define __gc_hal_kernel_h_
 
@@ -701,6 +700,8 @@ struct _gckCOMMAND {
     gckFENCE                    fence;
 
     gctBOOL                     dummyDraw;
+
+    gctUINT32                   currPid;
 };
 
 typedef struct _gcsEVENT       *gcsEVENT_PTR;

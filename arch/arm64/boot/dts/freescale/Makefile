@@ -379,7 +379,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-11x11-evk.dtb \
 			  imx93-11x11-evk-rpmsg.dtb imx93-11x11-evk-rpmsg-lpv.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx91-11x11-evk.dtb \
-			  imx91-11x11-evk-flexspi-m2.dtb \
+			  imx91-11x11-evk-flexspi-m2.dtb imx91-11x11-evk-flexspi-nand-m2.dtb \
 			  imx91-11x11-evk-lpuart.dtb \
 			  imx91-11x11-evk-mqs.dtb imx91-11x11-evk-aud-hat.dtb \
 			  imx91-11x11-evk-tianma-wvga-panel.dtb \
@@ -434,6 +434,25 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-tqma9352-mba93xxla.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-mqs.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-aud-hat.dtb
+
+imx95-15x15-evk-adv7535-dtbs := imx95-15x15-evk.dtb imx95-15x15-evk-adv7535.dtbo
+dtb-${CONFIG_ARCH_MXC} += imx95-15x15-evk-adv7535.dtb
+
+imx95-15x15-evk-ap1302-dtbs := imx95-15x15-evk.dtb imx95-15x15-evk-ap1302.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-ap1302.dtb
+imx95-15x15-evk-ap1302_rpi-dtbs := imx95-15x15-evk.dtb \
+				   imx95-15x15-evk-ap1302.dtbo \
+				   imx95-15x15-evk-ap1302_rpi.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-ap1302_rpi.dtb
+
+imx95-15x15-evk-rm692c9-dtbs := imx95-15x15-evk.dtb imx95-15x15-evk-rm692c9.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-rm692c9.dtb
+
+imx95-15x15-evk-adv7535-ap1302-dtbs := imx95-15x15-evk.dtb \
+				       imx95-15x15-evk-adv7535.dtbo \
+				       imx95-15x15-evk-ap1302.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-adv7535-ap1302.dtb
+
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk.dtb imx95-19x19-evk-root.dtb imx95-19x19-evk-inmate.dtb
 
 imx95-19x19-evk-pcie1-ep-dtbs := imx95-19x19-evk.dtb imx95-19x19-evk-pcie1-ep.dtbo

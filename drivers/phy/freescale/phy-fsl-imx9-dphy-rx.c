@@ -460,7 +460,7 @@ static const struct of_device_id dw_dphy_of_match[] = {
 	{ .compatible = "fsl,imx95-dphy-rx", .data = &imx95_dphy_drvdata},
 	{ /* sentinel */ }
 };
-MODULE_DEVICE_TABLE(of, dw_dphy_rx_of_match);
+MODULE_DEVICE_TABLE(of, dw_dphy_of_match);
 
 static int dw_dphy_probe(struct platform_device *pdev)
 {

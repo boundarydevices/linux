@@ -35,6 +35,8 @@
 #define ELE_MU_IO_FLAGS_USE_SEC_MEM	(0x02u)
 #define ELE_MU_IO_FLAGS_USE_SHORT_ADDR	(0x04u)
 
+#define SOC_ID_OF_IMX95			0x9500
+
 struct ele_imem_buf {
 	u8 *buf;
 	phys_addr_t phyaddr;
@@ -152,6 +154,7 @@ struct ele_mu_priv {
 	struct perf_time_frame time_frame;
 };
 
+uint32_t get_se_soc_id(struct device *dev);
 phys_addr_t get_phy_buf_mem_pool(struct device *dev,
 				 char *mem_pool_name,
 				 u32 **buf,

@@ -12,7 +12,7 @@
 #include <linux/fs.h>
 #include <linux/poll.h>
 #include <linux/list.h>
-#include <linux/timer.h>
+#include <linux/hrtimer.h>
 #include <linux/delay.h>
 
 #include "neutron_inference.h"
@@ -34,9 +34,17 @@ static int neutron_inference_release(struct inode *inode,
 static unsigned int neutron_inference_poll(struct file *file,
 					   poll_table *wait);
 
+static long neutron_inference_ioctl(struct file *file,
+				    unsigned int cmd,
+				    unsigned long arg);
+
 static const struct file_operations neutron_inference_fops = {
 	.release        = &neutron_inference_release,
 	.poll           = &neutron_inference_poll,
+	.unlocked_ioctl	= &neutron_inference_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl	= &neutron_inference_ioctl,
+#endif
 };
 
 /****************************************************************************
@@ -50,7 +58,7 @@ static inline void neutron_inference_del_list(struct neutron_inference_queue *qu
 	list_del(&inf->node);
 }
 
-static void poll_result_callback(struct timer_list *poll_timer)
+static enum hrtimer_restart poll_result_callback(struct hrtimer *poll_timer)
 {
 	struct neutron_inference *inf =
 		container_of(poll_timer, typeof(*inf), poll_timer);
@@ -58,16 +66,18 @@ static void poll_result_callback(struct timer_list *poll_timer)
 	u32 val;
 
 	if (!inf || IS_ERR(inf) || !kref_read(&inf->kref))
-		return;
+		return HRTIMER_NORESTART;
 
 	mbox = inf->ndev->mbox;
 
 	val = mbox->ops->read_ret(mbox);
-	if (val == DONE)
+	if (val == DONE) {
 		neutron_inference_done(inf->ndev);
+		return HRTIMER_NORESTART;
+	}
 	/* Reload timer */
-	else
-		mod_timer(&inf->poll_timer, jiffies + usecs_to_jiffies(500));
+	hrtimer_forward_now(poll_timer, ns_to_ktime(100 * 1000));
+	return HRTIMER_RESTART;
 }
 
 int neutron_inference_run(struct neutron_inference *inf)
@@ -164,9 +174,8 @@ int neutron_inference_run(struct neutron_inference *inf)
 				goto inf_stop_early;
 			usleep_range(10, 20);
 		}
-		/* Add timer to continue poll status if it's not done yet */
-		timer_setup(&inf->poll_timer, poll_result_callback, 0);
-		mod_timer(&inf->poll_timer, jiffies + usecs_to_jiffies(500));
+		/* Start timer to continue poll status if it's not done yet */
+		hrtimer_start(&inf->poll_timer, ns_to_ktime(100 * 1000), HRTIMER_MODE_REL);
 	};
 
 	return 0;
@@ -285,7 +294,7 @@ static void neutron_inference_kref_destroy(struct kref *kref)
 	spin_unlock_bh(&inf->ndev->queue->lock);
 
 	if (inf->poll_mode)
-		del_timer(&inf->poll_timer);
+		hrtimer_cancel(&inf->poll_timer);
 
 	devm_kfree(inf->ndev->dev, inf);
 }
@@ -317,6 +326,50 @@ static unsigned int neutron_inference_poll(struct file *file,
 	return ret;
 }
 
+static long neutron_inference_ioctl(struct file *file,
+				    unsigned int cmd,
+				    unsigned long arg)
+{
+	struct neutron_inference *inf = file->private_data;
+	void __user *udata = (void __user *)arg;
+	struct neutron_device *ndev;
+	int ret = -EINVAL;
+
+	if (!inf || IS_ERR(inf))
+		return ret;
+
+	ndev = inf->ndev;
+
+	dev_dbg(ndev->dev, "Device ioctl. file=0x%pK, cmd=0x%x, arg=0x%lx\n",
+		file, cmd, arg);
+
+	switch (cmd) {
+	case NEUTRON_IOCTL_INFERENCE_STATE:
+		struct neutron_uapi_result_status uapi;
+		struct neutron_mbox_rx_msg rx_msg;
+
+		uapi.status = inf->status;
+		uapi.error_code = 0;
+
+		/* Read firmware return code if the job is done */
+		if (inf->status == NEUTRON_UAPI_STATUS_DONE) {
+			ndev->mbox->ops->recv_data(ndev->mbox, &rx_msg);
+			uapi.error_code = rx_msg.args[0];
+		}
+
+		if (copy_to_user(udata, &uapi, sizeof(uapi)))
+			break;
+		ret = 0;
+		break;
+
+	default:
+		dev_err(ndev->dev, "Invalid ioctl. cmd=%u, arg=%lu",
+			cmd, arg);
+		break;
+	}
+	return ret;
+}
+
 int neutron_inference_create(struct neutron_device *ndev, enum neutron_cmd_type type,
 			     struct neutron_uapi_inference_args *uapi)
 {
@@ -334,6 +387,11 @@ int neutron_inference_create(struct neutron_device *ndev, enum neutron_cmd_type 
 
 	kref_init(&inf->kref);
 	init_waitqueue_head(&inf->waitq);
+
+	if (inf->poll_mode) {
+		hrtimer_init(&inf->poll_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		inf->poll_timer.function = &poll_result_callback;
+	}
 
 	memcpy(&inf->args, uapi, sizeof(struct neutron_uapi_inference_args));
 

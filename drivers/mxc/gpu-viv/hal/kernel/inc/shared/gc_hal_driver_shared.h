@@ -52,7 +52,6 @@
 *
 *****************************************************************************/
 
-
 #ifndef __gc_hal_driver_shared_h_
 #define __gc_hal_driver_shared_h_
 
@@ -648,6 +647,10 @@ typedef struct _gcsHAL_SUBCOMMIT {
 
     /* Does it require top priority. */
     gctBOOL                     topPriority;
+#endif
+#if gcdLOCAL_MEMORY_USAGE
+    /* Does commands use local memory. */
+    gctBOOL                     useLocalMem;
 #endif
 } gcsHAL_SUBCOMMIT, *gcsHAL_SUBCOMMIT_PTR;
 

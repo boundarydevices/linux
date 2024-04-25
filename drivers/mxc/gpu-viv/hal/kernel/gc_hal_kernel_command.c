@@ -52,7 +52,6 @@
 *
 *****************************************************************************/
 
-
 #include "gc_hal_kernel_precomp.h"
 #include "gc_hal_kernel_context.h"
 
@@ -2870,9 +2869,6 @@ gckCOMMAND_SwitchSecurityMode(gckCOMMAND Command, gckHARDWARE Hardware)
 
     gcmkONERROR(gckHARDWARE_SwitchSecurityMode(Hardware, gcvNULL, gcvINVALID_ADDRESS, 1, 0, &reserveBytes));
 
-
-    gcmkONERROR(gckHARDWARE_SwitchSecurityMode(Hardware, gcvNULL, gcvINVALID_ADDRESS, 1, 0, &reserveBytes));
-
     gcmkONERROR(gckCOMMAND_Reserve(Command, reserveBytes, (gctPOINTER *)&pointer, &size));
 
     address = Command->address + Command->offset;
@@ -2992,11 +2988,12 @@ gckCOMMAND_Commit(IN gckCOMMAND Command, IN gcsHAL_SUBCOMMIT *SubCommit,
 #endif
 
 #if gcdCONTEXT_SWITCH_FORCE_USC_RESET
-        if (Command->currContext != context
-            && delta != gcvNULL
-            && Command->kernel->hardware->type == gcvHARDWARE_3D
-            && gckHARDWARE_IsFeatureAvailable(Command->kernel->hardware, gcvFEATURE_BLT_ENGINE)
-            && gckHARDWARE_IsFeatureAvailable(Command->kernel->hardware, gcvFEATURE_SECURITY))
+        if (Command->kernel->hardware->supportUscReset
+            && Command->currPid && Command->currPid != ProcessId
+#if gcdLOCAL_MEMORY_USAGE
+            && SubCommit->useLocalMem
+#endif
+            && Command->kernel->hardware->type == gcvHARDWARE_3D)
             switchSecurityMode = gcvTRUE;
 #endif
 
@@ -3030,6 +3027,8 @@ gckCOMMAND_Commit(IN gckCOMMAND Command, IN gcsHAL_SUBCOMMIT *SubCommit,
 
         if (status != gcvSTATUS_INTERRUPTED)
             gcmkONERROR(status);
+
+        Command->currPid = ProcessId;
 
         /* Release the command queue. */
         gcmkONERROR(gckCOMMAND_ExitCommit(Command, gcvFALSE));

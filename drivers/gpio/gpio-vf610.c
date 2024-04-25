@@ -215,7 +215,7 @@ static int vf610_gpio_irq_set_type(struct irq_data *d, u32 type)
 	else
 		irq_set_handler_locked(d, handle_edge_irq);
 
-	return 0;
+	return port->gc.direction_input(&port->gc, d->hwirq);
 }
 
 static void vf610_gpio_irq_mask(struct irq_data *d)
