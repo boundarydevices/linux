@@ -1075,6 +1075,8 @@ static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_EXPOSURE:
 		ret = os08a20_set_exp(sensor, ctrl->val);
 		break;
+	case V4L2_CID_LINK_FREQ:
+		return 0;
 	case V4L2_CID_PIXEL_RATE:
 		/* Read-only, but we adjust it based on mode. */
 		return 0;
@@ -1092,13 +1094,18 @@ static const struct v4l2_ctrl_ops os08a20_ctrl_ops = {
 
 /*
  * MIPI CSI-2 link frequencies.
- * link_freq = (pixel_rate * bpp) / (2 * data_lanes)
+ * pixel_rate_on_the_bus = link_freq * 2 * data_lanes * / bits_per_sample
+ * link_freq = 200 Mhz => pixel_rate_on_the_bus = 160 Mpix/sec (4 lanes)
+ * link_freq = 400 Mhz => pixel_rate_on_the_bus = 320 Mpix/sec (4 lanes)
  */
 static const s64 os08a20_csi2_link_freqs[] = {
 	200000000,
+	400000000,
 };
 
-/* Link freq for default mode: 1080p RAW10, 4 data lanes 800 Mbps/lane. */
+/* default mode: 1080p, RAW10, 4 lanes, 60 fps, hblank 16, vblank 108
+ * pixel sampling rate 60 * (1920 + 16) * (1080 + 108) = 137 Mpix/sec
+ */
 #define OS08A20_DEFAULT_LINK_FREQ	0
 
 static int os08a20_init_controls(struct os08a20 *sensor)
@@ -1145,7 +1152,6 @@ static int os08a20_init_controls(struct os08a20 *sensor)
 		goto free_ctrls;
 	}
 
-	ctrls->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 	ctrls->pixel_rate->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 
 	sensor->subdev.ctrl_handler = hdl;
