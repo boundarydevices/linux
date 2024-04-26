@@ -16,7 +16,6 @@
 };
 
 &tpm5 {
-	clockevents-register;
 	timer-rating = <410>;
 };
 
