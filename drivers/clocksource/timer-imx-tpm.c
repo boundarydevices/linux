@@ -317,12 +317,9 @@ static int __init tpm_timer_init(struct device_node *np)
 		tpm++;
 		global_tpm = clkevt;
 
-		/* only register when dual-tpm timers are enabled */
-		if (of_property_read_bool(np, "clockevents-register")) {
-			cpuhp_setup_state(CPUHP_AP_NXP_TIMER_STARTING,
+		cpuhp_setup_state(CPUHP_AP_NXP_TIMER_STARTING,
 				  "clockevents/nxp/tpm_timer:starting",
 				  imx_tpm_starting_cpu, imx_tpm_dying_cpu);
-		}
 
 		return tpm_clocksource_init(&clkevt->to_tpm);
 	}
