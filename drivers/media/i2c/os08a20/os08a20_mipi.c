@@ -925,9 +925,9 @@ static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 	/* s_ctrl holds sensor lock */
 	switch (ctrl->id) {
 	case V4L2_CID_HDR_SENSOR_MODE:
-		sensor->hdr = ctrl->val;
-		if (sensor->hdr == sensor->cur_mode.hdr_mode)
+		if (ctrl->val == sensor->cur_mode.hdr_mode && sensor->hdr == ctrl->val)
 			break;
+		sensor->hdr = ctrl->val;
 
 		/* update and apply current mode if hdr mode mismatches */
 		os08a20_update_current_mode(sensor, sensor->cur_mode.size.bounds_width,
