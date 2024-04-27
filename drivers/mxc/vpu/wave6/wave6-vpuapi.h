@@ -1273,6 +1273,8 @@ int wave6_vdi_allocate_dma_memory(struct vpu_device *vpu_dev, struct vpu_buf *vb
 int wave6_vdi_write_memory(struct vpu_device *vpu_dev, struct vpu_buf *vb, size_t offset,
 			   u8 *data, int len, int endian);
 void wave6_vdi_free_dma_memory(struct vpu_device *vpu_dev, struct vpu_buf *vb);
+int wave6_allocate_secure_dma_memory(struct vpu_device *vpu_dev, struct vpu_buf *vb);
+void wave6_free_secure_dma_memory(struct vpu_device *vpu_dev, struct vpu_buf *vb);
 
 int wave6_vpu_dec_open(struct vpu_instance *inst, struct dec_open_param *pop);
 int wave6_vpu_dec_close(struct vpu_instance *inst, u32 *fail_res);
