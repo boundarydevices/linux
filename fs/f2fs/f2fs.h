@@ -1555,6 +1555,7 @@ struct f2fs_sb_info {
 
 #ifdef CONFIG_BLK_DEV_ZONED
 	unsigned int blocks_per_blkz;		/* F2FS blocks per zone */
+	unsigned int max_open_zones;		/* max open zone resources of the zoned device */
 #endif
 
 	/* for node-related operations */
@@ -3504,6 +3505,8 @@ int f2fs_setattr(struct mnt_idmap *idmap, struct dentry *dentry,
 		 struct iattr *attr);
 int f2fs_truncate_hole(struct inode *inode, pgoff_t pg_start, pgoff_t pg_end);
 void f2fs_truncate_data_blocks_range(struct dnode_of_data *dn, int count);
+int f2fs_do_shutdown(struct f2fs_sb_info *sbi, unsigned int flag,
+							bool readonly);
 int f2fs_precache_extents(struct inode *inode);
 int f2fs_fileattr_get(struct dentry *dentry, struct fileattr *fa);
 int f2fs_fileattr_set(struct mnt_idmap *idmap,
@@ -4664,7 +4667,7 @@ static inline void f2fs_truncate_meta_inode_pages(struct f2fs_sb_info *sbi,
 
 		page = find_get_page(META_MAPPING(sbi), blkaddr + i);
 		if (page) {
-			if (PageWriteback(page))
+			if (folio_test_writeback(page_folio(page)))
 				need_submit = true;
 			f2fs_put_page(page, 0);
 		}

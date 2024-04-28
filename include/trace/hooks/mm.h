@@ -18,19 +18,12 @@ DECLARE_RESTRICTED_HOOK(android_rvh_shmem_get_folio,
 			TP_PROTO(struct shmem_inode_info *info, struct folio **folio),
 			TP_ARGS(info, folio), 2);
 
-/*
-
-DECLARE_RESTRICTED_HOOK(android_rvh_set_skip_swapcache_flags,
-			TP_PROTO(gfp_t *flags),
-			TP_ARGS(flags), 1);
 DECLARE_RESTRICTED_HOOK(android_rvh_set_gfp_zone_flags,
-			TP_PROTO(gfp_t *flags),
+			TP_PROTO(unsigned int *flags),	/* gfp_t *flags */
 			TP_ARGS(flags), 1);
 DECLARE_RESTRICTED_HOOK(android_rvh_set_readahead_gfp_mask,
-			TP_PROTO(gfp_t *flags),
+			TP_PROTO(unsigned int *flags),	/* gfp_t *flags */
 			TP_ARGS(flags), 1);
-
-*/
 DECLARE_HOOK(android_vh_meminfo_cache_adjust,
 	TP_PROTO(unsigned long *cached),
 	TP_ARGS(cached));
@@ -59,7 +52,6 @@ DECLARE_HOOK(android_vh_look_around,
 	TP_PROTO(struct page_vma_mapped_walk *pvmw, struct folio *folio,
 		struct vm_area_struct *vma, int *referenced),
 	TP_ARGS(pvmw, folio, vma, referenced));
-
 struct mem_cgroup;
 DECLARE_HOOK(android_vh_mem_cgroup_alloc,
 	TP_PROTO(struct mem_cgroup *memcg),
@@ -89,6 +81,31 @@ DECLARE_HOOK(android_vh_adjust_kvmalloc_flags,
 DECLARE_HOOK(android_vh_alloc_pages_slowpath,
 	TP_PROTO(gfp_t gfp_mask, unsigned int order, unsigned long delta),
 	TP_ARGS(gfp_mask, order, delta));
+DECLARE_HOOK(android_vh_mmap_region,
+	TP_PROTO(struct vm_area_struct *vma, unsigned long addr),
+	TP_ARGS(vma, addr));
+DECLARE_HOOK(android_vh_try_to_unmap_one,
+	TP_PROTO(struct folio *folio, struct vm_area_struct *vma,
+		unsigned long addr, void *arg, bool ret),
+	TP_ARGS(folio, vma, addr, arg, ret));
+DECLARE_HOOK(android_vh_mm_direct_reclaim_enter,
+	TP_PROTO(unsigned int order),
+	TP_ARGS(order));
+DECLARE_HOOK(android_vh_mm_direct_reclaim_exit,
+	TP_PROTO(unsigned long did_some_progress, int retry_times),
+	TP_ARGS(did_some_progress, retry_times));
+struct oom_control;
+DECLARE_HOOK(android_vh_mm_may_oom_exit,
+	TP_PROTO(struct oom_control *oc, unsigned long did_some_progress),
+	TP_ARGS(oc, did_some_progress));
+DECLARE_HOOK(android_vh_get_page_wmark,
+	TP_PROTO(unsigned int alloc_flags, unsigned long *page_wmark),
+	TP_ARGS(alloc_flags, page_wmark));
+DECLARE_HOOK(android_vh_page_add_new_anon_rmap,
+	TP_PROTO(struct page *page, struct vm_area_struct *vma,
+		unsigned long address),
+	TP_ARGS(page, vma, address));
+
 #endif /* _TRACE_HOOK_MM_H */
 
 /* This part must be outside protection */

@@ -790,6 +790,11 @@ static inline struct vm_area_struct *lock_vma_under_rcu(struct mm_struct *mm,
 	return NULL;
 }
 
+static inline void vma_assert_locked(struct vm_area_struct *vma)
+{
+	mmap_assert_locked(vma->vm_mm);
+}
+
 static inline void release_fault_lock(struct vm_fault *vmf)
 {
 	mmap_read_unlock(vmf->vma->vm_mm);
@@ -1967,15 +1972,15 @@ static inline bool page_maybe_dma_pinned(struct page *page)
  *
  * The caller has to hold the PT lock and the vma->vm_mm->->write_protect_seq.
  */
-static inline bool page_needs_cow_for_dma(struct vm_area_struct *vma,
-					  struct page *page)
+static inline bool folio_needs_cow_for_dma(struct vm_area_struct *vma,
+					  struct folio *folio)
 {
 	VM_BUG_ON(!(raw_read_seqcount(&vma->vm_mm->write_protect_seq) & 1));
 
 	if (!test_bit(MMF_HAS_PINNED, &vma->vm_mm->flags))
 		return false;
 
-	return page_maybe_dma_pinned(page);
+	return folio_maybe_dma_pinned(folio);
 }
 
 /**
@@ -2145,21 +2150,47 @@ static inline size_t folio_size(struct folio *folio)
 }
 
 /**
- * folio_estimated_sharers - Estimate the number of sharers of a folio.
+ * folio_likely_mapped_shared - Estimate if the folio is mapped into the page
+ *				tables of more than one MM
  * @folio: The folio.
  *
- * folio_estimated_sharers() aims to serve as a function to efficiently
- * estimate the number of processes sharing a folio. This is done by
- * looking at the precise mapcount of the first subpage in the folio, and
- * assuming the other subpages are the same. This may not be true for large
- * folios. If you want exact mapcounts for exact calculations, look at
- * page_mapcount() or folio_total_mapcount().
+ * This function checks if the folio is currently mapped into more than one
+ * MM ("mapped shared"), or if the folio is only mapped into a single MM
+ * ("mapped exclusively").
  *
- * Return: The estimated number of processes sharing a folio.
+ * As precise information is not easily available for all folios, this function
+ * estimates the number of MMs ("sharers") that are currently mapping a folio
+ * using the number of times the first page of the folio is currently mapped
+ * into page tables.
+ *
+ * For small anonymous folios (except KSM folios) and anonymous hugetlb folios,
+ * the return value will be exactly correct, because they can only be mapped
+ * at most once into an MM, and they cannot be partially mapped.
+ *
+ * For other folios, the result can be fuzzy:
+ * (a) For partially-mappable large folios (THP), the return value can wrongly
+ *     indicate "mapped exclusively" (false negative) when the folio is
+ *     only partially mapped into at least one MM.
+ * (b) For pagecache folios (including hugetlb), the return value can wrongly
+ *     indicate "mapped shared" (false positive) when two VMAs in the same MM
+ *     cover the same file range.
+ * (c) For (small) KSM folios, the return value can wrongly indicate "mapped
+ *     shared" (false negative), when the folio is mapped multiple times into
+ *     the same MM.
+ *
+ * Further, this function only considers current page table mappings that
+ * are tracked using the folio mapcount(s). It does not consider:
+ * (1) If the folio might get mapped in the (near) future (e.g., swapcache,
+ *     pagecache, temporary unmapping for migration).
+ * (2) If the folio is mapped differently (VM_PFNMAP).
+ * (3) If hugetlb page table sharing applies. Callers might want to check
+ *     hugetlb_pmd_shared().
+ *
+ * Return: Whether the folio is estimated to be mapped into more than one MM.
  */
-static inline int folio_estimated_sharers(struct folio *folio)
+static inline bool folio_likely_mapped_shared(struct folio *folio)
 {
-	return page_mapcount(folio_page(folio, 0));
+	return page_mapcount(folio_page(folio, 0)) > 1;
 }
 
 #ifndef HAVE_ARCH_MAKE_PAGE_ACCESSIBLE
@@ -2350,6 +2381,8 @@ struct folio *vm_normal_folio(struct vm_area_struct *vma, unsigned long addr,
 			     pte_t pte);
 struct page *vm_normal_page(struct vm_area_struct *vma, unsigned long addr,
 			     pte_t pte);
+struct folio *vm_normal_folio_pmd(struct vm_area_struct *vma,
+				  unsigned long addr, pmd_t pmd);
 struct page *vm_normal_page_pmd(struct vm_area_struct *vma, unsigned long addr,
 				pmd_t pmd);
 
@@ -2591,19 +2624,19 @@ static inline void dec_mm_counter(struct mm_struct *mm, int member)
 	mm_trace_rss_stat(mm, member);
 }
 
-/* Optimized variant when page is already known not to be PageAnon */
-static inline int mm_counter_file(struct page *page)
+/* Optimized variant when folio is already known not to be anon */
+static inline int mm_counter_file(struct folio *folio)
 {
-	if (PageSwapBacked(page))
+	if (folio_test_swapbacked(folio))
 		return MM_SHMEMPAGES;
 	return MM_FILEPAGES;
 }
 
-static inline int mm_counter(struct page *page)
+static inline int mm_counter(struct folio *folio)
 {
-	if (PageAnon(page))
+	if (folio_test_anon(folio))
 		return MM_ANONPAGES;
-	return mm_counter_file(page);
+	return mm_counter_file(folio);
 }
 
 static inline unsigned long get_mm_rss(struct mm_struct *mm)

@@ -1899,7 +1899,7 @@ static int shmem_swapin_folio(struct inode *inode, pgoff_t index,
 	 * Some architectures may have to restore extra metadata to the
 	 * folio after reading from swap.
 	 */
-	arch_swap_restore(swap, folio);
+	arch_swap_restore(folio_swap(swap, folio), folio);
 
 	if (shmem_should_replace_folio(folio, gfp)) {
 		error = shmem_replace_folio(&folio, gfp, info, index);
@@ -4989,7 +4989,7 @@ int reclaim_shmem_address_space(struct address_space *mapping)
 	}
 	rcu_read_unlock();
 
-	return reclaim_pages(&page_list);
+	return reclaim_pages(&page_list, false);
 #else
 	return 0;
 #endif

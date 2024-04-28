@@ -17,6 +17,7 @@ load(
     "android_filegroup",
     "checkpatch",
     "ddk_headers",
+    "ddk_headers_archive",
     "kernel_abi",
     "kernel_build",
     "kernel_images",
@@ -118,6 +119,7 @@ filegroup(
         "android/abi_gki_aarch64_honor",
         "android/abi_gki_aarch64_imx",
         "android/abi_gki_aarch64_mtk",
+        "android/abi_gki_aarch64_nothing",
         "android/abi_gki_aarch64_oplus",
         "android/abi_gki_aarch64_pixel",
         "android/abi_gki_aarch64_qcom",
@@ -140,6 +142,7 @@ define_common_kernels(target_configs = {
         "protected_modules_list": "android/gki_aarch64_protected_modules",
         "module_implicit_outs": get_gki_modules_list("arm64"),
         "make_goals": _GKI_AARCH64_MAKE_GOALS,
+        "ddk_headers_archive": ":kernel_aarch64_ddk_headers_archive",
         "extra_dist": [":test_mappings_zip"],
     },
     "kernel_aarch64_16k": {
@@ -843,6 +846,14 @@ ddk_headers(
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
+)
+
+ddk_headers_archive(
+    name = "kernel_aarch64_ddk_headers_archive",
+    srcs = [
+        "all_headers_aarch64",
+    ],
+    visibility = ["//visibility:private"],
 )
 
 ddk_headers(

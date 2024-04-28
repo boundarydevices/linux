@@ -44,9 +44,15 @@ extern void **kvm_nvhe_sym(kvm_hyp_iommu_domains);
 
 struct kvm_hyp_iommu_domain {
 	struct io_pgtable	*pgtable;
-	atomic_t		refs;
+	unsigned int		refs;
 	pkvm_handle_t		domain_id;
 	void			*priv;
+#ifdef __KVM_NVHE_HYPERVISOR__
+	hyp_spinlock_t		lock;
+#else
+	/* see kvm_hyp_iommu.lock */
+	u32			unused;
+#endif
 };
 
 /*
@@ -76,10 +82,5 @@ struct kvm_hyp_iommu_domain {
 
 #define KVM_IOMMU_DOMAINS_ROOT_SIZE \
 	(KVM_IOMMU_DOMAINS_ROOT_ENTRIES * sizeof(void *))
-
-/* Bits [16:split] index the root table, bits [split-1:0] index the leaf table */
-#define KVM_IOMMU_DOMAIN_ID_SPLIT	ilog2(KVM_IOMMU_DOMAINS_PER_PAGE)
-
-#define KVM_IOMMU_DOMAIN_ID_LEAF_MASK	((1 << KVM_IOMMU_DOMAIN_ID_SPLIT) - 1)
 
 #endif /* __KVM_IOMMU_H */

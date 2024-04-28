@@ -729,7 +729,7 @@ static int kvm_arm_smmu_probe(struct platform_device *pdev)
 	if (ret || bypass)
 		return ret ?: -EINVAL;
 
-	platform_set_drvdata(pdev, host_smmu);
+	platform_set_drvdata(pdev, smmu);
 
 	ret = kvm_arm_probe_power_domain(dev, &power_domain);
 	if (ret)
@@ -867,8 +867,8 @@ static int kvm_arm_smmu_probe(struct platform_device *pdev)
 
 static int kvm_arm_smmu_remove(struct platform_device *pdev)
 {
-	struct host_arm_smmu_device *host_smmu = platform_get_drvdata(pdev);
-	struct arm_smmu_device *smmu = &host_smmu->smmu;
+	struct arm_smmu_device *smmu = platform_get_drvdata(pdev);
+	struct host_arm_smmu_device *host_smmu = smmu_to_host(smmu);
 
 	/*
 	 * There was an error during hypervisor setup. The hyp driver may
@@ -942,17 +942,17 @@ static int kvm_arm_smmu_array_alloc(void)
 	return 0;
 }
 
-static void kvm_arm_smmu_array_free(void)
-{
-	int order;
-
-	order = get_order(kvm_arm_smmu_count * sizeof(*kvm_arm_smmu_array));
-	free_pages((unsigned long)kvm_arm_smmu_array, order);
-}
-
 int smmu_put_device(struct device *dev, void *data)
 {
 	pm_runtime_put_noidle(dev);
+	return 0;
+}
+
+int smmu_unregister_smmu(struct device *dev, void *data)
+{
+	struct arm_smmu_device *smmu = dev_get_drvdata(dev);
+
+	arm_smmu_unregister_iommu(smmu);
 	return 0;
 }
 
@@ -1003,7 +1003,7 @@ static int smmu_alloc_atomic_mc(struct kvm_hyp_memcache *atomic_mc)
 static int kvm_arm_smmu_v3_init(void)
 {
 	int ret;
-	struct kvm_hyp_memcache atomic_mc;
+	struct kvm_hyp_memcache atomic_mc = {};
 
 	/*
 	 * Check whether any device owned by the host is behind an SMMU.
@@ -1014,12 +1014,12 @@ static int kvm_arm_smmu_v3_init(void)
 
 	ret = platform_driver_probe(&kvm_arm_smmu_driver, kvm_arm_smmu_probe);
 	if (ret)
-		goto err_free;
+		goto err_unregister;
 
 	if (kvm_arm_smmu_cur != kvm_arm_smmu_count) {
 		/* A device exists but failed to probe */
 		ret = -EUNATCH;
-		goto err_free;
+		goto err_unregister;
 	}
 
 #ifdef MODULE
@@ -1028,7 +1028,7 @@ static int kvm_arm_smmu_v3_init(void)
 
 	if (ret) {
 		pr_err("Failed to load SMMUv3 IOMMU EL2 module: %d\n", ret);
-		return ret;
+		goto err_unregister;
 	}
 #endif
 	/*
@@ -1043,16 +1043,22 @@ static int kvm_arm_smmu_v3_init(void)
 
 	ret = smmu_alloc_atomic_mc(&atomic_mc);
 	if (ret)
-		goto err_free;
+		goto err_free_mc;
 
 	ret = kvm_iommu_init_hyp(ksym_ref_addr_nvhe(smmu_ops), &atomic_mc, 0);
+	if (ret)
+		goto err_free_mc;
 
 	WARN_ON(driver_for_each_device(&kvm_arm_smmu_driver.driver, NULL,
 				       NULL, smmu_put_device));
-	return ret;
-err_free:
-	kvm_arm_smmu_array_free();
-	return ret;
+	return 0;
+err_free_mc:
+	free_hyp_memcache(&atomic_mc);
+err_unregister:
+	pr_err("pKVM SMMUv3 init failed with %d\n", ret);
+	WARN_ON(driver_for_each_device(&kvm_arm_smmu_driver.driver, NULL,
+				       NULL, smmu_unregister_smmu));
+	return 0;
 }
 
 static void kvm_arm_smmu_v3_remove(void)

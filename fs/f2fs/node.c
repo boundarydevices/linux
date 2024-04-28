@@ -1187,7 +1187,17 @@ skip_partial:
 		default:
 			BUG();
 		}
-		if (err < 0 && err != -ENOENT)
+		if (err == -ENOENT) {
+			set_sbi_flag(F2FS_P_SB(page), SBI_NEED_FSCK);
+			f2fs_handle_error(sbi, ERROR_INVALID_BLKADDR);
+			f2fs_err_ratelimited(sbi,
+				"truncate node fail, ino:%lu, nid:%u, "
+				"offset[0]:%d, offset[1]:%d, nofs:%d",
+				inode->i_ino, dn.nid, offset[0],
+				offset[1], nofs);
+			err = 0;
+		}
+		if (err < 0)
 			goto fail;
 		if (offset[1] == 0 &&
 				ri->i_nid[offset[0] - NODE_DIR1_BLOCK]) {
@@ -1733,7 +1743,7 @@ int f2fs_move_node_page(struct page *node_page, int gc_type)
 		goto release_page;
 	} else {
 		/* set page dirty and write it */
-		if (!PageWriteback(node_page))
+		if (!folio_test_writeback(page_folio(node_page)))
 			set_page_dirty(node_page);
 	}
 out_page:

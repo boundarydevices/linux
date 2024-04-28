@@ -47,8 +47,8 @@ enum migratetype {
 	MIGRATE_UNMOVABLE,
 	MIGRATE_MOVABLE,
 	MIGRATE_RECLAIMABLE,
-	MIGRATE_PCPTYPES,	/* the number of types on the pcp lists */
-	MIGRATE_HIGHATOMIC = MIGRATE_PCPTYPES,
+	/* the number of types that have fallbacks */
+	MIGRATE_FALLBACKS,
 #ifdef CONFIG_CMA
 	/*
 	 * MIGRATE_CMA migration type is designed to mimic the way
@@ -60,8 +60,13 @@ enum migratetype {
 	 * pageblocks to MIGRATE_CMA which can be done by
 	 * __free_pageblock_cma() function.
 	 */
-	MIGRATE_CMA,
+	MIGRATE_CMA = MIGRATE_FALLBACKS,
+	MIGRATE_PCPTYPES,
+#else
+	/* the number of types on the pcp lists */
+	MIGRATE_PCPTYPES = MIGRATE_FALLBACKS,
 #endif
+	MIGRATE_HIGHATOMIC = MIGRATE_PCPTYPES,
 #ifdef CONFIG_MEMORY_ISOLATION
 	MIGRATE_ISOLATE,	/* can't allocate from here */
 #endif
@@ -74,9 +79,11 @@ extern const char * const migratetype_names[MIGRATE_TYPES];
 #ifdef CONFIG_CMA
 #  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
 #  define is_migrate_cma_page(_page) (get_pageblock_migratetype(_page) == MIGRATE_CMA)
+#  define get_cma_migrate_type() MIGRATE_CMA
 #else
 #  define is_migrate_cma(migratetype) false
 #  define is_migrate_cma_page(_page) false
+#  define get_cma_migrate_type() MIGRATE_MOVABLE
 #endif
 
 static inline bool is_migrate_movable(int mt)
@@ -92,7 +99,7 @@ static inline bool is_migrate_movable(int mt)
  */
 static inline bool migratetype_is_mergeable(int mt)
 {
-	return mt < MIGRATE_PCPTYPES;
+	return mt < MIGRATE_FALLBACKS;
 }
 
 #define for_each_migratetype_order(order, type) \

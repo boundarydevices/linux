@@ -25,6 +25,7 @@
 #include <linux/perf_event.h>
 #include <linux/preempt.h>
 #include <linux/hugetlb.h>
+#include <linux/gfp_types.h>
 
 #include <asm/acpi.h>
 #include <asm/bug.h>
@@ -194,7 +195,7 @@ static void show_pte(unsigned long addr)
 		if (!ptep)
 			break;
 
-		pte = READ_ONCE(*ptep);
+		pte = __ptep_get(ptep);
 		pr_cont(", pte=%016llx", pte_val(pte));
 		pte_unmap(ptep);
 	} while(0);
@@ -208,16 +209,16 @@ static void show_pte(unsigned long addr)
  *
  * It needs to cope with hardware update of the accessed/dirty state by other
  * agents in the system and can safely skip the __sync_icache_dcache() call as,
- * like set_pte_at(), the PTE is never changed from no-exec to exec here.
+ * like __set_ptes(), the PTE is never changed from no-exec to exec here.
  *
  * Returns whether or not the PTE actually changed.
  */
-int ptep_set_access_flags(struct vm_area_struct *vma,
-			  unsigned long address, pte_t *ptep,
-			  pte_t entry, int dirty)
+int __ptep_set_access_flags(struct vm_area_struct *vma,
+			    unsigned long address, pte_t *ptep,
+			    pte_t entry, int dirty)
 {
 	pteval_t old_pteval, pteval;
-	pte_t pte = READ_ONCE(*ptep);
+	pte_t pte = __ptep_get(ptep);
 
 	if (pte_same(pte, entry))
 		return 0;
@@ -757,6 +758,11 @@ static int do_sea(unsigned long far, unsigned long esr, struct pt_regs *regs)
 {
 	const struct fault_info *inf;
 	unsigned long siaddr;
+	bool can_fixup = false;
+
+	trace_android_vh_try_fixup_sea(far, esr, regs, &can_fixup);
+	if (can_fixup && fixup_exception(regs))
+		return 0;
 
 	inf = esr_to_fault_info(esr);
 
@@ -968,7 +974,7 @@ NOKPROBE_SYMBOL(do_debug_exception);
 struct folio *vma_alloc_zeroed_movable_folio(struct vm_area_struct *vma,
 						unsigned long vaddr)
 {
-	gfp_t flags = GFP_HIGHUSER_MOVABLE | __GFP_ZERO;
+	gfp_t flags = GFP_HIGHUSER_MOVABLE | __GFP_ZERO | __GFP_CMA;
 
 	/*
 	 * If the page is mapped with PROT_MTE, initialise the tags at the

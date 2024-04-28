@@ -382,10 +382,12 @@ DECLARE_HOOK(android_vh_tick_nohz_idle_stop_tick,
 	TP_PROTO(void *unused),
 	TP_ARGS(unused));
 
+struct cpufreq_policy;
 DECLARE_HOOK(android_vh_map_util_freq,
 	TP_PROTO(unsigned long util, unsigned long freq,
-		unsigned long cap, unsigned long *next_freq),
-	TP_ARGS(util, freq, cap, next_freq));
+		unsigned long cap, unsigned long *next_freq, struct cpufreq_policy *policy,
+		bool *need_freq_update),
+	TP_ARGS(util, freq, cap, next_freq, policy, need_freq_update));
 
 struct cgroup_subsys_state;
 DECLARE_HOOK(android_vh_sched_move_task,
@@ -401,6 +403,9 @@ DECLARE_HOOK(android_vh_cpu_cgroup_css_free,
 	TP_PROTO(struct cgroup_subsys_state *css),
 	TP_ARGS(css));
 
+DECLARE_HOOK(android_vh_reweight_entity,
+	TP_PROTO(struct sched_entity *se),
+	TP_ARGS(se));
 /* macro versions of hooks are no longer required */
 
 #endif /* _TRACE_HOOK_SCHED_H */
