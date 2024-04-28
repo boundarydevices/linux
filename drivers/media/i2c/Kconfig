@@ -1110,6 +1110,7 @@ config VIDEO_KS0127
 	  module will be called ks0127.
 
 source "drivers/media/i2c/os08a20/Kconfig"
+source "drivers/media/i2c/ox05b1s/Kconfig"
 
 config VIDEO_MAX9286
 	tristate "Maxim MAX9286 GMSL deserializer support"
