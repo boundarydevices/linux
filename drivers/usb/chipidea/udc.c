@@ -517,7 +517,8 @@ static int prepare_td_for_sg(struct ci_hw_ep *hwep, struct ci_hw_req *hwreq)
 	}
 
 	while (i++ < req->num_mapped_sgs) {
-		if (sg_dma_address(s) % PAGE_SIZE) {
+		/* The first buffer could be not page size aligned. */
+		if ((sg_dma_address(s) % PAGE_SIZE) && (i > 1)) {
 			dev_err(hwep->ci->dev, "not page aligned sg buffer\n");
 			return -EINVAL;
 		}
