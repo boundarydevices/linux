@@ -104,6 +104,25 @@
 		reset-gpios = <&pcal6524 12 GPIO_ACTIVE_LOW>;
 	};
 
+	wm8524: audio-codec {
+		#sound-dai-cells = <0>;
+		compatible = "wlf,wm8524";
+		wlf,mute-gpios = <&pcal6524 2 GPIO_ACTIVE_LOW>;
+		clocks = <&clk IMX91_CLK_SAI1>;
+		clock-names = "mclk";
+		pinctrl-assert-gpios = <&pcal6524 18 GPIO_ACTIVE_LOW>;
+	};
+
+	sound-wm8524 {
+		compatible = "fsl,imx-audio-wm8524";
+		model = "wm8524-audio";
+		audio-cpu = <&sai1>;
+		audio-codec = <&wm8524>;
+		audio-routing =
+			"Line Out Jack", "LINEVOUTL",
+			"Line Out Jack", "LINEVOUTR";
+	};
+
 	sound-micfil {
 		compatible = "fsl,imx-audio-card";
 		model = "micfil-audio";
