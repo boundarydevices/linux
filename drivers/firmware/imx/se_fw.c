@@ -387,9 +387,12 @@ static int imx_fetch_soc_info(struct device *dev,
 	phys_addr_t get_info_addr = 0;
 	u32 *get_info_data = NULL;
 	u8 major_ver, minor_ver;
-	int err;
+	int err = 0;
 
 	info_list = (struct imx_info_list *)of_id->data;
+
+	if (info_list->soc_rev)
+		return err;
 
 	if (info->pool_name) {
 		get_info_addr = get_phy_buf_mem_pool(dev,
