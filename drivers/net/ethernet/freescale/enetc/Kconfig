@@ -109,7 +109,7 @@ config FSL_ENETC_QOS
 	  taprio(802.1Qbv) and Credit Based Shaper(802.1Qbu).
 
 config FSL_NTMP
-	bool "NETC NTMP driver"
+	tristate "NETC NTMP driver"
 	depends on FSL_ENETC4 || FSL_ENETC_VF
 	help
 	  Some NETC functionality is controlled using control messages
