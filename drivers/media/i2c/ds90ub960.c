@@ -513,6 +513,7 @@ struct ub960_data {
 
 	struct v4l2_ctrl_handler   ctrl_handler;
 	struct v4l2_async_notifier notifier;
+	struct v4l2_fract interval;
 
 	u32 tx_data_rate;		/* Nominal data rate (Gb/s) */
 	s64 tx_link_freq[1];
@@ -3107,8 +3108,40 @@ static const struct v4l2_subdev_core_ops ub960_subdev_core_ops = {
 	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
 };
 
+static int ub960_g_frame_interval(struct v4l2_subdev *sd,
+				  struct v4l2_subdev_frame_interval *interval)
+{
+	struct ub960_data *priv = sd_to_ub960(sd);
+
+	if (ub960_pad_is_sink(priv, interval->pad))
+		return -EINVAL;
+
+	interval->interval = priv->interval;
+
+	return 0;
+}
+
+static int ub960_s_frame_interval(struct v4l2_subdev *sd,
+				  struct v4l2_subdev_frame_interval *interval)
+{
+	struct ub960_data *priv = sd_to_ub960(sd);
+
+	if (ub960_pad_is_sink(priv, interval->pad))
+		return -EINVAL;
+
+	priv->interval = interval->interval;
+
+	return 0;
+}
+
+static const struct v4l2_subdev_video_ops ub960_subdev_video_ops = {
+	.g_frame_interval = ub960_g_frame_interval,
+	.s_frame_interval = ub960_s_frame_interval,
+};
+
 static const struct v4l2_subdev_ops ub960_subdev_ops = {
 	.core = &ub960_subdev_core_ops,
+	.video = &ub960_subdev_video_ops,
 	.pad = &ub960_pad_ops,
 };
 
@@ -3927,6 +3960,9 @@ static int ub960_probe(struct i2c_client *client)
 	priv->reg_current.indirect_target = 0xff;
 	priv->reg_current.rxport = 0xff;
 	priv->reg_current.txport = 0xff;
+
+	priv->interval.numerator = 1;
+	priv->interval.denominator = 30;
 
 	ret = ub960_get_hw_resources(priv);
 	if (ret)
