@@ -2922,6 +2922,7 @@ static int lpuart_probe(struct platform_device *pdev)
 		handler = lpuart_int;
 	}
 
+	pm_runtime_get_noresume(&pdev->dev);
 	pm_runtime_use_autosuspend(&pdev->dev);
 	pm_runtime_set_autosuspend_delay(&pdev->dev, UART_AUTOSUSPEND_TIMEOUT);
 	pm_runtime_set_active(&pdev->dev);
@@ -2944,6 +2945,8 @@ static int lpuart_probe(struct platform_device *pdev)
 	if (ret)
 		goto failed_irq_request;
 
+	pm_runtime_put_sync(&pdev->dev);
+
 	return 0;
 
 failed_irq_request:
@@ -2954,6 +2957,7 @@ failed_reset:
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_set_suspended(&pdev->dev);
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
+	pm_runtime_put_sync(&pdev->dev);
 	lpuart_disable_clks(sport);
 	return ret;
 }
