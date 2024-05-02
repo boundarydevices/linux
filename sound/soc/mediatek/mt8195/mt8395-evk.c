@@ -990,9 +990,8 @@ static int mt8195_mt6359_dev_probe(struct platform_device *pdev)
 	card->dev = &pdev->dev;
 	ret = set_card_codec_info(card);
 	if (ret) {
-		dev_err(&pdev->dev, "%s set_card_codec_info failed %d\n",
-		__func__, ret);
-		return ret;
+		return dev_err_probe(&pdev->dev, ret, "%s set_card_codec_info failed\n",
+				     __func__);
 	}
 
 	ret = snd_soc_of_parse_card_name(card, "model");
