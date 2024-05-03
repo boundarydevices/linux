@@ -493,6 +493,19 @@ static int rdacm21_initialize(struct rdacm21_device *dev)
 
 	max9271_wake_up(&dev->serializer);
 
+	ret = max9271_verify_id(&dev->serializer);
+	if (ret) {
+		/*
+		 * If use default slave address leading a failure of I2C transfer,
+		 * use the slave address defined in the DT node.
+		 */
+		dev_info(dev->dev, "Try using alternative address: 0x%02x\n", dev->addrs[0]);
+		dev->serializer.client->addr = dev->addrs[0];
+		ret = max9271_verify_id(&dev->serializer);
+		if (ret)
+			return ret;
+	}
+
 	/* Enable reverse channel and disable the serial link. */
 	ret = max9271_set_serial_link(&dev->serializer, false);
 	if (ret)
@@ -503,10 +516,6 @@ static int rdacm21_initialize(struct rdacm21_device *dev)
 				    MAX9271_I2CSLVSH_469NS_234NS |
 				    MAX9271_I2CSLVTO_1024US |
 				    MAX9271_I2CMSTBT_105KBPS);
-	if (ret)
-		return ret;
-
-	ret = max9271_verify_id(&dev->serializer);
 	if (ret)
 		return ret;
 
