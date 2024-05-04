@@ -9,6 +9,7 @@ config MT7925E
 	select MT7925_COMMON
 	depends on MAC80211
 	depends on PCI
+	depends on BROKEN
 	help
 	  This adds support for MT7925-based wireless PCIe devices,
 	  which support operation at 6GHz, 5GHz, and 2.4GHz IEEE 802.11be
@@ -22,6 +23,7 @@ config MT7925U
 	select MT7925_COMMON
 	depends on MAC80211
 	depends on USB
+	depends on BROKEN
 	help
 	  This adds support for MT7925-based wireless USB devices,
 	  which support operation at 6GHz, 5GHz, and 2.4GHz IEEE 802.11be
