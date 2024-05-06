@@ -338,6 +338,17 @@ _IMX_IN_TREE_MODULES = [
     "drivers/iio/accel/st_accel.ko",
     "drivers/iio/accel/st_accel_spi.ko",
     "drivers/pmdomain/imx/imx8mp-blk-ctrl.ko",
+    "drivers/net/ethernet/stmicro/stmmac/stmmac-platform.ko",
+    "drivers/power/reset/imx-sm-reset.ko",
+    "drivers/net/ethernet/stmicro/stmmac/dwmac-sunxi.ko",
+    "net/mac80211/mac80211.ko",
+    "net/wireless/cfg80211.ko",
+    "drivers/net/mdio/mdio-mux.ko",
+    "drivers/net/pcs/pcs_xpcs.ko",
+    "drivers/net/ethernet/stmicro/stmmac/dwmac-generic.ko",
+    "drivers/net/ethernet/stmicro/stmmac/dwmac-imx.ko",
+    "drivers/net/ethernet/stmicro/stmmac/stmmac.ko",
+    "drivers/net/ethernet/stmicro/stmmac/dwmac-sun8i.ko",
 ]
 
 def define_imx():
