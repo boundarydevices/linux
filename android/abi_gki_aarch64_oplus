@@ -19,6 +19,7 @@
   devres_destroy
   down_read_trylock
   drm_crtc_vblank_waitqueue
+  down_write_killable
   filp_close
   folio_add_lru
   folio_mapping
@@ -30,6 +31,7 @@
   gov_attr_set_get
   gpiod_to_chip
   have_governor_per_policy
+  iterate_dir
   i2c_smbus_read_word_data
   i2c_smbus_write_word_data
   iio_channel_get
@@ -80,6 +82,7 @@
   rtc_read_alarm
   rtc_set_alarm
   __rtnl_link_unregister
+  security_file_ioctl
   sdio_memcpy_fromio
   sdio_memcpy_toio
   sdio_set_block_size
@@ -102,6 +105,7 @@
   tcf_exts_dump_stats
   tcf_exts_validate
   tcf_queue_work
+  vfs_llseek
   __traceiter_android_rvh_post_init_entity_util_avg
   __traceiter_android_vh_account_process_tick_gran
   __traceiter_android_vh_alloc_oem_binder_struct
@@ -125,6 +129,7 @@
   __traceiter_android_vh_cgroup_set_task
   __traceiter_android_vh_cpufreq_acct_update_power
   __traceiter_android_vh_check_folio_look_around_ref
+  __traceiter_android_vh_customize_alloc_gfp
   __traceiter_android_vh_dup_task_struct
   __traceiter_android_vh_exit_signal
   __traceiter_android_vh_freq_qos_remove_request
@@ -158,6 +163,7 @@
   __traceiter_android_vh_meminfo_cache_adjust
   __traceiter_android_vh_si_mem_available_adjust
   __traceiter_android_vh_si_meminfo_adjust
+  __traceiter_android_vh_tune_scan_type
   __traceiter_mm_vmscan_kswapd_wake
   __traceiter_block_bio_queue
   __traceiter_block_getrq
@@ -202,6 +208,7 @@
   __tracepoint_android_vh_cpu_cgroup_css_free
   __tracepoint_android_vh_cgroup_set_task
   __tracepoint_android_vh_cpufreq_acct_update_power
+  __tracepoint_android_vh_customize_alloc_gfp
   __tracepoint_android_vh_dup_task_struct
   __tracepoint_android_vh_exit_signal
   __traceiter_android_vh_get_page_wmark
@@ -341,6 +348,7 @@
   __tracepoint_android_vh_rt_mutex_steal
   __tracepoint_android_vh_rtmutex_waiter_prio
   __tracepoint_android_vh_task_blocks_on_rtmutex
+  __tracepoint_android_vh_tune_scan_type
   wq_worker_comm
   is_dma_buf_file
   dma_buf_get_each

@@ -53,6 +53,8 @@ _COMMON_GKI_MODULES_LIST = [
     "net/6lowpan/nhc_routing.ko",
     "net/6lowpan/nhc_udp.ko",
     "net/8021q/8021q.ko",
+    "net/9p/9pnet.ko",
+    "net/9p/9pnet_fd.ko",
     "net/bluetooth/bluetooth.ko",
     "net/bluetooth/hidp/hidp.ko",
     "net/bluetooth/rfcomm/rfcomm.ko",
@@ -86,10 +88,6 @@ _ARM64_GKI_MODULES_LIST = [
     "drivers/ptp/ptp_kvm.ko",
 ]
 
-_RISCV64_GKI_MODULES_LIST = [
-    # keep sorted
-]
-
 _X86_GKI_MODULES_LIST = [
     # keep sorted
     "drivers/ptp/ptp_kvm.ko",
@@ -105,7 +103,7 @@ def get_gki_modules_list(arch = None):
     """ Provides the list of GKI modules.
 
     Args:
-      arch: One of [arm, arm64, i386, x86_64, riscv64].
+      arch: One of [arm, arm64, i386, x86_64].
 
     Returns:
       The list of GKI modules for the given |arch|.
@@ -119,10 +117,8 @@ def get_gki_modules_list(arch = None):
         gki_modules_list += _X86_GKI_MODULES_LIST
     elif arch == "x86_64":
         gki_modules_list += _X86_64_GKI_MODULES_LIST
-    elif arch == "riscv64":
-        gki_modules_list += _RISCV64_GKI_MODULES_LIST
     else:
-        fail("{}: arch {} not supported. Use one of [arm, arm64, i386, x86_64, riscv64]".format(
+        fail("{}: arch {} not supported. Use one of [arm, arm64, i386, x86_64]".format(
             str(native.package_relative_label(":x")).removesuffix(":x"),
             arch,
         ))

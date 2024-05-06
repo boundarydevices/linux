@@ -59,6 +59,7 @@
 #include <linux/delayacct.h>
 #include <linux/init.h>
 #include <linux/pfn_t.h>
+#include <linux/pgsize_migration.h>
 #include <linux/writeback.h>
 #include <linux/memcontrol.h>
 #include <linux/mmu_notifier.h>
@@ -79,6 +80,9 @@
 #include <linux/sched/sysctl.h>
 
 #include <trace/events/kmem.h>
+
+#undef CREATE_TRACE_POINTS
+#include <trace/hooks/mm.h>
 
 #include <asm/io.h>
 #include <asm/mmu_context.h>
@@ -3578,6 +3582,8 @@ static vm_fault_t do_wp_page(struct vm_fault *vmf)
 		return wp_page_shared(vmf, folio);
 	}
 
+	trace_android_vh_do_wp_page(folio);
+
 	/*
 	 * Private mapping: create an exclusive anonymous page copy if reuse
 	 * is impossible. We might miss VM_WRITE for FOLL_FORCE handling.
@@ -4158,6 +4164,7 @@ vm_fault_t do_swap_page(struct vm_fault *vmf)
 	inc_mm_counter(vma->vm_mm, MM_ANONPAGES);
 	dec_mm_counter(vma->vm_mm, MM_SWAPENTS);
 	pte = mk_pte(page, vma->vm_page_prot);
+	trace_android_vh_do_swap_page(folio, &pte, vmf, entry);
 
 	/*
 	 * Same logic as in do_wp_page(); however, optimize for pages that are
@@ -4405,6 +4412,7 @@ static vm_fault_t do_anonymous_page(struct vm_fault *vmf)
 	 */
 	__folio_mark_uptodate(folio);
 
+	trace_android_vh_do_anonymous_page(vma, folio);
 	entry = mk_pte(&folio->page, vma->vm_page_prot);
 	entry = pte_sw_mkyoung(entry);
 	if (vma->vm_flags & VM_WRITE)
@@ -4801,7 +4809,7 @@ static vm_fault_t do_fault_around(struct vm_fault *vmf)
 
 	/* The PTE offset of the end address, clamped to the VMA and PTE. */
 	to_pte = min3(from_pte + nr_pages, (pgoff_t)PTRS_PER_PTE,
-		      pte_off + vma_pages(vmf->vma) - vma_off) - 1;
+		      pte_off + vma_data_pages(vmf->vma) - vma_off) - 1;
 
 	if (pmd_none(*vmf->pmd)) {
 		vmf->prealloc_pte = pte_alloc_one(vmf->vma->vm_mm);
@@ -5933,6 +5941,10 @@ int follow_phys(struct vm_area_struct *vma,
 	if (follow_pte(vma->vm_mm, address, &ptep, &ptl))
 		goto out;
 	pte = ptep_get(ptep);
+
+	/* Never return PFNs of anon folios in COW mappings. */
+	if (vm_normal_folio(vma, address, pte))
+		goto unlock;
 
 	if ((flags & FOLL_WRITE) && !pte_write(pte))
 		goto unlock;

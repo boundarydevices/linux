@@ -1782,6 +1782,7 @@ static void uart_tty_port_shutdown(struct tty_port *port)
 	 * Free the transmit buffer.
 	 */
 	spin_lock_irq(&uport->lock);
+	uart_circ_clear(&state->xmit);
 	buf = state->xmit.buf;
 	state->xmit.buf = NULL;
 	spin_unlock_irq(&uport->lock);
@@ -2602,13 +2603,22 @@ uart_configure_port(struct uart_driver *drv, struct uart_state *state,
 			port->type = PORT_UNKNOWN;
 			flags |= UART_CONFIG_TYPE;
 		}
+		/* Synchronize with possible boot console. */
+		if (uart_console(port))
+			console_lock();
 		port->ops->config_port(port, flags);
+		if (uart_console(port))
+			console_unlock();
 	}
 
 	if (port->type != PORT_UNKNOWN) {
 		unsigned long flags;
 
 		uart_report_port(drv, port);
+
+		/* Synchronize with possible boot console. */
+		if (uart_console(port))
+			console_lock();
 
 		/* Power up port for set_mctrl() */
 		uart_change_pm(state, UART_PM_STATE_ON);
@@ -2625,6 +2635,9 @@ uart_configure_port(struct uart_driver *drv, struct uart_state *state,
 		spin_unlock_irqrestore(&port->lock, flags);
 
 		uart_rs485_config(port);
+
+		if (uart_console(port))
+			console_unlock();
 
 		/*
 		 * If this driver supports console, and it hasn't been
