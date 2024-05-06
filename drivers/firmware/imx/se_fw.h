@@ -152,6 +152,8 @@ struct ele_mu_priv {
 	struct ele_mu_device_ctx **ctxs;
 	struct ele_imem_buf imem;
 	struct perf_time_frame time_frame;
+	struct imx_sc_ipc *ipc_scu;
+	u8 part_owner;
 };
 
 uint32_t get_se_soc_id(struct device *dev);

@@ -38,6 +38,7 @@ int imx_sc_seco_secvio_config(struct imx_sc_ipc *ipc, u8 id, u8 access,
 			      u32 *data4, u8 size);
 int imx_sc_seco_secvio_dgo_config(struct imx_sc_ipc *ipc, u8 id, u8 access,
 				  u32 *data);
+int imx_scu_init_fw(struct device *dev);
 #else /* IS_ENABLED(CONFIG_IMX_SCU) */
 static inline
 int imx_sc_seco_build_info(struct imx_sc_ipc *ipc, uint32_t *version,
@@ -69,6 +70,12 @@ int imx_sc_seco_secvio_config(struct imx_sc_ipc *ipc, u8 id, u8 access,
 static inline
 int imx_sc_seco_secvio_dgo_config(struct imx_sc_ipc *ipc, u8 id, u8 access,
 				  u32 *data)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline
+int imx_scu_init_fw(struct device *dev)
 {
 	return -EOPNOTSUPP;
 }
