@@ -166,6 +166,13 @@
 		enable-active-high;
 	};
 
+	usdhc3_pwrseq: usdhc3_pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usdhc3_gpio>;
+		reset-gpios = <&gpio4 21 GPIO_ACTIVE_LOW>; /* WIFI_RESET */
+	};
+
 	reg_wlan_vmmc: regulator-wlan-vmmc {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
@@ -282,7 +289,7 @@
 &gpio4 {
 	gpio-line-names = "485_RXD", "485_TXD", "2", "3", "4", "5", "6", "7", "8",
 		"9", "10", "11", "12", "AMP_MUTE", "AMP_G1", "AMP_G0", "AMP_STDBY",
-		"17", "BKLITON", "19", "20", "21", "22", "23", "24",
+		"17", "BKLITON", "19", "20", "WIFI_RESET", "22", "23", "WL_IRQ",
 		"BT_EN", "WL_EN", "27", "HP_DET_tp13", "485_EN", "30", "UD_SW6";
 };
 
@@ -469,6 +476,14 @@
 		reg = <0x1a>;
 		clocks = <&clk IMX8MM_CLK_SAI1_ROOT>;
 		clock-names = "mclk";
+		AVDD-supply = <&reg_vref_1v8>;
+                CPVDD-supply = <&reg_vref_1v8>;
+                DBVDD-supply = <&reg_buck7>;
+                DCVDD-supply = <&reg_vref_1v8>;
+                MICVDD-supply = <&reg_buck7>;
+                PLLVDD-supply = <&reg_vref_1v8>;
+                SPKVDD1-supply = <&reg_vref_5v>;
+                SPKVDD2-supply = <&reg_vref_5v>;
 		wlf,shared-lrclk;
 	};
 };
@@ -599,15 +614,12 @@
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
 	status = "okay";
-#if 0
-	/* TODO */
+
 	bluetooth {
-		compatible = "infineon,cyw55572-bt";
-		brcm,requires-autobaud-mode;
-		max-speed = <921600>;
+		compatible = "nxp,88w8987-bt";
+		fw-init-baudrate = <3000000>;
 		shutdown-gpios = <&gpio4 25 GPIO_ACTIVE_HIGH>;
 	};
-#endif
 };
 
 &usbotg1 { /* Micro USB */
@@ -660,13 +672,24 @@
 	pm-ignore-notify;
 	keep-power-in-suspend;
 	non-removable;
+	wakeup-source;
+	mmc-pwrseq = <&usdhc3_pwrseq>; /* Controls WIFI_RESET */
+	fsl,sdio-async-interrupt-enabled;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_usdhc3>;
-	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
-	status = "disabled"; /* TODO */
+	pinctrl-0 = <&pinctrl_usdhc3>, <&pinctrl_wlan>;
+	pinctrl-1 = <&pinctrl_usdhc3_100mhz>, <&pinctrl_wlan>;
+	pinctrl-2 = <&pinctrl_usdhc3_200mhz>, <&pinctrl_wlan>;
+	status = "okay";
 	vmmc-supply = <&reg_wlan_vmmc>; /* Controls WL_EN */
 	vqmmc-1-8-v;
+
+	wifi_wake_host {
+                compatible = "nxp,wifi-wake-host";
+                interrupt-parent = <&gpio4>;
+                interrupts = <24 IRQ_TYPE_LEVEL_LOW>; /* WL_IRQ */
+                interrupt-names = "host-wake";
+        };
+
 };
 
 &vpu_g1 {
@@ -1032,9 +1055,21 @@
 		>;
 	};
 
+	pinctrl_usdhc3_gpio: usdhc1gpiogrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_SAI2_RXFS_GPIO4_IO21		0x16  /* WIFI_RESET */
+		>;
+	};
+
 	pinctrl_wdog: wdoggrp {
 		fsl,pins = <
-			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B	0x166
+			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B		0x166
+		>;
+	};
+
+	pinctrl_wlan: wlangrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_SAI2_TXFS_GPIO4_IO24		0x159	/* WL_IRQ */
 		>;
 	};
 };
