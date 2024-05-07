@@ -154,13 +154,13 @@ static t_LnxWrpFm   lnxWrpFm;
 static bool fm_has_err_a050385;
 #endif
 
-int fm_get_max_frm()
+int fm_get_max_frm(void)
 {
 	return fsl_fm_max_frm;
 }
 EXPORT_SYMBOL(fm_get_max_frm);
 
-int fm_get_rx_extra_headroom()
+int fm_get_rx_extra_headroom(void)
 {
 	return ALIGN(fsl_fm_rx_extra_headroom, 16);
 }
@@ -1617,6 +1617,14 @@ int fm_port_del_rate_limit(struct fm_port *port)
 	return 0;
 }
 EXPORT_SYMBOL(fm_port_del_rate_limit);
+
+int fm_port_enable_rx_l4csum(struct fm_port *port, bool enable)
+{
+	t_LnxWrpFmPortDev *p_LnxWrpFmPortDev = (t_LnxWrpFmPortDev *)port;
+
+	return FM_PORT_SetRxL4ChecksumVerify(p_LnxWrpFmPortDev->h_Dev, enable);
+}
+EXPORT_SYMBOL(fm_port_enable_rx_l4csum);
 
 void FM_PORT_Dsar_DumpRegs(void);
 int ar_showmem(struct file *file, const char __user *buffer,

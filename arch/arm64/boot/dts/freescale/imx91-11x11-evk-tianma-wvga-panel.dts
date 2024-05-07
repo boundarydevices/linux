@@ -4,14 +4,17 @@
  */
 
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pwm/pwm.h>
 #include "imx91-11x11-evk.dts"
 
 / {
 	backlight: backlight {
-		/* Do not use PWM backlight due to DPI HAT HW circuit issue */
-		compatible = "gpio-backlight";
-		gpios = <&pcal6524 8 GPIO_ACTIVE_HIGH>;
-		pinctrl-assert-gpios = <&gpio2 26 GPIO_ACTIVE_LOW>;    /* PWM low */
+		compatible = "pwm-backlight";
+		pwms = <&tpm5 3 40000 PWM_POLARITY_INVERTED>;	/* 25KHz PWM */
+		brightness-levels = <0 100>;
+		num-interpolated-steps = <100>;
+		default-brightness-level = <80>;
+		power-supply = <&reg_vrpi_5v>;
 	};
 
 	panel {
@@ -28,6 +31,22 @@
 	};
 };
 
+&adp5585gpio {
+	/* EXP_SEL RPi */
+	exp-sel-hog {
+		/delete-property/ output-low;
+		output-high;
+	};
+};
+
+&iomuxc {
+	pinctrl_tpm5_ch3: tpm5ch3grp {
+		fsl,pins = <
+			MX91_PAD_GPIO_IO26__TPM5_CH3	0x31e
+		>;
+	};
+};
+
 &lcdif {
 	assigned-clock-rates = <300000000>, <30000000>, <400000000>, <133333333>;
 	status = "okay";
@@ -39,7 +58,6 @@
 
 &parallel_disp_fmt {
 	pinctrl-names = "default";
-	pinctrl-assert-gpios = <&adp5585gpio 4 GPIO_ACTIVE_HIGH>;	/* EXP_SEL RPi */
 	pinctrl-0 = <&pinctrl_lcdif>;
 	fsl,interface-pix-fmt = "rgb666";
 	status = "okay";
@@ -58,4 +76,10 @@
 /* pin conflicts */
 &sai3 {
 	status = "disabled";
+};
+
+&tpm5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_tpm5_ch3>;
+	status = "okay";
 };

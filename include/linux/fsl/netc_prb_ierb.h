@@ -13,6 +13,9 @@
 
 int netc_ierb_get_init_status(void);
 u64 netc_ierb_get_clk_config(void);
+void netc_ierb_enable_wakeonlan(void);
+void netc_ierb_disable_wakeonlan(void);
+int netc_ierb_may_wakeonlan(void);
 
 #else
 
@@ -24,6 +27,19 @@ static inline int netc_ierb_get_init_status(void)
 static inline u64 netc_ierb_get_clk_config(void)
 {
 	return 0;
+}
+
+static inline void netc_ierb_enable_wakeonlan(void)
+{
+}
+
+static inline void netc_ierb_disable_wakeonlan(void)
+{
+}
+
+static inline int netc_ierb_may_wakeonlan(void)
+{
+	return -EINVAL;
 }
 
 #endif

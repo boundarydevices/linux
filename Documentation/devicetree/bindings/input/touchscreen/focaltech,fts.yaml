@@ -44,7 +44,7 @@ examples:
       #size-cells = <0>;
       clock-frequency = <400000>;
 
-      focaltech_touch: focaltech@38 {
+      focaltech_touch: touchscreen@38 {
         compatible = "focaltech,fts";
         reg = <0x38>;
         irq-gpio = <&gpio3 27 GPIO_ACTIVE_HIGH>;

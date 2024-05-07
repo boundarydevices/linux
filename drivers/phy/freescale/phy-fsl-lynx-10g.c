@@ -8,6 +8,8 @@
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
+#include <linux/fsl/guts.h>
+#include <linux/phy/phy-fsl-lynx.h>
 
 #include "phy-fsl-lynx-xgkr-algorithm.h"
 
@@ -272,19 +274,6 @@ struct lynx_pccr {
 	int shift;
 };
 
-enum lynx_lane_mode {
-	LANE_MODE_UNKNOWN,
-	LANE_MODE_1000BASEX_SGMII,
-	LANE_MODE_1000BASEKX,
-	LANE_MODE_2500BASEX,
-	LANE_MODE_QSGMII,
-	LANE_MODE_10G_QXGMII,
-	LANE_MODE_USXGMII,
-	LANE_MODE_10GBASER,
-	LANE_MODE_10GBASEKR,
-	LANE_MODE_MAX,
-};
-
 static const struct lynx_10g_proto_conf lynx_10g_proto_conf[LANE_MODE_MAX] = {
 	[LANE_MODE_1000BASEX_SGMII] = {
 		.proto_sel = PROTO_SEL_SGMII_BASEX_KX_QSGMII,
@@ -516,6 +505,7 @@ struct lynx_info {
 	bool (*lane_supports_mode)(int lane, enum lynx_lane_mode mode);
 	int num_lanes;
 	bool has_hardcoded_usxgmii;
+	int index;
 };
 
 struct lynx_10g_priv {
@@ -675,6 +665,7 @@ static const struct lynx_info lynx_info_ls1028a = {
 	.lane_supports_mode = ls1028a_lane_supports_mode,
 	.num_lanes = 4,
 	.has_hardcoded_usxgmii = true,
+	.index = 1,
 };
 
 static int ls1046a_serdes1_get_pccr(enum lynx_lane_mode lane_mode, int lane,
@@ -769,6 +760,7 @@ static const struct lynx_info lynx_info_ls1046a_serdes1 = {
 	.get_pcvt_offset = ls1046a_serdes1_get_pcvt_offset,
 	.lane_supports_mode = ls1046a_serdes1_lane_supports_mode,
 	.num_lanes = 4,
+	.index = 1,
 };
 
 static int ls1046a_serdes2_get_pccr(enum lynx_lane_mode lane_mode, int lane,
@@ -825,6 +817,7 @@ static const struct lynx_info lynx_info_ls1046a_serdes2 = {
 	.get_pcvt_offset = ls1046a_serdes2_get_pcvt_offset,
 	.lane_supports_mode = ls1046a_serdes2_lane_supports_mode,
 	.num_lanes = 4,
+	.index = 2,
 };
 
 static int ls1088a_serdes1_get_pccr(enum lynx_lane_mode lane_mode, int lane,
@@ -942,6 +935,7 @@ static const struct lynx_info lynx_info_ls1088a_serdes1 = {
 	.get_pcvt_offset = ls1088a_serdes1_get_pcvt_offset,
 	.lane_supports_mode = ls1088a_serdes1_lane_supports_mode,
 	.num_lanes = 4,
+	.index = 1,
 };
 
 static int ls2088a_serdes1_get_pccr(enum lynx_lane_mode lane_mode, int lane,
@@ -1057,6 +1051,7 @@ static const struct lynx_info lynx_info_ls2088a_serdes1 = {
 	.get_pcvt_offset = ls2088a_serdes1_get_pcvt_offset,
 	.lane_supports_mode = ls2088a_serdes1_lane_supports_mode,
 	.num_lanes = 8,
+	.index = 1,
 };
 
 static int ls2088a_serdes2_get_pccr(enum lynx_lane_mode lane_mode, int lane,
@@ -1106,6 +1101,7 @@ static const struct lynx_info lynx_info_ls2088a_serdes2 = {
 	.get_pcvt_offset = ls2088a_serdes2_get_pcvt_offset,
 	.lane_supports_mode = ls2088a_serdes2_lane_supports_mode,
 	.num_lanes = 8,
+	.index = 2,
 };
 
 static int lynx_pccr_read(struct lynx_10g_lane *lane, enum lynx_lane_mode mode,
@@ -1629,9 +1625,22 @@ out:
 	return err;
 }
 
+static bool lynx_10g_switch_needs_rcw_override(enum lynx_lane_mode crr,
+					       enum lynx_lane_mode new)
+{
+	if ((crr == LANE_MODE_1000BASEX_SGMII ||
+	     crr == LANE_MODE_2500BASEX) &&
+	    (new == LANE_MODE_1000BASEX_SGMII ||
+	     new == LANE_MODE_2500BASEX))
+		return false;
+
+	return true;
+}
+
 static int lynx_10g_set_lane_mode(struct phy *phy, enum lynx_lane_mode lane_mode)
 {
 	struct lynx_10g_lane *lane = phy_get_drvdata(phy);
+	struct lynx_10g_priv *priv = lane->priv;
 	bool powered_up = lane->powered_up;
 	int err;
 
@@ -1649,6 +1658,12 @@ static int lynx_10g_set_lane_mode(struct phy *phy, enum lynx_lane_mode lane_mode
 	 */
 	if (powered_up)
 		lynx_10g_lane_halt(phy);
+
+	if (lynx_10g_switch_needs_rcw_override(lane->mode, lane_mode)) {
+		err = fsl_guts_lane_set_mode(priv->info->index, lane->id, lane_mode);
+		if (err)
+			goto out;
+	}
 
 	err = lynx_10g_lane_disable_pcvt(lane, lane->mode);
 	if (err)
@@ -1872,21 +1887,13 @@ static int lynx_10g_validate_interface(struct phy *phy, phy_interface_t submode)
 {
 	enum lynx_lane_mode lane_mode = phy_interface_to_lane_mode(submode);
 	struct lynx_10g_lane *lane = phy_get_drvdata(phy);
+	struct lynx_10g_priv *priv = lane->priv;
 
 	if (!lynx_lane_supports_mode(lane, lane_mode))
 		return -EOPNOTSUPP;
 
-	/* The only protocol change currently supported is between
-	 * 1000Base-X/SGMII and 2500Base-X. The others require an RCW overwrite
-	 * procedure as documented here:
-	 * https://lore.kernel.org/linux-phy/20230810102631.bvozjer3t67r67iy@skbuf/
-	 * which is SoC-specific, and not yet implemented in drivers/soc/fsl/guts.c.
-	 */
-	if ((lane_mode != LANE_MODE_1000BASEX_SGMII &&
-	     lane_mode != LANE_MODE_2500BASEX) ||
-	    (lane->mode != LANE_MODE_1000BASEX_SGMII &&
-	     lane->mode != LANE_MODE_2500BASEX))
-		return -EOPNOTSUPP;
+	if (lynx_10g_switch_needs_rcw_override(lane->mode, lane_mode))
+		return fsl_guts_lane_validate(priv->info->index, lane->id, lane_mode);
 
 	return 0;
 }
@@ -2269,6 +2276,7 @@ static int lynx_10g_probe(struct platform_device *pdev)
 		lane->id = i;
 		phy_set_drvdata(phy, lane);
 		lynx_10g_lane_read_configuration(lane);
+		fsl_guts_lane_init(priv->info->index, lane->id, lane->mode);
 	}
 
 	for (i = 0; i < NUM_PLL; i++)

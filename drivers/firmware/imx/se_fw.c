@@ -140,7 +140,7 @@ static struct imx_info_list imx93_info = {
 };
 
 static struct imx_info_list imx95_info = {
-	.num_mu = 3,
+	.num_mu = 4,
 	.soc_id = SOC_ID_OF_IMX95,
 	.info = {
 			{
@@ -189,6 +189,30 @@ static struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
 				.mu_buff_size = 0,
+				.fw_name_in_rfs = NULL,
+			},
+			{
+				.pdev_name = {"v2x-fw4"},
+				.socdev = false,
+				.mu_id = 4,
+				.mu_did = 0,
+				.max_dev_ctx = 4,
+				.cmd_tag = 0x18,
+				.rsp_tag = 0xe2,
+				.success_tag = 0xd6,
+				.base_api_ver = 0x2,
+				.fw_api_ver = 0x2,
+				.se_name = "v2x_sv0",
+				.pool_name = NULL,
+				.mbox_tx_name = "tx",
+				.mbox_rx_name = "rx",
+				.reserved_dma_ranges = false,
+				.init_fw = false,
+				.v2x_state_check = true,
+				.start_rng = NULL,
+				.enable_ele_trng = false,
+				.imem_mgmt = false,
+				.mu_buff_size = 16,
 				.fw_name_in_rfs = NULL,
 			},
 			{
@@ -387,9 +411,12 @@ static int imx_fetch_soc_info(struct device *dev,
 	phys_addr_t get_info_addr = 0;
 	u32 *get_info_data = NULL;
 	u8 major_ver, minor_ver;
-	int err;
+	int err = 0;
 
 	info_list = (struct imx_info_list *)of_id->data;
+
+	if (info_list->soc_rev)
+		return err;
 
 	if (info->pool_name) {
 		get_info_addr = get_phy_buf_mem_pool(dev,

@@ -4394,7 +4394,7 @@ t_Error FM_PORT_ReleaseStalled(t_Handle h_FmPort)
     return FmResumeStalledPort(p_FmPort->h_Fm, p_FmPort->hardwarePortId);
 }
 
-t_Error FM_PORT_SetRxL4ChecksumVerify(t_Handle h_FmPort, bool l4Checksum)
+t_Error FM_PORT_SetRxL4ChecksumVerify(t_Handle h_FmPort, bool enable)
 {
     t_FmPort *p_FmPort = (t_FmPort*)h_FmPort;
     int err;
@@ -4407,7 +4407,13 @@ t_Error FM_PORT_SetRxL4ChecksumVerify(t_Handle h_FmPort, bool l4Checksum)
         RETURN_ERROR(MAJOR, E_INVALID_OPERATION,
                      ("available for Rx ports only"));
 
-    if (l4Checksum)
+    /* Bits 0-7 in the Rx FD Status are initialized by the user configurable
+     * FMBM_RFNE[FDCS]. A bit which is set by the user in FMBM_RFNE[FDCS] is
+     * reflected in the corresponding bit, and is not reset by the FMan
+     * hardware. So to let the hardware do its job, we need to clear the FMBM
+     * bit, and vice versa.
+     */
+    if (!enable)
         err = fman_port_modify_rx_fd_bits(
                 &p_FmPort->port, (uint8_t)(BMI_PORT_RFNE_FRWD_DCL4C >> 24),
                 TRUE);
@@ -5675,12 +5681,6 @@ static t_Error FmPortConfigAutoResForDeepSleepSupport1(t_FmPort *p_FmPort)
     return E_OK;
 }
 
-t_FmPortDsarTablesSizes* FM_PORT_GetDsarTablesMaxSizes(t_Handle h_FmPortRx)
-{
-    t_FmPort *p_FmPort = (t_FmPort *)h_FmPortRx;
-    return p_FmPort->deepSleepVars.autoResMaxSizes;
-}
-
 struct arOffsets
 {
     uint32_t arp;
@@ -6377,7 +6377,7 @@ t_Error FM_PORT_EnterDsarFinal(t_Handle h_DsarRxPort, t_Handle h_DsarTxPort)
 
 EXPORT_SYMBOL(FM_PORT_EnterDsarFinal);
 
-void FM_PORT_Dsar_DumpRegs()
+void FM_PORT_Dsar_DumpRegs(void)
 {
     uint32_t* hh = XX_PhysToVirt(PTR_TO_UINT(ARDesc));
     DUMP_MEMORY(hh, 0x220);

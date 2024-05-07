@@ -74,15 +74,22 @@
 #define IERB_VFAUXR(a)		(0x4004 + 0x40 * (a))
 #define FAUXR_LDID		GENMASK(3, 0)
 
+#define SAI_CLK_SEL		0x4
+#define SAI_CLK_SEL_BIT5	BIT(5)
+#define SAI_CLK_SEL_BIT10	BIT(10)
+
 struct netc_prb_ierb {
 	void __iomem *prb_base;
 	void __iomem *ierb_base;
 	struct clk *ipg_clk;
 
 	bool ierb_init;
+	atomic_t wakeonlan_count;
 	struct regmap *netcmix;
 	struct platform_device *pdev;
 	struct dentry *debugfs_root;
+	u32 *ifmode;
+	u32 *rmii_clk_dir;
 };
 
 static struct netc_prb_ierb *netc_pi;
@@ -109,15 +116,19 @@ static void netc_netcmix_init(struct platform_device *pdev)
 
 	/* Configure Link MII port */
 	regmap_write(pi->netcmix, CFG_LINK_MII_PROT,
-		     MII_PROT(0, MII_PROT_RGMII) |
-		     MII_PROT(1, MII_PROT_RGMII) |
-		     MII_PROT(2, MII_PROT_SERIAL));
+		     MII_PROT(0, pi->ifmode[0]) |
+		     MII_PROT(1, pi->ifmode[1]) |
+		     MII_PROT(2, pi->ifmode[2]));
 
 	/* Configure Link0/1/2 PCS protocol */
 	regmap_write(pi->netcmix, CFG_LINK_PCS_PROT_0, 0);
 	regmap_write(pi->netcmix, CFG_LINK_PCS_PROT_1, 0);
 	regmap_write(pi->netcmix, CFG_LINK_PCS_PROT_2,
 		     PCS_PROT_10G_SXGMII);
+	if (pi->rmii_clk_dir)
+		regmap_write(pi->netcmix, SAI_CLK_SEL,
+			     pi->rmii_clk_dir[0] ? SAI_CLK_SEL_BIT5 : 0 |
+			     pi->rmii_clk_dir[1] ? SAI_CLK_SEL_BIT10 : 0);
 }
 
 static bool netc_ierb_is_locked(struct netc_prb_ierb *pi)
@@ -162,15 +173,15 @@ static void netc_ierb_init_ldid(struct platform_device *pdev)
 		netc_reg_write(pi->ierb_base, IERB_VFAUXR(1), 2);
 		/* ENETC1 PF */
 		netc_reg_write(pi->ierb_base, IERB_EFAUXR(1), 3);
-		/* ENETC1 VF0 : Disabled */
-		netc_reg_write(pi->ierb_base, IERB_VFAUXR(2), 0);
-		/* ENETC1 VF1 : Disabled */
-		netc_reg_write(pi->ierb_base, IERB_VFAUXR(3), 0);
+		/* ENETC1 VF0 : Disabled on 19x19 board dts */
+		netc_reg_write(pi->ierb_base, IERB_VFAUXR(2), 5);
+		/* ENETC1 VF1 : Disabled on 19x19 board dts */
+		netc_reg_write(pi->ierb_base, IERB_VFAUXR(3), 6);
 		/* ENETC2 PF */
 		netc_reg_write(pi->ierb_base, IERB_EFAUXR(2), 4);
-		/* ENETC2 VF0 */
+		/* ENETC2 VF0 : Disabled on 15x15 board dts */
 		netc_reg_write(pi->ierb_base, IERB_VFAUXR(4), 5);
-		/* ENETC2 VF1 */
+		/* ENETC2 VF1 : Disabled on 15x15 board dts */
 		netc_reg_write(pi->ierb_base, IERB_VFAUXR(5), 6);
 		/* NETC TIMER */
 		netc_reg_write(pi->ierb_base, IERB_T0FAUXR, 7);
@@ -200,6 +211,7 @@ static int netc_ierb_init(struct platform_device *pdev)
 	}
 
 	pi->ierb_init = true;
+	atomic_set(&pi->wakeonlan_count, 0);
 
 	return 0;
 }
@@ -245,6 +257,43 @@ u64 netc_ierb_get_clk_config(void)
 	return clk_cfg;
 }
 EXPORT_SYMBOL_GPL(netc_ierb_get_clk_config);
+
+void netc_ierb_enable_wakeonlan(void)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+
+	if (!pi)
+		return;
+
+	atomic_inc(&pi->wakeonlan_count);
+}
+EXPORT_SYMBOL_GPL(netc_ierb_enable_wakeonlan);
+
+void netc_ierb_disable_wakeonlan(void)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+
+	if (!pi)
+		return;
+
+	atomic_dec(&pi->wakeonlan_count);
+	if (atomic_read(&pi->wakeonlan_count) < 0) {
+		atomic_set(&pi->wakeonlan_count, 0);
+		dev_warn(&pi->pdev->dev, "Wake-on-LAN count underflow.\n");
+	}
+}
+EXPORT_SYMBOL_GPL(netc_ierb_disable_wakeonlan);
+
+int netc_ierb_may_wakeonlan(void)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+
+	if (!pi)
+		return -ENXIO;
+
+	return atomic_read(&pi->wakeonlan_count);
+}
+EXPORT_SYMBOL_GPL(netc_ierb_may_wakeonlan);
 
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 static int netc_prb_show(struct seq_file *s, void *data)
@@ -394,6 +443,40 @@ static int netc_prb_check_error(struct netc_prb_ierb *pi)
 	return 0;
 }
 
+static int netc_prb_parse_if(struct netc_prb_ierb *pi, struct device *dev)
+{
+	struct device_node *node = dev->of_node;
+	int ret, count;
+
+	count = of_property_count_u32_elems(node, "netc-interfaces");
+	if (count < 1)
+		return -EINVAL;
+	pi->ifmode = devm_kcalloc(dev, count, sizeof(pi->ifmode), GFP_KERNEL);
+
+	ret = of_property_read_u32_array(node, "netc-interfaces",
+					 pi->ifmode, count);
+	if (ret)
+		return ret;
+
+	if (pi->ifmode[0] == MII_PROT_RMII || pi->ifmode[1] == MII_PROT_RMII) {
+		count = of_property_count_u32_elems(node, "netc-rmii-clk-dir");
+		if (count < 1) {
+			dev_err(dev, "Missing netc-rmii-clk-dir property.\n");
+			return -EINVAL;
+		}
+		pi->rmii_clk_dir = devm_kcalloc(dev, count,
+						sizeof(pi->rmii_clk_dir),
+						GFP_KERNEL);
+
+		ret = of_property_read_u32_array(node, "netc-rmii-clk-dir",
+						 pi->rmii_clk_dir, count);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int netc_prb_ierb_probe(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;
@@ -452,6 +535,7 @@ static int netc_prb_ierb_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pi);
 
+	netc_prb_parse_if(pi, &pdev->dev);
 	netc_netcmix_init(pdev);
 
 	err = netc_ierb_init(pdev);
@@ -495,6 +579,60 @@ static const struct of_device_id netc_prb_ierb_match[] = {
 };
 MODULE_DEVICE_TABLE(of, netc_prb_ierb_match);
 
+static int netc_prb_ierb_suspend_noirq(struct device *dev)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+
+	if (netc_ierb_may_wakeonlan())
+		return 0;
+
+	pi->ierb_init = false;
+
+	clk_disable_unprepare(pi->ipg_clk);
+
+	return 0;
+}
+
+static int netc_prb_ierb_resume_noirq(struct device *dev)
+{
+	struct netc_prb_ierb *pi = netc_pi;
+	struct platform_device *pdev = pi->pdev;
+	int err;
+
+	if (netc_ierb_may_wakeonlan())
+		return 0;
+
+	err = clk_prepare_enable(pi->ipg_clk);
+	if (err) {
+		dev_err(dev, "Enable ipg_clk failed\n");
+		return err;
+	}
+
+	netc_netcmix_init(pdev);
+
+	err = netc_ierb_init(pdev);
+	if (err) {
+		dev_err(&pdev->dev, "Initializing IERB failed.\n");
+		goto disable_ipg_clk;
+	}
+
+	if (netc_prb_check_error(pi) < 0)
+		dev_warn(&pdev->dev,
+			 "The current IERB configuration is invalid.\n");
+
+	return 0;
+
+disable_ipg_clk:
+	clk_disable_unprepare(pi->ipg_clk);
+
+	return err;
+}
+
+static const struct dev_pm_ops __maybe_unused netc_prb_ierb_pm_ops = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(netc_prb_ierb_suspend_noirq,
+				      netc_prb_ierb_resume_noirq)
+};
+
 static struct platform_driver netc_prb_ierb_driver = {
 	.driver = {
 		.name = "fsl-netc-prb-ierb",
@@ -502,6 +640,7 @@ static struct platform_driver netc_prb_ierb_driver = {
 	},
 	.probe = netc_prb_ierb_probe,
 	.remove = netc_prb_ierb_remove,
+	.driver.pm = &netc_prb_ierb_pm_ops,
 };
 
 module_platform_driver(netc_prb_ierb_driver);
