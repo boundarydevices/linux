@@ -78,9 +78,16 @@
 			gpios = <&gpio4 16 GPIO_ACTIVE_HIGH>;
 			default-state = "on";
 		};
+
+		/* Also used by the audio amp (VCC_12V) */
+		bk-lit {
+			label = "BKLITON";
+			gpios = <&gpio4 18 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
 	};
 
-	/* Tempory test of BackLight */
+	/* Temporary test of BackLight */
 	led-controller-pwm {
 		compatible = "pwm-leds";
 
@@ -209,19 +216,19 @@
 };
 
 &A53_0 {
-	cpu-supply = <&reg_sw3>;
+	cpu-supply = <&reg_buck3>;
 };
 
 &A53_1 {
-	cpu-supply = <&reg_sw3>;
+	cpu-supply = <&reg_buck3>;
 };
 
 &A53_2 {
-	cpu-supply = <&reg_sw3>;
+	cpu-supply = <&reg_buck3>;
 };
 
 &A53_3 {
-	cpu-supply = <&reg_sw3>;
+	cpu-supply = <&reg_buck3>;
 };
 
 &fec1 {
@@ -275,7 +282,7 @@
 &gpio4 {
 	gpio-line-names = "485_RXD", "485_TXD", "2", "3", "4", "5", "6", "7", "8",
 		"9", "10", "11", "12", "AMP_MUTE", "AMP_G1", "AMP_G0", "AMP_STDBY",
-		"17", "18", "19", "20", "21", "22", "23", "24",
+		"17", "BKLITON", "19", "20", "21", "22", "23", "24",
 		"BT_EN", "WL_EN", "27", "HP_DET_tp13", "485_EN", "30", "UD_SW6";
 };
 
@@ -297,7 +304,7 @@
 	status = "okay";
 
 	pf8100@8 {
-		compatible = "nxp,pf8x00";
+		compatible = "nxp,pf8100";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_pf8100>;
 		reg = <0x08>;
@@ -315,10 +322,8 @@
 				regulator-boot-on;
 				regulator-max-microvolt = <5000000>;
 				regulator-min-microvolt = <1500000>;
-#if 0
 				/* vselect low is 3.3V, high is 1.8V */
 				vselect-en;
-#endif
 			};
 
 			reg_ldo3: ldo3 { /* LDO3_1P8V_TO_3P3V */
@@ -335,23 +340,23 @@
 				regulator-min-microvolt = <1500000>;
 			};
 
-			reg_sw1: sw1 { /* VDD_SOC_VDDA_0P8_PHY_0P8 */
-				phase = <0>;
-				ilim-ma = <4500>;
+			reg_buck1: buck1 { /* VDD_SOC_VDDA_0P8_PHY_0P8 */
+				nxp,phase-shift = <0>;
+				regulator-max-microamp = <4500000>;
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
 				regulator-min-microvolt =  <400000>;
 			};
 
-			reg_sw2: sw2 { /* VDD_DRAM */
+			reg_buck2: buck2 { /* VDD_DRAM */
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
 				regulator-min-microvolt =  <400000>;
 			};
 
-			reg_sw3: sw3 { /* VDD_ARM */
+			reg_buck3: buck3 { /* VDD_ARM */
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
@@ -359,29 +364,28 @@
 				fast-slew = <1>;
 			};
 
-			reg_sw4: sw4 { /* VDD_GPU */
-				alias = <&reg_sw4>;
+			reg_buck4: buck4{ /* VDD_GPU */
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+				fast-slew = <1>;
+			};
+
+			reg_buck5: buck5 { /* VDD_VPU */
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_buck6: buck6 { /* NVCC_DRAM_1P1V */
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
 				regulator-min-microvolt =  <400000>;
 			};
 
-			reg_sw5: sw5 { /* VDD_VPU */
-				regulator-always-on;
-				regulator-boot-on;
-				regulator-max-microvolt = <1800000>;
-				regulator-min-microvolt =  <400000>;
-			};
-
-			reg_sw6: sw6 { /* NVCC_DRAM_1P1V */
-				regulator-always-on;
-				regulator-boot-on;
-				regulator-max-microvolt = <1800000>;
-				regulator-min-microvolt =  <400000>;
-			};
-
-			reg_sw7: sw7 { /* 3P3V */
+			reg_buck7: buck7 { /* 3P3V */
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <4100000>;
@@ -681,6 +685,11 @@
 	status = "okay";
 };
 
+&pgc_vpumix {
+        dvfs-supply = <&reg_buck5>;
+        idle-microvolt = <850000 805000 900000>;
+};
+
 &wdog1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_wdog>;
@@ -739,6 +748,7 @@
 			MX8MM_IOMUXC_SAI1_TXD3_GPIO4_IO15		0x100 /* GP_WM8960_AMP_G0        <&gpio4 15 GPIO_ACTIVE_HIGH> */
 			MX8MM_IOMUXC_SAI1_TXD4_GPIO4_IO16		0x100 /* GP_WM8960_AMP_STDBY     <&gpio4 16 GPIO_ACTIVE_LOW>    Low is standby */
 			MX8MM_IOMUXC_SAI3_RXC_GPIO4_IO29		0x100 /* 485_EN */
+			MX8MM_IOMUXC_SAI1_TXD6_GPIO4_IO18		0x100 /* BKLITON */
 		>;
 	};
 
