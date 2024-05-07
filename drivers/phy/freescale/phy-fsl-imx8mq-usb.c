@@ -788,9 +788,11 @@ static int imx8mq_phy_power_on(struct phy *phy)
 	u32 value;
 	int ret;
 
-	ret = regulator_enable(imx_phy->vbus);
-	if (ret)
-		return ret;
+	if (!regulator_is_enabled(imx_phy->vbus)) {
+		ret = regulator_enable(imx_phy->vbus);
+		if (ret)
+			return ret;
+	}
 
 	ret = clk_prepare_enable(imx_phy->clk);
 	if (ret)
@@ -815,7 +817,8 @@ static int imx8mq_phy_power_off(struct phy *phy)
 	writel(value, imx_phy->base + PHY_CTRL6);
 
 	clk_disable_unprepare(imx_phy->clk);
-	regulator_disable(imx_phy->vbus);
+	if (regulator_is_enabled(imx_phy->vbus))
+		regulator_disable(imx_phy->vbus);
 
 	return 0;
 }
@@ -1047,11 +1050,18 @@ static int imx8mq_phy_set_mode(struct phy *phy, enum phy_mode mode,
 			       int submode)
 {
 	struct imx8mq_usb_phy *imx_phy = phy_get_drvdata(phy);
+	int ret = 0;
 
-	if (mode == PHY_MODE_USB_DEVICE)
+	if (mode == PHY_MODE_USB_DEVICE) {
+		if (regulator_is_enabled(imx_phy->vbus))
+			ret = regulator_disable(imx_phy->vbus);
 		return imx8mq_phy_charger_detect(imx_phy);
+	} else if (mode == PHY_MODE_USB_HOST) {
+		if (!regulator_is_enabled(imx_phy->vbus))
+			ret = regulator_enable(imx_phy->vbus);
+	}
 
-	return 0;
+	return ret;
 }
 
 static const struct phy_ops imx8mq_usb_phy_ops = {
