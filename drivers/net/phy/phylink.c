@@ -725,9 +725,9 @@ static int phylink_validate_mac_and_pcs(struct phylink *pl,
 			dump_stack();
 			return -EINVAL;
 		}
-
+#ifndef CONFIG_IMX_GKI_FIX
 		pcs->cfg_link_an_mode = pl->cfg_link_an_mode;
-
+#endif
 		/* Validate the link parameters with the PCS */
 		if (pcs->ops->pcs_validate) {
 			ret = pcs->ops->pcs_validate(pcs, supported, state);
@@ -965,7 +965,9 @@ static int phylink_parse_mode(struct phylink *pl,
 	dn = fwnode_get_named_child_node(fwnode, "fixed-link");
 	if (dn || fwnode_property_present(fwnode, "fixed-link")) {
 		pl->cfg_link_an_mode = MLO_AN_FIXED;
+#ifndef CONFIG_IMX_GKI_FIX
 		pl->config->cfg_link_an_mode = pl->cfg_link_an_mode;
+#endif
 	}
 	fwnode_handle_put(dn);
 
@@ -989,8 +991,9 @@ managed:
 		phylink_set(pl->supported, Asym_Pause);
 		phylink_set(pl->supported, Pause);
 		pl->cfg_link_an_mode = MLO_AN_INBAND;
+#ifndef CONFIG_IMX_GKI_FIX
 		pl->config->cfg_link_an_mode = pl->cfg_link_an_mode;
-
+#endif
 		switch (pl->link_config.interface) {
 		case PHY_INTERFACE_MODE_SGMII:
 		case PHY_INTERFACE_MODE_PSGMII:
@@ -1037,7 +1040,9 @@ managed:
 		phylink_set(pl->supported, Asym_Pause);
 		phylink_set(pl->supported, Pause);
 		pl->cfg_link_an_mode = MLO_AN_C73;
+#ifndef CONFIG_IMX_GKI_FIX
 		pl->config->cfg_link_an_mode = pl->cfg_link_an_mode;
+#endif
 	} else {
 		return 0;
 	}

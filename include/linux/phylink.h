@@ -175,7 +175,9 @@ struct phylink_config {
 				struct phylink_link_state *state);
 	DECLARE_PHY_INTERFACE_MASK(supported_interfaces);
 	unsigned long mac_capabilities;
+#ifndef CONFIG_IMX_GKI_FIX
 	unsigned int cfg_link_an_mode;
+#endif
 };
 
 void phylink_limit_mac_speed(struct phylink_config *config, u32 max_speed);
@@ -457,7 +459,9 @@ struct phylink_pcs {
 	struct phylink *phylink;
 	bool neg_mode;
 	bool poll;
+#ifndef CONFIG_IMX_GKI_FIX
 	unsigned int cfg_link_an_mode;
+#endif
 };
 
 /**
