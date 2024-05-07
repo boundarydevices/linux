@@ -83,6 +83,12 @@
 			reg = <0 0x55000000 0 0x1400000>;
 		};
 
+		afe_dma_mem_reserved: snd-dma-mem-region {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0 0x60f00000 0 0x100000>;
+		};
+
 		vpu_reserve_memory: vpu-reserve-memory {
 			compatible = "shared-dma-pool";
 			size = <0 0x1400000>; //20 MB
@@ -336,6 +342,7 @@
 };
 
 &afe {
+	memory-region = <&afe_dma_mem_reserved>;
 	#sound-dai-cells = <0>;
 	mediatek,dmic-iir-on;
 	mediatek,dmic-clk-mono;
