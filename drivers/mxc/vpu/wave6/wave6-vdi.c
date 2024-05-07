@@ -166,3 +166,4 @@ void wave6_free_secure_dma_memory(struct vpu_device *vpu_dev, struct vpu_buf *vb
         memset(vb, 0, sizeof(*vb));
 }
 
+MODULE_IMPORT_NS(DMA_BUF);
