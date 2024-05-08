@@ -312,12 +312,16 @@ static int __init pkvm_drop_host_privileges(void)
 	return ret;
 }
 
+static int __init pkvm_firmware_rmem_clear(void);
+
 static int __init finalize_pkvm(void)
 {
 	int ret;
 
-	if (!is_protected_kvm_enabled() || !is_kvm_arm_initialised())
+	if (!is_protected_kvm_enabled() || !is_kvm_arm_initialised()) {
+		pkvm_firmware_rmem_clear();
 		return 0;
+	}
 
 	/*
 	 * Exclude HYP sections from kmemleak so that they don't get peeked
@@ -328,8 +332,10 @@ static int __init finalize_pkvm(void)
 	kmemleak_free_part_phys(hyp_mem_base, hyp_mem_size);
 
 	ret = pkvm_drop_host_privileges();
-	if (ret)
+	if (ret) {
 		pr_err("Failed to finalize Hyp protection: %d\n", ret);
+		pkvm_firmware_rmem_clear();
+	}
 
 	return ret;
 }
@@ -377,10 +383,10 @@ static int __init pkvm_firmware_rmem_clear(void)
 	void *addr;
 	phys_addr_t size;
 
-	if (likely(!pkvm_firmware_mem) || is_protected_kvm_enabled())
+	if (likely(!pkvm_firmware_mem))
 		return 0;
 
-	kvm_info("Clearing unused pKVM firmware memory\n");
+	kvm_info("Clearing pKVM firmware memory\n");
 	size = pkvm_firmware_mem->size;
 	addr = memremap(pkvm_firmware_mem->base, size, MEMREMAP_WB);
 	if (!addr)
@@ -391,7 +397,6 @@ static int __init pkvm_firmware_rmem_clear(void)
 	memunmap(addr);
 	return 0;
 }
-device_initcall_sync(pkvm_firmware_rmem_clear);
 
 static int pkvm_vm_ioctl_set_fw_ipa(struct kvm *kvm, u64 ipa)
 {
