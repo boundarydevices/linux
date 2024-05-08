@@ -205,6 +205,13 @@ static const struct mdp_format mt8183_formats[] = {
 		.num_planes	= 1,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
+		.pixelformat	= V4L2_PIX_FMT_RGBA32,
+		.mdp_color	= MDP_COLOR_RGBA8888,
+		.depth		= { 32 },
+		.row_depth	= { 32 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
 		.pixelformat	= V4L2_PIX_FMT_ABGR32,
 		.mdp_color	= MDP_COLOR_BGRA8888,
 		.depth		= { 32 },
