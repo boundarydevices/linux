@@ -775,3 +775,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8ulp-nitrogen-som.dtb \
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-nitrogen8mm.dtb imx8mm-nitrogen8mm-rpmsg.dtb \
 			  imx8mm-nitrogen8mm_rev2.dtb imx8mm-nitrogen8mm_rev2-rpmsg.dtb \
 			  imx8mm-nitrogen8mm_som.dtb imx8mm-nitrogen8mm_som-rpmsg.dtb \
+			  imx8mm-nitrogen_smarc.dtb imx8mm-nitrogen_smarc-rpmsg.dtb \
+			  imx8mm-nitrogen_smarc-ov5645.dtb \
+			  imx8mm-nitrogen_smarc-pivariety.dtb imx8mm-nitrogen_smarc-tevs.dtb \
+			  imx8mm-nitrogen_smarc-nx611.dtb imx8mm-nitrogen_smarc-ti351.dtb \

@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC
+ */
+
+#include "imx8mm-nitrogen_smarc.dts"
+
+/ {
+	model = "Ezurio Nitrogen8M Mini SMARC board + OV5645 sensor";
+	compatible = "ezurio,imx8mm-nitrogen_smarc-ov5645", "fsl,imx8mm";
+};
+
+&i2c2 {
+	/delete-node/ camera@3c;
+
+	ov5645: camera@3c {
+		compatible = "ovti,ov5645";
+		clocks = <&csi_mclk>;
+		clock-names = "xclk";
+		clock-frequency = <24000000>;
+		enable-gpios = <&gpio4 1 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
+		reg = <0x3c>;
+		status = "okay";
+
+		port {
+			mipi_sensor1_ep: endpoint {
+				bus-type = <4>;
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&mipi_csi1_ep>;
+			};
+		};
+	};
+};

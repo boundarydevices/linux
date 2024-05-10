@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 Ezurio LLC
+ */
+
+#include "imx8mm-nitrogen_smarc.dts"
+
+/ {
+	model = "Ezurio Nitrogen8MM SMARC board + Arducam Pivariety sensor";
+	compatible = "ezurio,imx8mm-nitrogen_smarc-pivariety", "fsl,imx8mm";
+};
+
+&csi_mclk {
+	clock-frequency = <24000000>;
+};
+
+&i2c2 {
+	/delete-node/ camera@3c;
+
+	pivariety_0: camera@c {
+		compatible = "arducam,arducam-pivariety";
+		reg = <0x0c>;
+		clocks = <&csi_mclk>;
+		clock-names = "xclk";
+		reset-gpios = <&gpio4 1 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+
+		port {
+			pivariety_0_ep: endpoint {
+				remote-endpoint = <&mipi_csi1_ep>;
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
+
+&mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	port {
+		mipi_csi1_ep: endpoint {
+			csis-hs-settle = <30>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+			data-lanes = <4>;
+			remote-endpoint = <&pivariety_0_ep>;
+		};
+
+		csi1_mipi_ep: endpoint@2 {
+			remote-endpoint = <&csi1_ep>;
+		};
+	};
+};
