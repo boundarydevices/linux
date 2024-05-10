@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 Ezurio LLC
+ */
+
+#include "imx8mm-nitrogen_smarc.dts"
+
+/ {
+	model = "Ezurio Nitrogen8MM SMARC board + TEVS sensor";
+	compatible = "ezurio,imx8mm-nitrogen_smarc-tevs", "fsl,imx8mm";
+
+};
+
+&i2c2 {
+	/delete-node/ camera@3c;
+
+	pca9554_a27_0: pca9554@27 {
+		compatible = "nxp,pca9554";
+		pinctrl-names = "default";
+		reg = <0x27>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		status = "okay";
+		gpio-line-names = "EXPOSURE_TRIG_IN1", "FLASH_OUT1",
+				"CAM_SHUTTER1", "XVS1",	"CSI1_PDB",
+				"CSI1_INT", "INFO_TRIG_IN1", "CSI1_RST_N";
+	};
+
+	camera@48 {
+		compatible = "tn,tevs";
+		reg = <0x48>;
+		reset-gpios = <&gpio4 1 GPIO_ACTIVE_HIGH>;
+		standby-gpios = <&pca9554_a27_0 6 GPIO_ACTIVE_HIGH>;
+		data-lanes = <4>;
+		data-frequency = <600>;
+		continuous-clock = <0>;
+		status = "okay";
+
+		port {
+			tevs_0_ep: endpoint {
+				remote-endpoint = <&mipi_csi1_ep>;
+			};
+		};
+	};
+};
+
+&mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	port {
+		mipi_csi1_ep: endpoint {
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+			data-lanes = <4>;
+			remote-endpoint = <&tevs_0_ep>;
+		};
+
+		csi1_mipi_ep: endpoint@2 {
+			remote-endpoint = <&csi1_ep>;
+		};
+	};
+};
