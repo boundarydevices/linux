@@ -631,7 +631,7 @@
 	cap-sd-highspeed;
 	sd-uhs-sdr50;
 	sd-uhs-sdr104;
-	//cd-gpios = <&pio 2 GPIO_ACTIVE_LOW>; /* Un-comment this when the pin works */
+	cd-gpios = <&pio 2 GPIO_ACTIVE_LOW>;
 	vqmmc-supply = <&mt6359_vsim1_ldo_reg>;
 	vmmc-supply = <&sdio2_en_3v3>;
 };
