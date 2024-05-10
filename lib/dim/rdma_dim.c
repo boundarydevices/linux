@@ -107,3 +107,4 @@ void rdma_dim(struct dim *dim, u64 completions)
 	}
 }
 EXPORT_SYMBOL(rdma_dim);
+MODULE_LICENSE("GPL");

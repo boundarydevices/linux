@@ -245,3 +245,4 @@ void net_dim(struct dim *dim, struct dim_sample end_sample)
 	}
 }
 EXPORT_SYMBOL(net_dim);
+MODULE_LICENSE("GPL");
