@@ -1176,10 +1176,13 @@ static void edid_work(struct work_struct *work)
 {
 	struct fsl_xcvr *xcvr = container_of(work, struct fsl_xcvr, work);
 	struct device *dev = &xcvr->pdev->dev;
+	struct edid *edid;
 
 	dev_dbg(dev, "trigger edid read\n");
-	if (xcvr->bridge)
-		drm_bridge_get_edid(xcvr->bridge, NULL);
+	if (xcvr->bridge) {
+		edid = drm_bridge_get_edid(xcvr->bridge, NULL);
+		kfree(edid);
+	}
 }
 
 static irqreturn_t irq0_isr(int irq, void *devid)
