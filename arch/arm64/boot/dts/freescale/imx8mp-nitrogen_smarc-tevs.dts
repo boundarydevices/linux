@@ -1,0 +1,146 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 Ezurio LLC
+ */
+
+#include "imx8mp-nitrogen_smarc.dts"
+
+/ {
+	model = "Ezurio Nitrogen8MP SMARC board + TEVS sensors";
+	compatible = "ezurio,imx8mp-nitrogen_smarc-tevs", "fsl,imx8mp";
+
+};
+
+&dewarp {
+	status = "okay";
+};
+
+&i2c6a {
+	/delete-node/ camera@10;
+
+	pca9554_a27_0: pca9554@27 {
+		compatible = "nxp,pca9554";
+		pinctrl-names = "default";
+		reg = <0x27>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		status = "okay";
+		gpio-line-names = "EXPOSURE_TRIG_IN0", "FLASH_OUT0",
+				"CAM_SHUTTER0", "XVS0",	"CSI0_PDB",
+				"CSI0_INT", "INFO_TRIG_IN0", "CSI0_RST_N";
+	};
+
+	tevs_0: camera@48 {
+		compatible = "tn,tevs";
+		reg = <0x48>;
+		reset-gpios = <&mcp23018 0 GPIO_ACTIVE_HIGH>;
+		standby-gpios = <&pca9554_a27_0 6 GPIO_ACTIVE_HIGH>;
+		data-lanes = <4>;
+		data-frequency = <800>;
+		continuous-clock = <0>;
+		status = "okay";
+
+		port {
+			tevs_0_ep: endpoint {
+				remote-endpoint = <&mipi_csi0_ep>;
+			};
+		};
+	};
+};
+
+
+&i2c6b {
+	/delete-node/ camera@10;
+
+	pca9554_a27_1: pca9554@27 {
+		compatible = "nxp,pca9554";
+		pinctrl-names = "default";
+		reg = <0x27>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		status = "okay";
+		gpio-line-names = "EXPOSURE_TRIG_IN1", "FLASH_OUT1",
+				"CAM_SHUTTER1", "XVS1",	"CSI1_PDB",
+				"CSI1_INT", "INFO_TRIG_IN1", "CSI1_RST_N";
+	};
+
+	tevs_1: camera@48 {
+		compatible = "tn,tevs";
+		reg = <0x48>;
+		reset-gpios = <&mcp23018 3 GPIO_ACTIVE_HIGH>;
+		standby-gpios = <&pca9554_a27_1 6 GPIO_ACTIVE_HIGH>;
+		data-lanes = <4>;
+		data-frequency = <800>;
+		continuous-clock = <0>;
+		status = "okay";
+
+		port {
+			tevs_1_ep: endpoint {
+				remote-endpoint = <&mipi_csi1_ep>;
+			};
+		};
+	};
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+
+	m2m_device {
+		status = "okay";
+	};
+};
+
+&isi_1 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+};
+
+&isp_0 {
+	status = "disabled";
+};
+
+&isp_1 {
+	status = "disabled";
+};
+
+&mipi_csi_0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	port@0 {
+		reg = <0>;
+		mipi_csi0_ep: endpoint {
+			remote-endpoint = <&tevs_0_ep>;
+			data-lanes = <4>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
+
+
+&mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	port@1 {
+		reg = <1>;
+		mipi_csi1_ep: endpoint {
+			remote-endpoint = <&tevs_1_ep>;
+			data-lanes = <4>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
