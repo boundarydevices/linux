@@ -409,6 +409,7 @@ _IMX_IN_TREE_MODULES = [
     "drivers/net/ethernet/freescale/enetc/fsl-enetc-vf.ko",
     "drivers/net/ethernet/freescale/enetc/fsl-enetc-mdio.ko",
     "drivers/staging/neutron/neutron.ko",
+    "drivers/iommu/arm/arm-smmu-v3/arm_smmu_v3.ko",
 ]
 
 def define_imx():
