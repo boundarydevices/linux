@@ -745,7 +745,6 @@ static int ptp_netc_powerup(struct netc_timer *priv)
 	pci_restore_state(pdev);
 
 	pci_set_master(pdev);
-	priv->phc_index = -1;
 
 	n = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_MSIX);
 	if (n != 1) {
