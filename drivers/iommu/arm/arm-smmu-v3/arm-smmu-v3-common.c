@@ -647,7 +647,7 @@ static void arm_smmu_free_msis(void *data)
 	platform_msi_domain_free_irqs(dev);
 }
 
-static void arm_smmu_write_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
+void arm_smmu_write_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
 {
 	phys_addr_t doorbell;
 	struct device *dev = msi_desc_to_dev(desc);
