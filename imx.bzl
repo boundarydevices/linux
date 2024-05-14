@@ -5,7 +5,7 @@ load(
 )
 
 _IMX_EXT_MODULES = [
-	"//nxp-mwifiex/mxm_wifiex/wlan_src:wlan.imx",
+	"//nxp-mwifiex:wlan.imx",
 	"//verisilicon_sw_isp_vvcam/vvcam/v4l2/sensor/camera-proxy-driver:isp.imx.basler.camera",
 	"//verisilicon_sw_isp_vvcam/vvcam/v4l2/dwe:isp.imx.dwe",
 	"//verisilicon_sw_isp_vvcam/vvcam/v4l2/video:isp.imx.video",
