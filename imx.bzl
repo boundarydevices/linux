@@ -374,8 +374,6 @@ _IMX_IN_TREE_MODULES = [
     "drivers/mfd/max96752-core.ko",
     "drivers/firmware/imx/sm-bbm.ko",
     "drivers/gpu/arm/midgard/mali_kbase.ko",
-    "drivers/firmware/arm_scmi/scmi_perf_domain.ko",
-    "drivers/cpufreq/scmi-cpufreq.ko",
     "lib/crc-itu-t.ko",
     "drivers/ptp/ptp-qoriq.ko",
     "drivers/media/i2c/ap130x.ko",
@@ -410,6 +408,7 @@ _IMX_IN_TREE_MODULES = [
     "drivers/net/ethernet/freescale/enetc/fsl-enetc-mdio.ko",
     "drivers/staging/neutron/neutron.ko",
     "drivers/iommu/arm/arm-smmu-v3/arm_smmu_v3.ko",
+    "lib/dim/dimlib.ko",
 ]
 
 def define_imx():
