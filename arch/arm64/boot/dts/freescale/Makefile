@@ -600,3 +600,6 @@ imx95-19x19-verdin-lt8912-lvds-panel-ap1302-dtbs := imx95-19x19-verdin.dtb \
 						   imx95-19x19-verdin-panel-cap-touch-10inch-lvds.dtbo \
 						   imx95-19x19-verdin-ap1302.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-verdin-lt8912-lvds-panel-ap1302.dtb
+
+imx95-19x19-evk-adv7535-rpmsg-dtbs := imx95-19x19-evk-rpmsg.dtb imx95-19x19-evk-adv7535.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-adv7535-rpmsg.dtb
