@@ -36,6 +36,14 @@
       ]
     },
     {
+      "name": "CtsWifiBroadcastsHostTestCases",
+      "options": [
+        {
+          "exclude-annotation": "com.android.testutils.SkipPresubmit"
+        }
+      ]
+    },
+    {
       "name": "vts_kernel_net_tests"
     }
   ],
@@ -55,7 +63,7 @@
           "exclude-annotation": "com.android.testutils.SkipPresubmit"
         },
         {
-          "include-filter": "CallRedirectionServiceTest"
+          "include-filter": "android.telecom.cts.CallRedirectionServiceTest"
         }
       ]
     }
