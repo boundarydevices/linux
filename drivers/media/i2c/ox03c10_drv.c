@@ -198,10 +198,6 @@ static int ox03c10_v4l2_init(struct ox03c10_priv *priv)
 	if (ret)
 		return ret;
 
-	strscpy(sd->name, DRIVER_NAME, sizeof(sd->name));
-	strlcat(sd->name, ".", sizeof(sd->name));
-	strlcat(sd->name, dev_name(priv->dev), sizeof(sd->name));
-
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
 	sd->ctrl_handler = ox03c10_ctrl_handler_get(priv->sensor);
 	sd->entity.function = MEDIA_ENT_F_CAM_SENSOR;
