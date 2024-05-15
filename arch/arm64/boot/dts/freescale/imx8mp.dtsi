@@ -232,9 +232,9 @@
 			linux,cma-default;
 		};
 
-		gpu_reserved: gpu_reserved@100000000 {
+		gpu_reserved: gpu_reserved@a0000000 {
 			no-map;
-			reg = <0x1 0x00000000 0 0x10000000>;
+			reg = <0x0 0xa0000000 0 0x10000000>;
 		};
 
 		dsp_reserved: dsp@92400000 {
