@@ -1470,12 +1470,15 @@ static u16 enetc_msg_pf_reply_link_speed(struct enetc_pf *pf)
 	struct ethtool_link_ksettings link_info = {0};
 	union enetc_pf_msg pf_msg;
 
+	rtnl_lock();
 	if (!priv->phylink ||
 	    phylink_ethtool_ksettings_get(priv->phylink, &link_info)) {
 		pf_msg.class_id = ENETC_MSG_CLASS_ID_CMD_NOT_SUPPORT;
+		rtnl_unlock();
 
 		return pf_msg.code;
 	}
+	rtnl_unlock();
 
 	pf_msg.class_id = ENETC_MSG_CLASS_ID_LINK_SPEED;
 
