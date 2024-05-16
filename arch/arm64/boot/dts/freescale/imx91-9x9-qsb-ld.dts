@@ -20,7 +20,7 @@
 		 <&clk IMX91_CLK_SYS_PLL_PFD2>, <&clk IMX91_CLK_SYS_PLL_PFD2_DIV2>;
 	no-od-mode;
 	ld-mode-enabled;
-	soc-supply = <&buck1>;
+	soc-supply = <&buck2>;
 	status = "okay";
 };
 

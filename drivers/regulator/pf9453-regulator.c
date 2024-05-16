@@ -162,8 +162,8 @@ static int pf9453_regulator_enable_regmap(struct regulator_dev *rdev)
 			val = rdev->desc->enable_mask;
 	}
 
-	return pf9453_pmic_write(pf9453, rdev->desc->enable_reg, val,
-				 rdev->desc->enable_mask);
+	return pf9453_pmic_write(pf9453, rdev->desc->enable_reg,
+				 rdev->desc->enable_mask, val);
 }
 
 /**
@@ -189,8 +189,8 @@ static int pf9453_regulator_disable_regmap(struct regulator_dev *rdev)
 		val = rdev->desc->disable_val;
 	}
 
-	return pf9453_pmic_write(pf9453, rdev->desc->enable_reg, val,
-				 rdev->desc->enable_mask);
+	return pf9453_pmic_write(pf9453, rdev->desc->enable_reg,
+				 rdev->desc->enable_mask, val);
 }
 
 /**
@@ -210,8 +210,8 @@ static int pf9453_regulator_set_voltage_sel_regmap(struct regulator_dev *rdev,
 	struct pf9453 *pf9453 = dev_get_drvdata(rdev->dev.parent);
 
 	sel <<= ffs(rdev->desc->vsel_mask) - 1;
-	ret = pf9453_pmic_write(pf9453, rdev->desc->vsel_reg, sel,
-				rdev->desc->vsel_mask);
+	ret = pf9453_pmic_write(pf9453, rdev->desc->vsel_reg,
+				rdev->desc->vsel_mask, sel);
 	if (ret)
 		return ret;
 
@@ -284,8 +284,8 @@ int pf9453_regulator_set_ramp_delay_regmap(struct regulator_dev *rdev,
 
 	sel <<= ffs(rdev->desc->ramp_mask) - 1;
 
-	return pf9453_pmic_write(pf9453, rdev->desc->ramp_reg, sel,
-				 rdev->desc->ramp_mask);
+	return pf9453_pmic_write(pf9453, rdev->desc->ramp_reg,
+				 rdev->desc->ramp_mask, sel);
 }
 
 static const struct regulator_ops pf9453_dvs_buck_regulator_ops = {

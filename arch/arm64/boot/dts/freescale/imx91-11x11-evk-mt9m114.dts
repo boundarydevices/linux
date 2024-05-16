@@ -139,6 +139,14 @@
 	};
 };
 
+&adp5585gpio {
+	/* EXP_SEL RPi */
+	exp-sel-hog {
+		/delete-property/ output-low;
+		output-high;
+	};
+};
+
 &lpi2c8 {
 	#address-cells = <1>;
 	#size-cells = <0>;

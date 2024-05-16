@@ -1127,6 +1127,8 @@ static int __maybe_unused enetc4_pf_suspend(struct device *dev)
 	} else {
 		phylink_suspend(priv->phylink, false);
 		enetc_free_msix(priv);
+		pci_disable_device(pdev);
+		pcie_flr(pdev);
 	}
 	rtnl_unlock();
 
@@ -1167,6 +1169,14 @@ static int __maybe_unused enetc4_pf_resume(struct device *dev)
 
 		enetc_port_mac_wr(si, ENETC4_PLPMR, 0);
 	} else {
+		err = pci_enable_device_mem(pdev);
+		if (err) {
+			dev_err(&pdev->dev, "device enable failed\n");
+			return err;
+		}
+
+		pci_set_master(pdev);
+
 		err = enetc_init_cbdr(si);
 		if (err)
 			goto err_init_cbdr;
@@ -1207,7 +1217,7 @@ err_config_si:
 err_init_address:
 	enetc_free_cbdr(si);
 err_init_cbdr:
-	clk_disable_unprepare(priv->ref_clk);
+	pci_disable_device(pdev);
 
 	return err;
 }

@@ -48,6 +48,7 @@
 		startup-delay-us = <1000>;
 		off-on-delay-us  = <0>;
 		gpio = <&pca9538 3 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&reg_rpi_3v3>;
 		enable-active-high;
 	};
 
@@ -55,6 +56,7 @@
 		compatible = "regulator-fixed";
 		regulator-name = "mt9m114-ctrl-9509";
 		gpio = <&pca9538 4 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&reg_rpi_3v3>;
 		enable-active-high;
 		regulator-always-on;
 	};
@@ -63,6 +65,7 @@
 		compatible = "regulator-fixed";
 		regulator-name = "mt9m114-ctrl-4t245";
 		gpio = <&pca9538 5 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&reg_rpi_3v3>;
 		enable-active-low;
 		regulator-always-on;
 	};
@@ -71,6 +74,7 @@
 		compatible = "regulator-fixed";
 		regulator-name = "mt9m114-ctrl-16t245";
 		gpio = <&pca9538 6 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&reg_rpi_3v3>;
 		enable-active-low;
 		regulator-always-on;
 	};
@@ -104,6 +108,11 @@
 			MX93_PAD_GPIO_IO13__LPI2C8_SCL		0x40000b9e
 		>;
 	};
+};
+
+&reg_rpi_3v3 {
+	regulator-boot-on;
+	status = "okay";
 };
 
 &cameradev {

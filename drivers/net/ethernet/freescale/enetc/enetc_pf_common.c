@@ -1467,7 +1467,7 @@ static u16 enetc_msg_handle_link_status(struct enetc_msg_header *msg_hdr,
 static u16 enetc_msg_pf_reply_link_speed(struct enetc_pf *pf)
 {
 	struct enetc_ndev_priv *priv = netdev_priv(pf->si->ndev);
-	struct ethtool_link_ksettings link_info;
+	struct ethtool_link_ksettings link_info = {0};
 	union enetc_pf_msg pf_msg;
 
 	if (!priv->phylink ||
