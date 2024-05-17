@@ -268,7 +268,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8mn.dtb \
 			  imx8mn-nitrogen8_nano.dtb imx8mn-nitrogen8_nano-m4.dtb \
 			  imx8mn-nitrogen_smarc.dtb \
 
-dtb-$(CONFIG_ARCH_MXC) += imx8mp-bm.dtb \
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-abiomed.dtb \
+			  imx8mp-bm.dtb \
 			  imx8mp-crs.dtb \
 			  imx8mp-nitrogen_smarc.dtb \
 			  imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-m4.dtb \
