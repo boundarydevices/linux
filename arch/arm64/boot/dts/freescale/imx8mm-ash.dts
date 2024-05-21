@@ -49,13 +49,15 @@
 
 	backlight_mipi: backlight-mipi {
 		compatible = "pwm-backlight";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight>;
 		pwms = <&pwm3 0 30000 0>; /* 33.3 Khz */
 		enable-gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;
 		brightness-levels = <0 10>;
 		display = <&display_subsystem>;
 		num-interpolated-steps = <10>;
 		default-brightness-level = <8>;
-		status = "okay"; /* TODO */
+		status = "disable";
 	};
 
 	led-controller {
@@ -323,7 +325,7 @@
 };
 
 &gpio5 {
-	gpio-line-names = "UD_SW7", "UD_SW8", "UD_SW5", "3", "4", "5", "6", "7", "8",
+	gpio-line-names = "UD_SW7", "UD_SW8", "UD_SW5", "PWM3", "4", "5", "6", "7", "8",
 			"9", "10", "11", "12", "13", "14", "15", "16",
 			"17", "18", "19", "20", "21", "22", "23", "24",
 			"25", "RS485_RTS", "27", "28", "29", "30", "31";
@@ -697,7 +699,7 @@
 
 &pwm3 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_backlight>;
+	pinctrl-0 = <&pinctrl_pwm>;
 	status = "okay";
 };
 
@@ -851,8 +853,13 @@
 
 	pinctrl_backlight: backlightgrp {
 		fsl,pins = <
-			MX8MM_IOMUXC_SPDIF_TX_PWM3_OUT		0x06
-			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x159
+			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x159
+		>;
+	};
+
+	pinctrl_pwm: pwmgrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_SPDIF_TX_PWM3_OUT			0x100
 		>;
 	};
 
