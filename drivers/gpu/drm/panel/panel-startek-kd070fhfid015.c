@@ -445,7 +445,14 @@ static int stk_panel_probe(struct mipi_dsi_device *dsi)
 	if (ret < 0)
 		return ret;
 
-	return mipi_dsi_attach(dsi);
+	ret = mipi_dsi_attach(dsi);
+	if (ret < 0) {
+		drm_panel_remove(&stk->base);
+		dev_err(&dsi->dev, "mipi_dsi_attach() failed: %d\n", ret);
+		return -EPROBE_DEFER;
+	}
+
+	return ret;
 }
 
 static int stk_panel_remove(struct mipi_dsi_device *dsi)
