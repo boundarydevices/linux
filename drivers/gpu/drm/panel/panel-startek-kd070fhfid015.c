@@ -302,6 +302,11 @@ static int dsi_dcs_bl_get_brightness(struct backlight_device *bl)
 	struct mipi_dsi_device *dsi = bl_get_data(bl);
 	int ret;
 	u16 brightness = bl->props.brightness;
+	struct device *dev = &dsi->dev;
+	struct stk_panel *stk = mipi_dsi_get_drvdata(dsi);
+
+	if (!stk->prepared)
+		return brightness;
 
 	dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
 
@@ -318,6 +323,10 @@ static int dsi_dcs_bl_update_status(struct backlight_device *bl)
 	struct mipi_dsi_device *dsi = bl_get_data(bl);
 	struct device *dev = &dsi->dev;
 	int ret;
+	struct stk_panel *stk = mipi_dsi_get_drvdata(dsi);
+
+	if (!stk->prepared)
+		return -EINVAL;
 
 	dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
 
