@@ -22,11 +22,6 @@ properties:
   reg:
     maxItems: 1
 
-  clocks:
-    items:
-      - description: m0 clock
-    minItems: 1
-
   power-domains:
     description:
       List of phandle and PM domain specifier as documented in
@@ -70,7 +65,6 @@ properties:
 required:
   - compatible
   - reg
-  - clocks
   - power-domains
   - mba
 
@@ -89,7 +83,6 @@ examples:
       nxp,blk-ctrl = <&cameramix_csr>;
       nxp,ocram-cfg = <&ocram_c_config>;
       nxp,isp-firmware = "imx9xm0p_isp_fw.bin";
-      clocks = <&scmi_clk IMX95_CLK_CAMCM0>;
       power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
 
       mba {
