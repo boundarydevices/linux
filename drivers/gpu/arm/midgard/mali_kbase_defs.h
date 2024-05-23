@@ -1100,6 +1100,7 @@ struct kbase_device {
 	struct {
 		u32 irq;
 		u32 flags;
+		char name[32];
 	} irqs[3];
 	u32 nr_irqs;
 
