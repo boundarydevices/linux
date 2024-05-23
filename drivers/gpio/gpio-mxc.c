@@ -23,6 +23,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/gpio/driver.h>
 #include <linux/of.h>
+#include <linux/of_irq.h>
 #include <linux/bug.h>
 
 #define IMX_SCU_WAKEUP_OFF		0
@@ -64,6 +65,7 @@ struct mxc_gpio_port {
 	int irq_high;
 	void (*mx_irq_handler)(struct irq_desc *desc);
 	struct irq_domain *domain;
+	struct irq_domain *irqsteer_domain;
 	struct gpio_chip gc;
 	struct device *dev;
 	u32 both_edges;
@@ -401,8 +403,35 @@ static void mxc_gpio_free(struct gpio_chip *chip, unsigned int offset)
 	pm_runtime_put(chip->parent);
 }
 
+static struct irq_domain *mxc_gpio_find_parent_irqsteer_irq_domain(struct device *dev)
+{
+	struct device_node *parent;
+	struct irq_domain *domain;
+
+	parent = of_irq_find_parent(dev->of_node);
+	if (!parent) {
+		dev_dbg(dev, "failed to find parent irq node\n");
+		return NULL;
+	}
+
+	domain = irq_find_host(parent);
+	of_node_put(parent);
+	if (!domain) {
+		dev_dbg(dev, "failed to find parent irq domain\n");
+		return NULL;
+	}
+
+	if (!strstr(domain->name, "irqsteer"))
+		return NULL;
+
+	return domain;
+}
+
 static void mxc_update_irq_chained_handler(struct mxc_gpio_port *port, bool enable)
 {
+	if (port->irqsteer_domain)
+		WARN_ON(pm_runtime_resume_and_get(port->irqsteer_domain->pm_dev));
+
 	if (enable)
 		irq_set_chained_handler_and_data(port->irq, port->mx_irq_handler, port);
 	else
@@ -417,6 +446,9 @@ static void mxc_update_irq_chained_handler(struct mxc_gpio_port *port, bool enab
 		else
 			irq_set_chained_handler_and_data(port->irq_high, NULL, NULL);
 	}
+
+	if (port->irqsteer_domain)
+		pm_runtime_put(port->irqsteer_domain->pm_dev);
 }
 
 static int mxc_gpio_probe(struct platform_device *pdev)
@@ -459,6 +491,8 @@ static int mxc_gpio_probe(struct platform_device *pdev)
 
 	if (of_device_is_compatible(np, "fsl,imx7d-gpio"))
 		port->power_off = true;
+
+	port->irqsteer_domain = mxc_gpio_find_parent_irqsteer_irq_domain(&pdev->dev);
 
 	pm_runtime_get_noresume(&pdev->dev);
 	pm_runtime_set_active(&pdev->dev);
