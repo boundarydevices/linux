@@ -457,9 +457,12 @@
   dma_buf_put
   dma_buf_unmap_attachment
   dma_buf_unmap_attachment_unlocked
+  dma_contiguous_default_area
   dma_fence_array_ops
   dma_fence_chain_init
   dma_fence_enable_sw_signaling
+  dma_fence_release
+  dma_fence_signal
   dma_fence_signal_timestamp_locked
   dma_free_attrs
   dma_free_pages
@@ -482,6 +485,8 @@
   dma_request_chan
   dma_resv_fini
   dma_resv_init
+  dma_resv_iter_first
+  dma_resv_iter_next
   dma_set_coherent_mask
   dma_set_mask
   dma_sync_sg_for_cpu
@@ -603,6 +608,7 @@
   find_vpid
   finish_wait
   firmware_request_nowarn
+  flow_keys_dissector
   flush_delayed_fput
   flush_delayed_work
   flush_work
@@ -1243,6 +1249,11 @@
   page_frag_free
   page_pinner_inited
   __page_pinner_put_page
+  page_pool_alloc_frag
+  page_pool_alloc_pages
+  page_pool_create
+  page_pool_destroy
+  page_pool_put_defragged_page
   panic
   panic_notifier_list
   panic_timeout
@@ -1670,6 +1681,7 @@
   shmem_read_folio_gfp
   shmem_read_mapping_page_gfp
   show_regs
+  si_mem_available
   si_meminfo
   simple_attr_open
   simple_attr_release
@@ -1677,6 +1689,7 @@
   simple_read_from_buffer
   single_open
   single_release
+  __siphash_unaligned
   si_swapinfo
   sk_alloc
   skb_add_rx_frag
@@ -1692,6 +1705,7 @@
   skb_csum_hwoffload_help
   skb_dequeue
   skb_ensure_writable
+  __skb_flow_get_ports
   skb_free_datagram
   __skb_get_hash
   __skb_gso_segment
@@ -2157,10 +2171,12 @@
   up_read
   up_write
   usb_add_phy_dev
+  usb_alloc_dev
   usb_alloc_coherent
   usb_assign_descriptors
   usb_composite_setup_continue
   usb_decode_ctrl
+  usb_device_match_id
   usb_ep_alloc_request
   usb_ep_autoconfig
   usb_ep_dequeue
@@ -2186,6 +2202,7 @@
   usb_role_switch_register
   usb_role_switch_set_role
   usb_role_switch_unregister
+  usb_set_device_state
   usb_speed_string
   usb_string_id
   usb_unregister_notify
@@ -2269,3 +2286,8 @@
   xhci_set_interrupter_moderation
   xhci_stop_endpoint_sync
   zap_vma_ptes
+  gunyah_rm_call
+  gunyah_rm_notifier_register
+  gunyah_rm_notifier_unregister
+  gunyah_rm_register_platform_ops
+  gunyah_rm_unregister_platform_ops

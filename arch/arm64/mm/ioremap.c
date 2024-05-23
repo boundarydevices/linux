@@ -145,7 +145,7 @@ static int __invoke_mmioguard(phys_addr_t phys_addr, int nr_granules, bool map,
 	if (res.a0 != SMCCC_RET_SUCCESS)
 		return -EINVAL;
 
-	*done = guard_has_range ? res.a1 : guard_granule;
+	*done = guard_has_range ? res.a1 : 1;
 
 	return 0;
 }
@@ -165,7 +165,7 @@ static int __do_xmap_granules(phys_addr_t phys_addr, int nr_granules, bool map)
 		if (WARN_ON(__nr_xmapped > nr_granules))
 			break;
 
-		phys_addr += __nr_xmapped;
+		phys_addr += __nr_xmapped * guard_granule;
 		nr_granules -= __nr_xmapped;
 	}
 
@@ -273,7 +273,6 @@ void ioremap_phys_range_hook(phys_addr_t phys_addr, size_t size, pgprot_t prot)
 	while (size) {
 		void *entry = mas_find(&mas, mas_end(phys_addr, size));
 		size_t sub_size = size;
-		int ret;
 
 		if (entry) {
 			if (mas.index <= phys_addr) {
@@ -287,8 +286,7 @@ void ioremap_phys_range_hook(phys_addr_t phys_addr, size_t size, pgprot_t prot)
 		}
 
 		/* Newly guarded region */
-		ret = ioremap_register_phys_range(phys_addr, sub_size);
-		if (ret)
+		if (WARN_ON(ioremap_register_phys_range(phys_addr, sub_size)))
 			break;
 
 		mas_set_range(&mas, phys_addr, mas_end(phys_addr, sub_size));
@@ -338,12 +336,15 @@ void iounmap_phys_range_hook(phys_addr_t phys_addr, size_t size)
 		mas_intersect(&mas, phys_addr, size);
 		sub_size = mas_size(&mas);
 
-		mas_store_refcount(&mas, refcount - 1);
-
-		if (refcount <= 1) {
-			if (WARN_ON(!mas_find(&mas, mas_end(phys_addr, sub_size))))
+		if (refcount == 1) {
+			if (WARN_ON(ioremap_unregister_phys_range(phys_addr, sub_size)))
 				break;
+
+			/* Split the existing mas if needed before deletion */
+			mas_store_refcount(&mas, refcount - 1);
 			mas_erase(&mas);
+		} else {
+			mas_store_refcount(&mas, refcount - 1);
 		}
 next:
 		size = size_sub(size, sub_size);
