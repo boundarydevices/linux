@@ -394,7 +394,6 @@ _IMX_IN_TREE_MODULES = [
     "drivers/net/ethernet/freescale/enetc/fsl-enetc-ptp.ko",
     "drivers/gpu/drm/bridge/max96752-lvds.ko",
     "drivers/net/phy/aquantia.ko",
-    "drivers/pinctrl/pinctrl-scmi.ko",
     "drivers/mfd/max96789-core.ko",
     "drivers/phy/freescale/phy-fsl-imx9-dphy-rx.ko",
     "drivers/net/ethernet/freescale/enetc/fsl-enetc-core.ko",
@@ -409,6 +408,7 @@ _IMX_IN_TREE_MODULES = [
     "drivers/staging/neutron/neutron.ko",
     "drivers/iommu/arm/arm-smmu-v3/arm_smmu_v3.ko",
     "lib/dim/dimlib.ko",
+    "drivers/pinctrl/freescale/pinctrl-imx-scmi.ko",
 ]
 
 def define_imx():
