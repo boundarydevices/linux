@@ -18,6 +18,10 @@
 #include "protocols.h"
 #include "notify.h"
 
+/* Updated only after ALL the mandatory features for that version are merged */
+#define SCMI_PROTOCOL_SUPPORTED_VERSION               0x10000
+
+
 enum scmi_imx_bbm_protocol_cmd {
 	IMX_BBM_GPR_SET = 0x3,
 	IMX_BBM_GPR_GET = 0x4,
@@ -255,7 +259,7 @@ static int scmi_imx_bbm_protocol_init(const struct scmi_protocol_handle *ph)
 	if (ret)
 		return ret;
 
-	return ph->set_priv(ph, binfo);
+	return ph->set_priv(ph, binfo, version);
 }
 
 static int scmi_imx_bbm_rtc_time_set(const struct scmi_protocol_handle *ph,
@@ -373,6 +377,7 @@ static const struct scmi_protocol scmi_imx_bbm = {
 	.instance_init = &scmi_imx_bbm_protocol_init,
 	.ops = &scmi_imx_bbm_proto_ops,
 	.events = &scmi_imx_bbm_protocol_events,
+	.supported_version = SCMI_PROTOCOL_SUPPORTED_VERSION,
 };
 
 module_scmi_protocol(scmi_imx_bbm);

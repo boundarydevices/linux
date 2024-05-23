@@ -18,6 +18,9 @@
 #include "protocols.h"
 #include "notify.h"
 
+/* Updated only after ALL the mandatory features for that version are merged */
+#define SCMI_PROTOCOL_SUPPORTED_VERSION               0x10000
+
 enum scmi_imx_misc_protocol_cmd {
 	SCMI_IMX_MISC_CTRL_SET	= 0x3,
 	SCMI_IMX_MISC_CTRL_GET	= 0x4,
@@ -212,7 +215,7 @@ static int scmi_imx_misc_protocol_init(const struct scmi_protocol_handle *ph)
 	if (ret)
 		return ret;
 
-	return ph->set_priv(ph, minfo);
+	return ph->set_priv(ph, minfo, version);
 }
 
 static int scmi_imx_misc_ctrl_get(const struct scmi_protocol_handle *ph,
@@ -284,6 +287,7 @@ static const struct scmi_protocol scmi_imx_misc = {
 	.instance_init = &scmi_imx_misc_protocol_init,
 	.ops = &scmi_imx_misc_proto_ops,
 	.events = &scmi_imx_misc_protocol_events,
+	.supported_version = SCMI_PROTOCOL_SUPPORTED_VERSION,
 };
 
 module_scmi_protocol(scmi_imx_misc);
