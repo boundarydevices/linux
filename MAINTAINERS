@@ -20976,13 +20976,6 @@ F:	include/linux/sc[mp]i_protocol.h
 F:	include/trace/events/scmi.h
 F:	include/uapi/linux/virtio_scmi.h
 
-PINCTRL DRIVER FOR SYSTEM CONTROL MANAGEMENT INTERFACE (SCMI)
-M:	Oleksii Moisieiev <oleksii_moisieiev@epam.com>
-L:	linux-arm-kernel@lists.infradead.org
-S:	Maintained
-F:	drivers/firmware/arm_scmi/pinctrl.c
-F:	drivers/pinctrl/pinctrl-scmi.c
-
 SYSTEM RESET/SHUTDOWN DRIVERS
 M:	Sebastian Reichel <sre@kernel.org>
 L:	linux-pm@vger.kernel.org

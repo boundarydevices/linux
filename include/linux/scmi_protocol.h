@@ -733,47 +733,6 @@ struct scmi_powercap_proto_ops {
 					  u32 *power_thresh_high);
 };
 
-enum scmi_pinctrl_selector_type {
-	PIN_TYPE = 0,
-	GROUP_TYPE,
-	FUNCTION_TYPE,
-};
-
-/**
- * struct scmi_pinctrl_proto_ops - represents the various operations provided
- * by SCMI Pinctrl Protocol
- *
- * @count_get: returns count of the registered elements in given type
- * @name_get: returns name by index of given type
- * @group_pins_get: returns the set of pins, assigned to the specified group
- * @function_groups_get: returns the set of groups, assigned to the specified
- *	function
- * @mux_set: set muxing function for groups of pins
- * @config_get: returns configuration parameter for pin or group
- * @config_set: sets the configuration parameter for pin or group
- * @pin_request: aquire pin before selecting mux setting
- * @pin_free: frees pin, acquired by request_pin call
- */
-struct scmi_pinctrl_proto_ops {
-	int (*count_get)(const struct scmi_protocol_handle *ph,
-			 enum scmi_pinctrl_selector_type type);
-	int (*name_get)(const struct scmi_protocol_handle *ph, u32 selector,
-			enum scmi_pinctrl_selector_type type, const char **name);
-	int (*group_pins_get)(const struct scmi_protocol_handle *ph, u32 selector,
-			      const unsigned int **pins, unsigned int *nr_pins);
-	int (*function_groups_get)(const struct scmi_protocol_handle *ph, u32 selector,
-				   unsigned int *nr_groups, const unsigned int **groups);
-	int (*mux_set)(const struct scmi_protocol_handle *ph, u32 selector, u32 group);
-	int (*config_get)(const struct scmi_protocol_handle *ph, u32 selector,
-			  enum scmi_pinctrl_selector_type type,
-			  u8 config_type, unsigned long *config_value);
-	int (*config_set)(const struct scmi_protocol_handle *ph, u32 selector,
-			  enum scmi_pinctrl_selector_type type,
-			  u8 config_type, unsigned long config_value);
-	int (*pin_request)(const struct scmi_protocol_handle *ph, u32 pin);
-	int (*pin_free)(const struct scmi_protocol_handle *ph, u32 pin);
-};
-
 /**
  * struct scmi_notify_ops  - represents notifications' operations provided by
  * SCMI core
@@ -883,7 +842,6 @@ enum scmi_std_protocol {
 	SCMI_PROTOCOL_RESET = 0x16,
 	SCMI_PROTOCOL_VOLTAGE = 0x17,
 	SCMI_PROTOCOL_POWERCAP = 0x18,
-	SCMI_PROTOCOL_PINCTRL = 0x19,
 };
 
 enum scmi_system_events {
