@@ -6,14 +6,13 @@
  */
 
 #include <linux/module.h>
-#include <linux/pinctrl/pinconf-generic.h>
 #include <linux/scmi_protocol.h>
 #include <linux/slab.h>
 
 #include "protocols.h"
 
-#define REG_TYPE_CONFIG GENMASK(1, 0)
-#define REG_NUM_CONFIG GENMASK(9, 2)
+#define REG_TYPE_BITS GENMASK(9, 8)
+#define REG_CONFIG GENMASK(7, 0)
 
 #define GET_GROUPS_NR(x)	le32_get_bits((x), GENMASK(31, 16))
 #define GET_PINS_NR(x)		le32_get_bits((x), GENMASK(15, 0))
@@ -37,11 +36,10 @@ enum scmi_pinctrl_protocol_cmd {
 	PINCTRL_SET_PERMISSIONS = 0xb
 };
 
-#define MAX_CONFIG_ENTRY 10
 struct scmi_msg_conf_set {
 	__le32 identifier;
 	__le32 attributes;
-	__le32 config_value[MAX_CONFIG_ENTRY * 2];
+	__le32 config_value;
 };
 
 struct scmi_msg_conf_get {
@@ -322,11 +320,9 @@ static int scmi_pinctrl_config_get(const struct scmi_protocol_handle *ph,
 
 	tx = t->tx.buf;
 	tx->identifier = cpu_to_le32(selector);
-	/*
 	attributes = FIELD_PREP(REG_TYPE_BITS, type) |
 		FIELD_PREP(REG_CONFIG, config_type);
 	tx->attributes = cpu_to_le32(attributes);
-	*/
 
 	ret = ph->xops->do_xfer(ph, t);
 	if (!ret)
@@ -339,7 +335,7 @@ static int scmi_pinctrl_config_get(const struct scmi_protocol_handle *ph,
 static int scmi_pinctrl_config_set(const struct scmi_protocol_handle *ph,
 				   u32 selector,
 				   enum scmi_pinctrl_selector_type type,
-				   unsigned long *configs, unsigned int num_configs)
+				   u8 config_type, unsigned long config_value)
 {
 	struct scmi_xfer *t;
 	struct scmi_msg_conf_set *tx;
@@ -359,14 +355,10 @@ static int scmi_pinctrl_config_set(const struct scmi_protocol_handle *ph,
 
 	tx = t->tx.buf;
 	tx->identifier = cpu_to_le32(selector);
-	for (int i = 0; i < num_configs; i++) {
-		tx->config_value[i * 2] = cpu_to_le32(pinconf_to_config_param(configs[i]));
-		tx->config_value[i * 2 + 1] = cpu_to_le32(pinconf_to_config_argument(configs[i]));
-	}
-
-	attributes = FIELD_PREP(REG_TYPE_CONFIG, type) |
-		FIELD_PREP(REG_NUM_CONFIG, num_configs);
+	attributes = FIELD_PREP(REG_TYPE_BITS, type) |
+		FIELD_PREP(REG_CONFIG, config_type);
 	tx->attributes = cpu_to_le32(attributes);
+	tx->config_value = cpu_to_le32(config_value);
 
 	ret = ph->xops->do_xfer(ph, t);
 
