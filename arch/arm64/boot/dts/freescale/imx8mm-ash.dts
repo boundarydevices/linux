@@ -51,13 +51,14 @@
 		compatible = "pwm-backlight";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight>;
+		vmmc-supply = <&reg_vref_12v>; /* Also for the audio amplifer */
 		pwms = <&pwm3 0 30000 0>; /* 33.3 Khz */
 		enable-gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;
 		brightness-levels = <0 10>;
 		display = <&display_subsystem>;
 		num-interpolated-steps = <10>;
 		default-brightness-level = <8>;
-		status = "disable";
+		status = "okay";
 	};
 
 	led-controller {
@@ -103,13 +104,6 @@
 		aud-stby {
 			label = "AUD_STBY";
 			gpios = <&gpio4 16 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
-		};
-
-		/* Also used by the audio amp (VCC_12V) */
-		bk-lit {
-			label = "BKLITON";
-			gpios = <&gpio4 18 GPIO_ACTIVE_HIGH>;
 			default-state = "on";
 		};
 	};
@@ -185,6 +179,17 @@
 		regulator-max-microvolt = <5000000>;
 	};
 
+	reg_vref_12v: regulator-vref-12v {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_vcc_12v>;
+		regulator-name = "vref-12v";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio4 18 GPIO_ACTIVE_HIGH>; /* VCC_12V */
+		enable-active-high;
+	};
+
 	reg_usdhc2_vmmc: regulator-usdhc2 {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
@@ -213,6 +218,17 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio4 26 GPIO_ACTIVE_HIGH>; /* WL_EN */
 		startup-delay-us = <70000>;
+		enable-active-high;
+	};
+
+	reg_bt_en: regulator-bt-en {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_bt_en>;
+		regulator-name = "reg_bt_en";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&gpio4 26 GPIO_ACTIVE_HIGH>; /* BT_EN */
 		enable-active-high;
 	};
 
@@ -740,12 +756,12 @@
 	assigned-clocks = <&clk IMX8MM_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
+	vmmc-supply = <&reg_bt_en>; /* Controls BT_EN */
 	status = "okay";
 
 	bluetooth {
 		compatible = "nxp,88w8987-bt";
 		fw-init-baudrate = <3000000>;
-		shutdown-gpios = <&gpio4 25 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -904,7 +920,6 @@
 			MX8MM_IOMUXC_SAI1_TXD3_GPIO4_IO15		0x100 /* GP_WM8960_AMP_G0        <&gpio4 15 GPIO_ACTIVE_HIGH> */
 			MX8MM_IOMUXC_SAI1_TXD4_GPIO4_IO16		0x100 /* GP_WM8960_AMP_STDBY     <&gpio4 16 GPIO_ACTIVE_LOW>    Low is standby */
 			MX8MM_IOMUXC_SAI3_RXC_GPIO4_IO29		0x100 /* 485_EN */
-			MX8MM_IOMUXC_SAI1_TXD6_GPIO4_IO18		0x100 /* BKLITON */
 		>;
 	};
 
@@ -985,9 +1000,21 @@
 		>;
 	};
 
+	pinctrl_reg_vcc_12v: reg-vcc-12vgrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_SAI1_TXD6_GPIO4_IO18	0x100 /* BKLITON */
+		>;
+	};
+
 	pinctrl_reg_wlan_vmmc: reg-wlan-vmmcgrp {
 		fsl,pins = <
 			MX8MM_IOMUXC_SAI2_TXD0_GPIO4_IO26	0x16
+		>;
+	};
+
+	pinctrl_reg_bt_en: reg-bt-engrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_SAI2_TXC_GPIO4_IO25	0x140 /* BT_EN */
 		>;
 	};
 
@@ -1052,8 +1079,7 @@
 			MX8MM_IOMUXC_ECSPI1_SCLK_UART3_DCE_RX		0x140
 			MX8MM_IOMUXC_ECSPI1_MOSI_UART3_DCE_TX		0x140
 			MX8MM_IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B		0x140
-			MX8MM_IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B		0x140
-			MX8MM_IOMUXC_SAI2_TXC_GPIO4_IO25		0x100 /* BT_EN */
+			MX8MM_IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B	0x140
 		>;
 	};
 
