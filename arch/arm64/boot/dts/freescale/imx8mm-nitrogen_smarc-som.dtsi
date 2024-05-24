@@ -161,8 +161,6 @@
 			};
 
 			reg_ldo3: ldo3 {
-				regulator-always-on;
-				regulator-boot-on;
 				regulator-max-microvolt = <5000000>;
 				regulator-min-microvolt = <1500000>;
 			};
@@ -199,8 +197,6 @@
 			};
 
 			reg_buck4: buck4 {
-				regulator-always-on;
-				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
 				regulator-min-microvolt =  <400000>;
 				fast-slew = <1>;
