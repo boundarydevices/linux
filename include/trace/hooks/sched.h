@@ -355,6 +355,11 @@ DECLARE_RESTRICTED_HOOK(android_rvh_remove_entity_load_avg,
 	TP_PROTO(struct cfs_rq *cfs_rq, struct sched_entity *se),
 	TP_ARGS(cfs_rq, se), 1);
 
+struct affinity_context;
+DECLARE_RESTRICTED_HOOK(android_rvh_set_cpus_allowed_ptr,
+	TP_PROTO(struct task_struct *p, struct affinity_context *ctx, bool *skip_user_ptr),
+	TP_ARGS(p, ctx, skip_user_ptr), 1);
+
 DECLARE_RESTRICTED_HOOK(android_rvh_update_blocked_fair,
 	TP_PROTO(struct rq *rq),
 	TP_ARGS(rq), 1);
