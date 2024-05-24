@@ -21,8 +21,15 @@
 	};
 };
 
+&reg_ldo3 {
+	regulator-always-on;
+	regulator-boot-on;
+};
+
 &reg_buck4 {
 	dual-phase;
+	regulator-always-on;
+	regulator-boot-on;
 };
 
 &wdog1 {
