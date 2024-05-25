@@ -505,7 +505,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_cyttsp5>;
 		reg = <0x24>;
-		status = "disabled";
+		status = "okay";
 		wakeup-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
 
 		cy,core {
@@ -530,7 +530,7 @@
 				cy,name = "cyttsp5_mt";
 
 				cy,inp_dev_name = "cyttsp5_mt";
-				cy,flags = <0>;
+				cy,flags = <0x30>; /* CY_MT_FLAG_INV_X | CY_MT_FLAG_INV_Y */
 				cy,abs =
 					/* ABS_MT_POSITION_X, CY_ABS_MIN_X, CY_ABS_MAX_X, 0, 0 */
 					<0x35 0 880 0 0
