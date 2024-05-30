@@ -95,17 +95,17 @@ static struct platform_device *__get_pdev_by_id(struct platform_device *pdev,
 	const char *compat;
 
 	if (!pdev)
-		return ERR_PTR(-ENODEV);
+		return NULL;
 
 	if (id < MDP_INFRA_MMSYS || id >= MDP_INFRA_MAX) {
 		dev_err(&pdev->dev, "Illegal infra id %d\n", id);
-		return ERR_PTR(-ENODEV);
+		return NULL;
 	}
 
 	mdp_data = of_device_get_match_data(&pdev->dev);
 	if (!mdp_data) {
 		dev_err(&pdev->dev, "have no driver data to find node\n");
-		return ERR_PTR(-ENODEV);
+		return NULL;
 	}
 
 	compat = mdp_data->mdp_probe_infra[id].compatible;
@@ -117,14 +117,14 @@ static struct platform_device *__get_pdev_by_id(struct platform_device *pdev,
 	node = of_find_compatible_node(f, NULL, compat);
 	if (WARN_ON(!node)) {
 		dev_err(&pdev->dev, "find node from id %d failed\n", id);
-		return ERR_PTR(-ENODEV);
+		return NULL;
 	}
 
 	mdp_pdev = of_find_device_by_node(node);
 	of_node_put(node);
 	if (WARN_ON(!mdp_pdev)) {
 		dev_err(&pdev->dev, "find pdev from id %d failed\n", id);
-		return ERR_PTR(-ENODEV);
+		return NULL;
 	}
 
 	return mdp_pdev;
@@ -247,7 +247,7 @@ static int mdp_probe(struct platform_device *pdev)
 	}
 
 	mm_pdev = __get_pdev_by_id(pdev, NULL, MDP_INFRA_MMSYS);
-	if (IS_ERR_OR_NULL(mm_pdev)) {
+	if (WARN_ON(!mm_pdev)) {
 		ret = -ENODEV;
 		goto err_destroy_device;
 	}
@@ -255,20 +255,20 @@ static int mdp_probe(struct platform_device *pdev)
 
 	/* Not all chips have MMSYS2, config may be null */
 	mm2_pdev = __get_pdev_by_id(pdev, mm_pdev, MDP_INFRA_MMSYS2);
-	if (IS_ERR(mm2_pdev)) {
-		ret = PTR_ERR(mm2_pdev);
+	if (WARN_ON(!mm2_pdev)) {
+		ret = -ENODEV;
 		goto err_destroy_device;
 	}
 	mdp->mdp_mmsys2 = &mm2_pdev->dev;
 
 	mm_pdev = __get_pdev_by_id(pdev, NULL, MDP_INFRA_MUTEX);
-	if (IS_ERR_OR_NULL(mm_pdev)) {
+	if (WARN_ON(!mm_pdev)) {
 		ret = -ENODEV;
 		goto err_destroy_device;
 	}
 	mm2_pdev = __get_pdev_by_id(pdev, mm_pdev, MDP_INFRA_MUTEX2);
 	/* MUTEX2 must works with MMSYS2 */
-	if ((IS_ERR(mm2_pdev)) ||
+	if ((WARN_ON(!mm2_pdev)) ||
 	    (mm2_pdev && IS_ERR_OR_NULL(mdp->mdp_mmsys2))) {
 		ret = -ENODEV;
 		goto err_destroy_device;
@@ -283,6 +283,10 @@ static int mdp_probe(struct platform_device *pdev)
 		p = (id && mm2_pdev) ? mm2_pdev : mm_pdev;
 		m = (id && mm2_pdev) ?
 			mdp->mdp_mutex2 : mdp->mdp_mutex;
+		if (IS_ERR(*m)) {
+			ret = PTR_ERR(*m);
+			goto err_free_mutex;
+		}
 		if (m[mutex_id])
 			continue;
 		m[mutex_id] = mtk_mutex_get(&p->dev);
@@ -314,7 +318,7 @@ static int mdp_probe(struct platform_device *pdev)
 	}
 
 	mm_pdev = __get_pdev_by_id(pdev, NULL, MDP_INFRA_SCP);
-	if (IS_ERR_OR_NULL(mm_pdev)) {
+	if (WARN_ON(!mm_pdev)) {
 		dev_err(&pdev->dev, "Could not get scp device\n");
 		ret = -ENODEV;
 		goto err_destroy_clock_wq;
@@ -405,7 +409,7 @@ static int mdp_remove(struct platform_device *pdev)
 static int __maybe_unused mdp_suspend(struct device *dev)
 {
 	struct mdp_dev *mdp = dev_get_drvdata(dev);
-	int ret, i;
+	int ret;
 
 	atomic_set(&mdp->suspended, 1);
 
@@ -415,8 +419,8 @@ static int __maybe_unused mdp_suspend(struct device *dev)
 					 2 * HZ);
 		if (ret == 0) {
 			dev_err(dev,
-				"flushed cmdq task incomplete, user=%d, count=%d\n",
-				i, atomic_read(&mdp->job_count[i]));
+				"%s:flushed cmdq task incomplete, count=%d\n",
+				__func__, atomic_read(&mdp->job_count[MDP_CMDQ_USER_M2M]));
 			return -EBUSY;
 		}
 	}
