@@ -7,6 +7,7 @@
  */
 
 #include <linux/firmware/imx/sci.h>
+#include <linux/io.h>
 #include "se_fw.h"
 
 struct imx_sc_msg_seco_get_build_id {
@@ -269,3 +270,77 @@ int imx_scu_init_fw(struct device *dev)
 	return ret;
 }
 EXPORT_SYMBOL(imx_scu_init_fw);
+
+int imx_scu_sec_mem_cfg(struct file *fp, uint32_t offset, uint32_t size)
+{
+	struct ele_mu_device_ctx *dev_ctx
+		= container_of(fp->private_data,
+			       struct ele_mu_device_ctx,
+			       miscdev);
+	u64 high_boundary;
+	int ret = 0;
+
+	high_boundary = offset;
+	if (high_boundary > SECURE_RAM_SIZE) {
+		dev_err(dev_ctx->priv->dev, "base offset is over secure memory\n");
+		return -ENOMEM;
+	}
+
+	high_boundary += size;
+	if (high_boundary > SECURE_RAM_SIZE) {
+		dev_err(dev_ctx->priv->dev, "total memory is over secure memory\n");
+		return -ENOMEM;
+	}
+
+	dev_ctx->secure_mem.dma_addr = (dma_addr_t)offset;
+	dev_ctx->secure_mem.size = size;
+	dev_ctx->secure_mem.pos = 0;
+	dev_ctx->secure_mem.ptr = devm_ioremap(dev_ctx->dev,
+					      (phys_addr_t)(SECURE_RAM_BASE_ADDRESS +
+					      (u64)dev_ctx->secure_mem.dma_addr),
+					      dev_ctx->secure_mem.size);
+	if (!dev_ctx->secure_mem.ptr) {
+		dev_err(dev_ctx->priv->dev, "Failed to map secure memory\n");
+		return -ENOMEM;
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(imx_scu_sec_mem_cfg);
+
+int imx_scu_mem_access(struct file *fp)
+{
+	struct ele_mu_device_ctx *dev_ctx
+		= container_of(fp->private_data,
+			       struct ele_mu_device_ctx,
+			       miscdev);
+	struct ele_mu_priv *priv = dev_ctx->priv;
+	u8 mr;
+	u64 addr;
+	int ret;
+
+	addr = dev_ctx->non_secure_mem.dma_addr;
+
+	ret = imx_sc_rm_find_memreg(priv->ipc_scu,
+				    &mr,
+				    addr,
+				    addr + MAX_DATA_SIZE_PER_USER);
+	if (ret) {
+		dev_err(dev_ctx->priv->dev,
+			"%s: Fail find memreg\n", dev_ctx->miscdev.name);
+		return ret;
+	}
+
+	ret = imx_sc_rm_set_memreg_permissions(priv->ipc_scu, mr,
+					       priv->part_owner,
+					       IMX_SC_RM_PERM_FULL);
+	if (ret) {
+		dev_err(dev_ctx->priv->dev,
+			"%s: Fail set permission for resource\n",
+				dev_ctx->miscdev.name);
+		return ret;
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(imx_scu_mem_access);

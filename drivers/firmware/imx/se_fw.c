@@ -41,7 +41,9 @@ static uint32_t v2x_fw_state;
 #define SOC_VER_MASK			0xFFFF0000
 #define SOC_ID_MASK			0x0000FFFF
 #define RESERVED_DMA_POOL		BIT(1)
+#define SCU_MEM_CFG			BIT(2)
 #define IMX_ELE_FW_DIR                 "/lib/firmware/imx/ele/"
+#define SECURE_RAM_BASE_ADDRESS_SCU	(0x20800000u)
 
 struct imx_info {
 	const uint8_t pdev_name[10];
@@ -146,9 +148,34 @@ static const struct imx_info_list imx93_info = {
 };
 
 static const struct imx_info_list imx8dxl_info = {
-	.num_mu = 6,
+	.num_mu = 7,
 	.soc_id = SOC_ID_OF_IMX8DXL,
 	.info = {
+			{
+				.pdev_name = {"seco-she"},
+				.socdev = false,
+				.mu_id = 1,
+				.mu_did = 0,
+				.max_dev_ctx = 4,
+				.cmd_tag = 0x17,
+				.rsp_tag = 0xe1,
+				.success_tag = 0x00,
+				.base_api_ver = MESSAGING_VERSION_6,
+				.fw_api_ver = MESSAGING_VERSION_7,
+				.se_name = "she1",
+				.mbox_tx_name = "txdb",
+				.mbox_rx_name = "rxdb",
+				.pool_name = NULL,
+				.reserved_dma_ranges = false,
+				.pre_if_config = imx_scu_init_fw,
+				.post_if_config = false,
+				.v2x_state_check = false,
+				.start_rng = false,
+				.enable_ele_trng = false,
+				.imem_mgmt = false,
+				.mu_buff_size = 0,
+				.fw_name_in_rfs = NULL,
+			},
 			{
 				.pdev_name = {"se-fw2"},
 				.socdev = false,
@@ -246,7 +273,7 @@ static const struct imx_info_list imx8dxl_info = {
 				.start_rng = false,
 				.enable_ele_trng = false,
 				.imem_mgmt = false,
-				.mu_buff_size = 0,
+				.mu_buff_size = 16,
 				.fw_name_in_rfs = NULL,
 			},
 			{
@@ -988,28 +1015,37 @@ exit:
 	return err;
 }
 
-/* Give access to EdgeLock Enclave, to the memory we want to share */
-static int ele_mu_setup_ele_mem_access(struct ele_mu_device_ctx *dev_ctx,
-					     u64 addr, u32 len)
+/* Configure the shared memory according to user config */
+static int ele_mu_ioctl_shared_mem_cfg_handler(struct file *fp,
+					       struct ele_mu_device_ctx *dev_ctx,
+					       unsigned long arg)
 {
-	/* Assuming EdgeLock Enclave has access to all the memory regions */
-	int ret = 0;
+	struct ele_mu_ioctl_shared_mem_cfg cfg;
+	int err = -EINVAL;
 
-	if (ret) {
-		dev_err(dev_ctx->priv->dev,
-			"%s: Fail find memreg\n", dev_ctx->miscdev.name);
-		goto exit;
+	/* Check if not already configured. */
+	if (dev_ctx->secure_mem.dma_addr != 0u) {
+		dev_err(dev_ctx->priv->dev, "Shared memory not configured\n");
+		return err;
 	}
 
-	if (ret) {
-		dev_err(dev_ctx->priv->dev,
-			"%s: Fail set permission for resource\n",
-				dev_ctx->miscdev.name);
-		goto exit;
+	err = (int)copy_from_user(&cfg, (u8 *)arg, sizeof(cfg));
+	if (err) {
+		dev_err(dev_ctx->priv->dev, "Fail copy memory config\n");
+		err = -EFAULT;
+		return err;
 	}
 
-exit:
-	return ret;
+	dev_dbg(dev_ctx->priv->dev, "cfg offset: %u(%d)\n", cfg.base_offset, cfg.size);
+
+	err = imx_scu_sec_mem_cfg(fp, cfg.base_offset, cfg.size);
+	if (err) {
+		dev_err(dev_ctx->priv->dev, "Failt to map memory\n");
+		err = -ENOMEM;
+		return err;
+	}
+
+	return err;
 }
 
 static int ele_mu_ioctl_get_mu_info(struct ele_mu_device_ctx *dev_ctx,
@@ -1101,13 +1137,10 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 
 	/* Select the shared memory to be used for this buffer. */
 	if (!(io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X)) {
-		if (io.flags & ELE_MU_IO_FLAGS_USE_SEC_MEM) {
+		if ((io.flags & ELE_MU_IO_FLAGS_USE_SEC_MEM) &&
+		    (priv->flags & SCU_MEM_CFG)) {
 			/* App requires to use secure memory for this buffer.*/
-			dev_err(dev_ctx->priv->dev,
-				"%s: Failed allocate SEC MEM memory\n",
-				dev_ctx->miscdev.name);
-			err = -EFAULT;
-			goto exit;
+			shared_mem = &dev_ctx->secure_mem;
 		} else {
 			/* No specific requirement for this buffer. */
 			shared_mem = &dev_ctx->non_secure_mem;
@@ -1134,14 +1167,12 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 		io.ele_addr = (u64)addr;
 	}
 
-	if ((io.flags & ELE_MU_IO_FLAGS_USE_SEC_MEM) &&
-	    !(io.flags & ELE_MU_IO_FLAGS_USE_SHORT_ADDR)) {
-		/*Add base address to get full address.*/
-		dev_err(dev_ctx->priv->dev,
-			"%s: Failed allocate SEC MEM memory\n",
-				dev_ctx->miscdev.name);
-		err = -EFAULT;
-		goto exit;
+	if (priv->flags & SCU_MEM_CFG) {
+		if ((io.flags & ELE_MU_IO_FLAGS_USE_SEC_MEM) &&
+		    !(io.flags & ELE_MU_IO_FLAGS_USE_SHORT_ADDR)) {
+			/*Add base address to get full address.#TODO: Add API*/
+			io.ele_addr += SECURE_RAM_BASE_ADDRESS_SCU;
+		}
 	}
 
 	if (!(io.flags & ELE_MU_IO_DATA_BUF_SHE_V2X)) {
@@ -1282,6 +1313,7 @@ static int ele_mu_fops_open(struct inode *nd, struct file *fp)
 		= container_of(fp->private_data,
 			       struct ele_mu_device_ctx,
 			       miscdev);
+	struct ele_mu_priv *priv = dev_ctx->priv;
 	int err;
 
 	/* Avoid race if opened at the same time */
@@ -1310,15 +1342,15 @@ static int ele_mu_fops_open(struct inode *nd, struct file *fp)
 		goto exit;
 	}
 
-	err = ele_mu_setup_ele_mem_access(dev_ctx,
-					  dev_ctx->non_secure_mem.dma_addr,
-					  MAX_DATA_SIZE_PER_USER);
-	if (err) {
-		err = -EPERM;
-		dev_err(dev_ctx->priv->dev,
-			"%s: Failed to share access to shared memory\n",
-			   dev_ctx->miscdev.name);
-		goto free_coherent;
+	if (priv->flags & SCU_MEM_CFG) {
+		err = imx_scu_mem_access(fp);
+		if (err) {
+			err = -EPERM;
+			dev_err(dev_ctx->priv->dev,
+				"%s: Failed to share access to shared memory\n",
+				dev_ctx->miscdev.name);
+			goto free_coherent;
+		}
 	}
 
 	dev_ctx->non_secure_mem.size = MAX_DATA_SIZE_PER_USER;
@@ -1441,20 +1473,22 @@ static long ele_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			err = 0;
 		}
 		break;
+	case ELE_MU_IOCTL_SHARED_BUF_CFG:
+		if (ele_mu_priv->flags & SCU_MEM_CFG)
+			err = ele_mu_ioctl_shared_mem_cfg_handler(fp, dev_ctx, arg);
+		break;
 	case ELE_MU_IOCTL_GET_MU_INFO:
 		err = ele_mu_ioctl_get_mu_info(dev_ctx, arg);
 		break;
 	case ELE_MU_IOCTL_SETUP_IOBUF:
 		err = ele_mu_ioctl_setup_iobuf_handler(dev_ctx, arg);
 		break;
-
 	case ELE_MU_IOCTL_GET_SOC_INFO:
 		err = ele_mu_ioctl_get_soc_info_handler(dev_ctx, arg);
 		break;
 	case ELE_MU_IOCTL_GET_TIMER:
 		err = ele_mu_ioctl_get_time(dev_ctx, arg);
 		break;
-
 	default:
 		err = -EINVAL;
 		dev_dbg(ele_mu_priv->dev,
@@ -1771,8 +1805,10 @@ static int se_fw_probe(struct platform_device *pdev)
 		ret = info->pre_if_config(dev);
 		if (ret) {
 			dev_err(dev, "Failed to initialize scu config.\n");
+			priv->flags &= (~SCU_MEM_CFG);
 			goto exit;
 		}
+		priv->flags |= SCU_MEM_CFG;
 	}
 
 	/* Initialize the mutex. */
