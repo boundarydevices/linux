@@ -23,6 +23,12 @@
 #include "mtk_mt8195_hdmi_regs.h"
 #include "mtk_mt8195_hdmi.h"
 
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+#include "mtk_hdmi_common.h"
+#include "mtk_hdmi_hdcp.h"
+#include "mtk_hdmi_ca.h"
+#endif
+
 #define EDID_ID 0x50
 #define DDC2_CLOK 572 /* BIM=208M/(v*4) = 90Khz */
 #define DDC2_CLOK_EDID 832 /* BIM=208M/(v*4) = 62.5Khz */
@@ -62,10 +68,106 @@ static inline void mtk_ddc_mask(struct mtk_hdmi_ddc *ddc, unsigned int reg,
 	writel(tmp, ddc->regs + reg);
 }
 
-static void hdmi_ddc_request(struct mtk_hdmi_ddc *ddc)
+struct mtk_hdmi *hdmi_ctx_from_mtk_hdmi_ddc(struct mtk_hdmi_ddc *ddc)
 {
+	return (struct mtk_hdmi *)ddc->hdmi;
+}
+
+void hdmi_ddc_request(struct mtk_hdmi_ddc *ddc, unsigned char req)
+{
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+/* 1: hdmi reset, 2: request DDC, 3: hdcp2.x reset, 5: reset DDC */
+	unsigned int i;
+	struct mtk_hdmi *hdmi = hdmi_ctx_from_mtk_hdmi_ddc(ddc);
+
+	ddc->ddc_count++;
+
+	if (req == 1)
+		pr_debug("DDC>1 HDMI reset request DDC, %d\n", ddc->ddc_count);
+	else if (req == 2)
+		pr_debug("DDC>2 request DDC, %d\n", ddc->ddc_count);
+	else if (req == 3)
+		pr_debug("DDC>3 HDCP2.x rst request DDC, %d\n", ddc->ddc_count);
+	else if (req == 5)
+		pr_debug("DDC>5 reset DDC, %d\n", ddc->ddc_count);
+
+	/* if hdcp2.x enable and req is hdcp1.x, then return */
+	if (req == 2)
+		return;
+
+	if (req == 5) {
+		/* reset DDC */
+		mtk_ddc_mask(ddc, TOP_MISC_CTLR, DISABLE_IDLE_DDC_RESET,
+			DISABLE_IDLE_DDC_RESET);
+		mtk_hdmi_hdcp_ca_write_hdcp_rst(hdmi, RISC_CLK_DDC_RST, RISC_CLK_DDC_RST);
+		udelay(1);
+		mtk_hdmi_hdcp_ca_write_hdcp_rst(hdmi, 0, RISC_CLK_DDC_RST);
+		mtk_ddc_mask(ddc, TOP_MISC_CTLR, 0, DISABLE_IDLE_DDC_RESET);
+
+		/* send stop cmd */
+		if (mtk_ddc_read(ddc, HDCP2X_DDCM_STATUS) & DDC_I2C_BUS_LOW) {
+			mtk_ddc_mask(ddc, DDC_CTRL, (CLOCK_SCL <<
+				DDC_CMD_SHIFT), DDC_CMD);
+			udelay(250);
+		}
+		return;
+	}
+
+	if ((mtk_ddc_read(ddc, HDCP2X_CTRL_0) & HDCP2X_EN) == 0)
+		return;
+
+	pr_debug("req %d, hdcp2.x state %d\n", req, mtk_hdmi_hdcp2x_get_state_from_ddc(ddc));
+#endif
 	mtk_ddc_mask(ddc, HDCP2X_POL_CTRL, HDCP2X_DIS_POLL_EN,
 		     HDCP2X_DIS_POLL_EN);
+
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+	mtk_ddc_mask(ddc, HDCP2X_GP_IN, 0xdb << HDCP2X_GP_IN3_SHIFT,
+	HDCP2X_GP_IN3);
+
+	for (i = 0; i < 100; i++) {
+		if ((mtk_ddc_read(ddc, HPD_DDC_STATUS) & DDC_I2C_IN_PROG) == 0) {
+			mtk_ddc_mask(ddc, HDCP2X_CTRL_0, 0, HDCP2X_EN);
+			break;
+		}
+		usleep_range(1000, 1050);
+	}
+
+	if (i == 100) {
+		pr_err("DDC error, %d\n", mtk_hdmi_hdcp2x_get_state_from_ddc(ddc));
+		/* reset DDC */
+		mtk_ddc_mask(ddc, TOP_MISC_CTLR, DISABLE_IDLE_DDC_RESET,
+			DISABLE_IDLE_DDC_RESET);
+		mtk_hdmi_hdcp_ca_write_hdcp_rst(hdmi, RISC_CLK_DDC_RST, RISC_CLK_DDC_RST);
+		udelay(1);
+		mtk_hdmi_hdcp_ca_write_hdcp_rst(hdmi, 0, RISC_CLK_DDC_RST);
+		mtk_ddc_mask(ddc, TOP_MISC_CTLR, 0, DISABLE_IDLE_DDC_RESET);
+
+		/* send stop cmd */
+		if (mtk_ddc_read(ddc, HDCP2X_DDCM_STATUS) & DDC_I2C_BUS_LOW) {
+			mtk_ddc_mask(ddc, DDC_CTRL,
+				(CLOCK_SCL << DDC_CMD_SHIFT), DDC_CMD);
+			udelay(250);
+		}
+	} else if (i > 1) {
+		pr_err("DDC stop, %d, %d\n", i, mtk_hdmi_hdcp2x_get_state_from_ddc(ddc));
+	}
+
+	/* step6 : disable HDCP2.x */
+	mtk_ddc_mask(ddc, HDCP2X_CTRL_0, 0, HDCP2X_EN);
+	/* step7 : reset HDCP2.x */
+	/* SOFT_HDCP_RST, SOFT_HDCP_RST); */
+	mtk_hdmi_hdcp_ca_write_hdcp_rst(hdmi, SOFT_HDCP_RST, SOFT_HDCP_RST);
+	/* SOFT_HDCP_CORE_RST, SOFT_HDCP_CORE_RST); */
+	mtk_hdmi_hdcp_ca_write_hdcp_rst(hdmi, SOFT_HDCP_CORE_RST, SOFT_HDCP_CORE_RST);
+	udelay(1);
+	/* SOFT_HDCP_NOR, SOFT_HDCP_RST); */
+	mtk_hdmi_hdcp_ca_write_hdcp_rst(hdmi, SOFT_HDCP_NOR, SOFT_HDCP_RST);
+	/* SOFT_HDCP_CORE_NOR, SOFT_HDCP_CORE_RST); */
+	mtk_hdmi_hdcp_ca_write_hdcp_rst(hdmi, SOFT_HDCP_CORE_NOR, SOFT_HDCP_CORE_RST);
+	/* step8 : free hdcp2.x */
+	mtk_ddc_mask(ddc, HDCP2X_GP_IN, 0 << HDCP2X_GP_IN3_SHIFT, HDCP2X_GP_IN3);
+#endif
 }
 
 static void DDC_WR_ONE(struct mtk_hdmi_ddc *ddc, unsigned int addr_id,
@@ -377,7 +479,7 @@ static unsigned char vddc_read(struct mtk_hdmi_ddc *ddc, unsigned int u4_clk_div
 	return uc_return_value;
 }
 
-static unsigned char fg_ddc_data_read(struct mtk_hdmi_ddc *ddc,
+unsigned char fg_ddc_data_read(struct mtk_hdmi_ddc *ddc,
 				   unsigned char b_dev,
 				   unsigned char b_data_addr,
 				   unsigned char b_data_count,
@@ -387,7 +489,7 @@ static unsigned char fg_ddc_data_read(struct mtk_hdmi_ddc *ddc,
 
 	mutex_lock(&ddc->mtx);
 
-	hdmi_ddc_request(ddc);
+	hdmi_ddc_request(ddc, 2);
 	if (vddc_read(ddc, DDC2_CLOK, (unsigned char)b_dev,
 		     (unsigned int)b_data_addr, SIF_8_BIT_HDMI,
 		     (unsigned char *)pr_data,
@@ -401,7 +503,7 @@ static unsigned char fg_ddc_data_read(struct mtk_hdmi_ddc *ddc,
 	return flag;
 }
 
-static unsigned char fg_ddc_data_write(struct mtk_hdmi_ddc *ddc,
+unsigned char fg_ddc_data_write(struct mtk_hdmi_ddc *ddc,
 				    unsigned char b_dev,
 				    unsigned char b_data_addr,
 				    unsigned char b_data_count,
@@ -411,7 +513,7 @@ static unsigned char fg_ddc_data_write(struct mtk_hdmi_ddc *ddc,
 
 	mutex_lock(&ddc->mtx);
 
-	hdmi_ddc_request(ddc);
+	hdmi_ddc_request(ddc, 2);
 	for (i = 0; i < b_data_count; i++)
 		DDC_WR_ONE(ddc, b_dev, b_data_addr + i, *(pr_data + i));
 

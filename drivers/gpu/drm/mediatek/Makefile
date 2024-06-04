@@ -28,6 +28,12 @@ mediatek-drm-hdmi-objs := mtk_cec.o \
 			  mtk_mt8195_hdmi.o \
 			  mtk_mt8195_hdmi_ddc.o \
 
+ifneq ($(findstring $(CONFIG_DRM_MEDIATEK_HDMI_HDCP), y m),)
+ccflags-y += -I$(srctree)/drivers/tee/optee/
+mediatek-drm-hdmi-objs += mtk_hdmi_hdcp.o \
+			  mtk_hdmi_ca.o
+endif
+
 obj-$(CONFIG_DRM_MEDIATEK_HDMI) += mediatek-drm-hdmi.o
 
 mediatek-drm-hdmi-cec-objs := mtk_cec_v2.o

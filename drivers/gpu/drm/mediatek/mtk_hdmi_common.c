@@ -6,6 +6,10 @@
  */
 #include "mtk_hdmi_common.h"
 
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+#include "mtk_hdmi_hdcp.h"
+#endif
+
 const char *const mtk_hdmi_clk_names_mt8195[MTK_MT8195_HDMI_CLK_COUNT] = {
 	[MTK_MT8195_HDMI_CLK_UNIVPLL_D6D4] = "univpll_d6_d4",
 	[MTK_MT8195_HDMI_CLK_MSDCPLL_D2] = "msdcpll_d2",
@@ -173,11 +177,16 @@ struct edid *mtk_hdmi_bridge_get_edid(struct drm_bridge *bridge,
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 	struct edid *edid;
+	struct mtk_hdmi_ddc *ddc;
 
 	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
 
 	if (!hdmi->ddc_adpt)
 		return NULL;
+
+	ddc = hdmi_ddc_ctx_from_mtk_hdmi(hdmi);
+	hdmi_ddc_request(ddc, 1);
+
 	edid = drm_get_edid(connector, hdmi->ddc_adpt);
 	if (!edid)
 		return NULL;
@@ -185,6 +194,7 @@ struct edid *mtk_hdmi_bridge_get_edid(struct drm_bridge *bridge,
 	mtk_hdmi_show_EDID_raw_data(hdmi, edid);
 
 	memcpy(hdmi->conn.eld, connector->eld, drm_eld_size(connector->eld));
+	hdmi->dvi_mode = !drm_detect_hdmi_monitor(edid);
 
 	return edid;
 }
@@ -274,7 +284,7 @@ void mtk_hdmi_send_infoframe(struct mtk_hdmi *hdmi, u8 *buffer_spd, size_t bufsz
 	mtk_hdmi_setup_spd_infoframe(hdmi, buffer_spd, bufsz_spd, "mediatek", "On-chip HDMI");
 }
 
-static struct mtk_hdmi_ddc *hdmi_ddc_ctx_from_mtk_hdmi(struct mtk_hdmi *hdmi)
+struct mtk_hdmi_ddc *hdmi_ddc_ctx_from_mtk_hdmi(struct mtk_hdmi *hdmi)
 {
 	return container_of(hdmi->ddc_adpt, struct mtk_hdmi_ddc, adap);
 }
@@ -383,6 +393,7 @@ int mtk_hdmi_dt_parse_pdata(struct mtk_hdmi *hdmi, struct platform_device *pdev,
 	if (hdmi->conf && hdmi->conf->is_mt8195) {
 		ddc = hdmi_ddc_ctx_from_mtk_hdmi(hdmi);
 		ddc->regs = hdmi->regs;
+		ddc->hdmi = (void *)hdmi;
 	}
 
 	return 0;
@@ -454,6 +465,30 @@ int mtk_drm_hdmi_probe(struct platform_device *pdev)
 		mtk_hdmi_output_init_mt8183(hdmi);
 		hdmi->bridge.funcs = &mtk_mt8183_hdmi_bridge_funcs;
 	}
+
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+	hdmi->hdcp = devm_kzalloc(dev, sizeof(struct mtk_hdmi_hdcp), GFP_KERNEL);
+	hdmi->hdcp->enable_hdcp = true;
+
+	hdmi->hdcp->ca_hdcp_aksv = devm_kzalloc(dev, sizeof(unsigned char) * HDCP_AKSV_COUNT,
+						GFP_KERNEL);
+	hdmi->hdcp->hdmi_aksv = devm_kzalloc(dev, sizeof(unsigned char) * HDCP_AKSV_COUNT,
+					     GFP_KERNEL);
+	hdmi->hdcp->ksv_buff = devm_kzalloc(dev, sizeof(unsigned char) * KSV_BUFF_SIZE,
+					    GFP_KERNEL);
+	hdmi->hdcp->sha_buff = devm_kzalloc(dev, sizeof(unsigned char) * SHA_BUFF_SIZE,
+					    GFP_KERNEL);
+	hdmi->hdcp->srm_buff = devm_kzalloc(dev, sizeof(unsigned char) * SRM_SIZE,
+					    GFP_KERNEL);
+	hdmi->hdcp->tx_bkav = devm_kzalloc(dev, sizeof(unsigned char) * HDCP_AKSV_COUNT,
+					   GFP_KERNEL);
+	hdmi->hdcp->share_info = devm_kzalloc(dev, sizeof(unsigned int) * MAX_HDMI_SHAREINFO,
+					      GFP_KERNEL);
+	hdmi->hdcp->hdcp_bksv = devm_kzalloc(dev, sizeof(unsigned int) * BKSV_BUFF_SIZE,
+					     GFP_KERNEL);
+
+	mtk_hdmi_hdcp_create_task(hdmi);
+#endif
 
 	hdmi->bridge.ops = DRM_BRIDGE_OP_DETECT | DRM_BRIDGE_OP_EDID | DRM_BRIDGE_OP_HPD;
 	hdmi->bridge.type = DRM_MODE_CONNECTOR_HDMIA;

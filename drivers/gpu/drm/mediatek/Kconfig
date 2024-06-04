@@ -30,6 +30,16 @@ config DRM_MEDIATEK_HDMI
 	help
 	  DRM/KMS HDMI driver for Mediatek SoCs
 
+config DRM_MEDIATEK_HDMI_HDCP
+	tristate "DRM HDMI HDCP Support for MediaTek SoCs"
+	depends on OPTEE
+	depends on DRM_MEDIATEK_HDMI
+	help
+	  DRM/KMS HDMI HDCP driver for MediaTek SoCs.
+	  Choose this option
+	  if you want to enable
+	  HDMI HDCP driver.
+
 config DRM_MEDIATEK_CEC
 	tristate "DRM CEC Support for MediaTek SoCs"
 	depends on DRM_MEDIATEK_HDMI

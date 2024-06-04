@@ -32,6 +32,11 @@
 #include "mtk_mt8195_hdmi_ddc.h"
 #include "mtk_mt8195_hdmi_regs.h"
 
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+#include "mtk_hdmi_hdcp.h"
+#include "mtk_hdmi_ca.h"
+#endif
+
 #define RGB444_8bit BIT(0)
 #define RGB444_10bit BIT(1)
 #define RGB444_12bit BIT(2)
@@ -169,7 +174,7 @@ static void mtk_hdmi_yuv420_downsample(struct mtk_hdmi *hdmi, bool enable)
 	}
 }
 
-static bool mtk_hdmi_tmds_over_340M(struct mtk_hdmi *hdmi)
+bool mtk_hdmi_tmds_over_340M(struct mtk_hdmi *hdmi)
 {
 	unsigned long pixel_clk, tmds_clk;
 
@@ -1267,6 +1272,9 @@ static enum hdmi_hpd_state mtk_hdmi_hpd_pord_status(struct mtk_hdmi *hdmi)
 static irqreturn_t mtk_hdmi_isr(int irq, void *arg)
 {
 	struct mtk_hdmi *hdmi = arg;
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+	struct mtk_hdmi_hdcp *hdcp = hdmi->hdcp;
+#endif
 	unsigned int int_status;
 	int ret = IRQ_HANDLED;
 
@@ -1274,6 +1282,26 @@ static irqreturn_t mtk_hdmi_isr(int irq, void *arg)
 	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],int status:0x%X\n",
 			    __func__, __LINE__, int_status);
 
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+	/* handle HDCP 2.x re-auth interrupt */
+	if (int_status & HDCP2X_RX_REAUTH_REQ_DDCM_INT_STA) {
+		if ((hdmi->hpd == HDMI_PLUG_IN_AND_SINK_POWER_ON) && (hdcp->hdcp_ctrl_state !=
+			HDCP2x_AUTHENTICATION)) {
+			mtk_hdmi_write(hdmi, TOP_INT_CLR00, 0xFFFFFF00);
+			mtk_hdmi_write(hdmi, TOP_INT_CLR00, 0x00000000);
+			mtk_hdmi_hdcp_set_state(hdmi, HDCP2x_AUTHENTICATION);
+			atomic_set(&hdcp->hdmi_hdcp_event, 1);
+			wake_up_interruptible(&hdcp->hdcp_wq);
+			DRM_DEV_DEBUG_DRIVER(hdmi->dev, "reauth_req\n");
+		}
+		mtk_hdmi_mask(hdmi, TOP_INT_CLR00,
+			HDCP2X_RX_REAUTH_REQ_DDCM_INT_CLR,
+			HDCP2X_RX_REAUTH_REQ_DDCM_INT_CLR);
+		mtk_hdmi_mask(hdmi, TOP_INT_CLR00,
+			0,
+			HDCP2X_RX_REAUTH_REQ_DDCM_INT_CLR);
+	}
+#endif
 	/* handle hpd interrupt */
 	if (int_status & (PORD_F_INT_STA | PORD_R_INT_STA | HTPLG_F_INT_STA |
 			  HTPLG_R_INT_STA)) {
@@ -1532,6 +1560,11 @@ static int mtk_hdmi_bridge_attach(struct drm_bridge *bridge,
 	}
 
 	pm_runtime_enable(hdmi->dev);
+
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+	mtk_hdmi_hdcp_ca_init(hdmi);
+#endif
+
 	mtk_hdmi_enable_disable(hdmi, true);
 
 	return 0;
@@ -1553,6 +1586,11 @@ static void mtk_hdmi_bridge_disable(struct drm_bridge *bridge)
 	mtk_hdmi_disable_hdcp_encrypt(hdmi);
 	usleep_range(50000, 50050);
 
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+	mtk_hdmi_hdcp_notify_hpd_to_hdcp(hdmi);
+	mtk_hdmi_hdcp_stop_task(hdmi);
+	mtk_hdmi_hdcp_reset(hdmi);
+#endif
 	phy_power_off(hdmi->phy);
 
 	hdmi->enabled = false;
@@ -1616,6 +1654,11 @@ static void mtk_hdmi_bridge_enable(struct drm_bridge *bridge)
 	mtk_hdmi_hw_vid_black(hdmi, false);
 	mtk_hdmi_hw_aud_unmute(hdmi);
 
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK_HDMI_HDCP)
+	mtk_hdmi_hdcp_enable_mute(hdmi, false);
+	mtk_hdmi_hdcp_notify_hpd_to_hdcp(hdmi);
+	mtk_hdmi_hdcp_start_task(hdmi);
+#endif
 	/* signal the connect event to audio codec */
 	mtk_hdmi_handle_plugged_change(hdmi, true);
 
@@ -1788,6 +1831,18 @@ static int mtk_hdmi_audio_get_eld(struct device *dev, void *data, uint8_t *buf,
 	else
 		memset(buf, 0, len);
 	return 0;
+}
+
+void mtk_hdmi_av_mute(struct mtk_hdmi *hdmi)
+{
+	mtk_hdmi_hw_aud_mute(hdmi);
+	mtk_hdmi_hw_vid_black(hdmi, true);
+}
+
+void mtk_hdmi_av_unmute(struct mtk_hdmi *hdmi)
+{
+	mtk_hdmi_hw_aud_unmute(hdmi);
+	mtk_hdmi_hw_vid_black(hdmi, false);
 }
 
 static const struct hdmi_codec_ops mtk_hdmi_audio_codec_ops = {
