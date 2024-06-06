@@ -598,6 +598,10 @@
 	status = "okay";
 };
 
+&mt6359_vemc_1_ldo_reg {
+	regulator-always-on;
+};
+
 /* eMMC */
 &mmc0 {
 	status = "okay";
@@ -693,6 +697,7 @@
 &spmi {
 	#address-cells = <1>;
 	#size-cells = <2>;
+
 	mt6315_6: mt6315@6 {
 		compatible = "mediatek,mt6315-regulator";
 		reg = <0x6 0 0xb>;
@@ -708,6 +713,7 @@
 				regulator-always-on;
 				mtk,combined-regulator = <2>;
 			};
+
 			mt6315_6_vbuck3: vbuck3 {
 				regulator-compatible = "vbuck3";
 				regulator-name = "vbuck3";
@@ -717,6 +723,7 @@
 				regulator-allowed-modes = <0 1 2>;
 				regulator-always-on;
 			};
+
 			mt6315_6_vbuck4: vbuck4 {
 				regulator-compatible = "vbuck4";
 				regulator-name = "vbuck4";
@@ -724,6 +731,12 @@
 				regulator-max-microvolt = <1193750>;
 				regulator-enable-ramp-delay = <256>;
 				regulator-allowed-modes = <0 1 2>;
+				regulator-always-on;
+
+				regulator-state-mem {
+					regulator-on-in-suspend;
+					regulator-suspend-microvolt = <1193750>;
+				};
 			};
 		};
 	};
@@ -951,6 +964,11 @@
 	domain-supply = <&mt6359_vproc1_buck_reg>;
 };
 
+&watchdog {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_watchdog>;
+};
+
 &pio {
 	aud_pins_default: audiodefault {
 		pins-aud-pmic {
@@ -1047,6 +1065,7 @@
 		};
 		pins-intr {
 			pinmux = <PINMUX_GPIO148__FUNC_B_GPIO148>; /* GPIRQ_EQOS_PHY */
+			bias-pull-up = <MTK_PUPD_SET_R1R0_10>;
 			input-enable;
 		};
 	};
@@ -1346,6 +1365,7 @@
 		pins-irq {
 			pinmux = <PINMUX_GPIO42__FUNC_B_GPIO42>; 	/* KPCOL0 */
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+			input-enable;
 		};
 	};
 
@@ -1435,6 +1455,13 @@
 		pins-wifi-enable {
 			pinmux = <PINMUX_GPIO89__FUNC_B_GPIO89>;	/* USB2_IDDIG */
 			output-low;
+		};
+	};
+
+	pinctrl_watchdog: watchdoggrp {
+		watchdog-pin {
+			pinmux = <PINMUX_GPIO100__FUNC_O_WATCHDOG>;	/* PMIC_WATCHDOG */
+			bias-pull-up;
 		};
 	};
 };
