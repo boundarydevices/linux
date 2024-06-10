@@ -221,6 +221,7 @@ struct pca953x_chip {
 	u8 (*recalc_addr)(struct pca953x_chip *chip, int reg, int off);
 	bool (*check_reg)(struct pca953x_chip *chip, unsigned int reg,
 			  u32 checkbank);
+	struct delayed_work irq_edge_update;
 };
 
 static int pca953x_bank_shift(struct pca953x_chip *chip)
@@ -313,12 +314,8 @@ static bool pcal6534_check_register(struct pca953x_chip *chip, unsigned int reg,
 	int offset;
 
 	if (reg >= 0x54) {
-		/*
-		 * Handle lack of reserved registers after output port
-		 * configuration register to form a bank.
-		 */
-		reg -= 0x54;
-		bank_shift = 16;
+		/* Always allow accessing IRQ setup registers */
+		return true;
 	} else if (reg >= 0x30) {
 		/*
 		 * Reserved block between 14h and 2Fh does not align on
@@ -792,6 +789,24 @@ static void pca953x_irq_bus_sync_unlock(struct irq_data *d)
 	mutex_unlock(&chip->irq_lock);
 }
 
+static void pca953x_irq_edge_update(struct work_struct *work)
+{
+	struct pca953x_chip *chip = container_of(work, struct pca953x_chip,
+						 irq_edge_update.work);
+	u64 irq_trig_any = *chip->irq_trig_fall | *chip->irq_trig_raise;
+	int irq;
+
+	while ((irq = ffs(irq_trig_any) - 1) > 0) {
+		u8 regaddr = chip->recalc_addr(chip, PCAL6524_INT_EDGE, irq * 2);
+		u8 regmask = IRQ_TYPE_EDGE_BOTH << ((irq % 4) * 2);
+		u8 regval = BIT(irq) & *chip->irq_trig_fall ? 2 << ((irq % 4) * 2) : 0;
+		regval |= BIT(irq) & *chip->irq_trig_raise ? 1 << ((irq % 4) * 2) : 0;
+
+		regmap_update_bits(chip->regmap, regaddr, regmask, regval);
+		irq_trig_any &= ~BIT(irq);
+	}
+}
+
 static int pca953x_irq_set_type(struct irq_data *d, unsigned int type)
 {
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
@@ -806,6 +821,9 @@ static int pca953x_irq_set_type(struct irq_data *d, unsigned int type)
 
 	assign_bit(hwirq, chip->irq_trig_fall, type & IRQ_TYPE_EDGE_FALLING);
 	assign_bit(hwirq, chip->irq_trig_raise, type & IRQ_TYPE_EDGE_RISING);
+
+	if (chip->driver_data & PCA_PCAL)
+		schedule_delayed_work(&chip->irq_edge_update, 0);
 
 	return 0;
 }
@@ -1127,6 +1145,10 @@ static int pca953x_probe(struct i2c_client *client)
 		chip->recalc_addr = pca953x_recalc_addr;
 		chip->check_reg = pca953x_check_register;
 	}
+#ifdef CONFIG_GPIO_PCA953X_IRQ
+	if (chip->driver_data & PCA_PCAL)
+		INIT_DELAYED_WORK(&chip->irq_edge_update, pca953x_irq_edge_update);
+#endif
 
 	chip->regmap = devm_regmap_init_i2c(client, regmap_config);
 	if (IS_ERR(chip->regmap)) {
