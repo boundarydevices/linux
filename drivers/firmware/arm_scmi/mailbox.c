@@ -323,21 +323,30 @@ static void mailbox_fetch_notification(struct scmi_chan_info *cinfo,
 static void mailbox_clear_channel(struct scmi_chan_info *cinfo)
 {
 	struct scmi_mailbox *smbox = cinfo->transport_info;
+	struct device *cdev = cinfo->dev;
+	struct mbox_chan *intr;
 	int ret;
 
 	shmem_clear_channel(smbox->shmem);
 
-	if (smbox->chan_platform_receiver) {
-		if (!shmem_channel_intr_enabled(smbox->shmem))
-			return;
+	if (!shmem_channel_intr_enabled(smbox->shmem))
+		return;
 
-		ret = mbox_send_message(smbox->chan_platform_receiver, NULL);
-		/* mbox_send_message returns non-negative value on success, so reset */
-		if (ret > 0)
-			ret = 0;
-
-		mbox_client_txdone(smbox->chan_platform_receiver, ret);
+	if (smbox->chan_platform_receiver)
+		intr = smbox->chan_platform_receiver;
+	else if (smbox->chan)
+		intr = smbox->chan;
+	else {
+		dev_err(cdev, "Channel INTR wrongly set?\n");
+		return;
 	}
+
+	ret = mbox_send_message(intr, NULL);
+	/* mbox_send_message returns non-negative value on success, so reset */
+	if (ret > 0)
+		ret = 0;
+
+	mbox_client_txdone(intr, ret);
 }
 
 static bool

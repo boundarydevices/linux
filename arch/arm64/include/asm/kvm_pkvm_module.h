@@ -149,6 +149,7 @@ enum pkvm_psci_notification {
  * @iommu_iotlb_gather_add_page: Add a page to the iotlb_gather druing unmap for the IOMMU.
  * @iommu_donate_pages_atomic:	Allocate memory from IOMMU identity pool.
  * @iommu_reclaim_pages_atomic:	Reclaim memory from iommu_donate_pages_atomic()
+ * @hyp_smp_processor_id:	Current CPU id
  */
 struct pkvm_module_ops {
 	int (*create_private_mapping)(phys_addr_t phys, size_t size,
@@ -168,7 +169,7 @@ struct pkvm_module_ops {
 	void (*update_hcr_el2)(unsigned long set_mask, unsigned long clear_mask);
 	void (*update_hfgwtr_el2)(unsigned long set_mask, unsigned long clear_mask);
 	int (*register_host_perm_fault_handler)(int (*cb)(struct user_pt_regs *regs, u64 esr, u64 addr));
-	int (*host_stage2_mod_prot)(u64 pfn, enum kvm_pgtable_prot prot, u64 nr_pages);
+	int (*host_stage2_mod_prot)(u64 pfn, enum kvm_pgtable_prot prot, u64 nr_pages, bool update_iommu);
 	int (*host_stage2_get_leaf)(phys_addr_t phys, kvm_pte_t *ptep, u32 *level);
 	int (*register_host_smc_handler)(bool (*cb)(struct user_pt_regs *));
 	int (*register_default_trap_handler)(bool (*cb)(struct user_pt_regs *));
@@ -202,7 +203,8 @@ struct pkvm_module_ops {
 	typeof(__list_add_valid_or_report) *list_add_valid_or_report;
 	typeof(__list_del_entry_valid_or_report) *list_del_entry_valid_or_report;
 #endif
-	void (*iommu_iotlb_gather_add_page)(void *cookie, struct iommu_iotlb_gather *gather,
+	void (*iommu_iotlb_gather_add_page)(struct kvm_hyp_iommu_domain *domain,
+					    struct iommu_iotlb_gather *gather,
 					    unsigned long iova, size_t size);
 	int (*register_hyp_event_ids)(unsigned long start, unsigned long end);
 	void* (*tracing_reserve_entry)(unsigned long length);
@@ -210,7 +212,7 @@ struct pkvm_module_ops {
 	void * (*iommu_donate_pages_atomic)(u8 order);
 	void (*iommu_reclaim_pages_atomic)(void *p, u8 order);
 	int (*iommu_snapshot_host_stage2)(struct kvm_hyp_iommu_domain *domain);
-
+	int (*hyp_smp_processor_id)(void);
 	ANDROID_KABI_RESERVE(1);
 	ANDROID_KABI_RESERVE(2);
 	ANDROID_KABI_RESERVE(3);
@@ -290,10 +292,11 @@ int pkvm_load_early_modules(void);
 	__pkvm_load_el2_module(THIS_MODULE, token);			\
 })
 
-#define pkvm_register_el2_mod_call(hfn, token)				\
-({									\
-	__pkvm_register_el2_call(pkvm_el2_mod_va(hfn, token));		\
-})
+static inline int pkvm_register_el2_mod_call(dyn_hcall_t hfn,
+					     unsigned long token)
+{
+	return __pkvm_register_el2_call(pkvm_el2_mod_va(hfn, token));
+}
 
 #define pkvm_el2_mod_call(id, ...)					\
 	({								\

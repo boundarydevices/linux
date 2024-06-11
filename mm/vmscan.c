@@ -73,7 +73,10 @@
 
 #undef CREATE_TRACE_POINTS
 #include <trace/hooks/vmscan.h>
+#include <trace/hooks/mm.h>
 
+EXPORT_TRACEPOINT_SYMBOL_GPL(mm_vmscan_direct_reclaim_begin);
+EXPORT_TRACEPOINT_SYMBOL_GPL(mm_vmscan_direct_reclaim_end);
 EXPORT_TRACEPOINT_SYMBOL_GPL(mm_vmscan_kswapd_wake);
 
 struct scan_control {
@@ -1539,6 +1542,11 @@ static enum folio_references folio_check_references(struct folio *folio,
 	int referenced_ptes, referenced_folio;
 	unsigned long vm_flags;
 	int ret = 0;
+	bool should_protect = false;
+
+	trace_android_vh_page_should_be_protected(folio, &should_protect);
+	if (unlikely(should_protect))
+		return FOLIOREF_ACTIVATE;
 
 	trace_android_vh_check_folio_look_around_ref(folio, &ret);
 	if (ret)
@@ -2395,6 +2403,8 @@ static unsigned long isolate_lru_folios(unsigned long nr_to_scan,
 		}
 
 		nr_taken += nr_pages;
+
+		trace_android_vh_del_page_from_lrulist(folio, false, lru);
 		nr_zone_taken[folio_zonenum(folio)] += nr_pages;
 		move_to = dst;
 move:
@@ -2733,7 +2743,8 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	unsigned nr_rotated = 0;
 	int file = is_file_lru(lru);
 	struct pglist_data *pgdat = lruvec_pgdat(lruvec);
-
+	bool should_protect = false;
+	bool bypass = false;
 	lru_add_drain();
 
 	spin_lock_irq(&lruvec->lru_lock);
@@ -2769,6 +2780,16 @@ static void shrink_active_list(unsigned long nr_to_scan,
 			}
 		}
 
+		trace_android_vh_page_should_be_protected(folio, &should_protect);
+		if (unlikely(should_protect)) {
+			nr_rotated += folio_nr_pages(folio);
+			list_add(&folio->lru, &l_active);
+			continue;
+		}
+
+		trace_android_vh_page_referenced_check_bypass(folio, nr_to_scan, lru, &bypass);
+		if (bypass)
+			goto skip_folio_referenced;
 		/* Referenced or rmap lock contention: rotate */
 		if (folio_referenced(folio, 0, sc->target_mem_cgroup,
 				     &vm_flags) != 0) {
@@ -2787,7 +2808,7 @@ static void shrink_active_list(unsigned long nr_to_scan,
 				continue;
 			}
 		}
-
+skip_folio_referenced:
 		folio_clear_active(folio);	/* we are de-activating */
 		folio_set_workingset(folio);
 		list_add(&folio->lru, &l_inactive);
@@ -2958,7 +2979,7 @@ static void prepare_scan_count(pg_data_t *pgdat, struct scan_control *sc)
 	 * Flush the memory cgroup stats, so that we read accurate per-memcg
 	 * lruvec stats for heuristics.
 	 */
-	mem_cgroup_flush_stats();
+	mem_cgroup_flush_stats(sc->target_mem_cgroup);
 
 	/*
 	 * Determine the scan balance between anon and file LRUs.

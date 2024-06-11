@@ -21,7 +21,7 @@
 #include <linux/vmstat.h>
 #include <linux/writeback.h>
 #include <linux/page-flags.h>
-#include <linux/android_vendor.h>
+#include <linux/android_kabi.h>
 
 struct mem_cgroup;
 struct obj_cgroup;
@@ -141,7 +141,7 @@ struct mem_cgroup_per_node {
 	struct mem_cgroup	*memcg;		/* Back pointer, we cannot */
 						/* use container_of	   */
 
-	ANDROID_BACKPORT_RESERVED(1);
+	ANDROID_BACKPORT_RESERVE(1);
 };
 
 struct mem_cgroup_threshold {
@@ -337,8 +337,8 @@ struct mem_cgroup {
 #endif
 
 	// These must be before the flexible array member nodeinfo below
-	ANDROID_BACKPORT_RESERVED(1);
-	ANDROID_BACKPORT_RESERVED(2);
+	ANDROID_BACKPORT_RESERVE(1);
+	ANDROID_BACKPORT_RESERVE(2);
 	ANDROID_OEM_DATA_ARRAY(1, 2);
 
 	struct mem_cgroup_per_node *nodeinfo[];
@@ -365,6 +365,8 @@ enum page_memcg_data_flags {
 #define MEMCG_DATA_FLAGS_MASK (__NR_MEMCG_DATA_FLAGS - 1)
 
 static inline bool folio_memcg_kmem(struct folio *folio);
+
+void do_traversal_all_lruvec(void);
 
 /*
  * After the initialization objcg->memcg is always pointing at
@@ -1047,8 +1049,8 @@ static inline unsigned long lruvec_page_state_local(struct lruvec *lruvec,
 	return x;
 }
 
-void mem_cgroup_flush_stats(void);
-void mem_cgroup_flush_stats_ratelimited(void);
+void mem_cgroup_flush_stats(struct mem_cgroup *memcg);
+void mem_cgroup_flush_stats_ratelimited(struct mem_cgroup *memcg);
 
 void __mod_memcg_lruvec_state(struct lruvec *lruvec, enum node_stat_item idx,
 			      int val);
@@ -1196,6 +1198,10 @@ static inline bool folio_memcg_kmem(struct folio *folio)
 static inline bool PageMemcgKmem(struct page *page)
 {
 	return false;
+}
+
+static inline void do_traversal_all_lruvec(void)
+{
 }
 
 static inline bool mem_cgroup_is_root(struct mem_cgroup *memcg)
@@ -1523,11 +1529,11 @@ static inline unsigned long lruvec_page_state_local(struct lruvec *lruvec,
 	return node_page_state(lruvec_pgdat(lruvec), idx);
 }
 
-static inline void mem_cgroup_flush_stats(void)
+static inline void mem_cgroup_flush_stats(struct mem_cgroup *memcg)
 {
 }
 
-static inline void mem_cgroup_flush_stats_ratelimited(void)
+static inline void mem_cgroup_flush_stats_ratelimited(struct mem_cgroup *memcg)
 {
 }
 

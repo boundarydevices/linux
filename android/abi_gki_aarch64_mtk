@@ -1714,7 +1714,6 @@
   of_irq_get_byname
   of_irq_parse_one
   of_irq_to_resource_table
-  of_machine_is_compatible
   of_match_device
   of_match_node
   of_n_addr_cells
@@ -2678,6 +2677,7 @@
   __traceiter_android_rvh_select_task_rq_fair
   __traceiter_android_rvh_select_task_rq_rt
   __traceiter_android_rvh_set_cpus_allowed_by_task
+  __traceiter_android_rvh_set_cpus_allowed_ptr
   __traceiter_android_rvh_setscheduler
   __traceiter_android_rvh_set_task_cpu
   __traceiter_android_rvh_set_task_comm
@@ -2777,6 +2777,7 @@
   __tracepoint_android_rvh_select_task_rq_fair
   __tracepoint_android_rvh_select_task_rq_rt
   __tracepoint_android_rvh_set_cpus_allowed_by_task
+  __tracepoint_android_rvh_set_cpus_allowed_ptr
   __tracepoint_android_rvh_setscheduler
   __tracepoint_android_rvh_set_task_comm
   __tracepoint_android_rvh_set_task_cpu
