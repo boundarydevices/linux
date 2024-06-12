@@ -409,6 +409,8 @@ _IMX_IN_TREE_MODULES = [
     "drivers/iommu/arm/arm-smmu-v3/arm_smmu_v3.ko",
     "lib/dim/dimlib.ko",
     "drivers/pinctrl/freescale/pinctrl-imx-scmi.ko",
+    "drivers/cpufreq/tegra20-cpufreq.ko",
+    "drivers/usb/phy/phy-tegra-usb.ko",
 ]
 
 def define_imx():
