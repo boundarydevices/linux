@@ -10,6 +10,7 @@
 #ifndef _SC_SCI_H
 #define _SC_SCI_H
 
+#include <dt-bindings/firmware/imx/rsrc.h>
 #include <linux/firmware/imx/ipc.h>
 
 #include <linux/firmware/imx/svc/misc.h>

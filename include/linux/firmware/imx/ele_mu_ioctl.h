@@ -67,6 +67,11 @@ struct ele_time_frame {
 #define ELE_MU_IOCTL_ENABLE_CMD_RCV	_IO(ELE_MU_IOCTL, 0x01)
 
 /*
+ * ioctl to get configure the SCU shared buffer.
+ */
+#define ELE_MU_IOCTL_SHARED_BUF_CFG	_IOW(ELE_MU_IOCTL, 0x02, \
+					     struct ele_mu_ioctl_shared_mem_cfg)
+/*
  * ioctl to get the buffer allocated from the memory, which is shared
  * between kernel and FW.
  * Post allocation, the kernel tagged the allocated memory with:
