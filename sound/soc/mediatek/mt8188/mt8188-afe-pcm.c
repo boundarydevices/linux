@@ -880,6 +880,8 @@ static const struct snd_kcontrol_new o035_mix[] = {
 
 static const struct snd_kcontrol_new o036_mix[] = {
 	SOC_DAPM_SINGLE_AUTODISABLE("I000 Switch", AFE_CONN36, 0, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("I004 Switch", AFE_CONN36, 4, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("I006 Switch", AFE_CONN36, 6, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("I012 Switch", AFE_CONN36, 12, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("I020 Switch", AFE_CONN36, 20, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("I070 Switch", AFE_CONN36_2, 6, 1, 0),
@@ -888,6 +890,9 @@ static const struct snd_kcontrol_new o036_mix[] = {
 
 static const struct snd_kcontrol_new o037_mix[] = {
 	SOC_DAPM_SINGLE_AUTODISABLE("I001 Switch", AFE_CONN37, 1, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("I005 Switch", AFE_CONN37, 5, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("I006 Switch", AFE_CONN37, 6, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("I007 Switch", AFE_CONN37, 7, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("I013 Switch", AFE_CONN37, 13, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("I021 Switch", AFE_CONN37, 21, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("I071 Switch", AFE_CONN37_2, 7, 1, 0),
@@ -1313,6 +1318,11 @@ static const struct snd_soc_dapm_route mt8188_memif_routes[] = {
 
 	{"O036", "I000 Switch", "I000"},
 	{"O037", "I001 Switch", "I001"},
+	{"O036", "I004 Switch", "I004"},
+	{"O037", "I005 Switch", "I005"},
+	{"O036", "I006 Switch", "I006"},
+	{"O037", "I006 Switch", "I006"},
+	{"O037", "I007 Switch", "I007"},
 	{"O036", "I012 Switch", "I012"},
 	{"O037", "I013 Switch", "I013"},
 	{"O036", "I020 Switch", "I020"},
