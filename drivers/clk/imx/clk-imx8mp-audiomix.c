@@ -14,10 +14,15 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset-controller.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
 
 #include <dt-bindings/clock/imx8mp-clock.h>
 
 #include "clk.h"
+
+#define IMX8MP_DSP_NOC_OFFSET	0x208
+#define IMX8MP_DSP_NOC_PRIORITY	0x80000404
 
 #define IMX8MP_AUDIO_BLK_CTRL_EARC_RESET	0
 #define IMX8MP_AUDIO_BLK_CTRL_EARC_PHY_RESET	1
@@ -279,6 +284,7 @@ struct imx_blk_ctrl_drvdata {
 	struct reset_controller_dev rcdev;
 	struct reset_hw *rst_hws;
 	struct pm_safekeep_info pm_info;
+	struct regmap *regmap;
 
 	spinlock_t *lock;
 };
@@ -427,6 +433,7 @@ static int clk_imx8mp_audiomix_probe(struct platform_device *pdev)
 
 	drvdata->base = base;
 	drvdata->lock = &imx_ccm_lock;
+	drvdata->regmap = syscon_regmap_lookup_by_compatible("fsl,imx8m-noc");
 	dev_set_drvdata(dev, drvdata);
 
 	ret = imx_blk_ctrl_init_runtime_pm_safekeeping(dev);
@@ -551,7 +558,13 @@ static int imx_blk_ctrl_runtime_suspend(struct device *dev)
 
 static int imx_blk_ctrl_runtime_resume(struct device *dev)
 {
+	struct imx_blk_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
+	struct regmap *regmap = drvdata->regmap;
+
 	imx_blk_ctrl_read_write(dev, true);
+
+	if (!IS_ERR(regmap))
+		regmap_write(regmap, IMX8MP_DSP_NOC_OFFSET, IMX8MP_DSP_NOC_PRIORITY);
 
 	return 0;
 }
