@@ -197,6 +197,9 @@ static int fts_get_ic_information(struct fts_ts_data *ts_data)
 		msleep(INTERVAL_READ_REG);
 	} while ((cnt * INTERVAL_READ_REG) < TIMEOUT_READ_REG);
 
+	if (ret)
+		return -EPROBE_DEFER;
+
 	if ((cnt * INTERVAL_READ_REG) >= TIMEOUT_READ_REG) {
 		for (cnt = 0; cnt < 3; cnt++) {
 			dev_info(&ts_data->client->dev, "fw is invalid, need read boot id");
@@ -758,6 +761,12 @@ static int fts_parse_dt(struct device *dev, struct fts_ts_platform_data *pdata)
 		return -EINVAL;
 	}
 
+	pdata->reset_gpio = of_get_named_gpio(np, "reset-gpio", 0);
+	if (!gpio_is_valid(pdata->reset_gpio)) {
+		dev_err(dev, "reset-gpio not set\n");
+		return -EINVAL;
+	}
+
 	dev_info(dev, "max touch number:%d, irq gpio:%d",
 			pdata->max_touch_number, pdata->irq_gpio);
 
@@ -899,6 +908,10 @@ int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 		dev_err(&ts_data->client->dev, "configure the gpios fail");
 		goto err_gpio_config;
 	}
+
+	gpio_direction_output(ts_data->pdata->reset_gpio, 0);
+	usleep_range(15000, 17000);
+	gpio_direction_output(ts_data->pdata->reset_gpio, 1);
 
 	ret = fts_get_ic_information(ts_data);
 	if (ret) {
