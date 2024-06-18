@@ -296,8 +296,8 @@ static const struct dma_buf_ops cma_heap_buf_ops = {
 
 static struct dma_buf *cma_heap_do_allocate(struct dma_heap *heap,
 					 unsigned long len,
-					 unsigned long fd_flags,
-					 unsigned long heap_flags,
+					 u32 fd_flags,
+					 u64 heap_flags,
 					 bool uncached)
 {
 	struct cma_heap *cma_heap = dma_heap_get_drvdata(heap);

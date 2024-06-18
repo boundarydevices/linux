@@ -78,8 +78,6 @@
  */
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_sk_alloc);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_sk_free);
-EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_nf_conn_alloc);
-EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_nf_conn_free);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_tcp_sendmsg);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_tcp_recvmsg);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_udp_sendmsg);
@@ -394,6 +392,9 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_free_user);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_save_vmalloc_stack);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_show_stack_hash);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_show_mapcount_pages);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_lock_folio_drop_mmap_start);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_lock_folio_drop_mmap_end);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_filemap_update_page);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_update_page_mapcount);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_add_page_to_lrulist);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_del_page_from_lrulist);
@@ -406,3 +407,5 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_psi_group);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mmc_sdio_pm_flag_set);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_read_lazy_flag);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_set_tsk_need_resched_lazy);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_usb_dev_suspend);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_usb_dev_resume);
