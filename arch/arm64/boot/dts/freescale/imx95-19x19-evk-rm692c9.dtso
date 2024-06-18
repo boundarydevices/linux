@@ -68,7 +68,7 @@
 		irq-gpio = <&gpio3 27 GPIO_ACTIVE_HIGH>;
 		reset-gpio = <&adp5585gpio 4 GPIO_ACTIVE_LOW>;
 		touchscreen-size-x = <1080>;
-		touchscreen-size-y = <1920>;
+		touchscreen-size-y = <2340>;
 		max-touch-number = <10>;
 		status = "okay";
 	};
