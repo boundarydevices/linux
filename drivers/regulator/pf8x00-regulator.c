@@ -465,9 +465,9 @@ static const struct regulator_ops pf8x00_vsnvs_ops = {
 			.vsel_reg = (base) + LDO_RUN_VOLT,	\
 			.vsel_mask = 0xff,			\
 			.enable_reg = (base) + LDO_CONFIG2,	\
-			.enable_val = 0x2,			\
+			.enable_val = 0x3,			\
 			.disable_val = 0x0,			\
-			.enable_mask = 2,			\
+			.enable_mask = 3,			\
 		},						\
 		.suspend_enable_reg = (base) + LDO_CONFIG2,	\
 		.suspend_enable_mask = 1,			\
@@ -498,9 +498,9 @@ static const struct regulator_ops pf8x00_vsnvs_ops = {
 			.csel_reg = (base) + SW_CONFIG2,	\
 			.csel_mask = PF8X00_SWXILIM_MASK,	\
 			.enable_reg = (base) + SW_MODE1,	\
-			.enable_val = 0x3,			\
+			.enable_val = 0xf,			\
 			.disable_val = 0x0,			\
-			.enable_mask = 0x3,			\
+			.enable_mask = 0xf,			\
 			.enable_time = 500,			\
 		},						\
 		.suspend_enable_reg = (base) + SW_MODE1,	\
