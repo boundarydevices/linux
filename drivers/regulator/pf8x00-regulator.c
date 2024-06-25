@@ -397,12 +397,41 @@ static int pf8x00_regulator_set_voltage_time_sel(struct regulator_dev *rdev,
 	return DIV_ROUND_UP(abs(change), slew);
 }
 
+static int pf8x00_regulator_set_voltage_sel(struct regulator_dev *rdev,
+						unsigned sel)
+{
+	struct device *dev = rdev_get_dev(rdev);
+	const unsigned int *volt_table = rdev->desc->volt_table;
+	const struct linear_range *linear_ranges = rdev->desc->linear_ranges;
+	int uv;
+	int ret;
+
+	if (volt_table != NULL) {
+		uv = volt_table[sel];
+	} else {
+		ret = linear_range_get_value(linear_ranges, sel, &uv);
+		if (ret) {
+			dev_err(dev, "failed to get val %u\n", sel);
+			return ret;
+		}
+	}
+
+	ret = regulator_set_voltage_sel_regmap(rdev, sel);
+	if (ret) {
+		dev_err(dev, "failed to set sel %u\n", sel);
+		return ret;
+	}
+
+	/* update suspend voltage as it resides in different register */
+	return pf8x00_set_suspend_voltage(rdev, uv);
+}
+
 static const struct regulator_ops pf8x00_ldo_ops = {
 	.enable = regulator_enable_regmap,
 	.disable = regulator_disable_regmap,
 	.is_enabled = regulator_is_enabled_regmap,
 	.list_voltage = regulator_list_voltage_table,
-	.set_voltage_sel = regulator_set_voltage_sel_regmap,
+	.set_voltage_sel = pf8x00_regulator_set_voltage_sel,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_suspend_enable = pf8x00_suspend_enable,
 	.set_suspend_disable = pf8x00_suspend_disable,
@@ -415,7 +444,7 @@ static const struct regulator_ops pf8x00_buck1_6_ops = {
 	.disable = regulator_disable_regmap,
 	.is_enabled = regulator_is_enabled_regmap,
 	.list_voltage = regulator_list_voltage_linear_range,
-	.set_voltage_sel = regulator_set_voltage_sel_regmap,
+	.set_voltage_sel = pf8x00_regulator_set_voltage_sel,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.get_current_limit = regulator_get_current_limit_regmap,
 	.set_current_limit = regulator_set_current_limit_regmap,
