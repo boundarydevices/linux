@@ -411,6 +411,7 @@ _IMX_IN_TREE_MODULES = [
     "drivers/pinctrl/freescale/pinctrl-imx-scmi.ko",
     "drivers/cpufreq/tegra20-cpufreq.ko",
     "drivers/usb/phy/phy-tegra-usb.ko",
+    "drivers/input/touchscreen/focaltech_ts.ko",
 ]
 
 def define_imx():
