@@ -797,6 +797,24 @@ no_resource_check:
 	return pf_msg.code;
 }
 
+static int enetc_msg_validate_delete_macs(struct enetc_pf *pf, u16 si_bit,
+					  struct enetc_mac_entry *mac,
+					  int mac_cnt)
+{
+	struct enetc_mac_list_entry *entry;
+	int i;
+
+	for (i = 0; i < mac_cnt; i++) {
+		entry = enetc_mac_list_lookup_entry(pf, mac[i].addr);
+		if (entry && (entry->mfe.si_bitmap & si_bit))
+			continue;
+
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static u16 enetc_msg_pf_del_vf_mac_entries(struct enetc_pf *pf, int vf_id)
 {
 	struct enetc_msg_swbd *msg_swbd = &pf->rxmsg[vf_id];
@@ -805,7 +823,7 @@ static u16 enetc_msg_pf_del_vf_mac_entries(struct enetc_pf *pf, int vf_id)
 	struct enetc_si *si = pf->si;
 	u16 si_bit = BIT(vf_id + 1);
 	union enetc_pf_msg pf_msg;
-	int i, mf_num;
+	int i, mf_num, err;
 
 	if (is_enetc_rev1(si)) {
 		pf_msg.class_id = ENETC_MSG_CLASS_ID_CMD_NOT_SUPPORT;
@@ -816,6 +834,14 @@ static u16 enetc_msg_pf_del_vf_mac_entries(struct enetc_pf *pf, int vf_id)
 
 	guard(mutex)(&pf->mac_list_lock);
 
+	err = enetc_msg_validate_delete_macs(pf, si_bit, msg->mac,
+					     msg->mac_cnt);
+	if (err) {
+		pf_msg.class_id = ENETC_MSG_CLASS_ID_MAC_FILTER;
+		pf_msg.class_code = ENETC_PF_RC_MAC_FILTER_MAC_NOT_FOUND;
+		return pf_msg.code;
+	}
+
 	mf_num = pf->num_mac_fe;
 	enetc_mac_list_del_matched_entries(pf, si_bit, msg->mac,
 					   msg->mac_cnt);
@@ -824,6 +850,7 @@ static u16 enetc_msg_pf_del_vf_mac_entries(struct enetc_pf *pf, int vf_id)
 	for (i = 0; i < mf_num; i++)
 		ntmp_maft_delete_entry(&si->cbdr, i);
 
+	i = 0;
 	hlist_for_each_entry(entry, &pf->mac_list, node) {
 		ntmp_maft_add_entry(&si->cbdr, i, entry->mfe.mac,
 				    entry->mfe.si_bitmap);
@@ -1180,6 +1207,24 @@ no_resource_check:
 	return pf_msg.code;
 }
 
+static int enetc_msg_validate_delete_vlans(struct enetc_pf *pf, u16 si_bit,
+					   struct enetc_vlan_entry *vlan,
+					   int vlan_cnt)
+{
+	struct enetc_vlan_list_entry *entry;
+	int i;
+
+	for (i = 0; i < vlan_cnt; i++) {
+		entry = enetc_vlan_list_lookup_entry(pf, &vlan[i]);
+		if (entry && (entry->vfe.si_bitmap & si_bit))
+			continue;
+
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static u16 enetc_msg_pf_del_vf_vlan_entries(struct enetc_pf *pf, int vf_id)
 {
 	struct enetc_msg_swbd *msg_swbd = &pf->rxmsg[vf_id];
@@ -1188,7 +1233,7 @@ static u16 enetc_msg_pf_del_vf_vlan_entries(struct enetc_pf *pf, int vf_id)
 	struct enetc_si *si = pf->si;
 	u16 si_bit = BIT(vf_id + 1);
 	union enetc_pf_msg pf_msg;
-	int i, vf_num;
+	int i, vf_num, err;
 
 	if (is_enetc_rev1(si)) {
 		pf_msg.class_id = ENETC_MSG_CLASS_ID_CMD_NOT_SUPPORT;
@@ -1198,6 +1243,14 @@ static u16 enetc_msg_pf_del_vf_vlan_entries(struct enetc_pf *pf, int vf_id)
 	msg = (struct enetc_msg_vlan_exact_filter *)msg_swbd->vaddr;
 	guard(mutex)(&pf->vlan_list_lock);
 
+	err = enetc_msg_validate_delete_vlans(pf, si_bit, msg->vlan,
+					      msg->vlan_cnt);
+	if (err) {
+		pf_msg.class_id = ENETC_MSG_CLASS_ID_VLAN_FILTER;
+		pf_msg.class_code = ENETC_PF_RC_VLAN_FILTER_VLAN_NOT_FOUND;
+		return pf_msg.code;
+	}
+
 	vf_num = pf->num_vlan_fe;
 	enetc_vlan_list_del_matched_entries(pf, si_bit, msg->vlan,
 					    msg->vlan_cnt);
@@ -1205,6 +1258,7 @@ static u16 enetc_msg_pf_del_vf_vlan_entries(struct enetc_pf *pf, int vf_id)
 	for (i = 0; i < vf_num; i++)
 		ntmp_vaft_delete_entry(&si->cbdr, i);
 
+	i = 0;
 	hlist_for_each_entry(entry, &pf->vlan_list, node) {
 		ntmp_vaft_add_entry(&si->cbdr, i, &entry->vfe);
 		i++;
