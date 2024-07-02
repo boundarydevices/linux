@@ -1931,10 +1931,15 @@ static int neoisp_probe(struct platform_device *pdev)
 	if (ret)
 		goto disable_nodes_err;
 
+	if (mod_params.test.enable_debugfs)
+		/* increase pm_runtime counter to prevent suspend */
+		pm_runtime_resume_and_get(&pdev->dev);
+
 	pm_runtime_mark_last_busy(&pdev->dev);
 	pm_runtime_put_autosuspend(&pdev->dev);
 
-	dev_info(&pdev->dev, "probe: done (%d)\n", ret);
+	dev_info(&pdev->dev, "probe: done (%d) debugfs (%x)\n",
+		 ret, mod_params.test.enable_debugfs);
 	return ret;
 
 disable_nodes_err:

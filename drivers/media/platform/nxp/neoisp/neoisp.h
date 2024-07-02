@@ -243,6 +243,7 @@ struct neoisp_mod_params_s {
 	struct {
 		__u32 disable_params;
 		__u32 disable_stats;
+		__u32 enable_debugfs;
 	} test;
 	struct neoisp_mparam_conf_s conf;
 	struct neoisp_mparam_packetizer_s pack;
