@@ -488,19 +488,15 @@ static int neoisp_set_pipe_conf(struct neoisp_dev_s *neoispd)
 	struct neoisp_buffer_s *buf_out = neoispd->queued_job.buf[NEOISP_FRAME_NODE];
 	struct neoisp_node_s *nd = &neoispd->queued_job.node_group->node[NEOISP_FRAME_NODE];
 	struct neoisp_mparam_conf_s *cfg = &mod_params.conf;
-	__u32 width, height, obpp, ibpp, hoffset, voffset, inp0_ls;
+	__u32 width, height, obpp, ibpp, hoffset, voffset;
 	__u32 out_pixfmt = nd->format.fmt.pix_mp.pixelformat;
-	dma_addr_t inp0_addr;
 
 	width = nd->format.fmt.pix_mp.width;
 	height = nd->format.fmt.pix_mp.height;
 	obpp = (nd->neoisp_format->bit_depth + 7) / 8;
 	nd = &neoispd->queued_job.node_group->node[NEOISP_INPUT0_NODE];
 	ibpp = (nd->neoisp_format->bit_depth + 7) / 8;
-	inp0_ls = nd->format.fmt.pix_mp.plane_fmt[0].bytesperline;
 	cfg->img_conf_cam0_ibpp0 = nd->neoisp_format->ibpp;
-	/* take crop into account if any */
-	inp0_addr = get_addr(buf, 0) + (nd->crop.left * ibpp) + (nd->crop.top * inp0_ls);
 
 	/*
 	 * Set Head Color selection
@@ -556,10 +552,10 @@ static int neoisp_set_pipe_conf(struct neoisp_dev_s *neoispd)
 			NEO_PIPE_CONF_IMG_SIZE_CAM0_WIDTH_SET(width)
 			| NEO_PIPE_CONF_IMG_SIZE_CAM0_HEIGHT_SET(height));
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG0_IN_LS_CAM0_IDX],
-			NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(inp0_ls));
+			NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(ibpp * width));
 	/* raw image addr from video output input0 node buffer */
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG0_IN_ADDR_CAM0_IDX],
-			NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(inp0_addr));
+			NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(get_addr(buf, 0)));
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG1_IN_ADDR_CAM0_IDX], 0u);
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG1_IN_LS_CAM0_IDX], 0u);
 
@@ -726,7 +722,6 @@ static int neoisp_schedule_internal(struct neoisp_node_group_s *node_group, unsi
 
 	return 1;
 }
-
 /* Try and schedule a job for just a single node group. */
 static void neoisp_schedule_one(struct neoisp_node_group_s *node_group)
 {
@@ -1066,10 +1061,6 @@ static int neoisp_try_fmt(struct v4l2_format *f, struct neoisp_node_s *node)
 	f->fmt.pix_mp.field = V4L2_FIELD_NONE;
 	f->fmt.pix_mp.width = max(min(f->fmt.pix_mp.width, 65536u), 64u);
 	f->fmt.pix_mp.height = max(min(f->fmt.pix_mp.height, 65536u), 64u);
-	if (!node->crop.width) {
-		node->crop.width = f->fmt.pix_mp.width;
-		node->crop.height = f->fmt.pix_mp.height;
-	}
 
 	if (NODE_IS_OUTPUT(node))
 		/* FIXME: we should use V4L2_COLORSPACE_RAW here instead of SRGB */
@@ -1160,67 +1151,6 @@ static int neoisp_s_fmt_vid_out(struct file *file, void *priv,
 	return 0;
 }
 
-static int neoisp_g_selection(struct file *file, void *fh, struct v4l2_selection *sel)
-{
-	struct neoisp_node_s *node = video_drvdata(file);
-
-	if (sel->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
-		return -EINVAL;
-
-	switch (sel->target) {
-	case V4L2_SEL_TGT_CROP_DEFAULT:
-	case V4L2_SEL_TGT_CROP_BOUNDS:
-		sel->r.top = 0;
-		sel->r.left = 0;
-		sel->r.width = node->format.fmt.pix_mp.width;
-		sel->r.height = node->format.fmt.pix_mp.height;
-		break;
-	case V4L2_SEL_TGT_CROP:
-		sel->r.top = node->crop.top;
-		sel->r.left = node->crop.left;
-		sel->r.width = node->crop.width;
-		sel->r.height = node->crop.height;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int neoisp_s_selection(struct file *file, void *fh, struct v4l2_selection *sel)
-{
-	struct neoisp_node_s *node = video_drvdata(file);
-	__u32 winput, hinput;
-
-	if (sel->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
-		return -EINVAL;
-
-	switch (sel->target) {
-	case V4L2_SEL_TGT_CROP:
-		winput = node->format.fmt.pix_mp.width;
-		hinput = node->format.fmt.pix_mp.height;
-
-		/* left and width should be multiple of 16 */
-		sel->r.left = clamp_t(int, ALIGN(sel->r.left, 16), 0, winput - NEOISP_MIN_W);
-		sel->r.width = clamp(ALIGN(sel->r.width, 16), NEOISP_MIN_W, winput - sel->r.left);
-		/* top and height should be even */
-		sel->r.top = clamp_t(int, ALIGN(sel->r.top, 2), 0, hinput - NEOISP_MIN_H);
-		sel->r.height = clamp(ALIGN(sel->r.height, 2), NEOISP_MIN_H, hinput - sel->r.top);
-
-		node->crop.top = sel->r.top;
-		node->crop.left = sel->r.left;
-		node->crop.width = sel->r.width;
-		node->crop.height = sel->r.height;
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 static void neoisp_set_ctx_default_params(struct neoisp_dev_s *neoispd, int ctx_id)
 {
 	memcpy(neoispd->node_group[ctx_id].params,
@@ -1293,8 +1223,6 @@ static const struct v4l2_ioctl_ops neoisp_ioctl_ops = {
 	.vidioc_s_fmt_meta_out		= neoisp_s_fmt_meta_out,
 	.vidioc_try_fmt_meta_out	= neoisp_try_fmt_meta_out,
 
-	.vidioc_g_selection		= neoisp_g_selection,
-	.vidioc_s_selection		= neoisp_s_selection,
 	.vidioc_reqbufs			= vb2_ioctl_reqbufs,
 	.vidioc_querybuf		= vb2_ioctl_querybuf,
 	.vidioc_qbuf			= vb2_ioctl_qbuf,
