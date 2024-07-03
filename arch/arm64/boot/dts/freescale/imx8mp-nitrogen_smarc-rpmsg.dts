@@ -22,13 +22,11 @@
 		};
 
 		vdev0vring0: vdev0vring0@55000000 {
-			compatible = "shared-dma-pool";
 			reg = <0 0x55000000 0 0x8000>;
 			no-map;
 		};
 
 		vdev0vring1: vdev0vring1@55008000 {
-			compatible = "shared-dma-pool";
 			reg = <0 0x55008000 0 0x8000>;
 			no-map;
 		};
@@ -39,7 +37,7 @@
 			no-map;
 		};
 
-		rsc_table: rsc_table@550ff000 {
+		rsc_table: rsc-table@550ff000 {
 			reg = <0 0x550ff000 0 0x1000>;
 			no-map;
 		};
@@ -47,8 +45,9 @@
 
 	imx8mp-cm7 {
 		compatible = "fsl,imx8mn-cm7";
-		rsc-da = <0x550ff000>;
+		rsc-da = <0x55000000>;
 		clocks = <&clk IMX8MP_CLK_M7_DIV>;
+		clock-names = "core";
 		mbox-names = "tx", "rx", "rxdb";
 		mboxes = <&mu 0 1
 			  &mu 1 1
