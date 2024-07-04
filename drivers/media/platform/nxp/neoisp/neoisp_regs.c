@@ -494,9 +494,9 @@ const int neoisp_fields_a[NEOISP_FIELD_COUNT] = {
 	NEO_ALIAS_ALIAS_REG83,
 };
 
-static bool neoisp_valid_reg(struct device *dev, unsigned int reg)
+bool neoisp_valid_reg(struct device *dev, unsigned int reg)
 {
-	for (int i = 0; i < NEOISP_FIELD_COUNT; i++) {
+	for (int i = 0; i <= NEO_IDBG2_DONE_STAT_IDX; i++) {
 		if (reg == neoisp_fields_a[i])
 			return true;
 		if (reg < neoisp_fields_a[i])
@@ -505,16 +505,12 @@ static bool neoisp_valid_reg(struct device *dev, unsigned int reg)
 	return false;
 }
 
-const struct regmap_config neoisp_regmap_config = {
+struct regmap_config neoisp_regmap_config = {
 	.reg_bits = 32,
 	.val_bits = 32,
 	.reg_stride = 4,
 	.fast_io = true,
-	.max_register = NEO_ALIAS_ALIAS_REG83,
-	.num_reg_defaults = NEOISP_FIELD_COUNT,
-	.readable_reg = neoisp_valid_reg,
-	.volatile_reg = neoisp_valid_reg,
-	.writeable_reg = neoisp_valid_reg,
+	.max_register = 0,
 	.cache_type = REGCACHE_NONE,
 };
 
