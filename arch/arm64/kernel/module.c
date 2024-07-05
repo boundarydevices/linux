@@ -459,6 +459,81 @@ static int module_init_ftrace_plt(const Elf_Ehdr *hdr,
 	return 0;
 }
 
+#ifdef CONFIG_KVM
+static const Elf_Shdr *find_symbol_table(const Elf_Ehdr *hdr,
+					 const Elf_Shdr *sechdrs)
+{
+	int idx;
+
+	for (idx = 1; idx < hdr->e_shnum; idx++) {
+		if (sechdrs[idx].sh_type == SHT_SYMTAB)
+			return &sechdrs[idx];
+	}
+
+	return NULL;
+}
+
+static int
+module_init_hyp_imported_sym(const Elf_Ehdr *hdr, const Elf_Shdr *sechdrs,
+			     struct module *mod)
+{
+	struct pkvm_el2_module *hyp_mod = &mod->arch.hyp;
+	struct pkvm_el2_sym *pkvm_sym;
+	const Elf_Shdr *symtab = NULL, *s, *se, *orig;
+	const char *strtab = NULL;
+	const Elf_Rela *rela;
+	const Elf_Sym *sym;
+
+	INIT_LIST_HEAD(&hyp_mod->ext_symbols);
+
+	for (s = sechdrs, se = sechdrs + hdr->e_shnum; s < se; s++) {
+		if (s->sh_type != SHT_RELA)
+			continue;
+
+		/* Imported symbols only used in .hyp.text */
+		orig = &sechdrs[s->sh_info];
+		if ((void *)orig->sh_addr != hyp_mod->text.start)
+			continue;
+
+		for (rela = (Elf_Rela *)((void *)hdr + s->sh_offset);
+		     rela < (Elf_Rela *)((void *)hdr + s->sh_offset + s->sh_size); rela++) {
+			size_t len;
+
+			symtab = symtab ? symtab : find_symbol_table(hdr, sechdrs);
+			if (!symtab)
+				return -ENOEXEC;
+			strtab = (const char *)hdr + sechdrs[symtab->sh_link].sh_offset;
+
+			sym = (Elf_Sym *)((const char *)hdr + symtab->sh_offset) +
+				ELF64_R_SYM(rela->r_info);
+
+			/* Imported symbols are UNDEF */
+			if (sym->st_shndx != SHN_UNDEF)
+				continue;
+
+			if (ELF64_R_TYPE(rela->r_info) != R_AARCH64_CALL26) {
+				pr_warn("Unknown relocation type for imported symbol %s\n",
+					strtab + sym->st_name);
+				return -EINVAL;
+			}
+
+			pkvm_sym = kmalloc(sizeof(*pkvm_sym), GFP_KERNEL);
+			if (!pkvm_sym)
+				return -ENOMEM;
+
+			len = strlen(strtab + sym->st_name);
+			pkvm_sym->name = kmalloc(len, GFP_KERNEL);
+			memcpy(pkvm_sym->name, strtab + sym->st_name, len);
+			pkvm_sym->rela_pos = (void *)orig->sh_addr + rela->r_offset;
+
+			list_add(&pkvm_sym->node, &hyp_mod->ext_symbols);
+		}
+	}
+
+	return 0;
+}
+#endif
+
 static int module_init_hyp(const Elf_Ehdr *hdr, const Elf_Shdr *sechdrs,
 			   struct module *mod)
 {
@@ -478,6 +553,8 @@ static int module_init_hyp(const Elf_Ehdr *hdr, const Elf_Shdr *sechdrs,
 		.start	= (void *)s->sh_addr,
 		.end	= (void *)s->sh_addr + s->sh_size,
 	};
+
+	module_init_hyp_imported_sym(hdr, sechdrs, mod);
 
 	s = find_section(hdr, sechdrs, ".hyp.reloc");
 	if (!s)

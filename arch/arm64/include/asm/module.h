@@ -16,6 +16,12 @@ struct pkvm_module_section {
 typedef s32 kvm_nvhe_reloc_t;
 struct pkvm_module_ops;
 
+struct pkvm_el2_sym {
+	char			*name;
+	__le32 			*rela_pos;
+	struct list_head	node;
+};
+
 struct pkvm_el2_module {
 	struct pkvm_module_section text;
 	struct pkvm_module_section bss;

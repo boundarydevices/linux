@@ -20,6 +20,7 @@
 #include <asm/kvm_mmu.h>
 #include <asm/kvm_pkvm.h>
 #include <asm/kvm_pkvm_module.h>
+#include <asm/patching.h>
 #include <asm/setup.h>
 
 #include "hyp_constants.h"
@@ -668,11 +669,13 @@ static int __init pkvm_request_early_module(char *module_name, char *module_path
 	return __pkvm_request_early_module(module_name, "");
 }
 
+static void pkvm_el2_mod_free(void);
+
 int __init pkvm_load_early_modules(void)
 {
 	char *token, *buf = early_pkvm_modules;
 	char *module_path = CONFIG_PKVM_MODULE_PATH;
-	int err;
+	int err = 0;
 
 	while (true) {
 		token = strsep(&buf, ",");
@@ -685,7 +688,7 @@ int __init pkvm_load_early_modules(void)
 			if (err) {
 				pr_err("Failed to load pkvm module %s: %d\n",
 				       token, err);
-				return err;
+				goto out;
 			}
 		}
 
@@ -693,10 +696,12 @@ int __init pkvm_load_early_modules(void)
 			*(buf - 1) = ',';
 	}
 
-	return 0;
+out:
+	pkvm_el2_mod_free();
+
+	return err;
 }
 
-#ifdef CONFIG_PROTECTED_NVHE_STACKTRACE
 static LIST_HEAD(pkvm_modules);
 
 static void pkvm_el2_mod_add(struct pkvm_el2_module *mod)
@@ -705,26 +710,144 @@ static void pkvm_el2_mod_add(struct pkvm_el2_module *mod)
 	list_add(&mod->node, &pkvm_modules);
 }
 
+static void pkvm_el2_mod_free(void)
+{
+	struct pkvm_el2_sym *sym, *tmp;
+	struct pkvm_el2_module *mod;
+
+	list_for_each_entry(mod, &pkvm_modules, node) {
+		list_for_each_entry_safe(sym, tmp, &mod->ext_symbols, node) {
+			list_del(&sym->node);
+			kfree(sym->name);
+			kfree(sym);
+		}
+	}
+}
+
+static struct module *pkvm_el2_mod_to_module(struct pkvm_el2_module *hyp_mod)
+{
+	struct mod_arch_specific *arch;
+
+	arch = container_of(hyp_mod, struct mod_arch_specific, hyp);
+	return container_of(arch, struct module, arch);
+}
+
+#ifdef CONFIG_PROTECTED_NVHE_STACKTRACE
 unsigned long pkvm_el2_mod_kern_va(unsigned long addr)
 {
 	struct pkvm_el2_module *mod;
 
 	list_for_each_entry(mod, &pkvm_modules, node) {
+		unsigned long hyp_va = (unsigned long)mod->hyp_va;
 		size_t len = (unsigned long)mod->sections.end -
 			     (unsigned long)mod->sections.start;
 
-		if (addr >= (unsigned long)mod->token &&
-		    addr < (unsigned long)mod->token + len)
+		if (addr >= hyp_va && addr < (hyp_va + len))
 			return (unsigned long)mod->sections.start +
-				(addr - mod->token);
+				(addr - hyp_va);
 	}
 
 	return 0;
 }
 #else
-static void pkvm_el2_mod_add(struct pkvm_el2_module *mod) { }
 unsigned long pkvm_el2_mod_kern_va(unsigned long addr) { return 0; }
 #endif
+
+static struct pkvm_el2_module *pkvm_el2_mod_lookup_symbol(const char *name,
+							  unsigned long *addr)
+{
+	struct pkvm_el2_module *hyp_mod;
+	unsigned long __addr;
+
+	list_for_each_entry(hyp_mod, &pkvm_modules, node) {
+		struct module *mod = pkvm_el2_mod_to_module(hyp_mod);
+
+		__addr = find_kallsyms_symbol_value(mod, name);
+		if (!__addr)
+			continue;
+
+		*addr = __addr;
+		return hyp_mod;
+	}
+
+	return NULL;
+}
+
+static bool within_pkvm_module_section(struct pkvm_module_section *section,
+				       unsigned long addr)
+{
+	return (addr > (unsigned long)section->start) &&
+		(addr < (unsigned long)section->end);
+}
+
+static int pkvm_reloc_imported_symbol(struct pkvm_el2_module *importer,
+				      struct pkvm_el2_sym *sym,
+				      unsigned long hyp_dst)
+{
+	s64 val, val_max = (s64)(~(BIT(25) - 1)) << 2;
+	u32 insn = le32_to_cpu(*sym->rela_pos);
+	unsigned long hyp_src;
+	u64 imm;
+
+	if (!within_pkvm_module_section(&importer->text,
+					(unsigned long)sym->rela_pos))
+		return -EINVAL;
+
+	hyp_src = (unsigned long)importer->hyp_va +
+		((void *)sym->rela_pos - importer->text.start);
+
+	/*
+	 * Module hyp VAs are allocated going upward. Source MUST have a
+	 * lower address than the destination
+	 */
+	if (WARN_ON(hyp_src < hyp_dst))
+		return -EINVAL;
+
+	val = hyp_dst - hyp_src;
+	if (val < val_max) {
+		pr_warn("Exported symbol %s is too far for the relocation in module %s\n",
+			sym->name, pkvm_el2_mod_to_module(importer)->name);
+		return -ERANGE;
+	}
+
+	/* offset encoded as imm26 * 4 */
+	imm = (val >> 2) & (BIT(26) - 1);
+
+	insn = aarch64_insn_encode_immediate(AARCH64_INSN_IMM_26, insn, imm);
+
+	return aarch64_insn_patch_text_nosync((void *)sym->rela_pos, insn);
+}
+
+static int pkvm_reloc_imported_symbols(struct pkvm_el2_module *importer)
+{
+	unsigned long addr, offset, hyp_addr;
+	struct pkvm_el2_module *exporter;
+	struct pkvm_el2_sym *sym;
+
+	list_for_each_entry(sym, &importer->ext_symbols, node) {
+		exporter = pkvm_el2_mod_lookup_symbol(sym->name, &addr);
+		if (!exporter) {
+			pr_warn("pKVM symbol %s not exported by any module\n",
+				sym->name);
+			return -EINVAL;
+		}
+
+		if (!within_pkvm_module_section(&exporter->text, addr)) {
+			pr_warn("pKVM symbol %s not part of %s .text section\n",
+				sym->name,
+				pkvm_el2_mod_to_module(exporter)->name);
+			return -EINVAL;
+		}
+
+		/* hyp addr in the exporter */
+		offset = addr - (unsigned long)exporter->text.start;
+		hyp_addr = (unsigned long)exporter->hyp_va + offset;
+
+		pkvm_reloc_imported_symbol(importer, sym, hyp_addr);
+	}
+
+	return 0;
+}
 
 struct pkvm_mod_sec_mapping {
 	struct pkvm_module_section *sec;
@@ -869,6 +992,10 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 
 	endrel = (void *)mod->relocs + mod->nr_relocs * sizeof(*endrel);
 	kvm_apply_hyp_module_relocations(mod, mod->relocs, endrel);
+
+	ret = pkvm_reloc_imported_symbols(mod);
+	if (ret)
+		return ret;
 
 	/*
 	 * Sadly we have also to disable kmemleak for EL1 sections: we can't
