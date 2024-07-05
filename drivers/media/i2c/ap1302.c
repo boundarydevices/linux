@@ -2768,7 +2768,7 @@ static void ap1302_cleanup(struct ap1302_device *ap1302)
 	mutex_destroy(&ap1302->lock);
 }
 
-static int ap1302_probe(struct i2c_client *client)
+static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct ap1302_device *ap1302;
 	unsigned int i;
