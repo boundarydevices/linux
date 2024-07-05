@@ -124,11 +124,24 @@
 	regulator-always-on;
 };
 
+&pcal6524 {
+	sai3-en-hog {
+		gpio-hog;
+		gpios = <23 GPIO_ACTIVE_HIGH>;
+		output-low;
+	};
+
+	sai3-tx-rx-sel-hog {
+		gpio-hog;
+		gpios = <14 GPIO_ACTIVE_HIGH>;
+		output-high;
+	};
+};
+
 &sai3 {
 	#sound-dai-cells = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3audhat>;
-	pinctrl-assert-gpios = <&pcal6524 23 GPIO_ACTIVE_LOW>;
 	clocks = <&clk IMX91_CLK_SAI3_IPG>, <&clk IMX91_CLK_DUMMY>,
 		 <&clk IMX91_CLK_SAI3_GATE>, <&clk IMX91_CLK_DUMMY>,
 		 <&clk IMX91_CLK_DUMMY>, <&clk IMX91_CLK_AUDIO_PLL>;
@@ -182,7 +195,6 @@
 		VLS-supply = <&reg_audio_pwr>;
 		VLC-supply = <&reg_audio_pwr>;
 		reset-gpio = <&pcal6524 6 GPIO_ACTIVE_LOW>;
-		pinctrl-assert-gpios = <&pcal6524 14 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
 };
