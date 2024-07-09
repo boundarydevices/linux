@@ -412,6 +412,7 @@ _IMX_IN_TREE_MODULES = [
     "drivers/cpufreq/tegra20-cpufreq.ko",
     "drivers/usb/phy/phy-tegra-usb.ko",
     "drivers/input/touchscreen/focaltech_ts.ko",
+    "drivers/video/fbdev/core/fb_io_fops.ko",
 ]
 
 def define_imx():
