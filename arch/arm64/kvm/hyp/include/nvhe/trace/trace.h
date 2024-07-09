@@ -59,7 +59,7 @@ do {							\
 			ht_fmt = {			\
 				.fmt = __fmt		\
 	};						\
-	trace___hyp_printk(ht_fmt.fmt, a, b, c, d);	\
+	trace___hyp_printk(hyp_printk_fmt_to_id(ht_fmt.fmt), a, b, c, d); \
 } while (0)
 
 #define __trace_hyp_printk_0(fmt, arg)		\

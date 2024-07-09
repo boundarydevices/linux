@@ -73,7 +73,7 @@ HYP_EVENT(host_mem_abort,
 );
 
 HYP_EVENT(__hyp_printk,
-	HE_PROTO(const char *fmt, u64 a, u64 b, u64 c, u64 d),
+	HE_PROTO(u8 fmt_id, u64 a, u64 b, u64 c, u64 d),
 	HE_STRUCT(
 		he_field(u8, fmt_id)
 		he_field(u64, a)
@@ -82,7 +82,7 @@ HYP_EVENT(__hyp_printk,
 		he_field(u64, d)
 	),
 	HE_ASSIGN(
-		__entry->fmt_id = hyp_printk_fmt_to_id(fmt);
+		__entry->fmt_id = fmt_id;
 		__entry->a = a;
 		__entry->b = b;
 		__entry->c = c;
