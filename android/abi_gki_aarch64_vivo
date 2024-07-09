@@ -24,6 +24,7 @@
   sched_setattr_nocheck
   schedule_timeout_killable
   set_blocksize
+  skb_orphan_partial
   static_key_enable
   submit_bh
   __kmalloc_node
@@ -49,6 +50,7 @@
   __traceiter_android_vh_binder_restore_priority
   __traceiter_android_vh_binder_special_task
   __traceiter_android_vh_binder_wait_for_work
+  __traceiter_android_vh_blk_fill_rwbs
   __traceiter_android_vh_cgroup_attach
   __traceiter_android_vh_check_folio_look_around_ref
   __traceiter_android_vh_check_nanosleep_syscall
@@ -57,6 +59,7 @@
   __traceiter_android_vh_configfs_uevent_work
   __traceiter_android_vh_count_workingset_refault
   __traceiter_android_vh_do_anonymous_page
+  __traceiter_android_vh_do_new_mount_fc
   __traceiter_android_vh_do_swap_page
   __traceiter_android_vh_do_wp_page
   __traceiter_android_vh_dup_task_struct
@@ -120,6 +123,7 @@
   __traceiter_sched_waking
   __traceiter_sys_exit
   __traceiter_task_rename
+  __traceiter_tcp_retransmit_skb
   __traceiter_workqueue_execute_end
   __traceiter_workqueue_execute_start
   __tracepoint_android_rvh_alloc_and_link_pwqs
@@ -142,6 +146,7 @@
   __tracepoint_android_vh_binder_restore_priority
   __tracepoint_android_vh_binder_special_task
   __tracepoint_android_vh_binder_wait_for_work
+  __tracepoint_android_vh_blk_fill_rwbs
   __tracepoint_android_vh_cgroup_attach
   __tracepoint_android_vh_check_folio_look_around_ref
   __tracepoint_android_vh_check_nanosleep_syscall
@@ -150,6 +155,7 @@
   __tracepoint_android_vh_configfs_uevent_work
   __tracepoint_android_vh_count_workingset_refault
   __tracepoint_android_vh_do_anonymous_page
+  __tracepoint_android_vh_do_new_mount_fc
   __tracepoint_android_vh_do_swap_page
   __tracepoint_android_vh_do_wp_page
   __tracepoint_android_vh_dup_task_struct
@@ -213,6 +219,7 @@
   __tracepoint_sched_waking
   __tracepoint_sys_exit
   __tracepoint_task_rename
+  __tracepoint_tcp_retransmit_skb
   __tracepoint_workqueue_execute_end
   __tracepoint_workqueue_execute_start
   ucsi_send_command
