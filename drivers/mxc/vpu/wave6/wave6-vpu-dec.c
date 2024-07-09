@@ -1405,11 +1405,17 @@ static int wave6_vpu_dec_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_VPU_SECURE_MODE:
 		inst->secure_mode = ctrl->val;
+		fallthrough;
 	case V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY:
+		fallthrough;
 	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
+		fallthrough;
 	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
+		fallthrough;
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
+		fallthrough;
 	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
+		fallthrough;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
 		break;
 	default:
