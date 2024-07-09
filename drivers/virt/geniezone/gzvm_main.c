@@ -233,6 +233,10 @@ static int gzvm_drv_probe(struct platform_device *pdev)
 		 gzvm_drv.hyp_version.major, gzvm_drv.hyp_version.minor,
 		 gzvm_drv.hyp_version.sub);
 
+	ret = gzvm_arch_drv_init();
+	if (ret)
+		return ret;
+
 	ret = misc_register(&gzvm_dev);
 	if (ret)
 		return ret;
