@@ -625,6 +625,16 @@ static int os08a20_set_vsexp(struct os08a20 *sensor, u32 exp)
 	return ret;
 }
 
+static int os08a20_set_again(struct os08a20 *sensor, u32 again)
+{
+	int ret = 0;
+
+	ret |= os08a20_write_reg(sensor, 0x3508, (again >> 8) & 0xff);
+	ret |= os08a20_write_reg(sensor, 0x3509, again & 0xff);
+
+	return ret;
+}
+
 static int os08a20_set_gain(struct os08a20 *sensor, u32 total_gain)
 {
 	int ret = 0;
@@ -999,7 +1009,7 @@ static int os08a20_apply_current_mode(struct os08a20 *sensor)
 		hts = (w + sensor->ctrls.hblank->cur.val) / 2;
 	ret = os08a20_set_hts(sensor, hts);
 	ret |= os08a20_set_vts(sensor, h + sensor->ctrls.vblank->cur.val);
-	ret |= os08a20_set_gain(sensor, sensor->ctrls.gain->cur.val);
+	ret |= os08a20_set_again(sensor, sensor->ctrls.gain->cur.val);
 	ret |= os08a20_set_exp(sensor, sensor->ctrls.exposure->cur.val);
 	if (ret < 0)
 		goto out;
@@ -1070,7 +1080,7 @@ static int os08a20_s_ctrl(struct v4l2_ctrl *ctrl)
 			ret = os08a20_set_hts(sensor, (w + ctrl->val) / 2);
 		break;
 	case V4L2_CID_ANALOGUE_GAIN:
-		ret = os08a20_set_gain(sensor, ctrl->val);
+		ret = os08a20_set_again(sensor, ctrl->val);
 		break;
 	case V4L2_CID_EXPOSURE:
 		ret = os08a20_set_exp(sensor, ctrl->val);

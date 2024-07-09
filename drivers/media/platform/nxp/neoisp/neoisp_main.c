@@ -212,13 +212,6 @@ static int neoisp_node_buffer_prepare(struct vb2_buffer *vb)
 		vb2_set_plane_payload(vb, i, size);
 	}
 
-	if (node->id == NEOISP_PARAMS_NODE) {
-		void *dst = &node->node_group->params[vb->index];
-		void *src = vb2_plane_vaddr(vb, 0);
-
-		memcpy(dst, src, sizeof(struct neoisp_meta_params_s));
-	}
-
 	return 0;
 }
 
@@ -332,13 +325,13 @@ static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 		/* remove 0-padding */
 		pck->ctrl_cam0_a0s = 0;
 		break;
-	case V4L2_PIX_FMT_YVYU:
+	case V4L2_PIX_FMT_VYUY:
 		pck->ctrl_cam0_type = 1;
 		pck->ch12_ctrl_cam0_subsample = 1;
 		/* set channels orders */
-		pck->ctrl_cam0_order0 = 0;
-		pck->ctrl_cam0_order1 = 3;
-		pck->ctrl_cam0_order2 = 1;
+		pck->ctrl_cam0_order0 = 1;
+		pck->ctrl_cam0_order1 = 2;
+		pck->ctrl_cam0_order2 = 0;
 		/* remove 0-padding */
 		pck->ctrl_cam0_a0s = 0;
 		break;
@@ -434,13 +427,56 @@ static int neoisp_set_packetizer(struct neoisp_dev_s *neoispd)
 	return 0;
 }
 
-static void neoisp_update_hdr_decompress(struct neoisp_reg_params_s *regp, __u32 ibpp)
+/*
+ * The pixel depth is NEOISP_PIPELINE0_BPP (20 bits) in pipeline0 and
+ * NEOISP_PIPELINE1_BPP (16 bits) in pipeline1.
+ * Input pixel may have a depth ranging from 8 to 20 bits, so a gain may
+ * have to be applied to reach that target.
+ * Gain can be applied in:
+ *    HDR Decompression block using ratio register whose format is u7.5
+ *       giving a maximum gain of ~128 corresponding
+ *       to a maximum bitshift of NEOISP_HDR_SHIFT_MAX (7 bits).
+ *    OBWB0/1 blocks that are used solely to apply additional gain
+ *       when HDR Decompression gain limit is reached.
+ * If HDR Decompression gain is sufficient, then OBWB0/1 is set to 1 (u8.8 format).
+ */
+static void neoisp_update_pipeline_bit_width(struct neoisp_reg_params_s *regp, __u32 ibpp)
 {
-	/* 16 bits per pixel is already in default configuration */
-	if (ibpp < 16) { /* 8, 10, 12 or 14 */
-		regp->decompress_input0.knee_point1 = 1 << ibpp;
-		regp->decompress_input0.knee_ratio0 = (1 << (20 - ibpp)) - 1;
-	}
+	__u32 hdr_shift, hdr_ratio0, obwb_shift, obwb_gain;
+
+	/* input path 0 */
+	hdr_shift = min(NEOISP_PIPELINE0_BPP - ibpp, NEOISP_HDR_SHIFT_MAX);
+	obwb_shift = NEOISP_PIPELINE0_BPP - ibpp - hdr_shift;
+
+	regp->decompress_input0.knee_point1 = min((1u << ibpp), NEOISP_HDR_KNPOINT_MAX);
+	regp->decompress_input0.knee_offset0 = 0;
+	hdr_ratio0 = (1 << (hdr_shift + NEOISP_HDR_SHIFT_RADIX)) - 1;
+	regp->decompress_input0.knee_ratio0 = hdr_ratio0;
+	regp->decompress_input0.knee_ratio4 = hdr_ratio0;
+	regp->decompress_input0.knee_npoint0 = 0;
+
+	obwb_gain = 1 << (obwb_shift + NEOISP_OBWB_SHIFT_RADIX);
+	regp->obwb[0].b_ctrl_gain = obwb_gain;
+	regp->obwb[0].gb_ctrl_gain = obwb_gain;
+	regp->obwb[0].gr_ctrl_gain = obwb_gain;
+	regp->obwb[0].r_ctrl_gain = obwb_gain;
+
+	/* input path 1 */
+	hdr_shift = min(NEOISP_PIPELINE1_BPP - ibpp, NEOISP_HDR_SHIFT_MAX);
+	obwb_shift = NEOISP_PIPELINE1_BPP - ibpp - hdr_shift;
+
+	regp->decompress_input1.knee_point1 = min((1u << ibpp), NEOISP_HDR_KNPOINT_MAX);
+	regp->decompress_input1.knee_offset0 = 0;
+	hdr_ratio0 = (1 << (hdr_shift + NEOISP_HDR_SHIFT_RADIX)) - 1;
+	regp->decompress_input1.knee_ratio0 = hdr_ratio0;
+	regp->decompress_input1.knee_ratio4 = hdr_ratio0;
+	regp->decompress_input1.knee_npoint0 = 0;
+
+	obwb_gain = 1 << (obwb_shift + NEOISP_OBWB_SHIFT_RADIX);
+	regp->obwb[1].b_ctrl_gain = obwb_gain;
+	regp->obwb[1].gb_ctrl_gain = obwb_gain;
+	regp->obwb[1].gr_ctrl_gain = obwb_gain;
+	regp->obwb[1].r_ctrl_gain = obwb_gain;
 }
 
 /*
@@ -452,15 +488,19 @@ static int neoisp_set_pipe_conf(struct neoisp_dev_s *neoispd)
 	struct neoisp_buffer_s *buf_out = neoispd->queued_job.buf[NEOISP_FRAME_NODE];
 	struct neoisp_node_s *nd = &neoispd->queued_job.node_group->node[NEOISP_FRAME_NODE];
 	struct neoisp_mparam_conf_s *cfg = &mod_params.conf;
-	__u32 width, height, obpp, ibpp, hoffset, voffset;
+	__u32 width, height, obpp, ibpp, hoffset, voffset, inp0_stride;
 	__u32 out_pixfmt = nd->format.fmt.pix_mp.pixelformat;
+	dma_addr_t inp0_addr;
 
 	width = nd->format.fmt.pix_mp.width;
 	height = nd->format.fmt.pix_mp.height;
 	obpp = (nd->neoisp_format->bit_depth + 7) / 8;
 	nd = &neoispd->queued_job.node_group->node[NEOISP_INPUT0_NODE];
 	ibpp = (nd->neoisp_format->bit_depth + 7) / 8;
+	inp0_stride = nd->format.fmt.pix_mp.plane_fmt[0].bytesperline;
 	cfg->img_conf_cam0_ibpp0 = nd->neoisp_format->ibpp;
+	/* take crop into account if any */
+	inp0_addr = get_addr(buf, 0) + (nd->crop.left * ibpp) + (nd->crop.top * inp0_stride);
 
 	/*
 	 * Set Head Color selection
@@ -516,33 +556,33 @@ static int neoisp_set_pipe_conf(struct neoisp_dev_s *neoispd)
 			NEO_PIPE_CONF_IMG_SIZE_CAM0_WIDTH_SET(width)
 			| NEO_PIPE_CONF_IMG_SIZE_CAM0_HEIGHT_SET(height));
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG0_IN_LS_CAM0_IDX],
-			NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(ibpp * width));
+			NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(inp0_stride));
 	/* raw image addr from video output input0 node buffer */
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG0_IN_ADDR_CAM0_IDX],
-			NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(get_addr(buf, 0)));
+			NEO_PIPE_CONF_ADDR_SET(inp0_addr));
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG1_IN_ADDR_CAM0_IDX], 0u);
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_IMG1_IN_LS_CAM0_IDX], 0u);
 
-	/* rgb/yuv output image address */
+	/* planar/multiplanar output image addresses */
 	if (out_pixfmt == V4L2_PIX_FMT_NV12 || out_pixfmt == V4L2_PIX_FMT_NV21 ||
 		out_pixfmt == V4L2_PIX_FMT_NV16 || out_pixfmt == V4L2_PIX_FMT_NV61) {
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH0_ADDR_CAM0_IDX],
-				NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(get_addr(buf_out, 0)));
+				NEO_PIPE_CONF_ADDR_SET(get_addr(buf_out, 0)));
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH0_LS_CAM0_IDX],
-				NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(obpp * width));
+				NEO_PIPE_CONF_OUTCH0_LS_CAM0_LS_SET(obpp * width));
 
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH1_ADDR_CAM0_IDX],
-				NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(get_addr(buf_out, 1)));
+				NEO_PIPE_CONF_ADDR_SET(get_addr(buf_out, 1)));
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH1_LS_CAM0_IDX],
-				NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(obpp * width));
+				NEO_PIPE_CONF_OUTCH1_LS_CAM0_LS_SET(obpp * width));
 	} else {
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH0_ADDR_CAM0_IDX], 0u);
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH0_LS_CAM0_IDX], 0u);
 
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH1_ADDR_CAM0_IDX],
-				NEO_PIPE_CONF_IMG_ADDR_CAM0_SET(get_addr(buf_out, 0)));
+				NEO_PIPE_CONF_ADDR_SET(get_addr(buf_out, 0)));
 		regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTCH1_LS_CAM0_IDX],
-				NEO_PIPE_CONF_IMG0_IN_LS_CAM0_LS_SET(obpp * width));
+				NEO_PIPE_CONF_OUTCH1_LS_CAM0_LS_SET(obpp * width));
 	}
 	regmap_field_write(neoispd->regs.fields[NEO_PIPE_CONF_OUTIR_LS_CAM0_IDX], 0u);
 
@@ -567,14 +607,12 @@ static void neoisp_reset_hw(struct neoisp_dev_s *neoispd, bool is_hw)
 }
 
 static void neoisp_queue_job(struct neoisp_dev_s *neoispd,
-		struct neoisp_node_group_s *node_group,
-		struct neoisp_meta_params_s *params)
+		struct neoisp_node_group_s *node_group)
 {
 	static __u32 prev_ctx_id = NEOISP_NODE_GROUPS_COUNT + 1; /* init to invalid id */
 
 	neoisp_set_packetizer(neoispd);
-	if (!IS_ERR_OR_NULL(params))
-		neoisp_update_ctx(neoispd, node_group->id, params);
+	neoisp_update_ctx(neoispd, node_group->id);
 
 	neoisp_program_ctx(neoispd, node_group->id);
 
@@ -588,12 +626,11 @@ static void neoisp_queue_job(struct neoisp_dev_s *neoispd,
 
 static int neoisp_schedule_internal(struct neoisp_node_group_s *node_group, unsigned long flags)
 {
-	struct neoisp_meta_params_s *params = NULL;
 	struct neoisp_dev_s *neoispd = node_group->neoisp_dev;
 	struct neoisp_buffer_s *buf[NEOISP_NODES_COUNT];
 	struct neoisp_node_s *node;
 	unsigned long flags1;
-	int i, params_index;
+	int i;
 	__u8 staggered_input = 0; /* FIXME compute the actual flag */
 	__u8 rgbir_input = 0; /* FIXME compute the actual flag */
 
@@ -626,12 +663,6 @@ static int neoisp_schedule_internal(struct neoisp_node_group_s *node_group, unsi
 			list_first_entry_or_null(&node->ready_queue, struct neoisp_buffer_s,
 					ready_list);
 		spin_unlock_irqrestore(&node->ready_lock, flags1);
-
-		/* Exit early if no params buffer and not disabled. */
-		if (!buf[NEOISP_PARAMS_NODE])
-			return 0;
-		params_index = buf[NEOISP_PARAMS_NODE]->vb.vb2_buf.index;
-		params = &node_group->params[params_index];
 	}
 
 	for (i = 0; i < NEOISP_NODES_COUNT; i++) {
@@ -691,10 +722,11 @@ static int neoisp_schedule_internal(struct neoisp_node_group_s *node_group, unsi
 	 */
 	dev_dbg(&neoispd->pdev->dev, "Have buffers - starting hardware\n");
 
-	neoisp_queue_job(neoispd, node_group, params);
+	neoisp_queue_job(neoispd, node_group);
 
 	return 1;
 }
+
 /* Try and schedule a job for just a single node group. */
 static void neoisp_schedule_one(struct neoisp_node_group_s *node_group)
 {
@@ -1117,6 +1149,10 @@ static int neoisp_s_fmt_vid_out(struct file *file, void *priv,
 	node->neoisp_format =
 		neoisp_find_pixel_format(f->fmt.pix_mp.pixelformat, NEOISP_FMT_VIDEO_OUTPUT);
 
+	node->crop.top = 0;
+	node->crop.left = 0;
+	node->crop.width = f->fmt.pix_mp.width;
+	node->crop.height = f->fmt.pix_mp.height;
 	dev_dbg(&neoispd->pdev->dev,
 			"Set output format for node %s to %x\n",
 			NODE_NAME(node),
@@ -1124,9 +1160,85 @@ static int neoisp_s_fmt_vid_out(struct file *file, void *priv,
 	return 0;
 }
 
+static int neoisp_g_selection(struct file *file, void *fh, struct v4l2_selection *sel)
+{
+	struct neoisp_node_s *node = video_drvdata(file);
+
+	if (sel->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+		return -EINVAL;
+
+	switch (sel->target) {
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+		sel->r.top = 0;
+		sel->r.left = 0;
+		sel->r.width = node->format.fmt.pix_mp.width;
+		sel->r.height = node->format.fmt.pix_mp.height;
+		break;
+	case V4L2_SEL_TGT_CROP:
+		sel->r.top = node->crop.top;
+		sel->r.left = node->crop.left;
+		sel->r.width = node->crop.width;
+		sel->r.height = node->crop.height;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int neoisp_s_selection(struct file *file, void *fh, struct v4l2_selection *sel)
+{
+	struct neoisp_node_s *node = video_drvdata(file);
+	__u32 winput, hinput;
+
+	if (sel->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+		return -EINVAL;
+
+	dev_dbg(&node->node_group->neoisp_dev->pdev->dev,
+		">>> Buffer Type: %u Target: %u Rect: %ux%u@%d.%d\n",
+		sel->type, sel->target,
+		sel->r.width, sel->r.height, sel->r.left, sel->r.top);
+
+	switch (sel->target) {
+	case V4L2_SEL_TGT_CROP:
+		winput = node->format.fmt.pix_mp.width;
+		hinput = node->format.fmt.pix_mp.height;
+
+		/* left and width should be multiple of 16 */
+		sel->r.left = (sel->r.left / 16) * 16;
+		sel->r.width = (sel->r.width / 16) * 16;
+		/* top and height should be even */
+		sel->r.top = (sel->r.top / 2) * 2;
+		sel->r.height = (sel->r.height / 2) * 2;
+
+		sel->r.top = clamp_t(int, sel->r.top, 0, hinput - NEOISP_MIN_H);
+		sel->r.left = clamp_t(int, sel->r.left, 0, winput - NEOISP_MIN_W);
+		sel->r.width = clamp(sel->r.width, NEOISP_MIN_W, winput - sel->r.left);
+		sel->r.height = clamp(sel->r.height, NEOISP_MIN_H, hinput - sel->r.top);
+
+		node->crop.top = sel->r.top;
+		node->crop.left = sel->r.left;
+		node->crop.width = sel->r.width;
+		node->crop.height = sel->r.height;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	dev_dbg(&node->node_group->neoisp_dev->pdev->dev,
+		"<<< Buffer Type: %u Target: %u Rect: %ux%u@%d.%d\n",
+		sel->type, sel->target,
+		sel->r.width, sel->r.height, sel->r.left, sel->r.top);
+
+	return 0;
+}
+
 static void neoisp_set_ctx_default_params(struct neoisp_dev_s *neoispd, int ctx_id)
 {
-	memcpy(&neoispd->node_group[ctx_id].params[VB2_MAX_FRAME],
+	memcpy(neoispd->node_group[ctx_id].params,
 		&neoisp_default_params,
 		sizeof(neoisp_default_params));
 }
@@ -1136,7 +1248,7 @@ static int neoisp_node_streamon(struct file *file, void *priv,
 {
 	struct neoisp_node_s *node = video_drvdata(file);
 	struct neoisp_dev_s *neoispd = node->node_group->neoisp_dev;
-	struct neoisp_meta_params_s *params = &node->node_group->params[VB2_MAX_FRAME];
+	struct neoisp_meta_params_s *params = node->node_group->params;
 	__u32 pixfmt = node->format.fmt.pix_mp.pixelformat;
 
 	dev_dbg(&neoispd->pdev->dev, "Stream on for node %s\n", NODE_NAME(node));
@@ -1144,9 +1256,17 @@ static int neoisp_node_streamon(struct file *file, void *priv,
 	 * Check if this is input0 node to preload default params
 	 */
 	if (node->id == NEOISP_INPUT0_NODE)
-		neoisp_update_hdr_decompress(&params->regs, node->neoisp_format->bit_depth);
+		neoisp_update_pipeline_bit_width(&params->regs, node->neoisp_format->bit_depth);
 
 	if (node->id == NEOISP_FRAME_NODE) {
+		struct neoisp_node_s *in0_node = &node->node_group->node[NEOISP_INPUT0_NODE];
+
+		if ((node->format.fmt.pix_mp.width != in0_node->crop.width)
+				|| (node->format.fmt.pix_mp.height != in0_node->crop.height)) {
+			dev_err(&neoispd->pdev->dev, "Crop size and output size does not match\n");
+			return -EPIPE;
+		}
+
 		if (FMT_IS_YUV(pixfmt))
 			neoisp_config_gcm_for_yuv(&params->regs);
 		else
@@ -1196,6 +1316,8 @@ static const struct v4l2_ioctl_ops neoisp_ioctl_ops = {
 	.vidioc_s_fmt_meta_out		= neoisp_s_fmt_meta_out,
 	.vidioc_try_fmt_meta_out	= neoisp_try_fmt_meta_out,
 
+	.vidioc_g_selection		= neoisp_g_selection,
+	.vidioc_s_selection		= neoisp_s_selection,
 	.vidioc_reqbufs			= vb2_ioctl_reqbufs,
 	.vidioc_querybuf		= vb2_ioctl_querybuf,
 	.vidioc_qbuf			= vb2_ioctl_qbuf,
@@ -1482,6 +1604,9 @@ static void node_set_default_format(struct neoisp_node_s *node)
 		neoisp_try_fmt(&f, node);
 		node->format = f;
 	}
+	node->crop.width = NEOISP_DEF_W;
+	node->crop.height = NEOISP_DEF_H;
+
 	node->neoisp_format = neoisp_find_pixel_format(node->format.fmt.pix_mp.pixelformat,
 			NEOISP_FMT_VIDEO_OUTPUT | NEOISP_FMT_VIDEO_CAPTURE
 			| NEOISP_FMT_META_OUTPUT | NEOISP_FMT_META_CAPTURE);
@@ -1639,9 +1764,8 @@ static int neoisp_init_group(struct neoisp_dev_s *neoispd, struct neoisp_info_s 
 	if (ret)
 		goto err_unregister_nodes;
 
-	node_group->params =
-		dma_alloc_coherent(mdev->dev,
-				sizeof(struct neoisp_meta_params_s) * (VB2_MAX_FRAME + 1),
+	node_group->params = dma_alloc_coherent(mdev->dev,
+				sizeof(struct neoisp_meta_params_s),
 				&node_group->params_dma_addr, GFP_KERNEL);
 	if (!node_group->params) {
 		dev_err(mdev->dev, "Unable to allocate cached params buffers.\n");
@@ -1673,7 +1797,7 @@ static void neoisp_destroy_node_group(struct neoisp_node_group_s *node_group)
 
 	if (node_group->params) {
 		dma_free_coherent(&neoispd->pdev->dev,
-				sizeof(struct neoisp_meta_params_s) * (VB2_MAX_FRAME + 1),
+				sizeof(struct neoisp_meta_params_s),
 				node_group->params,
 				node_group->params_dma_addr);
 	}
@@ -1703,9 +1827,7 @@ static int neoisp_init_ctx(struct neoisp_dev_s *neoispd)
 		ptr[i] = 1 << 8;
 
 	for (i = 0; i < NEOISP_NODE_GROUPS_COUNT; i++)
-		memcpy(&neoispd->node_group[i].params[VB2_MAX_FRAME],
-			&neoisp_default_params,
-			sizeof(neoisp_default_params));
+		neoisp_set_ctx_default_params(neoispd, i);
 
 	return 0;
 }
@@ -1781,6 +1903,8 @@ static int neoisp_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, neoisp_dev);
 
+	pm_runtime_set_autosuspend_delay(&pdev->dev, NEOISP_SUSPEND_TIMEOUT_MS);
+	pm_runtime_use_autosuspend(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 	ret = pm_runtime_resume_and_get(&pdev->dev);
 	if (ret < 0) {
@@ -1814,13 +1938,22 @@ static int neoisp_probe(struct platform_device *pdev)
 	if (ret)
 		goto disable_nodes_err;
 
-	dev_info(&pdev->dev, "probe: done (%d)\n", ret);
+	if (mod_params.test.enable_debugfs)
+		/* increase pm_runtime counter to prevent suspend */
+		pm_runtime_resume_and_get(&pdev->dev);
+
+	pm_runtime_mark_last_busy(&pdev->dev);
+	pm_runtime_put_autosuspend(&pdev->dev);
+
+	dev_info(&pdev->dev, "probe: done (%d) debugfs (%x)\n",
+		 ret, mod_params.test.enable_debugfs);
 	return ret;
 
 disable_nodes_err:
 	while (num_groups-- > 0)
 		neoisp_destroy_node_group(&neoisp_dev->node_group[num_groups]);
 err_pm:
+	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
 	dev_err(&pdev->dev, "probe: error %d\n", ret);
@@ -1835,6 +1968,7 @@ static int neoisp_remove(struct platform_device *pdev)
 	for (i = NEOISP_NODE_GROUPS_COUNT - 1; i >= 0; i--)
 		neoisp_destroy_node_group(&neoisp_dev->node_group[i]);
 
+	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
 	return 0;

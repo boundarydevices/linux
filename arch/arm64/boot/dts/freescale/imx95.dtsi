@@ -487,7 +487,8 @@
 						<&A55_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
 						<&A55_3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
 						<&A55_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-						<&A55_5 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						<&A55_5 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<&vpuctrl THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
 		};
@@ -641,23 +642,18 @@
 
 		opp-1000000000 {
 			opp-hz = /bits/ 64 <1000000000>;
-			opp-hz-real = /bits/ 64 <1000000000>, /bits/ 64 <500000000>;
+			opp-hz-real = /bits/ 64 <1000000000>, /bits/ 64 <133333333>;
 		};
 
 		opp-800000000 {
 			opp-hz = /bits/ 64 <800000000>;
-			opp-hz-real = /bits/ 64 <800000000>, /bits/ 64 <500000000>;
+			opp-hz-real = /bits/ 64 <800000000>, /bits/ 64 <133333333>;
+		};
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-hz-real = /bits/ 64 <500000000>, /bits/ 64 <133333333>;
 		};
 
-		opp-667000000 {
-			opp-hz = /bits/ 64 <667000000>;
-			opp-hz-real = /bits/ 64 <667000000>, /bits/ 64 <400000000>;
-		};
-
-		opp-400000000 {
-			opp-hz = /bits/ 64 <400000000>;
-			opp-hz-real = /bits/ 64 <400000000>, /bits/ 64 <250000000>;
-		};
 	};
 
 	usbphynop: usbphynop {
@@ -2932,10 +2928,11 @@
 		mali: gpu@4d900000 {
 			compatible = "arm,mali-valhall";
 			reg = <0 0x4d900000 0 0x700000>, <0 0x4d810000 0 0x10000>;
+			reg-names = "gpu_base", "gpumix_blk_ctrl";
 			interrupts = <GIC_SPI 288 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 289 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 290 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "GPU", "JOB", "MMU";
+			interrupt-names = "gpu", "job", "mmu";
 			clocks = <&scmi_clk IMX95_CLK_GPU>, <&scmi_clk IMX95_CLK_GPUAPB>;
 			clock-names = "gpu", "gpu_apb";
 			power-domains = <&scmi_devpd IMX95_PD_GPU>;
@@ -2946,7 +2943,6 @@
 			    static-coefficient = <2427750>;
 			    dynamic-coefficient = <4687>;
 			    ts = <20000 2000 (-20) 2>;
-			    thermal-zone = "gpu";
 			};
 		};
 
@@ -2998,7 +2994,10 @@
 			reg = <0x0 0x4c4c0000 0x0 0x10000>;
 			clocks = <&scmi_clk IMX95_CLK_VPU>,
 				 <&vpu_blk_ctrl IMX95_CLK_VPUBLK_WAVE>;
-			power-domains = <&scmi_devpd IMX95_PD_VPU>;
+			clock-names = "vpu", "vpublk_wave";
+			power-domains = <&scmi_devpd IMX95_PD_VPU>, <&scmi_perf IMX95_PERF_VPU>;
+			power-domain-names = "vpumix", "vpuperf";
+			#cooling-cells = <2>;
 		};
 
 		jpegdec: jpegdec@4c500000 {

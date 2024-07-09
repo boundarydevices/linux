@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2021-2023 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2021-2024 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -50,8 +50,8 @@ static int int_id_overrides_show(struct seq_file *sfile, void *data)
 #endif /* MALI_USE_CSF */
 
 		for (j = 0; j < sizeof(u32); ++j) {
-			u8 r_val;
-			u8 w_val;
+			u8 r_val = 0;
+			u8 w_val = 0;
 
 			switch (j) {
 			case 0:
@@ -234,7 +234,7 @@ void kbase_pbha_debugfs_init(struct kbase_device *kbdev)
 		debugfs_create_file("int_id_overrides", mode, debugfs_pbha_dir, kbdev,
 				    &pbha_int_id_overrides_fops);
 #if MALI_USE_CSF
-		if (kbase_hw_has_feature(kbdev, BASE_HW_FEATURE_PBHA_HWU))
+		if (kbase_hw_has_feature(kbdev, KBASE_HW_FEATURE_PBHA_HWU))
 			debugfs_create_file("propagate_bits", mode, debugfs_pbha_dir, kbdev,
 					    &pbha_propagate_bits_fops);
 #endif /* MALI_USE_CSF */

@@ -164,6 +164,7 @@ struct neoisp_node_s {
 	struct vb2_queue queue;
 	struct v4l2_format format;
 	const struct neoisp_fmt_s *neoisp_format;
+	struct v4l2_rect crop;
 };
 
 struct neoisp_node_group_s {
@@ -242,6 +243,7 @@ struct neoisp_mod_params_s {
 	struct {
 		__u32 disable_params;
 		__u32 disable_stats;
+		__u32 enable_debugfs;
 	} test;
 	struct neoisp_mparam_conf_s conf;
 	struct neoisp_mparam_packetizer_s pack;
