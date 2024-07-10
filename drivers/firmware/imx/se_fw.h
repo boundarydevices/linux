@@ -41,6 +41,7 @@ struct ele_imem_buf {
 	u8 *buf;
 	phys_addr_t phyaddr;
 	u32 size;
+	u32 state;
 };
 
 struct ele_buf_desc {
