@@ -80,16 +80,22 @@ static void *hyp_table_entry(struct hyp_mod_tables *mod_tables,
 extern struct hyp_printk_fmt __hyp_printk_fmts_start[];
 extern struct hyp_printk_fmt __hyp_printk_fmts_end[];
 
+static struct hyp_mod_tables mod_printk_fmt_tables;
+static unsigned long total_printk_fmts;
+
 static const char *hyp_printk_fmt_from_id(u8 fmt_id)
 {
-	int nr_printk_fmts = nr_entries(__hyp_printk_fmts_start,
-					__hyp_printk_fmts_end);
+	u8 nr_fmts = nr_entries(__hyp_printk_fmts_start, __hyp_printk_fmts_end);
+	struct hyp_printk_fmt *fmt = NULL;
 
-	if (fmt_id <= nr_printk_fmts)
-		return "Unknown Format";
+	if (fmt_id < nr_fmts)
+		return (__hyp_printk_fmts_start + fmt_id)->fmt;
 
-	return (const char *)(__hyp_printk_fmts_start +
-			      (fmt_id * sizeof(struct hyp_printk_fmt)));
+	fmt_id -= nr_fmts;
+
+	fmt = hyp_table_entry(&mod_printk_fmt_tables, sizeof(*fmt), fmt_id);
+
+	return fmt ? fmt->fmt : "Unknown Format";
 }
 
 extern struct hyp_event __hyp_events_start[];
@@ -458,7 +464,9 @@ int hyp_trace_init_events(void)
 	/* __hyp_printk event only supports U8_MAX different formats */
 	WARN_ON(nr_printk_fmts > U8_MAX);
 
-	if (WARN_ON(nr_events != nr_event_ids))
+	total_printk_fmts = nr_printk_fmts;
+
+	if (WARN(nr_events != nr_event_ids, "Too many trace_hyp_printk()!"))
 		return -EINVAL;
 
 	return hyp_event_table_init(__hyp_events_start, __hyp_event_ids_start,
@@ -466,8 +474,10 @@ int hyp_trace_init_events(void)
 }
 
 int hyp_trace_init_mod_events(struct hyp_event *event,
-			      struct hyp_event_id *event_id, int nr_events)
+			      struct hyp_event_id *event_id, int nr_events,
+			      struct hyp_printk_fmt *fmt, int nr_fmts)
 {
+	u8 *hyp_printk_fmt_offsets;
 	int ret;
 
 	ret = hyp_event_table_init(event, event_id, nr_events);
@@ -479,6 +489,26 @@ int hyp_trace_init_mod_events(struct hyp_event *event,
 		return ret;
 
 	hyp_event_table_init_tracefs(event, nr_events);
+
+	if (total_printk_fmts + nr_fmts > U8_MAX) {
+		pr_warn("Too many trace_hyp_printk()!");
+		return 0;
+	}
+
+	if (WARN_ON(nr_fmts && !event_id))
+		return 0;
+
+	ret = hyp_table_add(&mod_printk_fmt_tables, (void *)fmt, nr_fmts);
+	if (ret) {
+		pr_warn("Not enough memory to register trace_hyp_printk()");
+		return 0;
+	}
+
+	/* format offsets stored after event_ids (see module.lds.S) */
+	hyp_printk_fmt_offsets = (u8 *)(event_id + nr_events);
+	memset(hyp_printk_fmt_offsets, total_printk_fmts, nr_fmts);
+
+	total_printk_fmts += nr_fmts;
 
 	return 0;
 }

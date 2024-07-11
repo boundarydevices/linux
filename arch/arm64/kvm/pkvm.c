@@ -850,7 +850,9 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 
 	ret = hyp_trace_init_mod_events(mod->hyp_events,
 					mod->event_ids.start,
-					mod->nr_hyp_events);
+					mod->nr_hyp_events,
+					mod->hyp_printk_fmts,
+					mod->nr_hyp_printk_fmts);
 	if (ret)
 		kvm_err("Failed to init module events: %d\n", ret);
 

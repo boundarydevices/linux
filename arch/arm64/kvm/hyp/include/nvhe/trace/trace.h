@@ -45,12 +45,20 @@ int __pkvm_reset_tracing(unsigned int cpu);
 int __pkvm_swap_reader_tracing(unsigned int cpu);
 int __pkvm_enable_event(unsigned short id, bool enable);
 
-extern char __hyp_printk_fmts_start[];
+extern struct hyp_printk_fmt __hyp_printk_fmts_start[];
 
+#ifdef MODULE
+#define hyp_printk_fmt_to_id(fmt)					\
+({									\
+	static u8 fmt_id_offset __section(".hyp.printk_fmt_offset") __used;	\
+	(struct hyp_printk_fmt *)fmt - __hyp_printk_fmts_start + fmt_id_offset; \
+})
+#else
 static inline u8 hyp_printk_fmt_to_id(const char *fmt)
 {
-	return (fmt - __hyp_printk_fmts_start) / sizeof(struct hyp_printk_fmt);
+	return (struct hyp_printk_fmt *)fmt - __hyp_printk_fmts_start;
 }
+#endif
 
 #define __trace_hyp_printk(__fmt, a, b, c, d)		\
 do {							\

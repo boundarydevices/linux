@@ -24,10 +24,17 @@ SECTIONS {
 		__hyp_event_ids_start = .;
 		*(HYP_SECTION_NAME(.event_ids))
 		__hyp_event_ids_end = .;
+		*(HYP_SECTION_NAME(.printk_fmt_offset))
 	}
 
 	.hyp.data : {
 		HYP_SECTION_SYMBOL_NAME(.data) = .;
 		*(.data .data.*)
+	}
+
+	.hyp.printk_fmts : {
+		__hyp_printk_fmts_start = .;
+		*(HYP_SECTION_NAME(.printk_fmts))
+		__hyp_printk_fmts_end = .;
 	}
 }

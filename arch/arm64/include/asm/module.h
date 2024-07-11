@@ -25,7 +25,9 @@ struct pkvm_el2_module {
 	struct pkvm_module_section sections;
 	void *hyp_va;
 	struct hyp_event *hyp_events;
+	struct hyp_printk_fmt *hyp_printk_fmts;
 	unsigned int nr_hyp_events;
+	unsigned int nr_hyp_printk_fmts;
 	kvm_nvhe_reloc_t *relocs;
 	unsigned int nr_relocs;
 	int (*init)(const struct pkvm_module_ops *ops);

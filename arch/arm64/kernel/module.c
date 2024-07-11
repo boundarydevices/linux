@@ -510,28 +510,31 @@ static int module_init_hyp(const Elf_Ehdr *hdr, const Elf_Shdr *sechdrs,
 		};
 	}
 
-	s = find_section(hdr, sechdrs, "_hyp_events");
-	if (s) {
-		hyp_mod->hyp_events = (void *)s->sh_addr;
-		hyp_mod->nr_hyp_events = s->sh_size /
-			sizeof(*hyp_mod->hyp_events);
+	s = find_section(hdr, sechdrs, ".hyp.event_ids");
+	if (s && s->sh_size) {
+		mod->arch.hyp.event_ids = (struct pkvm_module_section) {
+			.start	= (void *)s->sh_addr,
+			.end	= (void *)s->sh_addr + s->sh_size,
+		};
+	}
 
-		s = find_section(hdr, sechdrs, ".hyp.event_ids");
-		if (s) {
-			mod->arch.hyp.event_ids = (struct pkvm_module_section) {
-				.start	= (void *)s->sh_addr,
-				.end	= (void *)s->sh_addr + s->sh_size,
-			};
-		} else {
-			hyp_mod->hyp_events = NULL;
-			hyp_mod->nr_hyp_events = 0;
+	s = find_section(hdr, sechdrs, "_hyp_events");
+	if (s && s->sh_size) {
+		if (!mod->arch.hyp.event_ids.start) {
 			WARN(1, "%s: Did you forget define_events.h in the EL2 (hyp) code?",
-				mod->name);
+			     mod->name);
+		} else {
+			hyp_mod->hyp_events = (void *)s->sh_addr;
+			hyp_mod->nr_hyp_events = s->sh_size /
+				sizeof(*hyp_mod->hyp_events);
 		}
-	} else {
-		WARN(find_section(hdr, sechdrs, ".hyp.event_ids"),
-		     "%s: Did you forget kvm_define_hypevents.h in the EL1 code?",
-		     mod->name);
+	}
+
+	s = find_section(hdr, sechdrs, ".hyp.printk_fmts");
+	if (s && s->sh_size) {
+		hyp_mod->hyp_printk_fmts = (void *)s->sh_addr;
+		hyp_mod->nr_hyp_printk_fmts = s->sh_size /
+			sizeof(*hyp_mod->hyp_printk_fmts);
 	}
 #endif
 	return 0;
