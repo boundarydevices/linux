@@ -883,14 +883,29 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 		goto exit;
 	}
 
-	/* Wait until the complete message is received on the MU. */
-	err = wait_event_interruptible(dev_ctx->wq, dev_ctx->pending_hdr != 0);
-	if (err) {
-		dev_err(ele_mu_priv->dev,
-			"%s: Err[0x%x]:Interrupted by signal.\n",
+	do {
+		err = wait_event_interruptible(dev_ctx->wq, dev_ctx->pending_hdr != 0);
+		if (err == -ERESTARTSYS) {
+			dev_dbg(dev_ctx->dev,
+				"%s: err[0x%x]:interrupted by CTRL + C.\n",
 				dev_ctx->miscdev.name, err);
-		goto exit;
-	}
+			if (dev_ctx->priv->waiting_rsp_dev) {
+				dev_ctx->priv->waiting_rsp_dev->signal_recvd = true;
+				continue;
+			} else {
+				dev_dbg(dev_ctx->dev,
+					"Command receiver Dev ctx %s, is getting killed.\n",
+					dev_ctx->priv->cmd_receiver_dev->miscdev.name);
+				err = -EINTR;
+				goto exit;
+			}
+		} else if (err) {
+			dev_err(dev_ctx->dev,
+				"%s: err[0x%x]: other than signal interruption.\n",
+				dev_ctx->miscdev.name, err);
+			goto exit;
+		}
+	} while (!dev_ctx->pending_hdr);
 
 	dev_dbg(ele_mu_priv->dev,
 			"%s: %s %s\n",
@@ -968,6 +983,12 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 	}
 
 	err = size_to_copy;
+	if (dev_ctx->priv->waiting_rsp_dev &&
+			dev_ctx == dev_ctx->priv->waiting_rsp_dev &&
+			dev_ctx->signal_recvd == true) {
+		dev_ctx->signal_recvd = false;
+		err = -EINTR;
+	}
 
 	/* free memory allocated on the shared buffers. */
 	dev_ctx->secure_mem.pos = 0;
