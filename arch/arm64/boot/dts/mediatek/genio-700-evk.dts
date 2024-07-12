@@ -217,6 +217,15 @@
 		regulator-always-on;
 	};
 
+	dsi0_en: dsi0-en {
+		compatible = "regulator-fixed";
+		regulator-name = "lcm1_en";
+		enable-active-high;
+		gpio = <&pio 111 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&dsi0_en_pins_default>;
+	};
+
 	amic_codec: amic-codec {
 		#sound-dai-cells = <0>;
 		compatible = "dmic-codec";
@@ -406,7 +415,7 @@
 		pinctrl-0 = <&panel_pins_default>;
 		reset-gpios = <&pio 25 GPIO_ACTIVE_HIGH>;
 		dcdc-gpios = <&pio 45 GPIO_ACTIVE_HIGH>;
-		enable-gpios = <&pio 111 GPIO_ACTIVE_HIGH>;
+		iovcc-supply = <&dsi0_en>;
 		port {
 			panel0_in: endpoint {
 				remote-endpoint = <&dsi0_out>;
@@ -640,14 +649,16 @@
 			output-low;
 		};
 
-		panel-en {
-			pinmux = <PINMUX_GPIO111__FUNC_B_GPIO111>;
-			output-low;
-		};
-
 		panel-rst {
 			pinmux = <PINMUX_GPIO25__FUNC_B_GPIO25>;
 			output-high;
+		};
+	};
+
+	dsi0_en_pins_default: dsi0-en-pins-default {
+		panel-en {
+			pinmux = <PINMUX_GPIO111__FUNC_B_GPIO111>;
+			output-low;
 		};
 	};
 
