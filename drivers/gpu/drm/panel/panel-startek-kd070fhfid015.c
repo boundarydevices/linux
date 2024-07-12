@@ -404,7 +404,7 @@ static int stk_panel_add(struct stk_panel *stk)
 		return ret;
 	}
 
-	stk->enable_gpio = devm_gpiod_get(dev, "enable", GPIOD_OUT_LOW);
+	stk->enable_gpio = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_LOW);
 	if (IS_ERR(stk->enable_gpio)) {
 		ret = PTR_ERR(stk->enable_gpio);
 		dev_err(dev, "cannot get enable-gpio %d\n", ret);
