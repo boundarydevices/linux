@@ -1119,6 +1119,18 @@
 			status = "disabled";
 		};
 
+		disp_pwm1: disp-pwm0@1100f000 {
+			compatible = "mediatek,mt8183-disp-pwm";
+			reg = <0 0x1100f000 0 0x1000>;
+			interrupts = <GIC_SPI 793 IRQ_TYPE_LEVEL_LOW 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
+			#pwm-cells = <2>;
+			clocks = <&topckgen CLK_TOP_DISP_PWM1>,
+				 <&infracfg_ao CLK_INFRA_AO_DISP_PWM1>;
+			clock-names = "main", "mm";
+			status = "disabled";
+		};
+
 		spi1: spi1@11010000 {
 			compatible = "mediatek,mt6765-spi";
 			reg = <0 0x11010000 0 0x1000>;
