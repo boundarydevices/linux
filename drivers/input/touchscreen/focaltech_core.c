@@ -864,8 +864,10 @@ int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 	}
 
 	ret = fts_parse_dt(ts_data->dev, ts_data->pdata);
-	if (ret)
+	if (ret) {
 		dev_err(&ts_data->client->dev, "device-tree parse fail");
+		goto err_parse_dt;
+	}
 
 	ts_data->ts_workqueue = create_singlethread_workqueue("fts_wq");
 	if (!ts_data->ts_workqueue)
@@ -939,6 +941,7 @@ err_bus_init:
 		destroy_workqueue(ts_data->ts_workqueue);
 	kfree_safe(ts_data->bus_tx_buf);
 	kfree_safe(ts_data->bus_rx_buf);
+err_parse_dt:
 	kfree_safe(ts_data->pdata);
 
 	return ret;
