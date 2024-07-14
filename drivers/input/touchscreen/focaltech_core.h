@@ -113,7 +113,7 @@
 #define FTS_MAX_TOUCH_BUF					4096
 #define FTS_MAX_BUS_BUF						4096
 #define FTS_TIMEOUT_COMERR_PM				700
-#define FTS_TOUCH_HIRES_EN					1
+#define FTS_TOUCH_HIRES_EN					0
 #define FTS_TOUCH_HIRES_X					10
 #define FTS_HI_RES_X_MAX					16
 
