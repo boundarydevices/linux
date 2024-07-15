@@ -758,6 +758,17 @@ static int fts_parse_dt(struct device *dev, struct fts_ts_platform_data *pdata)
 		return -EINVAL;
 	}
 
+	pdata->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
+	if (!pdata->reset_gpio) {
+		dev_info(dev, "reset-gpio not set\n");
+	} else {
+		ret = PTR_ERR_OR_ZERO(pdata->reset_gpio);
+		if (ret) {
+			dev_err(dev, "Failed to get reset gpio (%d)\n", ret);
+			return ret;
+		}
+	}
+
 	dev_info(dev, "max touch number:%d, irq gpio:%d",
 			pdata->max_touch_number, pdata->irq_gpio);
 
@@ -785,12 +796,23 @@ int fts_ts_suspend(struct fts_ts_data *ts_data)
 	return 0;
 }
 
+static void fts_reset_proc(struct fts_ts_data *ts_data, int hdelayms)
+{
+	if (ts_data->pdata->reset_gpio) {
+		gpiod_set_value_cansleep(ts_data->pdata->reset_gpio, 1);
+		usleep_range(1000, 2000);
+		gpiod_set_value_cansleep(ts_data->pdata->reset_gpio, 0);
+		msleep(hdelayms);
+	}
+}
+
 int fts_ts_resume(struct fts_ts_data *ts_data)
 {
 	if (!ts_data->suspended) {
 		dev_dbg(&ts_data->client->dev, "Already in awake state");
 		return 0;
 	}
+	fts_reset_proc(ts_data, FTS_RESET_MS);
 
 	ts_data->suspended = false;
 	fts_release_all_finger(ts_data);
@@ -901,6 +923,8 @@ int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 		dev_err(&ts_data->client->dev, "configure the gpios fail");
 		goto err_gpio_config;
 	}
+
+	fts_reset_proc(ts_data, FTS_RESET_MS);
 
 	ret = fts_get_ic_information(ts_data);
 	if (ret) {
