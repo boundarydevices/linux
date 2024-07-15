@@ -516,10 +516,16 @@ static void sync_hyp_timer_state(struct pkvm_hyp_vcpu *hyp_vcpu)
 		read_sysreg_el0(SYS_CNTV_CTL);
 }
 
+#define copy_sysreg(REG) do {							\
+	BUILD_BUG_ON(REG <= __INVALID_SYSREG__);				\
+	BUILD_BUG_ON(REG >= NR_SYS_REGS);					\
+	to_vcpu->arch.ctxt.sys_regs[REG] = from_vcpu->arch.ctxt.sys_regs[REG];	\
+} while (0)
+
 static void __copy_vcpu_state(const struct kvm_vcpu *from_vcpu,
 			      struct kvm_vcpu *to_vcpu)
 {
-	int i;
+	int reg;
 
 	to_vcpu->arch.ctxt.regs		= from_vcpu->arch.ctxt.regs;
 	to_vcpu->arch.ctxt.spsr_abt	= from_vcpu->arch.ctxt.spsr_abt;
@@ -530,12 +536,73 @@ static void __copy_vcpu_state(const struct kvm_vcpu *from_vcpu,
 	/*
 	 * Copy the sysregs, but don't mess with the timer state which
 	 * is directly handled by EL1 and is expected to be preserved.
+	 * Note that the sysreg enum is sparse and not sorted, therefore,
+	 * explicitly specify the registers to copy.
 	 */
-	for (i = 1; i < NR_SYS_REGS; i++) {
-		if (i >= CNTVOFF_EL2 && i <= CNTP_CTL_EL0)
-			continue;
-		to_vcpu->arch.ctxt.sys_regs[i] = from_vcpu->arch.ctxt.sys_regs[i];
-	}
+	copy_sysreg(MPIDR_EL1);
+	copy_sysreg(CLIDR_EL1);
+	copy_sysreg(CSSELR_EL1);
+	copy_sysreg(TPIDR_EL0);
+	copy_sysreg(TPIDRRO_EL0);
+	copy_sysreg(TPIDR_EL1);
+	copy_sysreg(CNTKCTL_EL1);
+	copy_sysreg(PAR_EL1);
+	copy_sysreg(MDCCINT_EL1);
+	copy_sysreg(OSLSR_EL1);
+	copy_sysreg(DISR_EL1);
+
+	copy_sysreg(PMCR_EL0);
+	copy_sysreg(PMSELR_EL0);
+	for (reg = PMEVCNTR0_EL0; reg <= PMEVCNTR30_EL0; reg++)
+		copy_sysreg(reg);
+	copy_sysreg(PMCCNTR_EL0);
+	for (reg = PMEVTYPER0_EL0; reg <= PMEVTYPER30_EL0; reg++)
+		copy_sysreg(reg);
+	copy_sysreg(PMCCFILTR_EL0);
+	copy_sysreg(PMCNTENSET_EL0);
+	copy_sysreg(PMINTENSET_EL1);
+	copy_sysreg(PMOVSSET_EL0);
+	copy_sysreg(PMUSERENR_EL0);
+
+	copy_sysreg(APIAKEYLO_EL1);
+	copy_sysreg(APIAKEYHI_EL1);
+	copy_sysreg(APIBKEYLO_EL1);
+	copy_sysreg(APIBKEYHI_EL1);
+	copy_sysreg(APDAKEYLO_EL1);
+	copy_sysreg(APDAKEYHI_EL1);
+	copy_sysreg(APDBKEYLO_EL1);
+	copy_sysreg(APDBKEYHI_EL1);
+	copy_sysreg(APGAKEYLO_EL1);
+	copy_sysreg(APGAKEYHI_EL1);
+
+	copy_sysreg(RGSR_EL1);
+	copy_sysreg(GCR_EL1);
+	copy_sysreg(TFSRE0_EL1);
+
+	copy_sysreg(SCTLR_EL1);
+	copy_sysreg(ACTLR_EL1);
+	copy_sysreg(CPACR_EL1);
+	copy_sysreg(ZCR_EL1);
+	copy_sysreg(TTBR0_EL1);
+	copy_sysreg(TTBR1_EL1);
+	copy_sysreg(TCR_EL1);
+	copy_sysreg(TCR2_EL1);
+	copy_sysreg(ESR_EL1);
+	copy_sysreg(AFSR0_EL1);
+	copy_sysreg(AFSR1_EL1);
+	copy_sysreg(FAR_EL1);
+	copy_sysreg(MAIR_EL1);
+	copy_sysreg(VBAR_EL1);
+	copy_sysreg(CONTEXTIDR_EL1);
+	copy_sysreg(AMAIR_EL1);
+	copy_sysreg(MDSCR_EL1);
+	copy_sysreg(ELR_EL1);
+	copy_sysreg(SP_EL1);
+	copy_sysreg(SPSR_EL1);
+	copy_sysreg(TFSR_EL1);
+
+	copy_sysreg(PIR_EL1);
+	copy_sysreg(PIRE0_EL1);
 }
 
 static void __sync_hyp_vcpu(struct pkvm_hyp_vcpu *hyp_vcpu)
