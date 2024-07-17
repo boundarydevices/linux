@@ -914,10 +914,17 @@ static int neoisp_enum_fmt(struct file *file, void *priv, struct v4l2_fmtdesc *f
 
 		f->pixelformat = formats_vout[f->index].fourcc;
 	} else {
-		if (f->index >= ARRAY_SIZE(formats_vcap))
-			return -EINVAL;
+		if (node->id == NEOISP_IR_NODE) {
+			if (f->index >= ARRAY_SIZE(formats_vcap_ir))
+				return -EINVAL;
 
-		f->pixelformat = formats_vcap[f->index].fourcc;
+			f->pixelformat = formats_vcap_ir[f->index].fourcc;
+		} else {
+			if (f->index >= ARRAY_SIZE(formats_vcap))
+				return -EINVAL;
+
+			f->pixelformat = formats_vcap[f->index].fourcc;
+		}
 	}
 
 	return 0;
