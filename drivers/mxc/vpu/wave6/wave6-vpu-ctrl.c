@@ -480,6 +480,7 @@ static int wave6_vpu_ctrl_init_vpu(struct vpu_ctrl *ctrl)
 	struct wave6_vpu_entity *entity = ctrl->current_entity;
 	int ret;
 
+	dprintk(ctrl->dev, "cold boot vpu\n");
 	entity->write_reg(entity->dev, W6_VPU_BUSY_STATUS, 1);
 	entity->write_reg(entity->dev, W6_CMD_INIT_VPU_SEC_AXI_BASE_CORE0,
 				       ctrl->sram_buf.dma_addr);
@@ -519,6 +520,7 @@ static void wave6_vpu_ctrl_clear_firmware_buffers(struct vpu_ctrl *ctrl,
 {
 	int ret;
 
+	dprintk(ctrl->dev, "clear firmware work buffers\n");
 	entity->write_reg(entity->dev, W6_VPU_BUSY_STATUS, 1);
 	entity->write_reg(entity->dev, W6_COMMAND, W6_INIT_WORK_BUF);
 	entity->write_reg(entity->dev, W6_VPU_HOST_INT_REQ, 1);
@@ -574,6 +576,7 @@ static void wave6_vpu_ctrl_clear_buffers(struct vpu_ctrl *ctrl)
 	struct wave6_vpu_entity *entity;
 	struct vpu_ctrl_buf *pbuf, *tmp;
 
+	dprintk(ctrl->dev, "clear all buffers\n");
 	entity = list_first_entry_or_null(&ctrl->entities,
 					  struct wave6_vpu_entity, list);
 	if (entity)
@@ -592,6 +595,8 @@ static void wave6_vpu_ctrl_boot_done(struct vpu_ctrl *ctrl, int wakeup)
 
 	if (ctrl->state == WAVE6_VPU_STATE_ON)
 		return;
+
+	dprintk(ctrl->dev, "boot done from %s\n", wakeup ? "wakeup" : "cold boot");
 
 	if (!wakeup)
 		wave6_vpu_ctrl_clear_buffers(ctrl);
@@ -667,7 +672,6 @@ exit:
 		ret = -EINVAL;
 	}
 
-	entity->write_reg(entity->dev, W6_VPU_REG_GLOBAL_WR, 0);
 	ctrl->current_entity = NULL;
 	if (ret)
 		wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_OFF);
@@ -684,6 +688,7 @@ static int wave6_vpu_ctrl_sleep(struct vpu_ctrl *ctrl, struct wave6_vpu_entity *
 {
 	int ret;
 
+	dprintk(ctrl->dev, "sleep firmware\n");
 	entity->write_reg(entity->dev, W6_VPU_BUSY_STATUS, 1);
 	entity->write_reg(entity->dev, W6_CMD_INSTANCE_INFO, (0 << 16) | 0);
 	entity->write_reg(entity->dev, W6_COMMAND, W6_SLEEP_VPU);
@@ -712,6 +717,7 @@ static int wave6_vpu_ctrl_wakeup(struct vpu_ctrl *ctrl, struct wave6_vpu_entity 
 {
 	int ret;
 
+	dprintk(ctrl->dev, "wakeup firmware\n");
 	wave6_vpu_ctrl_remap_code_buffer(ctrl);
 
 	entity->write_reg(entity->dev, W6_VPU_BUSY_STATUS, 1);
@@ -749,32 +755,14 @@ static int wave6_vpu_ctrl_try_boot(struct vpu_ctrl *ctrl, struct wave6_vpu_entit
 	if (reload_firmware)
 		wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_OFF);
 
-	if (entity->read_reg(entity->dev, W6_VPU_REG_GLOBAL_WR)) {
-		/* the vcpu may be booted by other vm */
-		wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_PREPARE);
-
-		ret = wave6_wait_event_freezable_timeout(ctrl->load_fw_wq,
-							 entity->read_reg(entity->dev,
-							 W6_VCPU_CUR_PC) != 0,
-							 msecs_to_jiffies(W6_BOOT_WAIT_TIMEOUT));
-
-		if (ret == -ERESTARTSYS || ret == 0)
-			wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_OFF);
-		else
-			wave6_vpu_ctrl_boot_done(ctrl, 0);
-		return ret;
-	}
-	entity->write_reg(entity->dev, W6_VPU_REG_GLOBAL_WR, 1);
-
 	if (entity->read_reg(entity->dev, W6_VCPU_CUR_PC)) {
-		entity->write_reg(entity->dev, W6_VPU_REG_GLOBAL_WR, 0);
-		wave6_vpu_ctrl_boot_done(ctrl, 0);
+		dprintk(ctrl->dev, "try boot directly as firmware is running\n");
+		wave6_vpu_ctrl_boot_done(ctrl, ctrl->state == WAVE6_VPU_STATE_SLEEP);
 		return 0;
 	}
 
 	if (ctrl->state == WAVE6_VPU_STATE_SLEEP) {
 		ret = wave6_vpu_ctrl_wakeup(ctrl, entity);
-		entity->write_reg(entity->dev, W6_VPU_REG_GLOBAL_WR, 0);
 		return ret;
 	}
 
@@ -789,7 +777,6 @@ static int wave6_vpu_ctrl_try_boot(struct vpu_ctrl *ctrl, struct wave6_vpu_entit
 	if (ret) {
 		dev_err(ctrl->dev, "request firmware %s fail, ret = %d\n", ctrl->res->fw_name, ret);
 		wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_OFF);
-		entity->write_reg(entity->dev, W6_VPU_REG_GLOBAL_WR, 0);
 		return ret;
 	}
 
