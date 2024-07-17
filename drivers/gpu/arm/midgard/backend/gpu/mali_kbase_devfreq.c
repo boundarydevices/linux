@@ -204,7 +204,7 @@ static int kbase_devfreq_target(struct device *dev, unsigned long *target_freq, 
 					err, nominal_freq/1000);
 			return err;
 		}
-		dev_dbg(dev, "gpu freq set target %lukHz\n", nominal_freq/1000);
+		dev_info(dev, "gpu freq set target %lukHz\n", nominal_freq/1000);
 		for (i = 0; i < kbdev->nr_clocks; i++) {
 #if IS_ENABLED(CONFIG_REGULATOR)
 			original_freqs[i] = kbdev->current_freqs[i];
