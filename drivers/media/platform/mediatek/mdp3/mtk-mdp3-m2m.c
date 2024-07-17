@@ -284,6 +284,30 @@ static int mdp_m2m_querycap(struct file *file, void *fh,
 	return 0;
 }
 
+static int mdp_m2m_enum_framesizes(struct file *file, void *fh,
+				   struct v4l2_frmsizeenum *sizes)
+{
+	struct mdp_m2m_ctx *ctx = fh_to_ctx(fh);
+	const struct mtk_mdp_driver_data *mdp_data = ctx->mdp_dev->mdp_data;
+	const struct mdp_limit *limit = mdp_data->def_limit;
+
+	mdp_frmsize_stepwise.max_width = limit->out_limit.wmax;
+	mdp_frmsize_stepwise.min_width = limit->out_limit.wmin;
+	mdp_frmsize_stepwise.max_height = limit->out_limit.hmax;
+	mdp_frmsize_stepwise.min_height = limit->out_limit.hmin;
+
+	if (sizes->index)
+		return -EINVAL;
+
+	if (mdp_find_fmt(mdp_data, sizes->pixel_format, V4L2_BUF_TYPE_VIDEO_CAPTURE) == NULL)
+		return -EINVAL;
+
+	sizes->type = V4L2_FRMSIZE_TYPE_CONTINUOUS;
+	memcpy(&sizes->stepwise, &mdp_frmsize_stepwise, sizeof(sizes->stepwise));
+
+	return 0;
+}
+
 static int mdp_m2m_enum_fmt_mplane(struct file *file, void *fh,
 				   struct v4l2_fmtdesc *f)
 {
@@ -455,6 +479,7 @@ static int mdp_m2m_s_selection(struct file *file, void *fh,
 
 static const struct v4l2_ioctl_ops mdp_m2m_ioctl_ops = {
 	.vidioc_querycap		= mdp_m2m_querycap,
+	.vidioc_enum_framesizes         = mdp_m2m_enum_framesizes,
 	.vidioc_enum_fmt_vid_cap	= mdp_m2m_enum_fmt_mplane,
 	.vidioc_enum_fmt_vid_out	= mdp_m2m_enum_fmt_mplane,
 	.vidioc_g_fmt_vid_cap_mplane	= mdp_m2m_g_fmt_mplane,
