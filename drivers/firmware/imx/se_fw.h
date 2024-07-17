@@ -154,6 +154,7 @@ struct ele_mu_priv {
 	struct perf_time_frame time_frame;
 	struct imx_sc_ipc *ipc_scu;
 	u8 part_owner;
+	bool imem_restore;
 };
 
 uint32_t get_se_soc_id(struct device *dev);
