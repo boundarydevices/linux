@@ -368,7 +368,7 @@ _IMX_IN_TREE_MODULES = [
     "drivers/mfd/max96789-i2c.ko",
     "drivers/firmware/arm_scmi/scmi_power_control.ko",
     "drivers/media/platform/nxp/imx-csi-formatter.ko",
-    "drivers/media/i2c/os08a20/os08a20_mipi.ko",
+    "drivers/media/i2c/ox05b1s/ox05b1s_mipi.ko",
     "drivers/firmware/imx/sm-misc.ko",
     "drivers/remoteproc/imx_neutron_rproc.ko",
     "drivers/mfd/max96752-core.ko",
