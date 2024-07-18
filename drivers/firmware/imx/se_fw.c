@@ -1718,6 +1718,7 @@ static int init_device_context(struct device *dev)
 static int se_save_imem_to_file(const char *path,
 				const void *buf, size_t buf_size)
 {
+#ifndef CONFIG_IMX_GKI_FIX
 	struct file *file;
 	struct path root;
 	ssize_t wret;
@@ -1750,6 +1751,7 @@ static int se_save_imem_to_file(const char *path,
 		pr_err("Error %pe closing imem file\n",
 		       ERR_PTR(wret));
 
+#endif
 	return 0;
 }
 
