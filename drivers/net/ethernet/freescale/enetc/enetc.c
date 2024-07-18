@@ -2734,6 +2734,18 @@ static void enetc_wait_bdrs(struct enetc_ndev_priv *priv)
 		enetc_wait_txbdr(hw, priv->tx_ring[i]);
 }
 
+static void enetc_restore_irqs_affinity(struct enetc_ndev_priv *priv)
+{
+	struct pci_dev *pdev = priv->si->pdev;
+	int i;
+
+	for (i = 0; i < priv->bdr_int_num; i++) {
+		int irq = pci_irq_vector(pdev, ENETC_BDR_INT_BASE_IDX + i);
+
+		irq_set_affinity_hint(irq, get_cpu_mask(i % num_online_cpus()));
+	}
+}
+
 static int enetc_setup_irqs(struct enetc_ndev_priv *priv)
 {
 	struct pci_dev *pdev = priv->si->pdev;
@@ -3148,6 +3160,8 @@ int enetc_resume(struct net_device *ndev, bool wol)
 		err = enetc_setup_irqs(priv);
 		if (err)
 			goto out_setup_irqs;
+	} else {
+		enetc_restore_irqs_affinity(priv);
 	}
 
 	tx_res = enetc_alloc_tx_resources(priv);

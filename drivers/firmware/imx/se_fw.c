@@ -70,8 +70,6 @@ struct imx_info {
 	bool v2x_state_check;
 	int (*start_rng)(struct device *dev);
 	bool enable_ele_trng;
-	bool imem_mgmt;
-	bool imem_restore;
 	uint8_t *fw_name_in_rfs;
 	uint8_t *imem_save_rfs;
 };
@@ -110,7 +108,6 @@ static struct imx_info_list imx8ulp_info = {
 				.v2x_state_check = false,
 				.start_rng = ele_start_rng,
 				.enable_ele_trng = false,
-				.imem_mgmt = true,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = IMX_ELE_FW_DIR\
 						  "mx8ulpa2ext-ahab-container.img",
@@ -144,7 +141,6 @@ static struct imx_info_list imx93_info = {
 				.v2x_state_check = false,
 				.start_rng = ele_start_rng,
 				.enable_ele_trng = true,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -177,7 +173,6 @@ static const struct imx_info_list imx8dxl_info = {
 				.v2x_state_check = false,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -203,7 +198,6 @@ static const struct imx_info_list imx8dxl_info = {
 				.v2x_state_check = false,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -229,7 +223,6 @@ static const struct imx_info_list imx8dxl_info = {
 				.v2x_state_check = false,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -255,7 +248,6 @@ static const struct imx_info_list imx8dxl_info = {
 				.v2x_state_check = false,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -281,7 +273,6 @@ static const struct imx_info_list imx8dxl_info = {
 				.v2x_state_check = false,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 16,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -307,7 +298,6 @@ static const struct imx_info_list imx8dxl_info = {
 				.v2x_state_check = false,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -333,7 +323,6 @@ static const struct imx_info_list imx8dxl_info = {
 				.v2x_state_check = false,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -366,7 +355,6 @@ static struct imx_info_list imx95_info = {
 				.v2x_state_check = true,
 				.start_rng = ele_start_rng,
 				.enable_ele_trng = true,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -392,7 +380,6 @@ static struct imx_info_list imx95_info = {
 				.v2x_state_check = true,
 				.start_rng = v2x_start_rng,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -418,7 +405,6 @@ static struct imx_info_list imx95_info = {
 				.v2x_state_check = true,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 16,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -444,7 +430,6 @@ static struct imx_info_list imx95_info = {
 				.v2x_state_check = true,
 				.start_rng = NULL,
 				.enable_ele_trng = false,
-				.imem_mgmt = false,
 				.mu_buff_size = 256,
 				.fw_name_in_rfs = NULL,
 				.imem_save_rfs = NULL,
@@ -612,12 +597,12 @@ void free_phybuf_mem_pool(struct device *dev,
 	gen_pool_free(mem_pool, (unsigned long)buf, size);
 }
 
-static int imx_fetch_soc_info(struct device *dev,
-			      struct imx_info *info, u32 *state)
+static int imx_fetch_soc_info(struct ele_mu_priv *priv,
+			      struct imx_info *info)
 {
 	struct soc_device_attribute *attr;
 	struct soc_device *sdev = NULL;
-	const struct of_device_id *of_id = of_match_device(se_fw_match, dev);
+	const struct of_device_id *of_id = of_match_device(se_fw_match, priv->dev);
 	struct imx_info_list *info_list;
 	phys_addr_t get_info_addr = 0;
 	u32 *get_info_data = NULL;
@@ -626,22 +611,22 @@ static int imx_fetch_soc_info(struct device *dev,
 
 	info_list = (struct imx_info_list *)of_id->data;
 
-	if (info_list->soc_rev)
+	if (info_list->soc_rev || info_list->soc_id == SOC_ID_OF_IMX8DXL)
 		return err;
 
 	if (info->pool_name) {
-		get_info_addr = get_phy_buf_mem_pool(dev,
+		get_info_addr = get_phy_buf_mem_pool(priv->dev,
 						     info->pool_name,
 						     &get_info_data,
 						     DEVICE_GET_INFO_SZ);
 	} else {
-		get_info_data = dmam_alloc_coherent(dev,
+		get_info_data = dmam_alloc_coherent(priv->dev,
 						    DEVICE_GET_INFO_SZ,
 						    &get_info_addr,
 						    GFP_KERNEL);
 	}
 	if (!get_info_addr) {
-		dev_err(dev, "Unable to alloc buffer for device info.\n");
+		dev_err(priv->dev, "Unable to alloc buffer for device info.\n");
 		return -ENOMEM;
 	}
 
@@ -649,7 +634,7 @@ static int imx_fetch_soc_info(struct device *dev,
 	if (!attr)
 		return -ENOMEM;
 
-	err = ele_get_info(dev, get_info_addr, ELE_GET_INFO_READ_SZ);
+	err = ele_get_info(priv->dev, get_info_addr, ELE_GET_INFO_READ_SZ);
 	if (err) {
 		attr->revision = kasprintf(GFP_KERNEL, "A0");
 	} else {
@@ -676,6 +661,8 @@ static int imx_fetch_soc_info(struct device *dev,
 			case SOC_ID_OF_IMX8ULP:
 				attr->soc_id = kasprintf(GFP_KERNEL,
 							 "i.MX8ULP");
+				priv->imem.state = (get_info_data[ELE_IMEM_STATE_WORD]
+							& ELE_IMEM_STATE_MASK) >> 16;
 				break;
 			case SOC_ID_OF_IMX93:
 				attr->soc_id = kasprintf(GFP_KERNEL,
@@ -686,8 +673,6 @@ static int imx_fetch_soc_info(struct device *dev,
 							 "i.MX95");
 				break;
 		}
-
-		*state = get_info_data[39];
 	}
 
 	err = of_property_read_string(of_root, "model",
@@ -704,10 +689,10 @@ static int imx_fetch_soc_info(struct device *dev,
 			    | get_info_data[GET_INFO_SL_NUM_LSB_WORD_OFF]);
 
 	if (info->pool_name) {
-		free_phybuf_mem_pool(dev, info->pool_name,
+		free_phybuf_mem_pool(priv->dev, info->pool_name,
 				     get_info_data, DEVICE_GET_INFO_SZ);
 	} else {
-		dmam_free_coherent(dev,
+		dmam_free_coherent(priv->dev,
 				   DEVICE_GET_INFO_SZ,
 				   get_info_data,
 				   get_info_addr);
@@ -898,14 +883,29 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 		goto exit;
 	}
 
-	/* Wait until the complete message is received on the MU. */
-	err = wait_event_interruptible(dev_ctx->wq, dev_ctx->pending_hdr != 0);
-	if (err) {
-		dev_err(ele_mu_priv->dev,
-			"%s: Err[0x%x]:Interrupted by signal.\n",
+	do {
+		err = wait_event_interruptible(dev_ctx->wq, dev_ctx->pending_hdr != 0);
+		if (err == -ERESTARTSYS) {
+			dev_dbg(dev_ctx->dev,
+				"%s: err[0x%x]:interrupted by CTRL + C.\n",
 				dev_ctx->miscdev.name, err);
-		goto exit;
-	}
+			if (dev_ctx->priv->waiting_rsp_dev) {
+				dev_ctx->priv->waiting_rsp_dev->signal_recvd = true;
+				continue;
+			} else {
+				dev_dbg(dev_ctx->dev,
+					"Command receiver Dev ctx %s, is getting killed.\n",
+					dev_ctx->priv->cmd_receiver_dev->miscdev.name);
+				err = -EINTR;
+				goto exit;
+			}
+		} else if (err) {
+			dev_err(dev_ctx->dev,
+				"%s: err[0x%x]: other than signal interruption.\n",
+				dev_ctx->miscdev.name, err);
+			goto exit;
+		}
+	} while (!dev_ctx->pending_hdr);
 
 	dev_dbg(ele_mu_priv->dev,
 			"%s: %s %s\n",
@@ -983,6 +983,12 @@ static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 	}
 
 	err = size_to_copy;
+	if (dev_ctx->priv->waiting_rsp_dev &&
+			dev_ctx == dev_ctx->priv->waiting_rsp_dev &&
+			dev_ctx->signal_recvd == true) {
+		dev_ctx->signal_recvd = false;
+		err = -EINTR;
+	}
 
 	/* free memory allocated on the shared buffers. */
 	dev_ctx->secure_mem.pos = 0;
@@ -1751,9 +1757,10 @@ static void se_load_firmware(const struct firmware *fw, void *context)
 {
 	struct ele_mu_priv *priv = context;
 	const struct imx_info *info = priv->info;
-	const char *ele_fw_name = info->fw_name_in_rfs;
-	uint8_t *ele_fw_buf;
+	const u8 *se_img_file_to_load;
 	phys_addr_t ele_fw_phyaddr;
+	u8 *se_fw_buf;
+	int ret;
 
 	if (!fw) {
 		if (priv->fw_fail)
@@ -1763,9 +1770,14 @@ static void se_load_firmware(const struct firmware *fw, void *context)
 			/*add a bit delay to wait for firmware priv released */
 			msleep(20);
 
+			if (priv->imem.state == ELE_IMEM_STATE_BAD)
+				se_img_file_to_load = info->imem_save_rfs;
+			else
+				se_img_file_to_load = info->fw_name_in_rfs;
+
 			/* Load firmware one more time if timeout */
 			request_firmware_nowait(THIS_MODULE,
-					FW_ACTION_UEVENT, info->fw_name_in_rfs,
+					FW_ACTION_UEVENT, se_img_file_to_load,
 					priv->dev, GFP_KERNEL, priv,
 					se_load_firmware);
 			priv->fw_fail++;
@@ -1776,115 +1788,70 @@ static void se_load_firmware(const struct firmware *fw, void *context)
 		return;
 	}
 
-	/* allocate buffer to store the ELE FW */
-	ele_fw_buf = dmam_alloc_coherent(priv->dev, fw->size,
-					 &ele_fw_phyaddr,
-					 GFP_KERNEL);
-	if (!ele_fw_buf) {
-		dev_err(priv->dev, "Failed to alloc ELE fw buffer memory\n");
-		goto exit;
+	if (priv->imem.state == ELE_IMEM_STATE_BAD) {
+		memcpy(priv->imem.buf, fw->data, fw->size);
+		priv->imem.size = fw->size;
+		ret = restore_imem(priv->dev, info->pool_name);
+		if (ret < 0) {
+			dev_err(priv->dev,
+				"Error %pe: Restore IMEM state post DPD.\n",
+				ERR_PTR(ret));
+			goto exit;
+		}
+	} else {
+		/* allocate buffer to store the SE FW */
+		se_fw_buf = dma_alloc_coherent(priv->dev, fw->size,
+				&ele_fw_phyaddr, GFP_KERNEL);
+		if (!se_fw_buf)
+			goto exit;
+
+		memcpy(se_fw_buf, fw->data, fw->size);
+		ret = ele_fw_authenticate(priv->dev, ele_fw_phyaddr);
+		if (ret < 0)
+			dev_err(priv->dev,
+				"Error %pe: Authenticate & load SE firmware %s.\n",
+				ERR_PTR(ret),
+				se_img_file_to_load);
+
+		dma_free_coherent(priv->dev,
+				fw->size,
+				se_fw_buf,
+				ele_fw_phyaddr);
+
+		ret = save_imem(priv->dev);
+		if (ret < 0) {
+			dev_err(priv->dev,
+				"Error %pe: Save imem data for saving.",
+				ERR_PTR(ret));
+			goto exit;
+		}
+
+		priv->imem.size = ret;
+
+		ret = se_save_imem_to_file(info->imem_save_rfs,
+					   priv->imem.buf,
+					   priv->imem.size);
+		if (ret < 0)
+			dev_err(priv->dev,
+				"Error %pe: Save IMEM data to file.",
+				ERR_PTR(ret));
+
 	}
-
-	memcpy(ele_fw_buf, fw->data, fw->size);
-
-	if (ele_fw_authenticate(priv->dev, ele_fw_phyaddr))
-		dev_err(priv->dev,
-			"Failed to authenticate & load ELE firmware %s.\n",
-			ele_fw_name);
 
 exit:
-	dmam_free_coherent(priv->dev,
-			   fw->size,
-			   ele_fw_buf,
-			   ele_fw_phyaddr);
-
-	release_firmware(fw);
-
-	if (info->imem_mgmt && info->imem_save_rfs) {
-		priv->imem.size = save_imem(priv->dev);
-		se_save_imem_to_file(info->imem_save_rfs, priv->imem.buf, priv->imem.size);
-	}
-}
-
-static void se_load_imem_file(const struct firmware *fw, void *context)
-{
-	struct ele_mu_priv *priv = context;
-	const struct imx_info *info = priv->info;
-
-	if (!fw) {
-		if (priv->fw_fail)
-			dev_dbg(priv->dev,
-				"External iMEM FW not found, using ROM FW.\n");
-		else {
-			/*add a bit delay to wait for firmware priv released */
-			msleep(20);
-
-			/* Load firmware one more time if timeout */
-			request_firmware_nowait(THIS_MODULE,
-						FW_ACTION_UEVENT, info->imem_save_rfs,
-						priv->dev, GFP_KERNEL, priv,
-						se_load_imem_file);
-			priv->fw_fail++;
-			dev_dbg(priv->dev, "Value of retries = 0x%x\n",
-				priv->fw_fail);
-		}
-
-		return;
-	}
-
-	dev_dbg(priv->dev, "load imem file ok, size 0x%lx\n", fw->size);
-	memcpy(priv->imem.buf, fw->data, fw->size);
-	priv->imem.size = fw->size;
-
-	restore_imem(priv->dev, info->pool_name);
-	dev_dbg(priv->dev, "restore imem done\n");
-
 	release_firmware(fw);
 }
 
-static void se_save_imem_file(const struct firmware *fw, void *context)
-{
-	struct ele_mu_priv *priv = context;
-	const struct imx_info *info = priv->info;
-
-	if (!fw) {
-		if (priv->fw_fail)
-			dev_dbg(priv->dev,
-				"External iMEM FW not found, using ROM FW.\n");
-		else {
-			/*add a bit delay to wait for firmware priv released */
-			msleep(20);
-
-			/* Load firmware one more time if timeout */
-			request_firmware_nowait(THIS_MODULE,
-						FW_ACTION_UEVENT, info->imem_save_rfs,
-						priv->dev, GFP_KERNEL, priv,
-						se_save_imem_file);
-			priv->fw_fail++;
-			dev_dbg(priv->dev, "Value of retries = 0x%x\n",
-				priv->fw_fail);
-		}
-		return;
-	}
-
-	dev_dbg(priv->dev, "check imem file ok, size 0x%lx\n", fw->size);
-	release_firmware(fw);
-
-	priv->imem.size = save_imem(priv->dev);
-	se_save_imem_to_file(info->imem_save_rfs, priv->imem.buf, priv->imem.size);
-
-	dev_dbg(priv->dev, "save imem file done\n");
-}
 
 static int se_fw_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	u8 *se_img_file_to_load = NULL;
 	struct ele_mu_priv *priv;
 	const struct of_device_id *of_id = of_match_device(se_fw_match, dev);
 	struct imx_info *info = NULL;
 	int ret;
 	struct device_node *np;
-	u32 ele_state;
 
 	info = get_imx_info((struct imx_info_list *)of_id->data,
 			    pdev->name, strlen(pdev->name) + 1);
@@ -2005,23 +1972,12 @@ static int se_fw_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = imx_fetch_soc_info(dev, info, &ele_state);
+	ret = imx_fetch_soc_info(priv, info);
 	if (ret) {
 		dev_err(dev,
 			"failed[%d] to register SoC device\n", ret);
 		goto exit;
 	}
-
-	if (((ele_state >> 16) & 0xFF) == 0xFE)
-		priv->imem_restore = true;
-	else if (((ele_state >> 16) & 0xFF) == 0xCA)
-		priv->imem_restore = false;
-	else {
-		dev_info(dev,
-			 "Unknown state 0x%x\n", ele_state);
-		priv->imem_restore = false;
-	}
-	dev_info(dev, "ele_state 0x%x, imem_restore %d\n", ele_state, priv->imem_restore);
 
 	/* Assumed v2x_state_check is enabled for i.MX95 only. */
 	if (info->v2x_state_check) {
@@ -2056,8 +2012,9 @@ static int se_fw_probe(struct platform_device *pdev)
 			dev_err(dev, "Failed to init ele-trng\n");
 	}
 
-	if (info->imem_mgmt) {
-		/* allocate buffer where ELE store encrypted IMEM */
+	se_img_file_to_load = info->fw_name_in_rfs;
+	if (info->imem_save_rfs) {
+		/* allocate buffer where SE store encrypted IMEM */
 		priv->imem.buf = dmam_alloc_coherent(dev, ELE_IMEM_SIZE,
 						     &priv->imem.phyaddr,
 						     GFP_KERNEL);
@@ -2067,29 +2024,20 @@ static int se_fw_probe(struct platform_device *pdev)
 			ret = -ENOMEM;
 			goto exit;
 		}
-
-		if (priv->imem_restore && info->imem_save_rfs) {
-			ret = request_firmware_nowait(THIS_MODULE,
-						      FW_ACTION_UEVENT,
-						      info->imem_save_rfs,
-						      dev, GFP_KERNEL, priv,
-						      se_load_imem_file);
-			if (ret)
-				dev_warn(dev, "Failed to get imem firmware [%s].\n",
-					 info->imem_save_rfs);
-		}
-
+		if (priv->imem.state == ELE_IMEM_STATE_BAD)
+			se_img_file_to_load = info->imem_save_rfs;
 	}
 
-	if (!priv->imem_restore && info->fw_name_in_rfs) {
+	if (se_img_file_to_load) {
 		ret = request_firmware_nowait(THIS_MODULE,
 					      FW_ACTION_UEVENT,
-					      info->fw_name_in_rfs,
+					      se_img_file_to_load,
 					      dev, GFP_KERNEL, priv,
 					      se_load_firmware);
 		if (ret)
 			dev_warn(dev, "Failed to get firmware [%s].\n",
-				 info->fw_name_in_rfs);
+				 se_img_file_to_load);
+		ret = 0;
 	}
 
 	if (info->max_dev_ctx) {
@@ -2156,7 +2104,7 @@ static int se_fw_suspend(struct device *dev)
 	struct ele_mu_priv *priv = dev_get_drvdata(dev);
 	const struct imx_info *info = priv->info;
 
-	if (info && info->imem_mgmt)
+	if (info && info->imem_save_rfs)
 		priv->imem.size = save_imem(dev);
 
 	return 0;
@@ -2166,25 +2114,13 @@ static int se_fw_resume(struct device *dev)
 {
 	struct ele_mu_priv *priv = dev_get_drvdata(dev);
 	const struct imx_info *info = priv->info;
-	int i, ret;
+	int i;
 
 	for (i = 0; i < priv->max_dev_ctx; i++)
 		wake_up_interruptible(&priv->ctxs[i]->wq);
 
-	if (info && info->imem_mgmt) {
+	if (info && info->imem_save_rfs)
 		restore_imem(dev, info->pool_name);
-		if (info->imem_save_rfs) {
-			priv->fw_fail = 0;
-			ret = request_firmware_nowait(THIS_MODULE,
-						      FW_ACTION_UEVENT,
-						      info->imem_save_rfs,
-						      dev, GFP_KERNEL, priv,
-						      se_save_imem_file);
-			if (ret)
-				dev_warn(dev, "Failed to get imem firmware [%s].\n",
-					 info->imem_save_rfs);
-		}
-	}
 
 	return 0;
 }

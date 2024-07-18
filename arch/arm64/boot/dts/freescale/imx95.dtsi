@@ -643,15 +643,18 @@
 		opp-1000000000 {
 			opp-hz = /bits/ 64 <1000000000>;
 			opp-hz-real = /bits/ 64 <1000000000>, /bits/ 64 <133333333>;
+			opp-microvolt = <920000>;
 		};
 
 		opp-800000000 {
 			opp-hz = /bits/ 64 <800000000>;
 			opp-hz-real = /bits/ 64 <800000000>, /bits/ 64 <133333333>;
+			opp-microvolt = <920000>;
 		};
 		opp-500000000 {
 			opp-hz = /bits/ 64 <500000000>;
 			opp-hz-real = /bits/ 64 <500000000>, /bits/ 64 <133333333>;
+			opp-microvolt = <920000>;
 		};
 
 	};
@@ -1936,15 +1939,6 @@
 			#clock-cells = <1>;
 			clocks = <&scmi_clk IMX95_CLK_CAMAPB>;
 			power-domains = <&scmi_devpd IMX95_PD_CAMERA>;
-			assigned-clocks =
-				<&scmi_clk IMX95_CLK_CAMAPB>,
-				<&scmi_clk IMX95_CLK_CAMAXI>,
-				<&scmi_clk IMX95_CLK_CAMISI>;
-			assigned-clock-parents =
-				<&scmi_clk IMX95_CLK_SYSPLL1_PFD1_DIV2>,
-				<&scmi_clk IMX95_CLK_SYSPLL1_PFD1>,
-				<&scmi_clk IMX95_CLK_SYSPLL1_PFD2>;
-			assigned-clock-rates = <133333333>,<800000000>,<667000000>;
 
 			csi_pixel_formatter_0: formatter@20 {
 				compatible = "fsl,imx95-csi-formatter";
@@ -2926,7 +2920,7 @@
 		};
 
 		mali: gpu@4d900000 {
-			compatible = "arm,mali-valhall";
+			compatible = "arm,mali-valhall", "nxp,imx95-mali";
 			reg = <0 0x4d900000 0 0x700000>, <0 0x4d810000 0 0x10000>;
 			reg-names = "gpu_base", "gpumix_blk_ctrl";
 			interrupts = <GIC_SPI 288 IRQ_TYPE_LEVEL_HIGH>,
@@ -2935,14 +2929,22 @@
 			interrupt-names = "gpu", "job", "mmu";
 			clocks = <&scmi_clk IMX95_CLK_GPU>, <&scmi_clk IMX95_CLK_GPUAPB>;
 			clock-names = "gpu", "gpu_apb";
-			power-domains = <&scmi_devpd IMX95_PD_GPU>;
+			power-domains = <&scmi_devpd IMX95_PD_GPU>, <&scmi_perf IMX95_PERF_GPU>;
+			power-domain-names = "gpumix", "gpuperf";
 			operating-points-v2 = <&gpu_opp_table>;
 			#cooling-cells = <2>;
-			power_model {
+			simple_power: power_model@0 {
 			    compatible = "arm,mali-simple-power-model";
-			    static-coefficient = <2427750>;
-			    dynamic-coefficient = <4687>;
+			    static-coefficient = <1065895>;
+			    dynamic-coefficient = <1013>;
+			    reference_voltage = <920>;
 			    ts = <20000 2000 (-20) 2>;
+			    thermal-zone = "ana";
+			};
+
+			ipa_power:power_model@1 {
+			    compatible = "arm,mali-tvax-power-model";
+			    reference_voltage = <920>;
 			};
 		};
 
@@ -2952,6 +2954,7 @@
 			interrupts = <GIC_SPI 299 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_VPU>,
 				 <&vpu_blk_ctrl IMX95_CLK_VPUBLK_WAVE>;
+			clock-names = "vpu", "vpublk_wave";
 			power-domains = <&scmi_devpd IMX95_PD_VPU>;
 			cnm,ctrl = <&vpuctrl>;
 		};
@@ -2962,6 +2965,7 @@
 			interrupts = <GIC_SPI 300 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_VPU>,
 				 <&vpu_blk_ctrl IMX95_CLK_VPUBLK_WAVE>;
+			clock-names = "vpu", "vpublk_wave";
 			power-domains = <&scmi_devpd IMX95_PD_VPU>;
 			cnm,ctrl = <&vpuctrl>;
 			status = "disabled";
@@ -2973,6 +2977,7 @@
 			interrupts = <GIC_SPI 301 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_VPU>,
 				 <&vpu_blk_ctrl IMX95_CLK_VPUBLK_WAVE>;
+			clock-names = "vpu", "vpublk_wave";
 			power-domains = <&scmi_devpd IMX95_PD_VPU>;
 			cnm,ctrl = <&vpuctrl>;
 			status = "disabled";
@@ -2984,6 +2989,7 @@
 			interrupts = <GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk IMX95_CLK_VPU>,
 				 <&vpu_blk_ctrl IMX95_CLK_VPUBLK_WAVE>;
+			clock-names = "vpu", "vpublk_wave";
 			power-domains = <&scmi_devpd IMX95_PD_VPU>;
 			cnm,ctrl = <&vpuctrl>;
 			status = "disabled";

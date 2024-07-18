@@ -17,8 +17,8 @@
 	/delete-node/ pca9632;
 	/delete-node/ i2c3_gpio_expander_20;
 
-	os08a20: os08a20_mipi@36 {
-		compatible = "ovti,os08a20";
+	ox05b1s: ox05b1s@36 {
+		compatible = "ovti,ox05b1s";
 		reg = <0x36>;
 		clocks = <&scmi_clk IMX95_CLK_CCMCKO1>;
 		clock-names = "csi_mclk";
@@ -29,7 +29,7 @@
 		status = "okay";
 
 		port {
-			os08a20_mipi_0_ep: endpoint {
+			ox05b1s_mipi_0_ep: endpoint {
 				remote-endpoint = <&mipi_csi0_ep>;
 				data-lanes = <1 2 3 4>;
 				clock-lanes = <0>;
@@ -52,7 +52,7 @@
 		port@0 {
 			reg = <0>;
 			mipi_csi0_ep: endpoint {
-				remote-endpoint = <&os08a20_mipi_0_ep>;
+				remote-endpoint = <&ox05b1s_mipi_0_ep>;
 				data-lanes = <1 2 3 4>;
 				clock-lanes = <0>;
 			};

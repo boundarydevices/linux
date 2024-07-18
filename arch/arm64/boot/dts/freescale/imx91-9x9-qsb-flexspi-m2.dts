@@ -19,24 +19,40 @@
 };
 
 &pcal6524 {
-	/* SW select the qspi pins. Or set SW4[1] to 1 on board */
-	sd3-qspi-sel-hog {
-		/delete-property/ output-low;
+	/*
+	 * need the SD3_QSPI_SEL to 0, to select the M.2 pad.
+	 * default dts already set the sd3-qspi-sel-hog to low.
+	 * so no need to seting here.
+	 */
+
+	/* Put the nor reset pin(M2_SD_nRST) to High */
+	m2-sd-nrst-hog {
+		gpio-hog;
+		gpios = <12 GPIO_ACTIVE_HIGH>;
 		output-high;
 	};
+
+	/* Give M.2 nor chip 1.8v(M2_nDIS1 to High) */
+	m2-ndis1-hog {
+		gpio-hog;
+		gpios = <20 GPIO_ACTIVE_HIGH>;
+		output-high;
+	};
+
 };
 
 &flexspi1 {
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_flexspi1>;
+	pinctrl-1 = <&pinctrl_flexspi1>;
 	status = "okay";
 
-	GD5F2GM7REYIG: flash@0 {
+	mt25qu512abb8e12: flash@0 {
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "spi-nand";
-		spi-max-frequency = <104000000>;
+		compatible = "jedec,spi-nor";
+		spi-max-frequency = <133000000>;
 		spi-tx-bus-width = <4>;
 		spi-rx-bus-width = <4>;
 	};

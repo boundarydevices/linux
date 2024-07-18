@@ -41,6 +41,7 @@ struct ele_imem_buf {
 	u8 *buf;
 	phys_addr_t phyaddr;
 	u32 size;
+	u32 state;
 };
 
 struct ele_buf_desc {
@@ -73,6 +74,7 @@ struct ele_mu_device_ctx {
 	wait_queue_head_t wq;
 	struct semaphore fops_lock;
 
+	bool signal_recvd;
 	u32 pending_hdr;
 	struct list_head pending_in;
 	struct list_head pending_out;
