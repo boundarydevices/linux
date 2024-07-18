@@ -3344,6 +3344,7 @@ static int enetc_reconfigure_xdp_cb(struct enetc_ndev_priv *priv, void *ctx)
 	for (i = 0; i < priv->num_rx_rings; i++) {
 		struct enetc_bdr *rx_ring = priv->rx_ring[i];
 
+		rx_ring->xdp.xdp_tx_in_flight = 0;
 		rx_ring->xdp.prog = prog;
 
 		if (prog)
