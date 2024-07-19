@@ -279,8 +279,9 @@ static int fts_input_report_b(struct fts_ts_data *ts_data, struct ts_event *even
 		if (EVENT_DOWN(events[i].flag)) {
 			input_mt_slot(input_dev, events[i].id);
 			input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, true);
+			input_report_key(input_dev, BTN_TOUCH, 1);
 			input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR, events[i].area);
-			input_report_abs(input_dev, ABS_MT_TOUCH_MINOR, events[i].minor);
+			input_report_abs(input_dev, ABS_MT_WIDTH_MAJOR, events[i].minor);
 
 			input_report_abs(input_dev, ABS_MT_POSITION_X, events[i].x);
 			input_report_abs(input_dev, ABS_MT_POSITION_Y, events[i].y);
@@ -310,6 +311,7 @@ static int fts_input_report_b(struct fts_ts_data *ts_data, struct ts_event *even
 					dev_dbg(&ts_data->client->dev, "[B]P%d UP!", i);
 				input_mt_slot(input_dev, i);
 				input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, false);
+				input_report_key(input_dev, BTN_TOUCH, 0);
 			}
 		}
 	}
@@ -640,9 +642,14 @@ static int fts_input_init(struct fts_ts_data *ts_data)
 #endif
 
 	input_mt_init_slots(input_dev, pdata->max_touch_number, INPUT_MT_DIRECT);
+
+	input_set_capability(input_dev, EV_ABS, ABS_MT_POSITION_X);
+	input_set_capability(input_dev, EV_ABS, ABS_MT_POSITION_Y);
+
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, 0, touch_x_max - 1, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, 0, touch_y_max - 1, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, 0xFF, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_WIDTH_MAJOR, 0, 0xFF, 0, 0);
 
 	ret = input_register_device(input_dev);
 	if (ret) {
