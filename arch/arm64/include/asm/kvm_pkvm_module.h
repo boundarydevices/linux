@@ -80,6 +80,16 @@ enum pkvm_psci_notification {
  *				CPU will be stuck in an infinite loop. @nr_pages
  *				allows to apply this prot on a range of
  *				contiguous memory.
+ * @host_stage2_enable_lazy_pte:
+ *				Unmap a range of memory from the host stage-2,
+ *				leaving the pages host ownership intact. The
+ *				pages will be remapped lazily (subject to the
+ *				usual ownership checks) in response to a
+ *				faulting access from the host.
+ * @host_stage2_disable_lazy_pte:
+ *				This is the opposite function of
+ *				host_stage2_enable_lazy_pte. Must be called once
+ *				the module is done with the region.
  * @host_stage2_get_leaf:	Query the host's stage2 page-table entry for
  *				the page @phys.
  * @register_host_smc_handler:	@cb is called whenever the host issues an SMC
@@ -166,6 +176,8 @@ struct pkvm_module_ops {
 	int (*register_host_perm_fault_handler)(int (*cb)(struct user_pt_regs *regs, u64 esr, u64 addr));
 	int (*host_stage2_mod_prot)(u64 pfn, enum kvm_pgtable_prot prot, u64 nr_pages);
 	int (*host_stage2_get_leaf)(phys_addr_t phys, kvm_pte_t *ptep, s8 *level);
+	int (*host_stage2_enable_lazy_pte)(u64 addr, u64 nr_pages);
+	int (*host_stage2_disable_lazy_pte)(u64 addr, u64 nr_pages);
 	int (*register_host_smc_handler)(bool (*cb)(struct user_pt_regs *));
 	int (*register_default_trap_handler)(bool (*cb)(struct user_pt_regs *));
 	int (*register_illegal_abt_notifier)(void (*cb)(struct user_pt_regs *));
