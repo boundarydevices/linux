@@ -53,6 +53,7 @@
   rfkill_soft_blocked
   scsi_device_quiesce
   scsi_device_resume
+  smpboot_unregister_percpu_thread
   stack_trace_save_regs
   __kfree_skb
   __traceiter_android_rvh_arm64_serror_panic
@@ -87,12 +88,14 @@
   __traceiter_android_vh_smaps_pte_entry
   __traceiter_android_vh_try_to_freeze_todo
   __traceiter_android_vh_try_to_freeze_todo_unfrozen
+  __traceiter_android_vh_tune_scan_control
   __traceiter_android_vh_use_vm_swappiness
   __traceiter_android_vh_warn_alloc_tune_ratelimit
   __traceiter_android_vh_warn_alloc_show_mem_bypass
   __traceiter_android_vh_watchdog_timer_softlockup
   __traceiter_android_vh_wq_lockup_pool
   __traceiter_console
+  __traceiter_consume_skb
   __traceiter_error_report_end
   __traceiter_vm_unmapped_area
   __traceiter_workqueue_execute_start
@@ -129,12 +132,14 @@
   __tracepoint_android_vh_smaps_pte_entry
   __tracepoint_android_vh_try_to_freeze_todo
   __tracepoint_android_vh_try_to_freeze_todo_unfrozen
+  __tracepoint_android_vh_tune_scan_control
   __tracepoint_android_vh_use_vm_swappiness
   __tracepoint_android_vh_warn_alloc_tune_ratelimit
   __tracepoint_android_vh_warn_alloc_show_mem_bypass
   __tracepoint_android_vh_watchdog_timer_softlockup
   __tracepoint_android_vh_wq_lockup_pool
   __tracepoint_console
+  __tracepoint_consume_skb
   __tracepoint_error_report_end
   __tracepoint_vm_unmapped_area
   __tracepoint_workqueue_execute_start

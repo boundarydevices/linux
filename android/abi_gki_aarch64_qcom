@@ -750,6 +750,7 @@
   gpio_free_array
   gpio_request
   gpio_to_desc
+  groups_free
   gunyah_rm_call
   gunyah_rm_notifier_register
   gunyah_rm_notifier_unregister
@@ -784,6 +785,7 @@
   __hw_addr_init
   __hw_addr_sync
   __hw_addr_unsync
+  hwspin_lock_bust
   hwspin_lock_free
   hwspin_lock_request_specific
   __hwspin_lock_timeout
