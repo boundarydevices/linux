@@ -1051,9 +1051,18 @@ err_accdet_wq:
 	return ret;
 }
 
+const struct of_device_id accdet_of_match[] = {
+	{
+		.compatible = "mediatek,mt6359-accdet",
+	}, {
+		/* sentinel */
+	},
+};
+
 static struct platform_driver mt6359_accdet_driver = {
 	.driver = {
 		.name = "pmic-codec-accdet",
+		.of_match_table = accdet_of_match,
 	},
 	.probe = mt6359_accdet_probe,
 };
