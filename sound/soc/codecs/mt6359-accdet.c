@@ -590,7 +590,7 @@ static int mt6359_accdet_parse_dt(struct mt6359_accdet *priv)
 	ret = of_property_read_u32(node, "mediatek,eint-level-pol",
 				   &priv->data->eint_pol);
 	if (ret)
-		priv->data->eint_pol = 8;
+		priv->data->eint_pol = IRQ_TYPE_LEVEL_LOW;
 
 	ret = of_property_read_u32(node, "mediatek,eint-use-ap", &tmp);
 	if (ret)
@@ -741,6 +741,22 @@ static void config_digital_init_by_mode(struct mt6359_accdet *priv)
 					   ACCDET_EINT1_INVERTER_SW_EN_MASK_SFT,
 					   BIT(ACCDET_EINT1_INVERTER_SW_EN_SFT));
 		}
+	}
+
+	if (priv->data->eint_pol == IRQ_TYPE_LEVEL_LOW) {
+		/* EINT polarity normal */
+		regmap_update_bits(priv->regmap,
+				ACCDET_EINT_IN_INVERSE_ADDR,
+				ACCDET_EINT_IN_INVERSE_MASK_SFT,
+				0);
+	} else if (priv->data->eint_pol == IRQ_TYPE_LEVEL_HIGH) {
+		/* EINT polarity inverse */
+		regmap_update_bits(priv->regmap,
+				ACCDET_EINT_IN_INVERSE_ADDR,
+				ACCDET_EINT_IN_INVERSE_MASK_SFT,
+				BIT(ACCDET_EINT_IN_INVERSE_SFT));
+	} else {
+		dev_warn(priv->dev, "Unacceptable EINT level type, using default\n");
 	}
 }
 
