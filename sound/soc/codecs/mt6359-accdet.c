@@ -55,6 +55,11 @@
 #define ACCDET_DIGITAL_FASTDISCHARGE	BIT(13)
 #define ACCDET_AD_FASTDISCHRAGE		BIT(14)
 
+static struct snd_soc_dai_driver mt6359_accdet_dummy_dai_driver[] = {
+	{
+		.name = "ACCDET",
+	},
+};
 static struct platform_driver mt6359_accdet_driver;
 static const struct snd_soc_component_driver mt6359_accdet_soc_driver;
 
@@ -1028,7 +1033,8 @@ static int mt6359_accdet_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, priv);
 	ret = devm_snd_soc_register_component(&pdev->dev,
 					      &mt6359_accdet_soc_driver,
-					      NULL, 0);
+					      mt6359_accdet_dummy_dai_driver,
+					      ARRAY_SIZE(mt6359_accdet_dummy_dai_driver));
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to register component\n");
 		return ret;
