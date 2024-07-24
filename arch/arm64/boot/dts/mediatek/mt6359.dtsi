@@ -15,6 +15,25 @@
 		mt6359codec: mt6359codec {
 		};
 
+		accdet: accdet {
+			compatible = "mediatek,mt6359-accdet";
+			#sound-dai-cells = <0>;
+			mediatek,mic-vol = <8>;
+			mediatek,mic-mode = <2>;
+			mediatek,pwm-deb-setting = <0x500 0x500 1 0x1f0
+						    0x800 0x800 0x20 0x44
+						    0x4 0x1
+						    0x5 0x3 0x3 0x5 0xe>;
+			mediatek,eint-use-ap = <0>;
+			mediatek,eint-detect-mode = <4>;
+			mediatek,eint-num = <0>;
+			mediatek,eint-trig-mode = <1>;
+			mediatek,eint-use-ext-res = <0>;
+			mediatek,eint-comp-vth = <2>;
+			mediatek,key-mode = <0>;
+			mediatek,three-key-thr = <0 80 220 400>;
+		};
+
 		regulators {
 			mt6359_vs1_buck_reg: buck_vs1 {
 				regulator-name = "vs1";
