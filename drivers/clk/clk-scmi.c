@@ -130,6 +130,20 @@ static void scmi_clk_disable(struct clk_hw *hw)
 	scmi_proto_clk_ops->disable(clk->ph, clk->id, NOT_ATOMIC);
 }
 
+static int scmi_clk_is_enabled(struct clk_hw *hw)
+{
+	int ret;
+	bool enabled = false;
+	struct scmi_clk *clk = to_scmi_clk(hw);
+
+	ret = scmi_proto_clk_ops->state_get(clk->ph, clk->id, &enabled, NOT_ATOMIC);
+	if (ret)
+		dev_warn(clk->dev,
+			 "Failed to get state for clock ID %d\n", clk->id);
+
+	return !!enabled;
+}
+
 static int scmi_clk_atomic_enable(struct clk_hw *hw)
 {
 	struct scmi_clk *clk = to_scmi_clk(hw);
@@ -176,6 +190,7 @@ static const struct clk_ops scmi_clk_ops = {
 	.round_rate = scmi_clk_round_rate,
 	.set_rate = scmi_clk_set_rate,
 	.prepare = scmi_clk_enable,
+	.is_prepared = scmi_clk_is_enabled,
 	.unprepare = scmi_clk_disable,
 	.set_parent = scmi_clk_set_parent,
 	.get_parent = scmi_clk_get_parent,
