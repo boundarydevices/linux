@@ -412,9 +412,17 @@
 	};
 };
 
+&mt6357_vibr_reg {
+	regulator-always-on;
+};
+
 &mt6357_vsim1_reg {
 	regulator-min-microvolt = <1800000>;
 	regulator-max-microvolt = <1800000>;
+};
+
+&mt6357_vsim2_reg {
+	regulator-always-on;
 };
 
 &pio {
