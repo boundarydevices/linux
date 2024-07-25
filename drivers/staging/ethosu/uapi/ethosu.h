@@ -256,14 +256,14 @@ enum ethosu_uapi_inference_type {
  * @output_size:        The outputs size
  */
 struct ethosu_uapi_memory_layout {
-        __u32                         flash_offset;
-        __u32                         arena_offset;
-        __u32                         input_count;
-        __u32                         input_offset[ETHOSU_FD_MAX];
-        __u32                         input_size[ETHOSU_FD_MAX];
-        __u32                         output_count;
-        __u32                         output_offset[ETHOSU_FD_MAX];
-        __u32                         output_size[ETHOSU_FD_MAX];
+	__u32			flash_offset;
+	__u32			arena_offset;
+	__u32			input_count;
+	__u32			input_offset[ETHOSU_FD_MAX];
+	__u32			input_size[ETHOSU_FD_MAX];
+	__u32			output_count;
+	__u32			output_offset[ETHOSU_FD_MAX];
+	__u32			output_size[ETHOSU_FD_MAX];
 };
 
 /**
