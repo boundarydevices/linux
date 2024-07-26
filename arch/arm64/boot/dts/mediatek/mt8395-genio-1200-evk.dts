@@ -1391,6 +1391,10 @@
 	status = "okay";
 };
 
+&accdet {
+	mediatek,eint-level-pol = <IRQ_TYPE_LEVEL_HIGH>;
+};
+
 &afe {
 	memory-region = <&snd_dma_mem>;
 	mediatek,dmic-iir-on;
@@ -1414,7 +1418,7 @@
 		link-name = "DL_SRC_BE";
 
 		codec {
-			sound-dai = <&pmic 0>;
+			sound-dai = <&pmic 0>, <&accdet>;
 		};
 	};
 
