@@ -1286,6 +1286,10 @@
 		codec-0 {
 			sound-dai = <&pmic 0>;
 		};
+
+		codec-1 {
+			sound-dai = <&accdet>;
+		};
 	};
 
 	dai-link-1 {
@@ -1337,6 +1341,10 @@
 			sound-dai = <&dmic_codec>;
 		};
 	};
+};
+
+&accdet {
+	mediatek,eint-level-pol = <IRQ_TYPE_LEVEL_HIGH>;
 };
 
 &mfg0 {
