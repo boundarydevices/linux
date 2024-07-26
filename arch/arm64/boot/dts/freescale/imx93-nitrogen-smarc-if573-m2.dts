@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR MIT)
+/*
+ * Copyright 2024 Boundary Devices
+ *
+ * For use with a modified SMARC carrier where
+ * the SDCARD SDIO signals are routed to the M.2 port
+ *
+ */
+
+/dts-v1/;
+
+#include "imx93-nitrogen-smarc.dtsi"
+
+/ {
+        model = "Boundary Devices Nitrogen93 SMARC DSI(sn65) 7\" or 10\" IF573 M.2 SDIO";
+        compatible = "fsl,imx93-nitrogen-smarc", "fsl,imx93";
+
+};
+
+&reg_usdhc2_vmmc {
+	compatible = "regulator-fixed-clock";
+	clocks = <&rv3028>;
+};
+
+&usdhc2 { /* SDIO on M.2 */
+	/delete-property/ cd-gpios;
+	/delete-property/ no-sdio;
+	/delete-property/ no-mmc;
+	vqmmc-1-8-v;
+	// vqmmc-supply = <&reg_vref_1v8>;
+	keep-power-in-suspend;
+	non-removable;
+	wakeup-source;
+	pm-ignore-notify;
+	fsl,sdio-async-interrupt-enabled;
+	wifi@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+		laird,regdomain = "US";
+	};
+};

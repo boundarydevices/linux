@@ -374,7 +374,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-9x9-qsb.dtb \
 			  imx93-9x9-qsb-i3c.dtb \
 			  imx93-9x9-qsb-lpspi.dtb imx93-9x9-qsb-lpspi-slave.dtb \
 			  imx93-9x9-qsb-ld.dtb imx93-9x9-qsb-aud-hat.dtb \
-			  imx93-nitrogen-smarc.dtb \
+			  imx93-nitrogen-smarc.dtb imx93-nitrogen-smarc-if573-m2.dtb \
 			  imx93-nitrogen-smarc-lvds.dtb imx93-nitrogen-smarc-auo-b080uan01-dsi.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-venice-gw72xx-0x-imx219.dtb
