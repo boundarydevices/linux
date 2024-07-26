@@ -1409,6 +1409,10 @@
 	domain-supply = <&mt6359_vproc1_buck_reg>;
 };
 
+&accdet {
+	mediatek,eint-level-pol = <IRQ_TYPE_LEVEL_LOW>;
+};
+
 &afe {
 	#sound-dai-cells = <0>;
 	memory-region = <&afe_dma_mem_reserved>;
@@ -1442,7 +1446,7 @@
 		link-name = "DL_SRC_BE";
 
 		codec {
-			sound-dai = <&pmic 0>;
+			sound-dai = <&pmic 0>, <&accdet>;
 		};
 	};
 
