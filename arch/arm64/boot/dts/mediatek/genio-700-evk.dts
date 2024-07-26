@@ -1403,6 +1403,10 @@
 		codec-1 {
 			sound-dai = <&amic_codec>;
 		};
+
+		codec-2 {
+			sound-dai = <&accdet>;
+		};
 	};
 
 	dai-link-1 {
@@ -1434,6 +1438,10 @@
 			sound-dai = <&dmic_codec>;
 		};
 	};
+};
+
+&accdet {
+	mediatek,eint-level-pol = <IRQ_TYPE_LEVEL_LOW>;
 };
 
 &cam_vcore {
