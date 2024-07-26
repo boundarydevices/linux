@@ -17,6 +17,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include "../../codecs/mt6359.h"
+#include "../../codecs/mt6359-accdet.h"
 #include "../common/mtk-afe-platform-driver.h"
 #include "../common/mtk-dsp-sof-common.h"
 #include "../common/mtk-soc-card.h"
@@ -35,8 +36,21 @@ struct mt8195_card_data {
 };
 
 struct mt8195_mt6359_priv {
+	struct snd_soc_jack headset_jack;
 	struct snd_soc_jack dp_jack;
 	struct snd_soc_jack hdmi_jack;
+};
+
+/* Headset jack detection DAPM pins */
+static struct snd_soc_jack_pin mt8195_headset_jack_pins[] = {
+	{
+		.pin = "Headphone Jack",
+		.mask = SND_JACK_HEADPHONE,
+	},
+	{
+		.pin = "Headset Mic",
+		.mask = SND_JACK_MICROPHONE,
+	},
 };
 
 /* HDMI jack detection DAPM pins */
@@ -281,8 +295,13 @@ static int mt8195_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 
 static int mt8195_mt6359_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct mtk_soc_card_data *soc_card_data = snd_soc_card_get_drvdata(rtd->card);
+	struct mt8195_mt6359_priv *priv = soc_card_data->mach_priv;
 	struct snd_soc_component *cmpnt_codec =
 		asoc_rtd_to_codec(rtd, 0)->component;
+	struct snd_soc_component *cmpnt_accdet =
+		asoc_rtd_to_codec(rtd, 1)->component;
+	int ret;
 
 	/* set mtkaif protocol */
 	mt6359_set_mtkaif_protocol(cmpnt_codec,
@@ -290,6 +309,23 @@ static int mt8195_mt6359_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* mtkaif calibration */
 	mt8195_mt6359_mtkaif_calibration(rtd);
+
+	ret = snd_soc_card_jack_new(rtd->card, "Headset Jack",
+				    SND_JACK_HEADSET | SND_JACK_BTN_0 |
+				    SND_JACK_BTN_1 | SND_JACK_BTN_2 |
+				    SND_JACK_BTN_3,
+				    &priv->headset_jack, mt8195_headset_jack_pins,
+				    ARRAY_SIZE(mt8195_headset_jack_pins));
+	if (ret) {
+		dev_err(rtd->dev, "Headset Jack create failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = mt6359_accdet_enable_jack_detect(cmpnt_accdet, &priv->headset_jack);
+	if (ret) {
+		dev_err(rtd->dev, "Headset Jack enable failed: %d\n", ret);
+		return ret;
+	}
 
 	return 0;
 }
