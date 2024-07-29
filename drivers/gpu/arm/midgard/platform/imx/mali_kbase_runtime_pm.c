@@ -147,8 +147,15 @@ static int kbase_device_runtime_init(struct kbase_device *kbdev)
 	ret = dev_pm_domain_attach_list(kbdev->dev, &pd_data, &kbdev->pd_list);
 	if (ret < 0)
 		dev_dbg(kbdev->dev, "%s: didn't attach perf power domains, ret=%d", __func__, ret);
-	else if (ret == 2)
+	else if (ret == 2) {
+
 		kbdev->dev_gpuperf = kbdev->pd_list->pd_devs[DOMAIN_GPU_PERF];
+		ret = dev_pm_genpd_set_performance_state(kbdev->dev_gpuperf, 500000);
+		if (ret && !((ret == -ENODEV) || (ret == -EOPNOTSUPP)))
+			dev_err(kbdev->dev, "Failed to set opp (%d) (target 500MHz)\n", ret);
+
+		ret = 0;
+	}
 
 	dev_dbg(kbdev->dev, "get perf domain ret=%d, perf=%p\n", ret, kbdev->dev_gpuperf);
 
