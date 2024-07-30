@@ -363,6 +363,15 @@ static inline int mxc_isi_m2m_unregister(struct mxc_isi_dev *isi)
 {
 	return 0;
 }
+
+static inline void mxc_isi_m2m_suspend(struct mxc_isi_pipe *pipe)
+{
+}
+
+static inline int mxc_isi_m2m_resume(struct mxc_isi_pipe *pipe)
+{
+	return 0;
+}
 #endif
 
 int mxc_isi_channel_acquire(struct mxc_isi_pipe *pipe,
