@@ -71,6 +71,12 @@
 				linux,code = <KEY_FN_F4>;
 			};
 
+			pwr_sel_input {
+				label = "ch1_input";
+				gpios = <&gpio4 19 GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_FN_F5>;
+			};
+
 			/* No ch1_16v_fault on this board (F5) */
 
 			ch1_48v_fault { /* 48v_fault */
@@ -714,7 +720,7 @@
 
 	pinctrl_pwm1: pwm1grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO08__PWM1_OUT	0x160  /* SimonG see that we patched this and added a transistor*/
+			MX8MP_IOMUXC_SAI5_MCLK__PWM1_OUT	0x160
 		>;
 	};
 
