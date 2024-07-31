@@ -1178,6 +1178,7 @@
 &xhci1 {
 	status = "okay";
 
+	phys = <&u2port1 PHY_TYPE_USB2>;
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	vbus-supply = <&usb_vbus>;
 };
