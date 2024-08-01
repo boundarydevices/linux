@@ -1209,6 +1209,8 @@ struct vpu_instance {
 	struct workqueue_struct *workqueue;
 	u64 total_frames;
 	u64 total_frame_cycle;
+	struct work_struct init_task;
+	atomic_t start_init_seq;
 
 	struct vpu_performance_info performance;
 
