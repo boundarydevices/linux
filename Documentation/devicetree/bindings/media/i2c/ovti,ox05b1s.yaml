@@ -45,6 +45,9 @@ properties:
     description: Reference to the GPIO connected to the XSHUTDOWN pin. Active low.
     maxItems: 1
 
+  orientation: true
+  rotation: true
+
   port:
     $ref: /schemas/graph.yaml#/$defs/port-base
     description: |
@@ -80,7 +83,6 @@ additionalProperties: false
 
 examples:
   - |
-    #include <dt-bindings/clock/fsl,imx95-clock.h>
     #include <dt-bindings/gpio/gpio.h>
 
     i2c {
@@ -90,12 +92,9 @@ examples:
         ox05b1s: ox05b1s@36 {
             compatible = "ovti,ox05b1s";
             reg = <0x36>;
-            clocks = <&scmi_clk IMX95_CLK_CCMCKO1>;
-            clock-names = "csi_mclk";
-            assigned-clocks = <&scmi_clk IMX95_CLK_CCMCKO1>;
-            assigned-clock-parents = <&scmi_clk IMX95_CLK_24M>;
-            assigned-clock-rates = <24000000>;
             reset-gpios = <&i2c3_gpio_expander_20 2 GPIO_ACTIVE_LOW>;
+            orientation = <2>;
+            rotation = <0>;
             status = "okay";
 
             port {

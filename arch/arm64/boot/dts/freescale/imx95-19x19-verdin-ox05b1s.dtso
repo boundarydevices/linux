@@ -6,7 +6,6 @@
 /dts-v1/;
 /plugin/;
 
-#include <dt-bindings/clock/fsl,imx95-clock.h>
 #include <dt-bindings/gpio/gpio.h>
 
 &lpi2c3 {
@@ -20,12 +19,9 @@
 	ox05b1s: ox05b1s@36 {
 		compatible = "ovti,ox05b1s";
 		reg = <0x36>;
-		clocks = <&scmi_clk IMX95_CLK_CCMCKO1>;
-		clock-names = "csi_mclk";
-		assigned-clocks = <&scmi_clk IMX95_CLK_CCMCKO1>;
-		assigned-clock-parents = <&scmi_clk IMX95_CLK_24M>;
-		assigned-clock-rates = <24000000>;
 		rst-gpios = <&i2c7_pcal6524_23 20 GPIO_ACTIVE_LOW>;
+		orientation = <2>;
+		rotation = <0>;
 		status = "okay";
 
 		port {

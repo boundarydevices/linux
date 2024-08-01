@@ -113,7 +113,7 @@
 #define FTS_MAX_TOUCH_BUF					4096
 #define FTS_MAX_BUS_BUF						4096
 #define FTS_TIMEOUT_COMERR_PM				700
-#define FTS_TOUCH_HIRES_EN					1
+#define FTS_TOUCH_HIRES_EN					0
 #define FTS_TOUCH_HIRES_X					10
 #define FTS_HI_RES_X_MAX					16
 
@@ -140,6 +140,7 @@
 #define INTERVAL_READ_REG_RESUME	50  /* unit:ms */
 #define TIMEOUT_READ_REG			1000 /* unit:ms */
 #define FTS_READY_MS				10
+#define FTS_RESET_MS				200
 #define kfree_safe(pbuf) do {\
 	kfree(pbuf);\
 	pbuf = NULL;\
@@ -181,6 +182,7 @@ struct fts_ts_platform_data {
 	u32 x_min;
 	u32 y_min;
 	u32 max_touch_number;
+	struct gpio_desc *reset_gpio;
 };
 
 struct ts_event {

@@ -1133,6 +1133,8 @@ struct vpu_device {
 	struct kfifo irq_status;
 	struct delayed_work task_timer;
 	struct wave6_vpu_entity entity;
+	int pause_request;
+	struct mutex pause_lock;
 	const struct wave6_match_data *res;
 	struct dentry *debugfs;
 	struct device *trusty_dev;
@@ -1207,8 +1209,6 @@ struct vpu_instance {
 	struct workqueue_struct *workqueue;
 	u64 total_frames;
 	u64 total_frame_cycle;
-	struct work_struct init_task;
-	atomic_t start_init_seq;
 
 	struct vpu_performance_info performance;
 

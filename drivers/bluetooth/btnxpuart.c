@@ -42,10 +42,14 @@
 #define FIRMWARE_W9098_OLD	"uartuart9098_bt_v1.bin"
 #define FIRMWARE_IW416		"uartiw416_bt_v0.bin"
 #define FIRMWARE_IW612		"uartspi_n61x_v1.bin.se"
+#define FIRMWARE_IW615		"uartspi_iw610_v0.bin"
+#define FIRMWARE_SECURE_IW615	"uartspi_iw610_v0.bin.se"
 #define FIRMWARE_IW624		"uartiw624_bt.bin"
 #define FIRMWARE_SECURE_IW624	"uartiw624_bt.bin.se"
 #define FIRMWARE_AW693		"uartaw693_bt.bin"
 #define FIRMWARE_SECURE_AW693	"uartaw693_bt.bin.se"
+#define FIRMWARE_AW693_A1		"uartaw693_bt_v1.bin"
+#define FIRMWARE_SECURE_AW693_A1	"uartaw693_bt_v1.bin.se"
 #define FIRMWARE_HELPER		"helper_uart_3000000.bin"
 
 #define CHIP_ID_W9098		0x5c03
@@ -53,7 +57,10 @@
 #define CHIP_ID_IW612		0x7601
 #define CHIP_ID_IW624a		0x8000
 #define CHIP_ID_IW624c		0x8001
-#define CHIP_ID_AW693		0x8200
+#define CHIP_ID_AW693a0		0x8200
+#define CHIP_ID_AW693a1		0x8201
+#define CHIP_ID_IW615a0		0x8800
+#define CHIP_ID_IW615a1		0x8801
 
 #define FW_SECURE_MASK		0xc0
 #define FW_OPEN			0x00
@@ -906,11 +913,28 @@ static char *nxp_get_fw_name_from_chipid(struct hci_dev *hdev, u16 chipid,
 		else
 			bt_dev_err(hdev, "Illegal loader version %02x", loader_ver);
 		break;
-	case CHIP_ID_AW693:
+	case CHIP_ID_AW693a0:
 		if ((loader_ver & FW_SECURE_MASK) == FW_OPEN)
 			fw_name = FIRMWARE_AW693;
 		else if ((loader_ver & FW_SECURE_MASK) != FW_AUTH_ILLEGAL)
 			fw_name = FIRMWARE_SECURE_AW693;
+		else
+			bt_dev_err(hdev, "Illegal loader version %02x", loader_ver);
+		break;
+	case CHIP_ID_AW693a1:
+		if ((loader_ver & FW_SECURE_MASK) == FW_OPEN)
+			fw_name = FIRMWARE_AW693_A1;
+		else if ((loader_ver & FW_SECURE_MASK) != FW_AUTH_ILLEGAL)
+			fw_name = FIRMWARE_SECURE_AW693_A1;
+		else
+			bt_dev_err(hdev, "Illegal loader version %02x", loader_ver);
+		break;
+	case CHIP_ID_IW615a0:
+	case CHIP_ID_IW615a1:
+		if ((loader_ver & FW_SECURE_MASK) == FW_OPEN)
+			fw_name = FIRMWARE_IW615;
+		else if ((loader_ver & FW_SECURE_MASK) != FW_AUTH_ILLEGAL)
+			fw_name = FIRMWARE_SECURE_IW615;
 		else
 			bt_dev_err(hdev, "Illegal loader version %02x", loader_ver);
 		break;
@@ -1498,6 +1522,26 @@ static void nxp_serdev_remove(struct serdev_device *serdev)
 	hci_free_dev(hdev);
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int nxp_serdev_suspend(struct device *dev)
+{
+	struct btnxpuart_dev *nxpdev = dev_get_drvdata(dev);
+	struct ps_data *psdata = &nxpdev->psdata;
+
+	ps_control(psdata->hdev, PS_STATE_SLEEP);
+	return 0;
+}
+
+static int nxp_serdev_resume(struct device *dev)
+{
+	struct btnxpuart_dev *nxpdev = dev_get_drvdata(dev);
+	struct ps_data *psdata = &nxpdev->psdata;
+
+	ps_control(psdata->hdev, PS_STATE_AWAKE);
+	return 0;
+}
+#endif
+
 static struct btnxpuart_data w8987_data __maybe_unused = {
 	.helper_fw_name = NULL,
 	.fw_name = FIRMWARE_W8987,
@@ -1517,12 +1561,17 @@ static const struct of_device_id nxpuart_of_match_table[] __maybe_unused = {
 };
 MODULE_DEVICE_TABLE(of, nxpuart_of_match_table);
 
+static const struct dev_pm_ops nxp_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(nxp_serdev_suspend, nxp_serdev_resume)
+};
+
 static struct serdev_device_driver nxp_serdev_driver = {
 	.probe = nxp_serdev_probe,
 	.remove = nxp_serdev_remove,
 	.driver = {
 		.name = "btnxpuart",
 		.of_match_table = of_match_ptr(nxpuart_of_match_table),
+		.pm = &nxp_pm_ops,
 	},
 };
 
