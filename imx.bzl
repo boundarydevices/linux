@@ -413,6 +413,10 @@ _IMX_IN_TREE_MODULES = [
     "drivers/usb/phy/phy-tegra-usb.ko",
     "drivers/input/touchscreen/focaltech_ts.ko",
     "drivers/video/fbdev/core/fb_io_fops.ko",
+    "drivers/soc/imx/soc-imx9.ko",
+    "drivers/soc/imx/imx93-src.ko",
+    "drivers/pmdomain/imx/imx93-pd.ko",
+    "drivers/soc/imx/imx93_lpm.ko",
 ]
 
 def define_imx():
