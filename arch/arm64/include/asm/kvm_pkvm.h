@@ -442,33 +442,6 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa);
 	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_LS64), PVM_ID_AA64ISAR1_ALLOW) ? 0ULL : HCRX_nLS64) | \
 	0
 
-/*
- * Returns the maximum number of breakpoints supported for protected VMs.
- */
-static inline int pkvm_get_max_brps(void)
-{
-	int num = FIELD_GET(ARM64_FEATURE_MASK(ID_AA64DFR0_EL1_BRPs),
-			    PVM_ID_AA64DFR0_ALLOW);
-
-	/*
-	 * If breakpoints are supported, the maximum number is 1 + the field.
-	 * Otherwise, return 0, which is not compliant with the architecture,
-	 * but is reserved and is used here to indicate no debug support.
-	 */
-	return num ? num + 1 : 0;
-}
-
-/*
- * Returns the maximum number of watchpoints supported for protected VMs.
- */
-static inline int pkvm_get_max_wrps(void)
-{
-	int num = FIELD_GET(ARM64_FEATURE_MASK(ID_AA64DFR0_EL1_WRPs),
-			    PVM_ID_AA64DFR0_ALLOW);
-
-	return num ? num + 1 : 0;
-}
-
 enum pkvm_moveable_reg_type {
 	PKVM_MREG_MEMORY,
 	PKVM_MREG_PROTECTED_RANGE,
