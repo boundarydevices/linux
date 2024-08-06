@@ -134,7 +134,7 @@
 	sai3-tx-rx-sel-hog {
 		gpio-hog;
 		gpios = <14 GPIO_ACTIVE_HIGH>;
-		output-high;
+		output-low;
 	};
 };
 
@@ -150,7 +150,7 @@
 	assigned-clock-parents = <&clk IMX91_CLK_AUDIO_PLL>;
 	assigned-clock-rates = <12288000>;
 	fsl,sai-mclk-direction-output;
-	fsl,sai-synchronous-rx;
+	fsl,sai-asynchronous;
 	status = "okay";
 };
 
@@ -227,7 +227,9 @@
 		fsl,pins = <
 			MX91_PAD_GPIO_IO17__SAI3_MCLK		0x3fe
 			MX91_PAD_GPIO_IO19__SAI3_RX_SYNC	0x3fe
-			MX91_PAD_GPIO_IO18__SAI3_RX_BCLK	0x400003fe
+			MX91_PAD_GPIO_IO18__SAI3_RX_BCLK	0x3fe
+			MX91_PAD_UART2_TXD__SAI3_TX_SYNC	0x3fe
+			MX91_PAD_GPIO_IO16__SAI3_TX_BCLK	0x3fe
 			MX91_PAD_GPIO_IO21__SAI3_TX_DATA0	0x3fe
 			MX91_PAD_GPIO_IO20__SAI3_RX_DATA0	0x3fe
 		>;
