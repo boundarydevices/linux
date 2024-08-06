@@ -50,10 +50,19 @@
 	fragment@2 {
 		target-path = "/";
 		__overlay__ {
+			backlight_lcd1: backlight-lcd0 {
+				compatible = "pwm-backlight";
+				pwms = <&disp_pwm1 0 500000>;
+				enable-gpios = <&pio 15 GPIO_ACTIVE_HIGH>;
+				brightness-levels = <0 1023>;
+				num-interpolated-steps = <1023>;
+				default-brightness-level = <576>;
+				status = "okay";
+			};
+
 			edp_panel: panel {
 				compatible = "auo,g156han03";
-				power-supply = <&edp_panel_fixed_3v3>;
-				backlight = <&backlight_lcd0>;
+				backlight = <&backlight_lcd1>;
 				width-mm = <350>;
 				height-mm = <216>;
 				status = "okay";
@@ -67,31 +76,12 @@
 		};
 	};
 
-	fragment@3 {
-		target = <&edp_panel_fixed_3v3>;
-		__overlay__ {
-			regulator-state-mem {
-				regulator-on-in-suspend;
-			};
-		};
-	};
-
-	fragment@4 {
-		target = <&backlight_lcd0>;
-		__overlay__ {
-			default-on;
-			power-supply = <&edp_panel_fixed_3v3>;
-			enable-active-high;
-			status = "okay";
-		};
-	};
-
 	fragment@5 {
-		target = <&disp_pwm0>;
+		target = <&disp_pwm1>;
 		__overlay__ {
 			status = "okay";
 			pinctrl-names = "default";
-			pinctrl-0 = <&disp_pwm0_pin_default>;
+			pinctrl-0 = <&disp_pwm1_pin_default>;
 		};
 	};
 
@@ -100,14 +90,15 @@
 		__overlay__ {
 			edp_pin: edp-pin-default {
 				pins-cmd-dat {
-					pinmux = <PINMUX_GPIO17__FUNC_I0_EDP_TX_HPD>;
-					bias-pull-up;
+					pinmux = <PINMUX_GPIO26__FUNC_I0_EDP_TX_HPD>;
+					bias-pull-down;
 				};
 			};
 
-			disp_pwm0_pin_default: disp-pwm0-pin-default {
+			disp_pwm1_pin_default: disp-pwm1-pin-default {
 				pins1 {
-					pinmux = <PINMUX_GPIO29__FUNC_O_DISP_PWM0>;
+					pinmux = <PINMUX_GPIO30__FUNC_O_DISP_PWM1>,
+						 <PINMUX_GPIO15__FUNC_B_GPIO15>;
 				};
 			};
 		};
@@ -124,6 +115,15 @@
 		target = <&mipi_tx0>;
 		__overlay__ {
 			status = "disabled";
+		};
+	};
+
+	fragment@12 {
+		target = <&sound>;
+		__overlay__ {
+			dai-link-2 { /* DPTX */
+				status = "disabled";
+			};
 		};
 	};
 };
