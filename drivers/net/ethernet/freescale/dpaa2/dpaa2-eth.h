@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause) */
 /* Copyright 2014-2016 Freescale Semiconductor Inc.
- * Copyright 2016-2022 NXP
+ * Copyright 2016-2022, 2024 NXP
  */
 
 #ifndef __DPAA2_ETH_H
@@ -13,6 +13,8 @@
 #include <linux/net_tstamp.h>
 #include <net/devlink.h>
 #include <net/xdp.h>
+#include <net/dst_metadata.h>
+#include <net/macsec.h>
 
 #include <soc/fsl/dpaa2-io.h>
 #include <soc/fsl/dpaa2-fd.h>
@@ -262,9 +264,11 @@ struct dpaa2_faead {
 
 #define DPAA2_FAEAD_A2V			0x20000000
 #define DPAA2_FAEAD_A4V			0x08000000
+#define DPAA2_FAEAD_MCVV		0x00004000
 #define DPAA2_FAEAD_UPDV		0x00001000
 #define DPAA2_FAEAD_EBDDV		0x00002000
 #define DPAA2_FAEAD_UPD			0x00000010
+#define DPAA2_FAEAD_MCV			0x00000040
 
 struct ptp_tstamp {
 	u16 sec_msb;
@@ -550,6 +554,10 @@ struct dpaa2_eth_fds {
 	struct dpaa2_fd array[DPAA2_ETH_ENQUEUE_MAX_FDS];
 };
 
+struct dpaa2_eth_macsec {
+	struct macsec_secy *secy;
+};
+
 /* Driver private data */
 struct dpaa2_eth_priv {
 	struct net_device *net_dev;
@@ -642,6 +650,10 @@ struct dpaa2_eth_priv {
 
 	struct dpaa2_eth_fds __percpu *fd;
 	bool ceetm_en;
+
+	struct dpaa2_eth_macsec sec;
+	u8 secy_id;
+	struct metadata_dst *md_dst;
 };
 
 struct dpaa2_eth_devlink_priv {
@@ -725,6 +737,7 @@ enum dpaa2_eth_rx_dist {
 
 #define DPNI_PTP_ONESTEP_VER_MAJOR 8
 #define DPNI_PTP_ONESTEP_VER_MINOR 2
+
 #define DPAA2_PTP_SINGLE_STEP_ENABLE	BIT(31)
 #define DPAA2_PTP_SINGLE_STEP_CH	BIT(7)
 #define DPAA2_PTP_SINGLE_CORRECTION_OFF(v) ((v) << 8)
@@ -738,8 +751,19 @@ enum dpaa2_eth_rx_dist {
 #define DPNI_NUM_TX_TCS_VER_MAJOR	7
 #define DPNI_NUM_TX_TCS_VER_MINOR	3
 
+#define DPNI_MACSEC_VER_MAJOR		8
+#define DPNI_MACSEC_VER_MINOR		5
+
 #define DPAA2_ETH_FEATURE_ONESTEP_CFG_DIRECT	BIT(0)
 #define DPAA2_ETH_FEATURE_GET_NUM_TX_TCS	BIT(1)
+#define DPAA2_ETH_FEATURE_MACSEC		BIT(2)
+
+static inline bool dpaa2_macsec_skb_is_offload(struct sk_buff *skb)
+{
+	struct metadata_dst *md_dst = skb_metadata_dst(skb);
+
+	return md_dst && (md_dst->type == METADATA_MACSEC);
+}
 
 static inline bool dpaa2_eth_tx_pause_enabled(u64 link_options)
 {
@@ -768,8 +792,10 @@ static inline unsigned int dpaa2_eth_needed_headroom(struct sk_buff *skb)
 	if (skb_is_nonlinear(skb))
 		return 0;
 
-	/* If we have Tx timestamping, need 128B hardware annotation */
-	if (skb->cb[0])
+	/* If we have Tx timestamping or this is a MACSec offload skb, we need
+	 * 128B hardware annotation.
+	 */
+	if (skb->cb[0] || dpaa2_macsec_skb_is_offload(skb))
 		headroom += DPAA2_ETH_TX_HWA_SIZE;
 
 	return headroom;
@@ -876,5 +902,13 @@ bool dpaa2_xsk_tx(struct dpaa2_eth_priv *priv,
 void *dpaa2_eth_sgt_get(struct dpaa2_eth_priv *priv);
 
 void dpaa2_eth_sgt_recycle(struct dpaa2_eth_priv *priv, void *sgt_buf);
+
+static inline u64 sci_to_cpu(sci_t sci)
+{
+	return be64_to_cpu((__force __be64)sci);
+}
+
+int dpaa2_eth_macsec_init(struct dpaa2_eth_priv *priv);
+void dpaa2_eth_macsec_deinit(struct dpaa2_eth_priv *priv);
 
 #endif	/* __DPAA2_H */

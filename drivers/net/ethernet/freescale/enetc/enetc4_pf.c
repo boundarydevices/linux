@@ -1051,6 +1051,8 @@ static void enetc4_pf_destroy_vlan_list(struct enetc_pf *pf)
 		hlist_del(&entry->node);
 		kfree(entry);
 	}
+
+	pf->num_vlan_fe = 0;
 }
 
 static void enetc4_pf_destroy_mac_list(struct enetc_pf *pf)
@@ -1063,6 +1065,8 @@ static void enetc4_pf_destroy_mac_list(struct enetc_pf *pf)
 		hlist_del(&entry->node);
 		kfree(entry);
 	}
+
+	pf->num_mac_fe = 0;
 }
 
 static int enetc4_pf_unload(struct enetc_pf *pf)

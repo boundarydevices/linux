@@ -54,6 +54,12 @@ fsl-ls1028a-qds-7777-dtbs := fsl-ls1028a-qds.dtb fsl-ls1028a-qds-7777.dtbo
 fsl-ls1028a-qds-85bb-dtbs := fsl-ls1028a-qds.dtb fsl-ls1028a-qds-85bb.dtbo
 fsl-ls1028a-qds-899b-dtbs := fsl-ls1028a-qds.dtb fsl-ls1028a-qds-899b.dtbo
 fsl-ls1028a-qds-9999-dtbs := fsl-ls1028a-qds.dtb fsl-ls1028a-qds-9999.dtbo
+fsl-ls1028a-qds-backplane-dtbs := \
+	fsl-ls1028a-qds.dtb \
+	fsl-ls1028a-lane-a-backplane.dtbo \
+	fsl-ls1028a-lane-b-backplane.dtbo \
+	fsl-ls1028a-lane-c-backplane.dtbo \
+	fsl-ls1028a-lane-d-backplane.dtbo
 
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1028a-qds-13bb.dtb
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1028a-qds-65bb.dtb
@@ -61,6 +67,7 @@ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1028a-qds-7777.dtb
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1028a-qds-85bb.dtb
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1028a-qds-899b.dtb
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1028a-qds-9999.dtb
+dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1028a-qds-backplane.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8dxl-evk.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-ab2.dtb imx8mm-ab2-m4.dtb imx8mm-ddr4-ab2.dtb imx8mm-ddr4-ab2-m4.dtb \
@@ -450,6 +457,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-aud-hat.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-root.dtb imx95-15x15-evk-inmate.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-ab2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-i2c-spi-slave.dtb
+DTC_FLAGS_imx95-15x15-evk-boe-wxga-lvds0-panel := -@
+DTC_FLAGS_imx95-15x15-evk-boe-wxga-lvds1-panel := -@
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-boe-wxga-lvds0-panel.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-boe-wxga-lvds1-panel.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-boe-wxga-lvds-two-panels.dtb
@@ -505,6 +514,9 @@ imx95-15x15-evk-os08a20-isp-adv7535-dtbs := imx95-15x15-evk-adv7535.dtb \
 					    imx95-15x15-evk-os08a20.dtbo \
 					    imx95-19x19-evk-neoisp.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-os08a20-isp-adv7535.dtb
+DTC_FLAGS_imx95-15x15-evk-rpmsg := -@
+DTC_FLAGS_imx95-15x15-evk-rpmsg-lpv := -@
+dtb-$(CONFIG_ARCH_MXC) += imx95-15x15-evk-rpmsg.dtb imx95-15x15-evk-rpmsg-lpv.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk.dtb imx95-19x19-evk-root.dtb imx95-19x19-evk-inmate.dtb \
 			  imx95-19x19-evk-lpspi-slave.dtb
@@ -522,6 +534,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-pcie1-ep.dtb
 
 imx95-19x19-evk-ap1302-dtbs := imx95-19x19-evk.dtb imx95-19x19-evk-ap1302.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-ap1302.dtb
+
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-tja1103-tja1120.dtb imx95-19x19-evk-tja1103-rmii.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-netc-rpmsg.dtb
 
@@ -536,6 +549,9 @@ dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-ox05b1s-combo.dtb
 
 imx95-19x19-evk-ti-serdes-dtbs := imx95-19x19-evk.dtb imx95-19x19-evk-ti-serdes.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-ti-serdes.dtb
+
+imx95-19x19-evk-ti-serdes-combo-dtbs := imx95-19x19-evk.dtb imx95-19x19-evk-ti-serdes-combo.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-ti-serdes-combo.dtb
 
 imx95-19x19-evk-os08a20-combo-dtbs := imx95-19x19-evk.dtb imx95-19x19-evk-os08a20-combo.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-os08a20-combo.dtb
@@ -616,6 +632,8 @@ imx95-19x19-evk-ox05b1s-isp-it6263-lvds0-dtbs := imx95-19x19-evk-neoisp.dtb imx9
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-evk-ox05b1s-isp-it6263-lvds0.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-verdin.dtb
+DTC_FLAGS_imx95-19x19-verdin-rpmsg := -@
+dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-verdin-rpmsg.dtb
 
 imx95-19x19-verdin-adv7535-dtbs := imx95-19x19-verdin.dtb imx95-19x19-verdin-adv7535.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-verdin-adv7535.dtb
@@ -675,6 +693,9 @@ imx95-19x19-verdin-ox03c10-isp-lt8912-dtbs := imx95-19x19-verdin.dtb \
 					      imx95-19x19-evk-neoisp.dtbo \
 					      imx95-19x19-verdin-lt8912.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-verdin-ox03c10-isp-lt8912.dtb
+
+imx95-19x19-verdin-ti-serdes-dtbs := imx95-19x19-verdin.dtb imx95-19x19-verdin-ti-serdes.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-verdin-ti-serdes.dtb
 
 DTC_FLAGS_imx95-19x19-evk-rpmsg := -@
 DTC_FLAGS_imx95-19x19-evk-rpmsg-lpv := -@

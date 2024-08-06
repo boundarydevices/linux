@@ -39,6 +39,10 @@ static uint32_t v2x_fw_state;
 #define SOC_ID_OF_IMX8ULP		0x084D
 #define SOC_ID_OF_IMX93			0x9300
 #define SOC_ID_OF_IMX8DXL		0xE
+#define SOC_ID_OF_IMX8QXP		0x2
+#define SOC_REV_A1			0xA100
+#define SOC_REV_B0			0xB000
+#define SOC_REV_C0			0xC000
 #define SOC_VER_MASK			0xFFFF0000
 #define SOC_ID_MASK			0x0000FFFF
 #define RESERVED_DMA_POOL		BIT(1)
@@ -79,6 +83,11 @@ struct imx_info_list {
 	uint16_t soc_id;
 	uint16_t soc_rev;
 	struct imx_info info[];
+};
+
+struct seco_soc_info {
+	u16 soc_id;
+	u16 soc_rev;
 };
 
 static LIST_HEAD(priv_data_list);
@@ -445,6 +454,25 @@ static const struct of_device_id se_fw_match[] = {
 	{},
 };
 
+static const struct soc_device_attribute soc_info_matches[] = {
+	{ .soc_id = "i.MX8DXL",
+	  .revision = "1.1",
+	  .data = &(struct seco_soc_info) {.soc_id = SOC_ID_OF_IMX8DXL, .soc_rev = SOC_REV_A1,}
+	},
+	{ .soc_id = "i.MX8DXL",
+	  .revision = "1.2",
+	  .data = &(struct seco_soc_info) {.soc_id = SOC_ID_OF_IMX8DXL, .soc_rev = SOC_REV_B0,}
+	},
+	{ .soc_id = "i.MX8QXP",
+	  .revision = "1.1",
+	  .data = &(struct seco_soc_info) {.soc_id = SOC_ID_OF_IMX8QXP, .soc_rev = SOC_REV_B0,}
+	},
+	{ .soc_id = "i.MX8QXP",
+	  .revision = "1.2",
+	  .data = &(struct seco_soc_info) {.soc_id = SOC_ID_OF_IMX8QXP, .soc_rev = SOC_REV_C0,}
+	},
+};
+
 /*
  * get_se_soc_id() - to fetch the soc_id of the platform
  *
@@ -595,6 +623,24 @@ void free_phybuf_mem_pool(struct device *dev,
 		dev_err(dev, "%s failed: Unable to get sram pool.\n", __func__);
 
 	gen_pool_free(mem_pool, (unsigned long)buf, size);
+}
+
+/* function to fetch SoC revision on the SECO platform */
+static int seco_fetch_soc_info(uint16_t *soc_id, uint16_t *soc_rev)
+{
+	const struct soc_device_attribute *imx_soc_match;
+	int err = 0;
+
+	imx_soc_match = soc_device_match(soc_info_matches);
+	if (!soc_id || !soc_rev || !imx_soc_match || !imx_soc_match->data) {
+		err = -EINVAL;
+		goto exit;
+	}
+
+	*soc_id = ((const struct seco_soc_info *)imx_soc_match->data)->soc_id;
+	*soc_rev = ((const struct seco_soc_info *)imx_soc_match->data)->soc_rev;
+exit:
+	return err;
 }
 
 static int imx_fetch_soc_info(struct ele_mu_priv *priv,
@@ -1286,8 +1332,17 @@ static int ele_mu_ioctl_get_soc_info_handler(struct ele_mu_device_ctx *dev_ctx,
 
 	info_list = (struct imx_info_list *)of_id->data;
 
-	soc_info.soc_id = info_list->soc_id;
-	soc_info.soc_rev = info_list->soc_rev;
+	if (info_list->soc_id == SOC_ID_OF_IMX8DXL) {
+		err = seco_fetch_soc_info(&soc_info.soc_id, &soc_info.soc_rev);
+		if (err)
+			dev_err(dev_ctx->priv->dev,
+			"%s: Failed[%d] to fetch SoC Info\n",
+			dev_ctx->miscdev.name, err);
+
+	} else {
+		soc_info.soc_id = info_list->soc_id;
+		soc_info.soc_rev = info_list->soc_rev;
+	}
 
 	err = (int)copy_to_user((u8 *)arg, (u8 *)(&soc_info), sizeof(soc_info));
 	if (err) {
