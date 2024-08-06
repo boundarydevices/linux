@@ -75,7 +75,7 @@ struct imx_info {
 	int (*start_rng)(struct device *dev);
 	bool enable_ele_trng;
 	uint8_t *fw_name_in_rfs;
-	uint8_t *imem_save_rfs;
+	uint8_t *primary_fw_rfs;
 };
 
 struct imx_info_list {
@@ -120,7 +120,7 @@ static const struct imx_info_list imx8ulp_info = {
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = IMX_ELE_FW_DIR\
 						  "mx8ulpa2ext-ahab-container.img",
-				.imem_save_rfs = IMX_ELE_FW_DIR"mx8ulp-imem.img",
+				.primary_fw_rfs = IMX_ELE_FW_DIR"mx8ulpa2-ahab-container.img",
 			},
 	},
 };
@@ -152,7 +152,7 @@ static const struct imx_info_list imx93_info = {
 				.enable_ele_trng = true,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 	},
 };
@@ -184,7 +184,7 @@ static const struct imx_info_list imx8dxl_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"se-fw2"},
@@ -209,7 +209,7 @@ static const struct imx_info_list imx8dxl_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-sv0"},
@@ -234,7 +234,7 @@ static const struct imx_info_list imx8dxl_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-sv1"},
@@ -259,7 +259,7 @@ static const struct imx_info_list imx8dxl_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-she"},
@@ -284,7 +284,7 @@ static const struct imx_info_list imx8dxl_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 16,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-sg0"},
@@ -309,7 +309,7 @@ static const struct imx_info_list imx8dxl_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-sg1"},
@@ -334,7 +334,7 @@ static const struct imx_info_list imx8dxl_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 	},
 };
@@ -366,7 +366,7 @@ static const struct imx_info_list imx95_info = {
 				.enable_ele_trng = true,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-fw0"},
@@ -391,7 +391,7 @@ static const struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 0,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-fw4"},
@@ -416,7 +416,7 @@ static const struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 16,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 			{
 				.pdev_name = {"v2x-fw6"},
@@ -441,7 +441,7 @@ static const struct imx_info_list imx95_info = {
 				.enable_ele_trng = false,
 				.mu_buff_size = 256,
 				.fw_name_in_rfs = NULL,
-				.imem_save_rfs = NULL,
+				.primary_fw_rfs = NULL,
 			},
 	}
 };
@@ -1770,49 +1770,10 @@ static int init_device_context(struct device *dev)
 	return ret;
 }
 
-static int se_save_imem_to_file(const char *path,
-				const void *buf, size_t buf_size)
-{
-	struct file *file;
-	struct path root;
-	ssize_t wret;
-	loff_t offset = 0;
-
-	if (!path || !*path)
-		return -EINVAL;
-
-	task_lock(&init_task);
-	get_fs_root(init_task.fs, &root);
-	task_unlock(&init_task);
-
-	file = file_open_root(&root, path, O_CREAT | O_WRONLY, 0);
-	path_put(&root);
-	if (IS_ERR(file)) {
-		pr_err("open file %s failed\n", path);
-		return PTR_ERR(file);
-	}
-
-	wret = kernel_write(file, buf, buf_size, &offset);
-	if (wret < 0) {
-		pr_err("Error writing to imem file\n");
-	} else if (wret != buf_size) {
-		pr_err("Wrote only 0x%lx bytes of 0x%lx writing to imem file %s\n",
-		wret, buf_size, path);
-	}
-
-	wret = filp_close(file, NULL);
-	if (wret)
-		pr_err("Error %pe closing imem file\n",
-		       ERR_PTR(wret));
-
-	return 0;
-}
-
 static void se_load_firmware(const struct firmware *fw, void *context)
 {
 	struct ele_mu_priv *priv = context;
 	const struct imx_info *info = priv->info;
-	const u8 *se_img_file_to_load;
 	phys_addr_t ele_fw_phyaddr;
 	u8 *se_fw_buf;
 	int ret;
@@ -1825,14 +1786,9 @@ static void se_load_firmware(const struct firmware *fw, void *context)
 			/*add a bit delay to wait for firmware priv released */
 			msleep(20);
 
-			if (priv->imem.state == ELE_IMEM_STATE_BAD)
-				se_img_file_to_load = info->imem_save_rfs;
-			else
-				se_img_file_to_load = info->fw_name_in_rfs;
-
 			/* Load firmware one more time if timeout */
 			request_firmware_nowait(THIS_MODULE,
-					FW_ACTION_UEVENT, se_img_file_to_load,
+					FW_ACTION_UEVENT, priv->se_img_file_to_load,
 					priv->dev, GFP_KERNEL, priv,
 					se_load_firmware);
 			priv->fw_fail++;
@@ -1843,54 +1799,34 @@ static void se_load_firmware(const struct firmware *fw, void *context)
 		return;
 	}
 
-	if (priv->imem.state == ELE_IMEM_STATE_BAD) {
-		memcpy(priv->imem.buf, fw->data, fw->size);
-		priv->imem.size = fw->size;
-		ret = restore_imem(priv->dev, info->pool_name);
-		if (ret < 0) {
-			dev_err(priv->dev,
-				"Error %pe: Restore IMEM state post DPD.\n",
-				ERR_PTR(ret));
-			goto exit;
-		}
-	} else {
-		/* allocate buffer to store the SE FW */
-		se_fw_buf = dma_alloc_coherent(priv->dev, fw->size,
-				&ele_fw_phyaddr, GFP_KERNEL);
-		if (!se_fw_buf)
-			goto exit;
+	dev_info(priv->dev, "loading firmware %s\n", priv->se_img_file_to_load);
 
-		memcpy(se_fw_buf, fw->data, fw->size);
-		ret = ele_fw_authenticate(priv->dev, ele_fw_phyaddr);
-		if (ret < 0)
-			dev_err(priv->dev,
-				"Error %pe: Authenticate & load SE firmware %s.\n",
-				ERR_PTR(ret),
-				se_img_file_to_load);
+	/* allocate buffer to store the SE FW */
+	se_fw_buf = dma_alloc_coherent(priv->dev, fw->size,
+			&ele_fw_phyaddr, GFP_KERNEL);
+	if (!se_fw_buf)
+		goto exit;
 
-		dma_free_coherent(priv->dev,
-				fw->size,
-				se_fw_buf,
-				ele_fw_phyaddr);
+	memcpy(se_fw_buf, fw->data, fw->size);
+	ret = ele_fw_authenticate(priv->dev, ele_fw_phyaddr);
+	if (ret < 0)
+		dev_err(priv->dev,
+			"Error %pe: Authenticate & load SE firmware %s.\n",
+			ERR_PTR(ret),
+			priv->se_img_file_to_load);
 
-		ret = save_imem(priv->dev);
-		if (ret < 0) {
-			dev_err(priv->dev,
-				"Error %pe: Save imem data for saving.",
-				ERR_PTR(ret));
-			goto exit;
-		}
+	dma_free_coherent(priv->dev,
+			fw->size,
+			se_fw_buf,
+			ele_fw_phyaddr);
 
-		priv->imem.size = ret;
-
-		ret = se_save_imem_to_file(info->imem_save_rfs,
-					   priv->imem.buf,
-					   priv->imem.size);
-		if (ret < 0)
-			dev_err(priv->dev,
-				"Error %pe: Save IMEM data to file.",
-				ERR_PTR(ret));
-
+	if (priv->imem.state == ELE_IMEM_STATE_BAD &&
+	    priv->se_img_file_to_load == info->primary_fw_rfs) {
+		priv->se_img_file_to_load = info->fw_name_in_rfs;
+		request_firmware_nowait(THIS_MODULE,
+				FW_ACTION_UEVENT, priv->se_img_file_to_load,
+				priv->dev, GFP_KERNEL, priv,
+				se_load_firmware);
 	}
 
 exit:
@@ -1901,7 +1837,6 @@ exit:
 static int se_fw_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	u8 *se_img_file_to_load = NULL;
 	struct ele_mu_priv *priv;
 	const struct of_device_id *of_id = of_match_device(se_fw_match, dev);
 	struct imx_info *info = NULL;
@@ -2067,8 +2002,8 @@ static int se_fw_probe(struct platform_device *pdev)
 			dev_err(dev, "Failed to init ele-trng\n");
 	}
 
-	se_img_file_to_load = info->fw_name_in_rfs;
-	if (info->imem_save_rfs) {
+	priv->se_img_file_to_load = info->fw_name_in_rfs;
+	if (info->primary_fw_rfs) {
 		/* allocate buffer where SE store encrypted IMEM */
 		priv->imem.buf = dmam_alloc_coherent(dev, ELE_IMEM_SIZE,
 						     &priv->imem.phyaddr,
@@ -2080,18 +2015,18 @@ static int se_fw_probe(struct platform_device *pdev)
 			goto exit;
 		}
 		if (priv->imem.state == ELE_IMEM_STATE_BAD)
-			se_img_file_to_load = info->imem_save_rfs;
+			priv->se_img_file_to_load = info->primary_fw_rfs;
 	}
 
-	if (se_img_file_to_load) {
+	if (priv->se_img_file_to_load) {
 		ret = request_firmware_nowait(THIS_MODULE,
 					      FW_ACTION_UEVENT,
-					      se_img_file_to_load,
+					      priv->se_img_file_to_load,
 					      dev, GFP_KERNEL, priv,
 					      se_load_firmware);
 		if (ret)
 			dev_warn(dev, "Failed to get firmware [%s].\n",
-				 se_img_file_to_load);
+				 priv->se_img_file_to_load);
 		ret = 0;
 	}
 
@@ -2159,7 +2094,7 @@ static int se_fw_suspend(struct device *dev)
 	struct ele_mu_priv *priv = dev_get_drvdata(dev);
 	const struct imx_info *info = priv->info;
 
-	if (info && info->imem_save_rfs)
+	if (info && info->primary_fw_rfs)
 		priv->imem.size = save_imem(dev);
 
 	return 0;
@@ -2174,7 +2109,7 @@ static int se_fw_resume(struct device *dev)
 	for (i = 0; i < priv->max_dev_ctx; i++)
 		wake_up_interruptible(&priv->ctxs[i]->wq);
 
-	if (info && info->imem_save_rfs)
+	if (info && info->primary_fw_rfs)
 		restore_imem(dev, info->pool_name);
 
 	return 0;
