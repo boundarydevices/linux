@@ -27,6 +27,7 @@
 		t_mipi = &t_mipi;
 		ts_lvds_ft5x06 = &ts_lvds_ft5x06;
 		ts_lvds_goodix = &ts_lvds_goodix;
+		ts_lvds_goodix2 = &ts_lvds_goodix2;
 		usb_mux = &usb_mux;
 	};
 
@@ -257,6 +258,18 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_lvds_gt911>;
 		reg = <0x14>;
+		reset-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+		status = "disabled";
+	};
+
+	ts_lvds_goodix2: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&gpio3 22 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_lvds_gt911>;
+		reg = <0x5d>;
 		reset-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
 		status = "disabled";
 	};
