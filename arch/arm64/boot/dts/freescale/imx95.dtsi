@@ -2801,6 +2801,7 @@
 			reg = <0x0 0x4c0100c0 0x0 0x1>;
 			#clock-cells = <1>;
 			clocks = <&dummy>;
+			power-domains = <&scmi_devpd IMX95_PD_HSIO_TOP>;
 		};
 
 		pcie0: pcie@4c300000 {
