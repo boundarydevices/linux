@@ -40,7 +40,7 @@
 		enable-gpios = <&gpio4 3 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds>;
-		pwms = <&pwm1 0 100000 0>;
+		pwms = <&pwm1 0 2000000 0>; /* 500 Hz */
 		status = "disabled";
 	};
 
