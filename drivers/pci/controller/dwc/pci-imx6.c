@@ -138,6 +138,7 @@ struct imx6_pcie {
 	struct clk		*pcie_inbound_axi;
 	struct clk		*pcie;
 	struct clk		*pcie_aux;
+	struct clk		*pcie_ref;
 	struct regmap		*iomuxc_gpr;
 	u16			msi_ctrl;
 	u32			controller_id;
@@ -760,6 +761,14 @@ static int imx6_pcie_enable_ref_clk(struct imx6_pcie *imx6_pcie)
 			dev_err(dev, "unable to enable pcie_aux clock\n");
 			break;
 		}
+		if (imx6_pcie->refclk_pad_mode == IMX8_PCIE_REFCLK_PAD_OUTPUT) {
+			ret = clk_prepare_enable(imx6_pcie->pcie_ref);
+			if (ret) {
+				dev_err(dev, "unable to enable ref clock\n");
+				clk_disable_unprepare(imx6_pcie->pcie_ref);
+				break;
+			}
+		}
 		break;
 	}
 
@@ -789,6 +798,11 @@ static void imx6_pcie_disable_ref_clk(struct imx6_pcie *imx6_pcie)
 				   IMX7D_GPR12_PCIE_PHY_REFCLK_SEL,
 				   IMX7D_GPR12_PCIE_PHY_REFCLK_SEL);
 		break;
+	case IMX95:
+	case IMX95_EP:
+		if (imx6_pcie->refclk_pad_mode == IMX8_PCIE_REFCLK_PAD_OUTPUT)
+			clk_disable_unprepare(imx6_pcie->pcie_ref);
+		fallthrough;
 	case IMX8MM:
 	case IMX8MM_EP:
 	case IMX8MQ:
@@ -1991,6 +2005,10 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		if (IS_ERR(imx6_pcie->pcie_aux))
 			return dev_err_probe(dev, PTR_ERR(imx6_pcie->pcie_aux),
 					     "pcie_aux clock source missing or invalid\n");
+		imx6_pcie->pcie_ref = devm_clk_get(dev, "ref");
+		if (IS_ERR(imx6_pcie->pcie_ref))
+			return dev_err_probe(dev, PTR_ERR(imx6_pcie->pcie_ref),
+					     "pcie_ref clock source missing or invalid\n");
 		imx6_pcie->iomuxc_gpr = syscon_regmap_lookup_by_phandle(node,
 				"ctrl-ssr");
 		if (IS_ERR(imx6_pcie->iomuxc_gpr)) {
