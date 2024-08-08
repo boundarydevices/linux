@@ -448,7 +448,7 @@
 
 	pinctrl_ts_mipi_gt911: ts-mipi-gt911grp {
 		fsl,pins = <
-			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x100
+			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x140
 		>;
 	};
 
