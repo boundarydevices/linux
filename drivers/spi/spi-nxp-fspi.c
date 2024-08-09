@@ -643,15 +643,15 @@ static int nxp_fspi_clk_prep_enable(struct nxp_fspi *f)
 	return 0;
 }
 
-static int nxp_fspi_clk_disable_unprep(struct nxp_fspi *f)
+static void nxp_fspi_clk_disable_unprep(struct nxp_fspi *f)
 {
 	if (is_acpi_node(dev_fwnode(f->dev)))
-		return 0;
+		return;
 
 	clk_disable_unprepare(f->clk);
 	clk_disable_unprepare(f->clk_en);
 
-	return 0;
+	return;
 }
 
 static void nxp_fspi_dll_calibration(struct nxp_fspi *f)
@@ -1490,8 +1490,11 @@ static int nxp_fspi_runtime_suspend(struct device *dev)
 static int nxp_fspi_runtime_resume(struct device *dev)
 {
 	struct nxp_fspi *f = dev_get_drvdata(dev);
+	int ret;
 
-	nxp_fspi_clk_prep_enable(f);
+	ret = nxp_fspi_clk_prep_enable(f);
+	if (ret)
+		return ret;
 
 	if (nxp_fspi_initialized(f) && nxp_fspi_need_reinit(f))
 		nxp_fspi_default_setup(f);
