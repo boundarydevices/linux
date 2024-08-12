@@ -93,6 +93,7 @@
 	sound-micfil {
 		compatible = "fsl,imx-audio-card";
 		model = "micfil-audio";
+		status = "disabled";
 		pri-dai-link {
 			link-name = "micfil hifi";
 			format = "i2s";
@@ -296,7 +297,7 @@
 	assigned-clock-rates = <3932160000>,
 			       <3612672000>, <393216000>,
 			       <361267200>, <49152000>;
-	status = "okay";
+	status = "disabled";
 };
 
 &sai2 {
