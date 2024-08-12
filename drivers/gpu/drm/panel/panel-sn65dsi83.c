@@ -141,7 +141,7 @@ static void sn_enable_gp(struct panel_sn65dsi83 *sn)
 static void sn_enable_irq(struct panel_sn65dsi83 *sn)
 {
 	sn_i2c_write_byte(sn, SN_IRQ_STAT, 0xff);
-	sn_i2c_write_byte(sn, SN_IRQ_MASK, 0x7f);
+	sn_i2c_write_byte(sn, SN_IRQ_MASK, 0x7e);
 	sn_i2c_write_byte(sn, SN_IRQ_EN, 1);
 }
 
