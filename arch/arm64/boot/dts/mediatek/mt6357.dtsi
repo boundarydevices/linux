@@ -261,7 +261,7 @@
 		};
 
 		rtc {
-			compatible = "mediatek,mt6357-rtc";
+			compatible = "mediatek,mt6357-rtc", "mediatek,mt6358-rtc";
 		};
 
 		keys {
