@@ -414,6 +414,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
 			  imx8mm-nitrogen8mm_tab.dtb \
 			  imx8mm-nitrogen8_lite.dtb \
 			  imx8mm-nitrogen_smarc.dtb \
+			  imx8mm-nitrogen_smarc-rpmsg.dtb \
 			  imx8mm-span.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8mn.dtb \
