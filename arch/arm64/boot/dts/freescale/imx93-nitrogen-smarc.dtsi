@@ -38,13 +38,7 @@
 			size = <0 0x10000000>;
 			linux,cma-default;
 		};
-#if 0
-		ethosu_mem: ethosu_region@C0000000 {
-			compatible = "shared-dma-pool";
-			reusable;
-			reg = <0x0 0xC0000000 0x0 0x10000000>;
-		};
-#endif
+
 		vdev0vring0: vdev0vring0@a4000000 {
 			reg = <0 0xa4000000 0 0x8000>;
 			no-map;
@@ -129,15 +123,6 @@
 		pwms = <&tpm5 1 30000 0>;       /* 42 = 24MHz  30000 = 3.3 Khz */
 		status = "okay";
 	};
-
-#if 0
-	ethosu {
-		compatible = "arm,ethosu";
-		fsl,cm33-proc = <&cm33>;
-		memory-region = <&ethosu_mem>;
-		power-domains = <&mlmix>;
-	};
-#endif
 
 	led-controller {
 		compatible = "gpio-leds";
@@ -299,15 +284,15 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy1: ethernet-phy@1 {
+		ethphy1: ethernet-phy@7 {
 			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <3>;
+			reg = <7>;
 			eee-broken-1000t;
-			at803x,hib-disabled;
 			/* This platform has no seperate eth_lpi */
-			interrupt-parent = <&gpio2>;
-			interrupts = <29 IRQ_TYPE_LEVEL_LOW>;
+			interrupts-extended = <&gpio2 29 IRQ_TYPE_LEVEL_LOW>;
 			reset-gpios =<&pcal6534 1 GPIO_ACTIVE_LOW>;
+			reset-assert-us = <10000>;
+			reset-deassert-us = <80000>;
 		};
 	};
 };
@@ -324,14 +309,14 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy2: ethernet-phy@2 {
+		ethphy2: ethernet-phy@7 {
 			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <7>;
 			eee-broken-1000t;
+			interrupts-extended = <&gpio2 18 IRQ_TYPE_LEVEL_LOW>;
 			reset-gpios = <&pcal6534 0 GPIO_ACTIVE_LOW>;
 			reset-assert-us = <10000>;
 			reset-deassert-us = <150000>;
-			interrupts-extended = <&gpio2 18 IRQ_TYPE_LEVEL_LOW>;
-			reg = <3>;
 		};
 	};
 };
@@ -974,11 +959,11 @@
 		fsl,pins = <
 			MX93_PAD_ENET1_MDC__ENET_QOS_MDC			0x57e
 			MX93_PAD_ENET1_MDIO__ENET_QOS_MDIO			0x57e
-			MX93_PAD_ENET1_RD0__ENET_QOS_RGMII_RD0			0x57e
-			MX93_PAD_ENET1_RD1__ENET_QOS_RGMII_RD1			0x57e
-			MX93_PAD_ENET1_RD2__ENET_QOS_RGMII_RD2			0x57e
-			MX93_PAD_ENET1_RD3__ENET_QOS_RGMII_RD3			0x57e
-			MX93_PAD_ENET1_RXC__CCM_ENET_QOS_CLOCK_GENERATE_RX_CLK	0x5fe
+			MX93_PAD_ENET1_RD0__ENET_QOS_RGMII_RD0			0x37e
+			MX93_PAD_ENET1_RD1__ENET_QOS_RGMII_RD1			0x37e
+			MX93_PAD_ENET1_RD2__ENET_QOS_RGMII_RD2			0x37e
+			MX93_PAD_ENET1_RD3__ENET_QOS_RGMII_RD3			0x37e
+			MX93_PAD_ENET1_RXC__CCM_ENET_QOS_CLOCK_GENERATE_RX_CLK	0x3fe
 			MX93_PAD_ENET1_RX_CTL__ENET_QOS_RGMII_RX_CTL		0x57e
 			MX93_PAD_ENET1_TD0__ENET_QOS_RGMII_TD0			0x57e
 			MX93_PAD_ENET1_TD1__ENET_QOS_RGMII_TD1			0x57e
@@ -994,11 +979,11 @@
 		fsl,pins = <
 			MX93_PAD_ENET2_MDC__ENET1_MDC				0x57e
 			MX93_PAD_ENET2_MDIO__ENET1_MDIO				0x57e
-			MX93_PAD_ENET2_RD0__ENET1_RGMII_RD0			0x57e
-			MX93_PAD_ENET2_RD1__ENET1_RGMII_RD1			0x57e
-			MX93_PAD_ENET2_RD2__ENET1_RGMII_RD2			0x57e
-			MX93_PAD_ENET2_RD3__ENET1_RGMII_RD3			0x57e
-			MX93_PAD_ENET2_RXC__ENET1_RGMII_RXC			0x57e
+			MX93_PAD_ENET2_RD0__ENET1_RGMII_RD0			0x37e
+			MX93_PAD_ENET2_RD1__ENET1_RGMII_RD1			0x37e
+			MX93_PAD_ENET2_RD2__ENET1_RGMII_RD2			0x37e
+			MX93_PAD_ENET2_RD3__ENET1_RGMII_RD3			0x37e
+			MX93_PAD_ENET2_RXC__ENET1_RGMII_RXC			0x37e
 			MX93_PAD_ENET2_RX_CTL__ENET1_RGMII_RX_CTL		0x57e
 			MX93_PAD_ENET2_TD0__ENET1_RGMII_TD0			0x57e
 			MX93_PAD_ENET2_TD1__ENET1_RGMII_TD1			0x57e
