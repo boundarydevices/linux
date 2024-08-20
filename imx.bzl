@@ -417,6 +417,18 @@ _IMX_IN_TREE_MODULES = [
     "drivers/soc/imx/imx93-src.ko",
     "drivers/pmdomain/imx/imx93-pd.ko",
     "drivers/soc/imx/imx93_lpm.ko",
+    "drivers/input/touchscreen/ilitek_ts_i2c.ko",
+    "drivers/input/touchscreen/exc3000.ko",
+    "net/sched/sch_cbs.ko",
+    "drivers/gpu/drm/bridge/lontium-lt9611uxc.ko",
+    "net/sched/sch_etf.ko",
+    "net/sched/act_gate.ko",
+    "net/sched/sch_taprio.ko",
+    "drivers/gpu/drm/panel/panel-lvds.ko",
+    "drivers/gpu/drm/bridge/ti-sn65dsi83.ko",
+    "net/sched/sch_mqprio.ko",
+    "net/sched/sch_mqprio_lib.ko",
+    "net/sched/cls_flower.ko",
 ]
 
 def define_imx():
