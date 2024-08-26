@@ -1,0 +1,35 @@
+
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC
+ */
+
+#include "imx91-nitrogen-smarc.dts"
+
+/ {
+	model = "Boundary Devices Nitrogen91 SMARC + TI351 WiFi";
+	compatible = "ezurio,imx91-nitrogen-smarc-ti351", "fsl,imx91";
+};
+
+&lpuart5 {
+	bluetooth {
+		compatible = "ti,cc33xx-bt";
+		cc33xx-supply = <&reg_wlan_vmmc>;
+		max-speed = <115200>;
+	};
+};
+
+&usdhc3 { /* WiFi / Bluetooth */
+	max-frequency = <50000000>;
+	cap-power-off-card;
+
+	/delete-node/ wifi_wake_host;
+	/delete-node/ wifi@1 ;
+
+	wlcore: wlcore@2 {
+		compatible = "ti,cc33xx";
+		/* To use in-band SDIO interrupts remove the following line */
+		interrupts-extended = <&pcal6534 3 IRQ_TYPE_EDGE_RISING>; /* SDIO_WAKE# */
+		reg = <2>;
+	};
+};
