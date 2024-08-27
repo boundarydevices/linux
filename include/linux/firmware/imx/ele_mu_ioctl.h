@@ -41,6 +41,7 @@ struct ele_mu_ioctl_signed_message {
 struct ele_mu_ioctl_get_soc_info {
 	u16 soc_id;
 	u16 soc_rev;
+	u8  board_type;
 };
 
 struct ele_time_frame {
