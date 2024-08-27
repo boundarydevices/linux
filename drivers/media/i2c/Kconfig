@@ -667,6 +667,17 @@ config VIDEO_ST_VGXY61
 	  This is a Video4Linux2 sensor driver for the ST VGXY61
 	  camera sensor.
 
+config VIDEO_TEVS
+	tristate "TechNexion TEVS sensor support"
+	depends on OF
+	depends on GPIOLIB && I2C && VIDEO_V4L2_SUBDEV_API
+	depends on MEDIA_CAMERA_SUPPORT
+	default y
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the TechNexion
+	  TEVS camera sensor with a MIPI CSI-2 interface.
+
 source "drivers/media/i2c/ccs/Kconfig"
 source "drivers/media/i2c/et8ek8/Kconfig"
 
