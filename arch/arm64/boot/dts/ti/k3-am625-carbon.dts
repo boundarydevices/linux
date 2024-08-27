@@ -1,0 +1,219 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+/*
+ * Copyright 2024 Ezurio LLC
+ *
+ */
+
+/dts-v1/;
+
+#include "k3-am625-carbon-som.dtsi"
+
+/ {
+	model = "Ezurio Carbon AM625 OSM Carrier Board";
+	compatible = "ezurio,am62-dev",
+		     "ti,am625";
+
+	vdd_mmc1_sel: regulator-sdio-a-sel {
+		/* Controls the SDIO_A_SEL to SD Card (LOW) Or M.2 (HIGH) */
+		bootph-all;
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_mmc1_sel";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <100000>;
+		regulator-boot-on;
+		vin-supply = <&vcc_3v3_sys>;
+		gpio = <&exp2 8 GPIO_ACTIVE_LOW>; /* U51 P10 */
+	};
+
+	vdd_mmc1: regulator-sdio-a {
+		bootph-all;
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&main_vdd_sdio_a_gpio>;
+		regulator-name = "vdd_mmc1";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <100000>;
+		regulator-boot-on;
+		enable-active-high;
+		vin-supply = <&vdd_mmc1_sel>;
+		gpio = <&main_gpio0 18 GPIO_ACTIVE_HIGH>;
+	};
+
+	transceiver1: can-phy0 {
+		compatible = "ti,tcan1042";
+		#phy-cells = <0>;
+		max-bitrate = <5000000>;
+		standby-gpios = <&exp2 2 GPIO_ACTIVE_HIGH>; /* TCAN1046 STB is active HIGH */
+	};
+
+	transceiver2: can-phy1 {
+		compatible = "ti,tcan1042";
+		#phy-cells = <0>;
+		max-bitrate = <5000000>;
+		standby-gpios = <&exp2 4 GPIO_ACTIVE_HIGH>; /* TCAN1046 STB is active HIGH */
+	};
+};
+
+&main_i2c1 { /* I2C_A */
+
+	eeprom@54 {
+		/* U53 Giantec, GT24C256C-2GLI-TR */
+		compatible = "atmel,24c256";
+		reg = <0x54>;
+	};
+
+	exp1: gpio@74 {
+                compatible = "ti,tca9539";
+                reg = <0x74>;
+                #gpio-cells = <2>;
+                gpio-controller;
+
+		gpio-line-names = "USB_C_OEn_P00", "USB_D_OEn_P01",
+			"ACD_nINT", "", "M2_WDISABLE1_EXP",
+			"M2_WDISABLE2_EXP", "M2_WL_DEVICE_WAKEUP",
+			"M2_BT_DEVICE_WAKEUP",
+			"M2_UART_WAKE",	"M2_Vendor_DF38", "M2_SD_nRST",
+			"M2_SD_HOST_WAKEUP", "M2_Power_EN", "",
+			"VOL_UP", "VOL_DOWN";
+	};
+
+	exp2: gpio@75 {
+                compatible = "ti,tca9539";
+                reg = <0x75>;
+                #gpio-cells = <2>;
+                gpio-controller;
+
+		gpio-line-names = "", "",
+			"CAN_A_STB", "",
+			"CAN_B_STB", "",
+			"", "",
+			"SDIO_A_SEL", "AUD_PWR_EN",
+			"CHGR_INTn", "CHGR_CEn",
+			"", "", "", "";
+	};
+
+	exp3: gpio@77 {
+                compatible = "ti,tca9539";
+                reg = <0x77>;
+                #gpio-cells = <2>;
+                gpio-controller;
+
+		gpio-line-names = "CSI_A_GPIO0", "CSI_A_GPIO1",
+			"CSI_B_GPIO0", "CSI_B_GPIO1",
+			"CSI_C_GPIO0", "CSI_C_GPIO1",
+			"CSI_D_GPIO0", "CSI_D_GPIO1",
+			"LVDS_C_INT", "LVDS_C_HPD",
+			"LVDS_D_INT", "LVDS_D_HPD",
+			"LVDS_E_INT", "LVDS_E_HPD",
+			"RGB_INT", "RGB_HDMI_HPD";
+	};
+};
+
+&cpsw3g_mdio {
+	status = "okay";
+
+	cpsw3g_phy0: ethernet-phy@0 {
+		reg = <0>;
+		pinctrl-names = "default";
+                pinctrl-0 = <&main_rgmii_phy0_gpio>;
+		interrupt-parent = <&main_gpio0>;
+                interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&main_gpio0 2 GPIO_ACTIVE_LOW>;
+                reset-assert-us = <25>;
+                reset-deassert-us = <60000>; /* T2 */
+		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_25_NS>;
+		ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+		ti,clk-output-sel = <DP83867_CLK_O_SEL_OFF>;
+		// ti,max-output-impedance;
+		//ti,min-output-impedance;
+	};
+
+	cpsw3g_phy1: ethernet-phy@1 {
+		reg = <1>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&main_rgmii_phy1_gpio>;
+		interrupt-parent = <&main_gpio0>;
+		interrupts = <42 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&main_gpio0 36 GPIO_ACTIVE_LOW>;
+		reset-assert-us = <25>;
+		reset-deassert-us = <60000>; /* T2 */
+		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+		ti,min-output-impedance;
+	};
+};
+
+&main_mcan0 { /* CAN_A */
+        status = "okay";
+	phys = <&transceiver1>;
+};
+
+&mcu_mcan0 { /* CAN_B */
+        status = "okay";
+	phys = <&transceiver2>;
+};
+
+&main_pmx0 {
+
+        main_rgmii_phy0_gpio: main-rgmii-phy0-gpio-default-pins {
+                bootph-all;
+                pinctrl-single,pins = <
+                        AM62X_IOPAD(0x0008, PIN_INPUT_PULLDOWN, 7) /* ETH_A_RST (J24) OSPI0_DQS.GPIO0_2 */
+			AM62X_IOPAD(0x0004, PIN_INPUT_PULLDOWN, 7) /* ETH_A_INT (G25) OSPI0_LBCLKO.GPIO0_1 */
+                >;
+        };
+
+	main_rgmii_phy1_gpio: main-rgmii-phy1-gpio-default-pins {
+		bootph-all;
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0094, PIN_INPUT, 7) /* ETH_B_RST (N20) GPMC0_BE1n.GPIO0_36 */
+			AM62X_IOPAD(0x00ac, PIN_INPUT, 7) /* ETH_B_INT (L21) GPMC0_CSn1.GPIO0_42 */
+		>;
+	};
+
+	main_spia_pins_default: spia-default-pins {
+		bootph-all;
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x00c, PIN_INPUT, 0) /* SPI_A_SDI (E25) OSPI0_D0 */
+			AM62X_IOPAD(0x010, PIN_OUTPUT, 0) /* SPI_A_SDO (G24) OSPI0_D1 */
+
+			AM62X_IOPAD(0x02c, PIN_OUTPUT, 0) /* SPI_A_CS0# (F23) OSPI0_CSn0 */
+			AM62X_IOPAD(0x030, PIN_OUTPUT, 0) /* SPI_A_CS0# (G21) OSPI0_CSn1 */
+			AM62X_IOPAD(0x000, PIN_OUTPUT, 0) /* SPI_A_SCK (H24) OSPI0_CLK */
+
+			AM62X_IOPAD(0x014, PIN_INPUT, 7) /* SPI_A_/WP_ (F25) OSPI0_D2.GPIO0_5 */
+			AM62X_IOPAD(0x018, PIN_INPUT, 7) /* SPI_A_/HOLD (F24) OSPI0_D3.GPIO0_6 */
+		>;
+	};
+
+	main_vdd_sdio_a_gpio: main-vdd-sdio-a-default-pins {
+		bootph-all;
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0048, PIN_INPUT, 7) /* SDIO_A_PWR_EN (N25) GPMC0_AD3.GPIO0_18 */
+		>;
+	};
+};
+
+&sdhci1 { /* SDIO_A uSD / M.2_SDIO */
+	status = "okay";
+	vmmc-supply = <&vdd_mmc1>; /* SDIO_A_PWR_EN */
+	vqmmc-supply = <&vdd_sd_dv>; /* VSEL_SD */
+	disable-wp; // MMC1_SDWP is just pulled down, so lets not use this.
+
+	/delete-property/ ti,otap-del-sel-sdr104; // This one is failing
+
+	ti,driver-strength-ohm = <50>;
+};
+
+&main_spi0 { /* SPI_B */
+        status = "okay";
+};
+
+&ospi0 { /* SPI_A Used as a normal SPI */
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_spia_pins_default>;
+};
