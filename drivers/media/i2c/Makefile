@@ -145,3 +145,4 @@ obj-$(CONFIG_VIDEO_VS6624) += vs6624.o
 obj-$(CONFIG_VIDEO_WM8739) += wm8739.o
 obj-$(CONFIG_VIDEO_WM8775) += wm8775.o
 obj-$(CONFIG_VIDEO_AP1302)     += ap1302.o
+obj-$(CONFIG_VIDEO_TEVS) += tevs/
