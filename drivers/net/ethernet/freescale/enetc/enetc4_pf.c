@@ -234,53 +234,49 @@ static int enetc4_pf_set_mac_exact_filter(struct enetc_pf *pf, int type)
 	struct enetc_mac_entry *mac_tbl __free(kfree);
 	int mf_max_num = pf->caps.mac_filter_num;
 	struct net_device *ndev = pf->si->ndev;
-	int i = 0, mac_cnt = 0, err;
 	struct netdev_hw_addr *ha;
 	u8 si_mac[ETH_ALEN];
+	int mac_cnt = 0;
 
-	enetc_get_si_primary_mac(&pf->si->hw, si_mac);
-
-	if (type & ENETC_MAC_FILTER_TYPE_UC)
-		mac_cnt += netdev_uc_count(ndev);
-
-	if (type & ENETC_MAC_FILTER_TYPE_MC)
-		mac_cnt += netdev_mc_count(ndev);
-
-	mac_tbl = kcalloc(mac_cnt, sizeof(*mac_tbl), GFP_KERNEL);
+	mac_tbl = kcalloc(mf_max_num, sizeof(*mac_tbl), GFP_KERNEL);
 	if (!mac_tbl)
 		return -ENOMEM;
 
+	enetc_get_si_primary_mac(&pf->si->hw, si_mac);
+
+	netif_addr_lock_bh(ndev);
 	if (type & ENETC_MAC_FILTER_TYPE_UC) {
 		netdev_for_each_uc_addr(ha, ndev) {
 			if (!is_valid_ether_addr(ha->addr) ||
-			    ether_addr_equal(ha->addr, si_mac)) {
-				mac_cnt--;
+			    ether_addr_equal(ha->addr, si_mac))
 				continue;
-			}
 
-			ether_addr_copy(mac_tbl[i].addr, ha->addr);
-			i++;
+			if (mac_cnt >= mf_max_num)
+				goto err_nospace_out;
+
+			ether_addr_copy(mac_tbl[mac_cnt++].addr, ha->addr);
 		}
 	}
 
 	if (type & ENETC_MAC_FILTER_TYPE_MC) {
 		netdev_for_each_mc_addr(ha, ndev) {
-			if (!is_multicast_ether_addr(ha->addr)) {
-				mac_cnt--;
+			if (!is_multicast_ether_addr(ha->addr))
 				continue;
-			}
 
-			ether_addr_copy(mac_tbl[i].addr, ha->addr);
-			i++;
+			if (mac_cnt >= mf_max_num)
+				goto err_nospace_out;
+
+			ether_addr_copy(mac_tbl[mac_cnt++].addr, ha->addr);
 		}
 	}
+	netif_addr_unlock_bh(ndev);
 
-	if (mac_cnt > mf_max_num)
-		return -ENOSPC;
+	return enetc_pf_set_mac_exact_filter(pf, 0, mac_tbl, mac_cnt);
 
-	err = enetc_pf_set_mac_exact_filter(pf, 0, mac_tbl, mac_cnt);
+err_nospace_out:
+	netif_addr_unlock_bh(ndev);
 
-	return err;
+	return -ENOSPC;
 }
 
 static void enetc4_pf_set_mac_hash_filter(struct enetc_pf *pf, int type)
@@ -291,6 +287,7 @@ static void enetc4_pf_set_mac_hash_filter(struct enetc_pf *pf, int type)
 	struct enetc_si *si = pf->si;
 	struct netdev_hw_addr *ha;
 
+	netif_addr_lock_bh(ndev);
 	if (type & ENETC_MAC_FILTER_TYPE_UC) {
 		mac_filter = &si->mac_filter[UC];
 		enetc_reset_mac_addr_filter(mac_filter);
@@ -310,6 +307,7 @@ static void enetc4_pf_set_mac_hash_filter(struct enetc_pf *pf, int type)
 		pf->hw_ops->set_si_mac_hash_filter(hw, 0, MC,
 						   *mac_filter->mac_hash_table);
 	}
+	netif_addr_unlock_bh(ndev);
 }
 
 static void enetc4_pf_set_mac_filter(struct enetc_pf *pf, int type)
