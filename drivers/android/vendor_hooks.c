@@ -33,6 +33,7 @@
 #include <trace/hooks/net.h>
 #include <trace/hooks/cpuidle_psci.h>
 #include <trace/hooks/vmscan.h>
+#include <trace/hooks/lz4_decompress.h>
 #include <trace/hooks/avc.h>
 #include <trace/hooks/creds.h>
 #include <trace/hooks/selinux.h>
@@ -126,6 +127,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_cpu_idle_exit);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mpam_set);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_wq_lockup_pool);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_alloc_and_link_pwqs);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_create_worker);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_ipi_stop);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_sysrq_crash);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_printk_hotplug);
@@ -187,6 +189,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_freq_qos_remove_request);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_set_balance_anon_file_reclaim);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_show_max_freq);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_shrink_slab_bypass);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_lz4_decompress_bypass);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_free_unref_page_bypass);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_kvmalloc_node_use_vmalloc);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_should_alloc_pages_retry);
