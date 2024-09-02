@@ -250,8 +250,7 @@ static int mt8188_mt6359_init(struct snd_soc_pcm_runtime *rtd)
 	struct mt8188_mt6359_priv *priv = soc_card_data->mach_priv;
 	struct snd_soc_component *cmpnt_codec =
 		asoc_rtd_to_codec(rtd, 0)->component;
-	struct snd_soc_component *cmpnt_accdet =
-		asoc_rtd_to_codec(rtd, 2)->component;
+	struct snd_soc_component *cmpnt_accdet;
 	int ret;
 
 	/* set mtkaif protocol */
@@ -260,6 +259,11 @@ static int mt8188_mt6359_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* mtkaif calibration */
 	mt8188_mt6359_mtkaif_calibration(rtd);
+
+	if (asoc_rtd_to_codec(rtd, 2) == NULL)
+		return 0;
+	else
+		cmpnt_accdet = asoc_rtd_to_codec(rtd, 2)->component;
 
 	ret = snd_soc_card_jack_new(rtd->card, "Headset Jack",
 				    SND_JACK_HEADSET | SND_JACK_BTN_0 |
