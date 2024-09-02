@@ -91,6 +91,13 @@ struct ele_time_frame {
  */
 #define ELE_MU_IOCTL_GET_MU_INFO	_IOR(ELE_MU_IOCTL, 0x04, \
 					struct ele_mu_ioctl_get_mu_info)
+
+/*
+ * ioctl to send signed message to SE.
+ */
+#define ELE_MU_IOCTL_SIGNED_MESSAGE     _IOR(ELE_MU_IOCTL, 0x05, \
+					struct ele_mu_ioctl_signed_message)
+
 /*
  * ioctl to get SoC Info from user-space.
  */

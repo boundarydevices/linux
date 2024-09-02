@@ -48,6 +48,7 @@ static uint32_t v2x_fw_state;
 #define SOC_ID_MASK			0x0000FFFF
 #define RESERVED_DMA_POOL		BIT(1)
 #define SCU_MEM_CFG			BIT(2)
+#define SCU_SIGNED_MSG_CFG		BIT(3)
 #define IMX_ELE_FW_DIR                 "/lib/firmware/imx/ele/"
 #define SECURE_RAM_BASE_ADDRESS_SCU	(0x20800000u)
 #define V2X_NON_FIPS			0x00000c00
@@ -1228,6 +1229,36 @@ exit:
 	return err;
 }
 
+static int ele_mu_ioctl_signed_msg_handler(struct file *fp,
+					   struct ele_mu_device_ctx *dev_ctx,
+					   unsigned long arg)
+{
+	struct ele_mu_ioctl_signed_message msg;
+	int err;
+
+	err = copy_from_user(&msg, (u8 *)arg, sizeof(msg));
+	if (err) {
+		dev_err(dev_ctx->priv->dev, "Failed to copy from user: %d\n", err);
+		return -EFAULT;
+	}
+
+	err = imx_scu_signed_msg(fp, msg.message, msg.msg_size, &msg.error_code);
+	if (err) {
+		dev_err(dev_ctx->priv->dev,
+			"Failed to send signed message: %d\n",
+			err);
+		return err;
+	}
+
+	err = copy_to_user((u8 *)arg, &msg, sizeof(msg));
+	if (err) {
+		dev_err(dev_ctx->priv->dev, "Failed to copy to user: %d\n", err);
+		return -EFAULT;
+	}
+
+	return err;
+}
+
 /*
  * Copy a buffer of data to/from the user and return the address to use in
  * messages
@@ -1645,6 +1676,10 @@ static long ele_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	case ELE_MU_IOCTL_GET_TIMER:
 		err = ele_mu_ioctl_get_time(dev_ctx, arg);
 		break;
+	case ELE_MU_IOCTL_SIGNED_MESSAGE:
+		if (ele_mu_priv->flags & SCU_SIGNED_MSG_CFG)
+			err = ele_mu_ioctl_signed_msg_handler(fp, dev_ctx, arg);
+		break;
 	default:
 		err = -EINVAL;
 		dev_dbg(ele_mu_priv->dev,
@@ -1919,6 +1954,7 @@ static int se_fw_probe(struct platform_device *pdev)
 	struct imx_info *info = NULL;
 	int ret;
 	struct device_node *np;
+	struct imx_info_list *info_list;
 
 	info = get_imx_info((struct imx_info_list *)of_id->data,
 			    pdev->name, strlen(pdev->name) + 1);
@@ -1966,15 +2002,27 @@ static int se_fw_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
+	info_list = (struct imx_info_list *)of_id->data;
+
 	if (info->pre_if_config) {
 		/* start initializing ele fw */
 		ret = info->pre_if_config(dev);
 		if (ret) {
 			dev_err(dev, "Failed to initialize scu config.\n");
 			priv->flags &= (~SCU_MEM_CFG);
+			if ((info_list->soc_id == SOC_ID_OF_IMX8DXL) &&
+			    ((memcmp(info->se_name, "she1", 5)) ||
+			    (memcmp(info->se_name, "hsm1", 5)))) {
+				priv->flags &= (~SCU_SIGNED_MSG_CFG);
+			}
 			goto exit;
 		}
 		priv->flags |= SCU_MEM_CFG;
+		if ((info_list->soc_id == SOC_ID_OF_IMX8DXL) &&
+		    ((memcmp(info->se_name, "she1", 5)) ||
+		    (memcmp(info->se_name, "hsm1", 5)))) {
+			priv->flags |= SCU_SIGNED_MSG_CFG;
+		}
 	}
 
 	/* Initialize the mutex. */
