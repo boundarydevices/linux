@@ -425,6 +425,12 @@
 		>;
 	};
 
+	mcu_rtc_pins_default: mcu-rtc-default-pins {
+		pinctrl-single,pins = <
+			AM62X_MCU_IOPAD(0x0084, PIN_INPUT, 7) /* RTC_INT (A12) WKUP_CLKOUT0.MCU_GPIO0_23 */
+		>;
+	};
+
 };
 
 &wkup_uart0 {
@@ -458,6 +464,17 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_i2c0_pins_default>;
 	clock-frequency = <400000>;
+
+	rv3028: rtc@52 {
+		backup-switchover-dsm;
+		#clock-cells = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&mcu_rtc_pins_default>;
+		compatible = "microcrystal,rv3028";
+		reg = <0x52>;
+		// interrupts-extended = <&mcu_gpio0 23 GPIO_ACTIVE_LOW>;
+		// wakeup-source;
+	};
 };
 
 &main_gpio0 {
