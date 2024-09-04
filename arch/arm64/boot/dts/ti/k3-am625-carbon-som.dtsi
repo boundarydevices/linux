@@ -17,7 +17,10 @@
 	model = "Ezurio Carbon AM625 SOM";
 
 	aliases {
-		serial2 = &main_uart0;
+		serial2 = &main_uart0; /* CONSOLE */
+		serial3 = &main_uart6; /* UART_A */
+		serial4 = &mcu_uart0;  /* UART_B */
+		serial6 = &main_uart4; /* UART_D */
 		mmc0 = &sdhci0;
 		mmc1 = &sdhci1;
 		mmc2 = &sdhci2;
@@ -386,6 +389,22 @@
 		>;
 	};
 
+	main_uart4_pins_default: main-uart4-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x006c, PIN_INPUT, 2) /* (T22) GPMC0_AD12.UART4_RXD */
+			AM62X_IOPAD(0x0070, PIN_OUTPUT, 2) /* (T24) GPMC0_AD13.UART4_TXD */
+		>;
+	};
+
+	main_uart6_pins_default: main-uart6-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0028, PIN_INPUT, 3) /* (J22) OSPI0_D7.UART6_CTSn */
+			AM62X_IOPAD(0x0024, PIN_OUTPUT, 3) /* (H25) OSPI0_D6.UART6_RTSn */
+			AM62X_IOPAD(0x001c, PIN_INPUT, 3) /* (J23) OSPI0_D4.UART6_RXD */
+			AM62X_IOPAD(0x0020, PIN_OUTPUT, 3) /* (J25) OSPI0_D5.UART6_TXD */
+		>;
+	};
+
 	ospi0_pins_default: ospi0-default-pins {
 		bootph-all;
 		pinctrl-single,pins = <
@@ -431,10 +450,18 @@
 		>;
 	};
 
+	pinctrl_mcu_uart0: muc-uart0-default-pins {
+		pinctrl-single,pins = <
+			AM62X_MCU_IOPAD(0x001c, PIN_INPUT, 0) /* (A6) MCU_UART0_CTSn */
+			AM62X_MCU_IOPAD(0x0020, PIN_OUTPUT, 0) /* (B6) MCU_UART0_RTSn */
+			AM62X_MCU_IOPAD(0x0014, PIN_INPUT, 0) /* (B5) MCU_UART0_RXD */
+			AM62X_MCU_IOPAD(0x0018, PIN_OUTPUT, 0) /* (A5) MCU_UART0_TXD */
+		>;
+	};
 };
 
 &wkup_uart0 {
-	/* WKUP UART0 is used by DM firmware */
+	/* WKUP UART0 (UART_C) is used by DM firmware */
 	bootph-pre-ram;
 	status = "reserved";
 	pinctrl-names = "default";
@@ -442,6 +469,7 @@
 };
 
 &main_uart0 {
+	/* Console ttyS2 */
 	bootph-all;
 	status = "okay";
 	pinctrl-names = "default";
@@ -457,6 +485,20 @@
 	status = "reserved";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_uart1_pins_default>;
+};
+
+&main_uart4 {
+	/* UART_D */
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_uart4_pins_default>;
+};
+
+&main_uart6 {
+	/* UART_A */
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_uart6_pins_default>;
 };
 
 &main_i2c0 {
@@ -582,6 +624,13 @@
 	memory-region = <&mcu_m4fss_dma_memory_region>,
 			<&mcu_m4fss_memory_region>;
 	status = "okay";
+};
+
+&mcu_uart0 {
+	/* UART_B */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mcu_uart0>;
+	status = "disabled";
 };
 
 &usbss0 {

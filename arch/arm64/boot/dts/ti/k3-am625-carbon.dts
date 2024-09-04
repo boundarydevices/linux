@@ -156,6 +156,10 @@
 	phys = <&transceiver2>;
 };
 
+&mcu_uart0 { /* UART_B */
+	status = "okay";
+};
+
 &main_pmx0 {
 
         main_rgmii_phy0_gpio: main-rgmii-phy0-gpio-default-pins {
@@ -210,6 +214,14 @@
 
 &main_spi0 { /* SPI_B */
         status = "okay";
+};
+
+&main_uart4 { /* UART_D */
+	status = "okay";
+};
+
+&main_uart6 { /* UART_A */
+	status = "okay";
 };
 
 &ospi0 { /* SPI_A Used as a normal SPI */
