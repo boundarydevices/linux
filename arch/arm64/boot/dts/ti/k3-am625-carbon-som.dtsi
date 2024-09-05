@@ -111,41 +111,6 @@
 		};
 	};
 
-	tlv320_mclk: clk-0 {
-		#clock-cells = <0>;
-		compatible = "fixed-clock";
-		clock-frequency = <12288000>;
-	};
-
-	codec_audio: sound {
-		compatible = "simple-audio-card";
-		simple-audio-card,name = "AM62x-SKEVM";
-		simple-audio-card,widgets =
-			"Headphone",	"Headphone Jack",
-			"Line",		"Line In",
-			"Microphone",	"Microphone Jack";
-		simple-audio-card,routing =
-			"Headphone Jack",	"HPLOUT",
-			"Headphone Jack",	"HPROUT",
-			"LINE1L",		"Line In",
-			"LINE1R",		"Line In",
-			"MIC3R",		"Microphone Jack",
-			"Microphone Jack",	"Mic Bias";
-		simple-audio-card,format = "dsp_b";
-		simple-audio-card,bitclock-master = <&sound_master>;
-		simple-audio-card,frame-master = <&sound_master>;
-		simple-audio-card,bitclock-inversion;
-
-		simple-audio-card,cpu {
-			sound-dai = <&mcasp1>;
-		};
-
-		sound_master: simple-audio-card,codec {
-			sound-dai = <&tlv320aic3106>;
-			clocks = <&tlv320_mclk>;
-		};
-	};
-
 	vcc_3v3_sys: regulator-u4 {
 		/* output of U4 */
 		bootph-all;
@@ -528,34 +493,22 @@
 };
 
 &main_i2c1 { /* I2C_A */
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_i2c1_pins_default>;
 	clock-frequency = <100000>;
 	bootph-all;
-
-	tlv320aic3106: audio-codec@1b {
-		#sound-dai-cells = <0>;
-		compatible = "ti,tlv320aic3106";
-		reg = <0x1b>;
-		ai3x-micbias-vg = <1>;	/* 2.0V */
-
-		/* Regulators */
-		AVDD-supply = <&vcc_3v3_sys>;
-		IOVDD-supply = <&vcc_3v3_sys>;
-		DRVDD-supply = <&vcc_3v3_sys>;
-	};
 };
 
-&main_i2c2 {
-	status = "okay";
+&main_i2c2 { /* I2C_B */
+	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_i2c2_pins_default>;
 	clock-frequency = <400000>;
 };
 
-&main_i2c3 {
-	status = "okay";
+&main_i2c3 { /* I2C_CAM */
+	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_i2c3_pins_default>;
 	clock-frequency = <400000>;
@@ -715,10 +668,6 @@
 
 &mcu_gpio_intr {
 	status = "reserved";
-};
-
-&tlv320aic3106 {
-	DVDD-supply = <&vcc_1v8>;
 };
 
 #define K3_TS_OFFSET(pa, val)	(0x4+(pa)*4) (0x10000 | val)

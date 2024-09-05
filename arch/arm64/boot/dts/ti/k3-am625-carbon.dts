@@ -41,6 +41,43 @@
 		gpio = <&main_gpio0 18 GPIO_ACTIVE_HIGH>;
 	};
 
+#if 0
+	tlv320_mclk: clk-0 {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <12288000>;
+	};
+
+	codec_audio: sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "AM62x-SKEVM";
+		simple-audio-card,widgets =
+			"Headphone",	"Headphone Jack",
+			"Line",		"Line In",
+			"Microphone",	"Microphone Jack";
+		simple-audio-card,routing =
+			"Headphone Jack",	"HPLOUT",
+			"Headphone Jack",	"HPROUT",
+			"LINE1L",		"Line In",
+			"LINE1R",		"Line In",
+			"MIC3R",		"Microphone Jack",
+			"Microphone Jack",	"Mic Bias";
+		simple-audio-card,format = "dsp_b";
+		simple-audio-card,bitclock-master = <&sound_master>;
+		simple-audio-card,frame-master = <&sound_master>;
+		simple-audio-card,bitclock-inversion;
+
+		simple-audio-card,cpu {
+			sound-dai = <&mcasp1>;
+		};
+
+		sound_master: simple-audio-card,codec {
+			sound-dai = <&tlv320aic3106>;
+			clocks = <&tlv320_mclk>;
+		};
+	};
+#endif
+
 	transceiver1: can-phy0 {
 		compatible = "ti,tcan1042";
 		#phy-cells = <0>;
@@ -57,6 +94,11 @@
 };
 
 &main_i2c1 { /* I2C_A */
+	status = "okay";
+
+// TODO 
+// PMIC on carrier, current, voltage measurement, usb-c PM, U9 boost ctrl, 
+// charger, Audio codec, Audio headset ctrl
 
 	eeprom@54 {
 		/* U53 Giantec, GT24C256C-2GLI-TR */
@@ -108,6 +150,66 @@
 			"LVDS_D_INT", "LVDS_D_HPD",
 			"LVDS_E_INT", "LVDS_E_HPD",
 			"RGB_INT", "RGB_HDMI_HPD";
+	};
+
+#if 0
+	tlv320aic3106: audio-codec@1b {
+		#sound-dai-cells = <0>;
+		compatible = "ti,tlv320aic3106";
+		reg = <0x1b>;
+		ai3x-micbias-vg = <1>;	/* 2.0V */
+
+		/* Regulators */
+		AVDD-supply = <&vcc_3v3_sys>;
+		IOVDD-supply = <&vcc_3v3_sys>;
+		DRVDD-supply = <&vcc_3v3_sys>;
+	};
+#endif
+};
+
+&main_i2c2 { /* I2C_B / I2C_B_MCU / J 25 */
+	status = "okay";
+};
+
+&main_i2c3 { /* I2C_CAM / I2C_D_ALT / J 21 */
+	status = "okay";
+};
+
+&main_i2c3 { /* I2C_CAM */
+	status = "okay";
+
+	i2c-mux@73 {
+
+		compatible = "nxp,pca9546"; /* U34 TCA9546APWR */
+		reg = <0x73>;
+		/* No reset reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>; */
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_cam_a: i2-cam-a@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_cam_b: i2-cam-b@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_cam_c: i2-cam-c@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_cam_d: i2-cam-d@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
 	};
 };
 
@@ -229,3 +331,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_spia_pins_default>;
 };
+
+#if 0
+&tlv320aic3106 {
+	DVDD-supply = <&vcc_1v8>;
+};
+#endif
