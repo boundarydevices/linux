@@ -37,7 +37,7 @@
 	};
 
 	opp-table {
-		/* Add 1.4GHz OPP for am625-sk board. Requires VDD_CORE to be at 0.85V */
+		/* Add 1.4GHz OPP for am625-carbon board. Requires VDD_CORE to be at 0.85V */
 		opp-1400000000 {
 			opp-hz = /bits/ 64 <1400000000>;
 			opp-supported-hw = <0x01 0x0004>;
@@ -111,6 +111,17 @@
 		};
 	};
 
+	vsys_5v: regulator-vcc-in-5v {
+		/* VCC_IN_5V */
+		bootph-all;
+		compatible = "regulator-fixed";
+		regulator-name = "vsys_5v";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
 	vcc_3v3_sys: regulator-u4 {
 		/* output of U4 */
 		bootph-all;
@@ -122,13 +133,13 @@
 		regulator-boot-on;
 	};
 
-	vdd_sd_dv: regulator-u3-ldo1 {
+	vdd_sd: regulator-u3-ldo1 {
 		/* Output of U3 TPS6521920WRHBRQ1 VLDO1 */
 		bootph-all;
 		compatible = "regulator-gpio";
-		regulator-name = "u3-vldo1";
+		regulator-name = "vdd_sd_u3_vldo1";
 		pinctrl-names = "default";
-		pinctrl-0 = <&vdd_sd_dv_pins_default>;
+		pinctrl-0 = <&vdd_sd_pins_default>;
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-boot-on;
@@ -136,17 +147,191 @@
 		states = <1800000 0x0>,
 			 <3300000 0x1>;
 	};
+};
 
-	vcc_1v8: regulator-u3-ldo3 {
-		/* output of U3 TPS6521920WRHBRQ1 VLDO3 */
-		compatible = "regulator-fixed";
-		regulator-name = "vcc_1v8";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-		vin-supply = <&vcc_3v3_sys>;
-		regulator-always-on;
-		regulator-boot-on;
+&cpsw3g {
+	bootph-all;
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_rgmii1_pins_default
+		     &main_rgmii2_pins_default>;
+
+	cpts@3d000 {
+		/* MAP HW3_TS_PUSH to GENF1 */
+		ti,pps = <2 1>;
 	};
+};
+
+&cpsw3g_mdio {
+	bootph-all;
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_mdio1_pins_default>;
+};
+
+&cpsw_port1 {
+	bootph-all;
+	phy-mode = "rgmii-rxid";
+	phy-handle = <&cpsw3g_phy0>;
+};
+
+&cpsw_port2 {
+	bootph-all;
+	phy-mode = "rgmii-rxid";
+	phy-handle = <&cpsw3g_phy1>;
+};
+
+&fss {
+	bootph-all;
+};
+
+&mailbox0_cluster0 {
+	mbox_m4_0: mbox-m4-0 {
+		ti,mbox-rx = <0 0 0>;
+		ti,mbox-tx = <1 0 0>;
+	};
+};
+
+&main_gpio0 {
+	bootph-all;
+};
+
+&main_gpio1 {
+	bootph-all;
+};
+
+&main_gpio_intr {
+	status = "okay";
+};
+
+&main_i2c0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_i2c0_pins_default>;
+	clock-frequency = <400000>;
+
+	rv3028: rtc@52 {
+		backup-switchover-dsm;
+		#clock-cells = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&mcu_rtc_pins_default>;
+		compatible = "microcrystal,rv3028";
+		reg = <0x52>;
+		// interrupts-extended = <&mcu_gpio0 23 GPIO_ACTIVE_LOW>;
+		// wakeup-source;
+	};
+
+	tps65219: pmic@30 {
+		compatible = "ti,tps65219";
+		reg = <0x30>;
+		buck1-supply = <&vsys_5v>;
+		buck2-supply = <&vsys_5v>;
+		buck3-supply = <&vsys_5v>;
+		ldo1-supply = <&vcc_3v3_sys>;
+		ldo2-supply = <&buck2_reg>;
+		ldo3-supply = <&vcc_3v3_sys>;
+		ldo4-supply = <&vcc_3v3_sys>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pmic_irq_pins_default>;
+
+		interrupt-parent = <&gic500>;
+		interrupts = <GIC_SPI 224 IRQ_TYPE_LEVEL_HIGH>;
+
+		system-power-controller;
+		ti,power-button;
+
+		regulators {
+			buck1_reg: buck1 {
+				regulator-name = "VDD_CORE";
+				regulator-min-microvolt = <750000>;
+				regulator-max-microvolt = <750000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			buck2_reg: buck2 {
+				regulator-name = "VDD1V8";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			buck3_reg: buck3 {
+				regulator-name = "VDD_1V1";
+				regulator-min-microvolt = <1100000>;
+				regulator-max-microvolt = <1100000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			ldo1_reg: ldo1 {
+				/*
+				 * Regulator is left as is unused, vdd_sd
+				 * is controlled via GPIO with bypass config
+				 * as per the NVM configuration
+				 */
+				regulator-name = "VDD_SD";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-allow-bypass;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			ldo2_reg: ldo2 {
+				regulator-name = "VDDA_0V85";
+				regulator-min-microvolt = <850000>;
+				regulator-max-microvolt = <850000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			ldo3_reg: regulator-u3-ldo3 {
+				regulator-name = "VDDA_1V8";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			ldo4_reg: ldo4 {
+				regulator-name = "VDD_1V2";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <1200000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+		};
+	};
+};
+
+&main_i2c1 { /* I2C_A */
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_i2c1_pins_default>;
+	clock-frequency = <100000>;
+	bootph-all;
+};
+
+&main_i2c2 { /* I2C_B */
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_i2c2_pins_default>;
+	clock-frequency = <400000>;
+};
+
+&main_i2c3 { /* I2C_CAM */
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_i2c3_pins_default>;
+	clock-frequency = <400000>;
+};
+
+&main_mcan0 { /* CAN_A */
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_mcan0_pins_default>;
 };
 
 &main_pmx0 {
@@ -383,7 +568,7 @@
 		>;
 	};
 
-	vdd_sd_dv_pins_default: vdd-sd-dv-default-pins {
+	vdd_sd_pins_default: vdd-sd-default-pins {
 		bootph-all;
 		pinctrl-single,pins = <
 			AM62X_IOPAD(0x07c, PIN_OUTPUT, 7) /* (P25) GPMC0_CLK.GPIO0_31 */
@@ -391,46 +576,10 @@
 	};
 };
 
-&mcu_pmx0 {
-	wkup_uart0_pins_default: wkup-uart0-default-pins {
-		bootph-pre-ram;
-		pinctrl-single,pins = <
-			AM62X_MCU_IOPAD(0x02c, PIN_INPUT, 0) /* (C6/A7) WKUP_UART0_CTSn */
-			AM62X_MCU_IOPAD(0x030, PIN_OUTPUT, 0) /* (A4/B4) WKUP_UART0_RTSn */
-			AM62X_MCU_IOPAD(0x024, PIN_INPUT, 0) /* (B4/B5) WKUP_UART0_RXD */
-			AM62X_MCU_IOPAD(0x028, PIN_OUTPUT, 0) /* (C5/C6) WKUP_UART0_TXD */
-		>;
-	};
-
-	mcu_mcan0_pins_default: mcu-mcan0-pins-default {
-		pinctrl-single,pins = <
-			AM62X_MCU_IOPAD(0x0034, PIN_OUTPUT, 0) /* CAN_B_TX (D6) MCU_MCAN0_TX */
-			AM62X_MCU_IOPAD(0x0038, PIN_INPUT, 0) /* CAN_B_RX (B3) MCU_MCAN0_RX */
-		>;
-	};
-
-	mcu_rtc_pins_default: mcu-rtc-default-pins {
-		pinctrl-single,pins = <
-			AM62X_MCU_IOPAD(0x0084, PIN_INPUT, 7) /* RTC_INT (A12) WKUP_CLKOUT0.MCU_GPIO0_23 */
-		>;
-	};
-
-	pinctrl_mcu_uart0: muc-uart0-default-pins {
-		pinctrl-single,pins = <
-			AM62X_MCU_IOPAD(0x001c, PIN_INPUT, 0) /* (A6) MCU_UART0_CTSn */
-			AM62X_MCU_IOPAD(0x0020, PIN_OUTPUT, 0) /* (B6) MCU_UART0_RTSn */
-			AM62X_MCU_IOPAD(0x0014, PIN_INPUT, 0) /* (B5) MCU_UART0_RXD */
-			AM62X_MCU_IOPAD(0x0018, PIN_OUTPUT, 0) /* (A5) MCU_UART0_TXD */
-		>;
-	};
-};
-
-&wkup_uart0 {
-	/* WKUP UART0 (UART_C) is used by DM firmware */
-	bootph-pre-ram;
-	status = "reserved";
-	pinctrl-names = "default";
-	pinctrl-0 = <&wkup_uart0_pins_default>;
+&main_spi0 { /* SPI_B */
+	status = "disabled";
+        pinctrl-names = "default";
+        pinctrl-0 = <&main_spi0_pins_default>;
 };
 
 &main_uart0 {
@@ -466,52 +615,101 @@
 	pinctrl-0 = <&main_uart6_pins_default>;
 };
 
-&main_i2c0 {
-	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&main_i2c0_pins_default>;
-	clock-frequency = <400000>;
+&mcasp1 {
+	status = "disabled";
+	#sound-dai-cells = <0>;
 
-	rv3028: rtc@52 {
-		backup-switchover-dsm;
-		#clock-cells = <0>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&mcu_rtc_pins_default>;
-		compatible = "microcrystal,rv3028";
-		reg = <0x52>;
-		// interrupts-extended = <&mcu_gpio0 23 GPIO_ACTIVE_LOW>;
-		// wakeup-source;
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_mcasp1_pins_default>;
+
+	op-mode = <0>;          /* MCASP_IIS_MODE */
+	tdm-slots = <2>;
+
+	serial-dir = <  /* 0: INACTIVE, 1: TX, 2: RX */
+	       1 0 2 0
+	       0 0 0 0
+	       0 0 0 0
+	       0 0 0 0
+	>;
+	tx-num-evt = <0>;
+	rx-num-evt = <0>;
+};
+
+/* mcu_gpio0 and mcu_gpio_intr are reserved for mcu firmware usage */
+&mcu_gpio0 {
+	status = "reserved";
+};
+
+&mcu_gpio_intr {
+	status = "reserved";
+};
+
+&mcu_m4fss {
+	mboxes = <&mailbox0_cluster0 &mbox_m4_0>;
+	memory-region = <&mcu_m4fss_dma_memory_region>,
+			<&mcu_m4fss_memory_region>;
+	status = "okay";
+};
+
+&mcu_mcan0 { /* CAN_B */
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&mcu_mcan0_pins_default>;
+};
+
+&mcu_pmx0 {
+
+	pmic_irq_pins_default: pmic-irq-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x01f4, PIN_INPUT, 0) /* (D16) EXTINTn */
+		>;
+	};
+
+	wkup_uart0_pins_default: wkup-uart0-default-pins {
+		bootph-pre-ram;
+		pinctrl-single,pins = <
+			AM62X_MCU_IOPAD(0x02c, PIN_INPUT, 0) /* (C6/A7) WKUP_UART0_CTSn */
+			AM62X_MCU_IOPAD(0x030, PIN_OUTPUT, 0) /* (A4/B4) WKUP_UART0_RTSn */
+			AM62X_MCU_IOPAD(0x024, PIN_INPUT, 0) /* (B4/B5) WKUP_UART0_RXD */
+			AM62X_MCU_IOPAD(0x028, PIN_OUTPUT, 0) /* (C5/C6) WKUP_UART0_TXD */
+		>;
+	};
+
+	mcu_mcan0_pins_default: mcu-mcan0-pins-default {
+		pinctrl-single,pins = <
+			AM62X_MCU_IOPAD(0x0034, PIN_OUTPUT, 0) /* CAN_B_TX (D6) MCU_MCAN0_TX */
+			AM62X_MCU_IOPAD(0x0038, PIN_INPUT, 0) /* CAN_B_RX (B3) MCU_MCAN0_RX */
+		>;
+	};
+
+	mcu_rtc_pins_default: mcu-rtc-default-pins {
+		pinctrl-single,pins = <
+			AM62X_MCU_IOPAD(0x0084, PIN_INPUT, 7) /* RTC_INT (A12) WKUP_CLKOUT0.MCU_GPIO0_23 */
+		>;
+	};
+
+	pinctrl_mcu_uart0: muc-uart0-default-pins {
+		pinctrl-single,pins = <
+			AM62X_MCU_IOPAD(0x001c, PIN_INPUT, 0) /* (A6) MCU_UART0_CTSn */
+			AM62X_MCU_IOPAD(0x0020, PIN_OUTPUT, 0) /* (B6) MCU_UART0_RTSn */
+			AM62X_MCU_IOPAD(0x0014, PIN_INPUT, 0) /* (B5) MCU_UART0_RXD */
+			AM62X_MCU_IOPAD(0x0018, PIN_OUTPUT, 0) /* (A5) MCU_UART0_TXD */
+		>;
 	};
 };
 
-&main_gpio0 {
-	bootph-all;
+&mcu_uart0 {
+	/* UART_B */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mcu_uart0>;
+	status = "disabled";
 };
 
-&main_gpio1 {
+&ospi0 { /* SPI_A Only 4 bits are routed out */
 	bootph-all;
-};
-
-&main_i2c1 { /* I2C_A */
 	status = "disabled";
 	pinctrl-names = "default";
-	pinctrl-0 = <&main_i2c1_pins_default>;
-	clock-frequency = <100000>;
-	bootph-all;
-};
-
-&main_i2c2 { /* I2C_B */
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&main_i2c2_pins_default>;
-	clock-frequency = <400000>;
-};
-
-&main_i2c3 { /* I2C_CAM */
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&main_i2c3_pins_default>;
-	clock-frequency = <400000>;
+	pinctrl-0 = <&ospi0_pins_default>;
 };
 
 &sdhci0 { /* eMMC */
@@ -534,56 +732,20 @@
 	pinctrl-0 = <&main_mmc2_pins_default>;
 };
 
-&cpsw3g {
-	bootph-all;
-	pinctrl-names = "default";
-	pinctrl-0 = <&main_rgmii1_pins_default
-		     &main_rgmii2_pins_default>;
+#define K3_TS_OFFSET(pa, val)	(0x4+(pa)*4) (0x10000 | val)
 
-	cpts@3d000 {
-		/* MAP HW3_TS_PUSH to GENF1 */
-		ti,pps = <2 1>;
-	};
-};
-
-&cpsw_port1 {
-	bootph-all;
-	phy-mode = "rgmii-rxid";
-	phy-handle = <&cpsw3g_phy0>;
-};
-
-&cpsw_port2 {
-	bootph-all;
-	phy-mode = "rgmii-rxid";
-	phy-handle = <&cpsw3g_phy1>;
-};
-
-&cpsw3g_mdio {
-	bootph-all;
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&main_mdio1_pins_default>;
-};
-
-&mailbox0_cluster0 {
-	mbox_m4_0: mbox-m4-0 {
-		ti,mbox-rx = <0 0 0>;
-		ti,mbox-tx = <1 0 0>;
-	};
-};
-
-&mcu_m4fss {
-	mboxes = <&mailbox0_cluster0 &mbox_m4_0>;
-	memory-region = <&mcu_m4fss_dma_memory_region>,
-			<&mcu_m4fss_memory_region>;
+&timesync_router {
 	status = "okay";
-};
-
-&mcu_uart0 {
-	/* UART_B */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_mcu_uart0>;
-	status = "disabled";
+	pinctrl-0 = <&cpsw_cpts>;
+
+	/* Use Time Sync Router to map GENF1 input to HW3_TS_PUSH output */
+	cpsw_cpts: cpsw-cpts {
+		pinctrl-single,pins = <
+			/* pps [cpsw cpts genf1] in17 -> out12 [cpsw cpts hw3_push] */
+			K3_TS_OFFSET(12, 17)
+			>;
+	};
 };
 
 &usbss0 {
@@ -612,76 +774,10 @@
 	pinctrl-0 = <&main_usb1_pins_default>;
 };
 
-&mcasp1 {
-	status = "disabled";
-	#sound-dai-cells = <0>;
-
-	pinctrl-names = "default";
-	pinctrl-0 = <&main_mcasp1_pins_default>;
-
-	op-mode = <0>;          /* MCASP_IIS_MODE */
-	tdm-slots = <2>;
-
-	serial-dir = <  /* 0: INACTIVE, 1: TX, 2: RX */
-	       1 0 2 0
-	       0 0 0 0
-	       0 0 0 0
-	       0 0 0 0
-	>;
-	tx-num-evt = <0>;
-	rx-num-evt = <0>;
-};
-
-&fss {
-	bootph-all;
-};
-
-&main_mcan0 { /* CAN_A */
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&main_mcan0_pins_default>;
-};
-
-&mcu_mcan0 { /* CAN_B */
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&mcu_mcan0_pins_default>;
-};
-
-&main_spi0 { /* SPI_B */
-	status = "disabled";
-        pinctrl-names = "default";
-        pinctrl-0 = <&main_spi0_pins_default>;
-};
-
-&ospi0 { /* SPI_A Only 4 bits are routed out */
-	bootph-all;
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&ospi0_pins_default>;
-};
-
-/* mcu_gpio0 and mcu_gpio_intr are reserved for mcu firmware usage */
-&mcu_gpio0 {
+&wkup_uart0 {
+	/* WKUP UART0 (UART_C) is used by DM firmware */
+	bootph-pre-ram;
 	status = "reserved";
-};
-
-&mcu_gpio_intr {
-	status = "reserved";
-};
-
-#define K3_TS_OFFSET(pa, val)	(0x4+(pa)*4) (0x10000 | val)
-
-&timesync_router {
-	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&cpsw_cpts>;
-
-	/* Use Time Sync Router to map GENF1 input to HW3_TS_PUSH output */
-	cpsw_cpts: cpsw-cpts {
-		pinctrl-single,pins = <
-			/* pps [cpsw cpts genf1] in17 -> out12 [cpsw cpts hw3_push] */
-			K3_TS_OFFSET(12, 17)
-			>;
-	};
+	pinctrl-0 = <&wkup_uart0_pins_default>;
 };
