@@ -107,8 +107,8 @@ static void pvm_init_traps_cptr(struct kvm_vcpu *vcpu)
 	u64 cptr_set = 0;
 
 	if (!has_hvhe()) {
-		vcpu->arch.cptr_el2 |= CPTR_NVHE_EL2_RES1;
-		vcpu->arch.cptr_el2 &= ~(CPTR_NVHE_EL2_RES0);
+		cptr_set |= CPTR_NVHE_EL2_RES1;
+		cptr_clear |= CPTR_NVHE_EL2_RES0;
 	}
 
 	if (!kvm_has_feat(kvm, ID_AA64PFR0_EL1, AMU, IMP))
