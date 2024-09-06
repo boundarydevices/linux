@@ -6,6 +6,7 @@
 
 /dts-v1/;
 
+#include <dt-bindings/leds/common.h>
 #include "k3-am625-carbon-som.dtsi"
 
 / {
@@ -64,6 +65,47 @@
 	};
 #endif
 
+#if 0
+	backlight: backlight {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		display = <&lcdif>;
+		pwms = <&epwm1 0 30000 0>; /* 3.3 KHz */
+		status = "okay";
+	};
+#endif
+
+	leds {
+		compatible = "pwm-leds";
+
+		/* For H/W test */
+
+		pwm_1: led-1 {
+			function = LED_FUNCTION_STATUS;
+			label = "PWM_1";
+			color = <LED_COLOR_ID_RED>;
+			max-brightness = <248>;
+			pwms = <&epwm1 0 30000 0>; /* 3.3 KHz */
+		};
+
+		pwm_2: led-2 {
+			function = LED_FUNCTION_STATUS;
+			label = "PWM_2";
+			color = <LED_COLOR_ID_RED>;
+			max-brightness = <248>;
+			pwms = <&epwm1 1 30000 0>; /* 3.3 KHz */
+		};
+
+		test_cam_mck: cam-mck {
+			function = LED_FUNCTION_STATUS;
+			label = "CAM_MCK";
+			color = <LED_COLOR_ID_RED>;
+			max-brightness = <248>;
+			pwms = <&ecap2 0 50 0>; /* 1 / 50 ns = 20 MHz */
+		};
+	};
+
 	transceiver1: can-phy0 {
 		compatible = "ti,tcan1042";
 		#phy-cells = <0>;
@@ -77,6 +119,10 @@
 		max-bitrate = <5000000>;
 		standby-gpios = <&exp2 4 GPIO_ACTIVE_HIGH>; /* TCAN1046 STB is active HIGH */
 	};
+};
+
+&cam_mck {
+//	status = "okay"; /* Remove test_cam_mck before enabling this */
 };
 
 &cpsw3g_mdio {
@@ -112,6 +158,10 @@
 		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
 		ti,min-output-impedance;
 	};
+};
+
+&epwm1 {
+	status = "okay";
 };
 
 &main_gpio0 {

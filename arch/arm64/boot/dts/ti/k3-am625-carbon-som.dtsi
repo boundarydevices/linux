@@ -111,6 +111,15 @@
 		};
 	};
 
+	cam_mck: cam-mck {
+		compatible = "pwm-clock";
+		status = "disabled";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "cam_mck";
+                pwms = <&ecap2 0 50 0>; /* 1 / 50 ns = 20 MHz */
+	};
+
 	vsys_5v: regulator-vcc-in-5v {
 		/* VCC_IN_5V */
 		bootph-all;
@@ -178,6 +187,19 @@
 	bootph-all;
 	phy-mode = "rgmii-rxid";
 	phy-handle = <&cpsw3g_phy1>;
+};
+
+&epwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_epwm1_pins_default>;
+	status = "disabled";
+};
+
+&ecap2 {
+	/* ECAP in APWM mode */
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_ecap2_pins_default>;
+	status = "okay";
 };
 
 &fss {
@@ -365,6 +387,24 @@
 };
 
 &main_pmx0 {
+	mypruicssm0ecap1_pins_default: mypruicssm0ecap1-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x00a4, PIN_INPUT, 1) /* PWM_0 (M22) GPMC0_DIR.PR0_ECAP0_IN_APWM_OUT */
+		>;
+	};
+
+	main_ecap2_pins_default: main-ecap2-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x01a4, PIN_OUTPUT, 2) /* CAM_MCK (B20) MCASP0_ACLKX.ECAP2_IN_APWM_OUT */
+		>;
+	};
+
+	main_epwm1_pins_default: main-epwm1-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x019c, PIN_OUTPUT, 6) /* PWM_1 (B18) MCASP0_AXR1.EHRPWM1_A */
+			AM62X_IOPAD(0x01a0, PIN_OUTPUT, 6) /* PWM_2 (E18) MCASP0_AXR0.EHRPWM1_B */
+		>;
+	};
 
 	main_i2c0_pins_default: main-i2c0-default-pins {
 		bootph-all;
