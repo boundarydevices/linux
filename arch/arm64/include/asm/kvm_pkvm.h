@@ -26,213 +26,11 @@ void pkvm_destroy_hyp_vm(struct kvm *kvm);
 bool pkvm_is_hyp_created(struct kvm *kvm);
 void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa);
 
-/*
- * Definitions for features to be allowed or restricted for guest virtual
- * machines, depending on the mode KVM is running in and on the type of guest
- * that is running.
- *
- * Each field in the masks represents the highest supported *unsigned* value for
- * the feature, if supported by the system.
- *
- * If a feature field is not present in either, than it is not supported.
- *
- * The approach taken for protected VMs is to allow features that are:
- * - Needed by common Linux distributions (e.g., floating point)
- * - Trivial to support, e.g., supporting the feature does not introduce or
- * require tracking of additional state in KVM
- * - Cannot be trapped or prevent the guest from using anyway
- */
-
-/*
- * Allow for protected VMs:
- * - Floating-point and Advanced SIMD
- * - GICv3(+) system register interface
- * - Data Independent Timing
- * - Spectre/Meltdown Mitigation
- *
- * Restrict to the following *unsigned* features for protected VMs:
- * - AArch64 guests only (no support for AArch32 guests):
- *	AArch32 adds complexity in trap handling, emulation, condition codes,
- *	etc...
- * - SVE
- * - RAS (v1)
- *	Supported by KVM
- */
-#define PVM_ID_AA64PFR0_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_FP) | \
-	ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_AdvSIMD) | \
-	ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_GIC) | \
-	ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_DIT) | \
-	ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_CSV2) | \
-	ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_CSV3) | \
-	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, EL0, IMP) | \
-	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, EL1, IMP) | \
-	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, EL2, IMP) | \
-	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, EL3, IMP) | \
-	FIELD_PREP(ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_SVE), ID_AA64PFR0_EL1_SVE_IMP) | \
-	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, RAS, IMP) \
-	)
-
-/*
- * Allow for protected VMs:
- * - Branch Target Identification
- * - Speculative Store Bypassing
- */
-#define PVM_ID_AA64PFR1_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_BT) | \
-	ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_SSBS) \
-	)
-
-#define PVM_ID_AA64PFR2_ALLOW 0ULL
-
-/*
- * Allow for protected VMs:
- * - Mixed-endian
- * - Distinction between Secure and Non-secure Memory
- * - Mixed-endian at EL0 only
- * - Non-context synchronizing exception entry and exit
- *
- * Restrict to the following *unsigned* features for protected VMs:
- * - 40-bit IPA
- * - 16-bit ASID
- */
-#define PVM_ID_AA64MMFR0_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64MMFR0_EL1_BIGEND) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR0_EL1_SNSMEM) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR0_EL1_BIGENDEL0) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR0_EL1_EXS) | \
-	FIELD_PREP(ARM64_FEATURE_MASK(ID_AA64MMFR0_EL1_PARANGE), ID_AA64MMFR0_EL1_PARANGE_40) | \
-	FIELD_PREP(ARM64_FEATURE_MASK(ID_AA64MMFR0_EL1_ASIDBITS), ID_AA64MMFR0_EL1_ASIDBITS_16) \
-	)
-
-/*
- * Allow for protected VMs:
- * - Hardware translation table updates to Access flag and Dirty state
- * - Number of VMID bits from CPU
- * - Hierarchical Permission Disables
- * - Privileged Access Never
- * - SError interrupt exceptions from speculative reads
- * - Enhanced Translation Synchronization
- * - Control for cache maintenance permission
- */
-#define PVM_ID_AA64MMFR1_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_HAFDBS) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_VMIDBits) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_HPDS) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_PAN) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_SpecSEI) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_ETS) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_CMOW) \
-	)
-
-/*
- * Allow for protected VMs:
- * - Common not Private translations
- * - User Access Override
- * - IESB bit in the SCTLR_ELx registers
- * - Unaligned single-copy atomicity and atomic functions
- * - ESR_ELx.EC value on an exception by read access to feature ID space
- * - TTL field in address operations.
- * - Break-before-make sequences when changing translation block size
- * - E0PDx mechanism
- */
-#define PVM_ID_AA64MMFR2_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64MMFR2_EL1_CnP) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR2_EL1_UAO) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR2_EL1_IESB) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR2_EL1_AT) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR2_EL1_IDS) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR2_EL1_TTL) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR2_EL1_BBM) | \
-	ARM64_FEATURE_MASK(ID_AA64MMFR2_EL1_E0PD) \
-	)
-
-#define PVM_ID_AA64MMFR3_ALLOW (0ULL)
-
-/*
- * No restrictions for Scalable Vectors (SVE).
- */
-#define PVM_ID_AA64ZFR0_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_SVEver) | \
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_AES) | \
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_BitPerm) | \
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_BF16) | \
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_SHA3) | \
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_SM4) | \
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_I8MM) | \
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_F32MM) | \
-	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_F64MM) \
-	)
-
-/*
- * No support for debug, including breakpoints, and watchpoints for protected
- * VMs:
- *	The Arm architecture mandates support for at least the Armv8 debug
- *	architecture, which would include at least 2 hardware breakpoints and
- *	watchpoints. Providing that support to protected guests adds
- *	considerable state and complexity. Therefore, the reserved value of 0 is
- *	used for debug-related fields.
- */
-#define PVM_ID_AA64DFR0_ALLOW (0ULL)
-#define PVM_ID_AA64DFR1_ALLOW (0ULL)
-
-/*
- * No support for implementation defined features.
- */
-#define PVM_ID_AA64AFR0_ALLOW (0ULL)
-#define PVM_ID_AA64AFR1_ALLOW (0ULL)
-
-/*
- * No restrictions on instructions implemented in AArch64.
- */
-#define PVM_ID_AA64ISAR0_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_AES) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_SHA1) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_SHA2) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_CRC32) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_ATOMIC) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_RDM) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_SHA3) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_SM3) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_SM4) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_DP) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_FHM) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_TS) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_TLB) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_RNDR) \
-	)
-
-/* Restrict pointer authentication to the basic version. */
-#define PVM_ID_AA64ISAR1_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_DPB) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_JSCVT) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_FCMA) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_LRCPC) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_GPA) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_GPI) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_FRINTTS) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_SB) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_SPECRES) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_BF16) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_DGH) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_I8MM) | \
-	FIELD_PREP(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_APA), ID_AA64ISAR1_EL1_APA_PAuth) | \
-	FIELD_PREP(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_API), ID_AA64ISAR1_EL1_API_PAuth) \
-	)
-
-#define PVM_ID_AA64ISAR2_ALLOW (\
-	ARM64_FEATURE_MASK(ID_AA64ISAR2_EL1_ATS1A)| \
-	ARM64_FEATURE_MASK(ID_AA64ISAR2_EL1_GPA3) | \
-	ARM64_FEATURE_MASK(ID_AA64ISAR2_EL1_MOPS) | \
-	FIELD_PREP(ARM64_FEATURE_MASK(ID_AA64ISAR2_EL1_APA3), ID_AA64ISAR2_EL1_APA3_PAuth) \
-	)
-
-
 /* All HAFGRTR_EL2 bits are AMU */
 #define HAFGRTR_AMU	__HAFGRTR_EL2_MASK
 
 #define PVM_HAFGRTR_EL2_SET \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_AMU), PVM_ID_AA64PFR0_ALLOW) ? 0ULL : HAFGRTR_AMU)
+	(kvm_has_feat(kvm, ID_AA64PFR0_EL1, AMU, IMP) ? 0ULL : HAFGRTR_AMU)
 
 #define PVM_HAFGRTR_EL2_CLR (0ULL)
 
@@ -301,24 +99,24 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa);
 #define HFGxTR_nLS64 	HFGxTR_EL2_nACCDATA_EL1
 
 #define PVM_HFGXTR_EL2_SET \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_RAS), PVM_ID_AA64PFR0_ALLOW) >= ID_AA64PFR0_EL1_RAS_IMP ? 0ULL : HFGxTR_RAS_IMP) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_RAS), PVM_ID_AA64PFR0_ALLOW) >= ID_AA64PFR0_EL1_RAS_V1P1 ? 0ULL : HFGxTR_RAS_V1P1) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_GIC), PVM_ID_AA64PFR0_ALLOW) ? 0ULL : HFGxTR_GIC) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_CSV2), PVM_ID_AA64PFR0_ALLOW) ? 0ULL : HFGxTR_CSV2) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_LO), PVM_ID_AA64MMFR1_ALLOW) ? 0ULL : HFGxTR_LOR) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_APA), PVM_ID_AA64ISAR1_ALLOW) ? 0ULL : HFGxTR_PAUTH) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_API), PVM_ID_AA64ISAR1_ALLOW) ? 0ULL : HFGxTR_PAUTH) | \
+	(kvm_has_feat(kvm, ID_AA64PFR0_EL1, RAS, IMP) ? 0ULL : HFGxTR_RAS_IMP) | \
+	(kvm_has_feat(kvm, ID_AA64PFR0_EL1, RAS, V1P1) ? 0ULL : HFGxTR_RAS_V1P1) | \
+	(kvm_has_feat(kvm, ID_AA64PFR0_EL1, GIC, IMP) ? 0ULL : HFGxTR_GIC) | \
+	(kvm_has_feat(kvm, ID_AA64PFR0_EL1, CSV2, IMP) ? 0ULL : HFGxTR_CSV2) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR1_EL1, LO, IMP) ? 0ULL : HFGxTR_LOR) | \
+	(vcpu_has_ptrauth(vcpu) ? 0ULL : HFGxTR_PAUTH) | \
+	(vcpu_has_ptrauth(vcpu) ? 0ULL : HFGxTR_PAUTH) | \
 	0
 
 #define PVM_HFGXTR_EL2_CLR \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR3_EL1_AIE), PVM_ID_AA64MMFR3_ALLOW) ? 0ULL : HFGxTR_nAIE) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR3_EL1_S2POE), PVM_ID_AA64MMFR3_ALLOW) ? 0ULL : HFGxTR_nS2POE) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR3_EL1_S1POE), PVM_ID_AA64MMFR3_ALLOW) ? 0ULL : HFGxTR_nS1POE) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR3_EL1_S1PIE), PVM_ID_AA64MMFR3_ALLOW) ? 0ULL : HFGxTR_nS1PIE) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_THE), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HFGxTR_nTHE) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_SME), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HFGxTR_nSME) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_GCS), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HFGxTR_nGCS) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_LS64), PVM_ID_AA64ISAR1_ALLOW) ? 0ULL : HFGxTR_nLS64) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR3_EL1, AIE, IMP) ? 0ULL : HFGxTR_nAIE) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR3_EL1, S2POE, IMP) ? 0ULL : HFGxTR_nS2POE) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR3_EL1, S1POE, IMP) ? 0ULL : HFGxTR_nS1POE) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR3_EL1, S1PIE, IMP) ? 0ULL : HFGxTR_nS1PIE) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, THE, IMP) ? 0ULL : HFGxTR_nTHE) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, SME, IMP) ? 0ULL : HFGxTR_nSME) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, GCS, IMP) ? 0ULL : HFGxTR_nGCS) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR1_EL1, LS64, LS64) ? 0ULL : HFGxTR_nLS64) | \
 	0
 
 #define PVM_HFGRTR_EL2_SET	PVM_HFGXTR_EL2_SET
@@ -386,16 +184,16 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa);
 			)
 
 #define PVM_HFGITR_EL2_SET \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR2_EL1_ATS1A), PVM_ID_AA64ISAR2_ALLOW) ? 0ULL : HFGITR_EL2_ATS1E1A) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_SPECRES), PVM_ID_AA64ISAR1_ALLOW) ? 0ULL : HFGITR_SPECRES) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR0_EL1_TLB), PVM_ID_AA64ISAR0_ALLOW) ? 0ULL : HFGITR_TLB) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_PAN), PVM_ID_AA64MMFR1_ALLOW) ? 0ULL : HFGITR_PAN) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_DPB), PVM_ID_AA64ISAR1_ALLOW) ? 0ULL : HFGITR_DPB) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR2_EL1, ATS1A, IMP) ? 0ULL : HFGITR_EL2_ATS1E1A) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR1_EL1, SPECRES, IMP) ? 0ULL : HFGITR_SPECRES) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR0_EL1, TLB, OS) ? 0ULL : HFGITR_TLB) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR1_EL1, PAN, IMP) ? 0ULL : HFGITR_PAN) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR1_EL1, DPB, IMP) ? 0ULL : HFGITR_DPB) | \
 	0
 
 #define PVM_HFGITR_EL2_CLR \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_GCS), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HFGITR_nGCS) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64DFR0_EL1_BRBE), PVM_ID_AA64DFR0_ALLOW) ? 0ULL : HFGITR_nBRBE) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, GCS, IMP) ? 0ULL : HFGITR_nGCS) | \
+	(kvm_has_feat(kvm, ID_AA64DFR0_EL1, BRBE, IMP) ? 0ULL : HFGITR_nBRBE) | \
 	0
 
 #define HCRX_NMI		HCRX_EL2_TALLINT
@@ -419,27 +217,26 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa);
 #define HCRX_nLS64		(HCRX_EL2_EnASR| HCRX_EL2_EnALS | HCRX_EL2_EnAS0)
 
 #define PVM_HCRX_EL2_SET \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_NMI), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HCRX_NMI) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_SME), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HCRX_SME) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, NMI, IMP) ? 0ULL : HCRX_NMI) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, SME, IMP) ? 0ULL : HCRX_SME) | \
 	0
 
 #define PVM_HCRX_EL2_CLR \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_APA), PVM_ID_AA64ISAR1_ALLOW) < ID_AA64ISAR1_EL1_APA_PAuth_LR ? 0ULL : HCRX_nPAuth_LR) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_API), PVM_ID_AA64ISAR1_ALLOW) < ID_AA64ISAR1_EL1_APA_PAuth_LR ? 0ULL : HCRX_nPAuth_LR) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_GCS), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HCRX_nGCS) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR2_EL1_SYSREG_128), PVM_ID_AA64ISAR2_ALLOW) ? 0ULL : HCRX_nSYSREG128) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR3_EL1_ADERR), PVM_ID_AA64MMFR3_ALLOW) ? 0ULL : HCRX_nADERR) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_DF2), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HCRX_nDoubleFault2) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR3_EL1_ANERR), PVM_ID_AA64MMFR3_ALLOW) ? 0ULL : HCRX_nANERR) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR0_EL1_PARANGE), PVM_ID_AA64MMFR0_ALLOW) ? 0ULL : HCRX_nD128) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_THE), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HCRX_nTHE) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR3_EL1_SCTLRX), PVM_ID_AA64MMFR3_ALLOW) ? 0ULL : HCRX_nSCTLR2) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR3_EL1_TCRX), PVM_ID_AA64MMFR3_ALLOW) ? 0ULL : HCRX_nTCR2) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR2_EL1_MOPS), PVM_ID_AA64ISAR2_ALLOW) ? 0ULL : HCRX_nMOPS) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64MMFR1_EL1_CMOW), PVM_ID_AA64MMFR1_ALLOW) ? 0ULL : HCRX_nCMOW) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64PFR1_EL1_NMI), PVM_ID_AA64PFR1_ALLOW) ? 0ULL : HCRX_nNMI) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_XS), PVM_ID_AA64ISAR1_ALLOW) ? 0ULL : HCRX_nXS) | \
-	(FIELD_GET(ARM64_FEATURE_MASK(ID_AA64ISAR1_EL1_LS64), PVM_ID_AA64ISAR1_ALLOW) ? 0ULL : HCRX_nLS64) | \
+	(vcpu_has_ptrauth(vcpu) ? HCRX_nPAuth_LR : 0ULL) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, GCS, IMP) ? 0ULL : HCRX_nGCS) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR2_EL1, SYSREG_128, IMP) ? 0ULL : HCRX_nSYSREG128) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR3_EL1, ADERR, FEAT_ADERR) ? 0ULL : HCRX_nADERR) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, DF2, IMP) ? 0ULL : HCRX_nDoubleFault2) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR3_EL1, ANERR, FEAT_ANERR) ? 0ULL : HCRX_nANERR) | \
+	(true /* trap unless ID_AA64MMFR0_EL1 PARANGE == 0b111 */ ? 0ULL : HCRX_nD128) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, THE, IMP) ? 0ULL : HCRX_nTHE) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR3_EL1, SCTLRX, IMP) ? 0ULL : HCRX_nSCTLR2) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR3_EL1, TCRX, IMP) ? 0ULL : HCRX_nTCR2) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR2_EL1, MOPS, IMP) ? 0ULL : HCRX_nMOPS) | \
+	(kvm_has_feat(kvm, ID_AA64MMFR1_EL1, CMOW, IMP) ? 0ULL : HCRX_nCMOW) | \
+	(kvm_has_feat(kvm, ID_AA64PFR1_EL1, NMI, IMP) ? 0ULL : HCRX_nNMI) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR1_EL1, XS, IMP) ? 0ULL : HCRX_nXS) | \
+	(kvm_has_feat(kvm, ID_AA64ISAR1_EL1, LS64, LS64) ? 0ULL : HCRX_nLS64) | \
 	0
 
 enum pkvm_moveable_reg_type {

@@ -43,6 +43,7 @@ extern void __pkvm_unmask_serror(void);
 static void __activate_pvm_traps_hcrx(struct kvm_vcpu *vcpu)
 {
 	struct kvm_cpu_context *hctxt = host_data_ptr(host_ctxt);
+	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
 	u64 clear = 0;
 	u64 set = 0;
 
