@@ -144,6 +144,15 @@
 		pinctrl-4 = <&aud_mosi_off_pins>;
 		pinctrl-5 = <&aud_mosi_on_pins>;
 		mediatek,platform = <&afe>;
+
+		/* hdmi interface */
+		dai-link-0 {
+			link-name = "I2S_OUT_BE";
+			sound-dai = <&afe>;
+			codec {
+				sound-dai = <&it66121_hdmi>;
+			};
+		};
 	};
 
 	vsys_lcm_reg: regulator-vsys-lcm {
