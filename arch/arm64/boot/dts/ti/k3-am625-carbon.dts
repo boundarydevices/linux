@@ -13,19 +13,6 @@
 	compatible = "ezurio,am62-dev",
 		     "ti,am625";
 
-	vdd_mmc1_sel: regulator-sdio-a-sel {
-		/* Controls the SDIO_A_SEL to SD Card (LOW) Or M.2 (HIGH) */
-		bootph-all;
-		compatible = "regulator-fixed";
-		regulator-name = "vdd_mmc1_sel";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		startup-delay-us = <100000>;
-		regulator-boot-on;
-		vin-supply = <&vcc_3v3_sys>;
-		gpio = <&exp2 8 GPIO_ACTIVE_LOW>; /* U51 P10 */
-	};
-
 	vdd_mmc1: regulator-sdio-a {
 		bootph-all;
 		compatible = "regulator-fixed";
@@ -37,7 +24,6 @@
 		startup-delay-us = <100000>;
 		regulator-boot-on;
 		enable-active-high;
-		vin-supply = <&vdd_mmc1_sel>;
 		gpio = <&main_gpio0 18 GPIO_ACTIVE_HIGH>;
 	};
 
@@ -118,14 +104,24 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&main_rgmii_phy1_gpio>;
 		interrupt-parent = <&main_gpio0>;
-		interrupts = <42 IRQ_TYPE_EDGE_FALLING>;
-		reset-gpios = <&main_gpio0 36 GPIO_ACTIVE_LOW>;
+		interrupts = <41 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&main_gpio0 39 GPIO_ACTIVE_LOW>;
 		reset-assert-us = <25>;
 		reset-deassert-us = <60000>; /* T2 */
 		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
 		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
 		ti,min-output-impedance;
 	};
+};
+
+&main_gpio0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_gpio0_hog_pins_default>; /* Just Muxing them to a GPIO */
+};
+
+&main_gpio1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_gpio1_hog_pins_default>; /* Just Muxing them to a GPIO */
 };
 
 &main_i2c1 { /* I2C_A */
@@ -143,6 +139,7 @@
 
 	exp1: gpio@74 {
 		compatible = "ti,tca9539";
+		// TODO from U4 PMIC vcc-supply = <&vcc_1v8>;
 		reg = <0x74>;
 		#gpio-cells = <2>;
 		gpio-controller;
@@ -169,6 +166,15 @@
 			"SDIO_A_SEL", "AUD_PWR_EN",
 			"CHGR_INTn", "CHGR_CEn",
 			"", "", "", "";
+
+		/* Force SDIO_A_SEL output-low for SDCARD, high for M.2 */
+		sdio-a-sel-hog {
+			/* SDIO_A_SEL U51 P10 */
+			gpio-hog;
+			gpios = <8 GPIO_ACTIVE_HIGH>;
+			output-low;
+			line-name = "SDIO_A_SEL_SDCARD";
+		};
 	};
 
 	exp3: gpio@77 {
@@ -258,6 +264,24 @@
 };
 
 &main_pmx0 {
+	main_gpio0_hog_pins_default: main-gpio0-hog-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0044, PIN_INPUT, 7) /* GPIO_B_7 (N24) GPMC0_AD2.GPIO0_17 */
+			AM62X_IOPAD(0x004c, PIN_INPUT, 7) /* GPIO_C_2 (P24) GPMC0_AD4.GPIO0_19 */
+			AM62X_IOPAD(0x0064, PIN_INPUT, 7) /* GPIO_C_3 (T25) GPMC0_AD10.GPIO0_25 */
+			AM62X_IOPAD(0x0068, PIN_INPUT, 7) /* GPIO_C_6 (R21) GPMC0_AD11.GPIO0_26 */
+			AM62X_IOPAD(0x0074, PIN_INPUT, 7) /* GPIO_C_7 (U25) GPMC0_AD14.GPIO0_29 */
+			AM62X_IOPAD(0x0078, PIN_INPUT, 7) /* GPIO_B_6 (U24) GPMC0_AD15.GPIO0_30 */
+			AM62X_IOPAD(0x0098, PIN_INPUT, 7) /* GPIO_A_0 (U23) GPMC0_WAIT0.GPIO0_37 */
+			AM62X_IOPAD(0x009c, PIN_INPUT, 7) /* GPIO_B_2 (V25) GPMC0_WAIT1.GPIO0_38 */
+		>;
+	};
+
+	main_gpio1_hog_pins_default: main-gpio1-hog-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x01a8, PIN_INPUT, 7) /* GPIO_A_3 (D20) MCASP0_AFSX.GPIO1_12 */
+		>;
+	};
 
 	main_rgmii_phy0_gpio: main-rgmii-phy0-gpio-default-pins {
 		bootph-all;
@@ -270,8 +294,8 @@
 	main_rgmii_phy1_gpio: main-rgmii-phy1-gpio-default-pins {
 		bootph-all;
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x0094, PIN_INPUT, 7) /* ETH_B_RST (N20) GPMC0_BE1n.GPIO0_36 */
-			AM62X_IOPAD(0x00ac, PIN_INPUT, 7) /* ETH_B_INT (L21) GPMC0_CSn1.GPIO0_42 */
+			AM62X_IOPAD(0x00a0, PIN_INPUT, 7) /* ETH_B_RST (K25) GPMC0_WPn.GPIO0_39 */
+			AM62X_IOPAD(0x00a8, PIN_INPUT, 7) /* ETH_B_INT(M21) GPMC0_CSn0.GPIO0_41 */
 		>;
 	};
 

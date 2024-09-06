@@ -193,10 +193,40 @@
 
 &main_gpio0 {
 	bootph-all;
+	gpio-line-names = "","GPIO_A_2","GPIO_A_1","","", 	/* 0 - 4 */
+		"","","","","",
+		"","","","","",					/* 10 - 14 */
+		"","","GPIO_B_7","SDIO_A_PWR_EN","GPIO_C_2",
+		"","","","","",					/* 20 - 24 */
+		"GPIO_C_3","GPIO_C_6","","","GPIO_C_7",
+		"GPIO_B_6","SDIO_A_IOPWR","","","",		/* 30 - 34 */
+		"","GPIO_B_3","GPIO_A_0","GPIO_B_2","GPIO_C_0",
+		"","GPIO_C_1","","","",				/* 40 - 44 */
+		"","","","","",
+		"","","","","",					/* 50 - 54 */
+		"","","","","",
+		"","","","","",					/* 60 - 64 */
+		"","","","","",
+		"","","","","",					/* 60 - 74 */
+		"","","","","",
+		"","","","","",					/* 80 - 84 */
+		"","","","","",
+		"","";						/* 90 - 91 */
 };
 
 &main_gpio1 {
 	bootph-all;
+	gpio-line-names = "","","","","",			/* 0 - 4 */
+		"","","","","",
+		"","","GPIO_A_3","","",				/* 10 - 14 */
+		"","","","","",
+		"","","","","",					/* 20 - 24 */
+		"","","","","",
+		"","","","","",					/* 30 - 34 */
+		"","","","","",
+		"","","","","",					/* 40 - 44 */
+		"","","","SDIO_A_CD#","",
+		"","";						/* 50 - 51 */
 };
 
 &main_gpio_intr {
@@ -385,14 +415,14 @@
 	main_mmc1_pins_default: main-mmc1-default-pins {
 		bootph-all;
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x23c, PIN_INPUT, 0) /* (A21) MMC1_CMD */
-			AM62X_IOPAD(0x234, PIN_INPUT, 0) /* (B22) MMC1_CLK */
-			AM62X_IOPAD(0x230, PIN_INPUT, 0) /* (A22) MMC1_DAT0 */
-			AM62X_IOPAD(0x22c, PIN_INPUT, 0) /* (B21) MMC1_DAT1 */
-			AM62X_IOPAD(0x228, PIN_INPUT, 0) /* (C21) MMC1_DAT2 */
-			AM62X_IOPAD(0x224, PIN_INPUT, 0) /* (D22) MMC1_DAT3 */
-			AM62X_IOPAD(0x240, PIN_INPUT, 0) /* (D17) MMC1_SDCD */
-			AM62X_IOPAD(0x244, PIN_INPUT, 0) /* (C17) MMC1_SDWP */
+			AM62X_IOPAD(0x23c, PIN_INPUT, 0) /* SDIO_A_CMD (A21) MMC1_CMD */
+			AM62X_IOPAD(0x234, PIN_INPUT, 0) /* SDIO_A_CLK (B22) MMC1_CLK */
+			AM62X_IOPAD(0x230, PIN_INPUT, 0) /* SDIO_A_D0 (A22) MMC1_DAT0 */
+			AM62X_IOPAD(0x22c, PIN_INPUT, 0) /* SDIO_A_D1 (B21) MMC1_DAT1 */
+			AM62X_IOPAD(0x228, PIN_INPUT, 0) /* SDIO_A_D2 (C21) MMC1_DAT2 */
+			AM62X_IOPAD(0x224, PIN_INPUT, 0) /* SDIO_A_D3 (D22) MMC1_DAT3 */
+			AM62X_IOPAD(0x240, PIN_INPUT, 0) /* SDIO_A_CD# (D17) MMC1_SDCD */
+			AM62X_IOPAD(0x244, PIN_INPUT, 0) /* SDIO_A_WP (C17) MMC1_SDWP */
 		>;
 	};
 
@@ -638,6 +668,11 @@
 /* mcu_gpio0 and mcu_gpio_intr are reserved for mcu firmware usage */
 &mcu_gpio0 {
 	status = "reserved";
+	gpio-line-names = "","","","","",                       /* 0 - 4 */
+		"","","","","",
+		"","GPIO_B_1","GPIO_B_0","","",			/* 10 - 14 */
+		"","","GPIO_A_4","GPIO_A_5","GPIO_B_4",
+		"GPIO_B_5","","","rv3028_int";			/* 20 - 23 */
 };
 
 &mcu_gpio_intr {
