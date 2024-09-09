@@ -181,8 +181,22 @@
 	status = "okay";
 
 // TODO 
-// PMIC on carrier, current, voltage measurement, usb-c PM, U9 boost ctrl, 
+// PMIC X 2 on carrier, usb-c PM, U9 boost ctrl,
 // charger, Audio codec, Audio headset ctrl
+// 0x60 ?? TI, TPS65263RHBR
+// 0x69 TI, TPS65400QRGZTQ1
+
+	power-sensor-5v@40 {
+		compatible = "ti,ina231"; /* TI, INA232AIDDFR */
+		reg = <0x40>;
+		shunt-resistor = <33000>; /* 0.033 Ohms */
+	};
+
+	power-sensor-3v3@41 {
+		compatible = "ti,ina231"; /* TI, INA232AIDDFR */
+		reg = <0x41>;
+		shunt-resistor = <33000>; /* 0.033 Ohms */
+	};
 
 	eeprom@54 {
 		/* U53 Giantec, GT24C256C-2GLI-TR */
