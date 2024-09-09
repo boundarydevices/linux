@@ -695,6 +695,12 @@
 		pins-pcm {
 			pinmux = <PINMUX_GPIO123__FUNC_O_PCM_DO>;
 		};
+
+		wcn-3v3-en {
+			pinmux = <PINMUX_GPIO74__FUNC_B_GPIO74>;
+			output-high;
+		};
+
 	};
 
 	mmc2_uhs_pins: mmc2-uhs-pins {
