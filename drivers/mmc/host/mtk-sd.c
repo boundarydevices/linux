@@ -241,6 +241,7 @@
 
 #define MSDC_PATCH_BIT1_CMDTA     GENMASK(5, 3)    /* RW */
 #define MSDC_PB1_BUSY_CHECK_SEL   BIT(7)    /* RW */
+#define MSDC_PB1_SINGLE_BURST     (0x1 << 16)   /* RW */
 #define MSDC_PATCH_BIT1_STOP_DLY  GENMASK(11, 8)    /* RW */
 
 #define MSDC_PATCH_BIT2_CFGRESP   BIT(15)   /* RW */
@@ -467,6 +468,7 @@ struct msdc_host {
 	bool hs400_tuning;	/* hs400 mode online tuning */
 	bool internal_cd;	/* Use internal card-detect logic */
 	bool cqhci;		/* support eMMC hw cmdq */
+	bool disable_single_burst;
 	struct msdc_save_para save_para; /* used when gate HCLK */
 	struct msdc_tune_para def_tune_para; /* default tune setting */
 	struct msdc_tune_para saved_tune_para; /* tune result of CMD21/CMD19 */
@@ -1734,6 +1736,10 @@ static void msdc_init_hw(struct msdc_host *host)
 	writel(0xffff4089, host->base + MSDC_PATCH_BIT1);
 	sdr_set_bits(host->base + EMMC50_CFG0, EMMC50_CFG_CFCSTS_SEL);
 
+	if (host->disable_single_burst)
+		sdr_clr_bits(host->base + MSDC_PATCH_BIT1,
+			     MSDC_PB1_SINGLE_BURST);
+
 	if (host->dev_comp->stop_clk_fix) {
 		sdr_set_field(host->base + MSDC_PATCH_BIT1,
 			      MSDC_PATCH_BIT1_STOP_DLY, 3);
@@ -1794,6 +1800,11 @@ static void msdc_init_hw(struct msdc_host *host)
 			sdr_set_bits(host->base + tune_reg,
 				     MSDC_PAD_TUNE_RXDLYSEL);
 	}
+
+
+	if (host->disable_single_burst)
+		sdr_clr_bits(host->base + MSDC_PATCH_BIT1,
+			     MSDC_PB1_SINGLE_BURST);
 
 	if (mmc->caps2 & MMC_CAP2_NO_SDIO) {
 		sdr_clr_bits(host->base + SDC_CFG, SDC_CFG_SDIO);
@@ -2606,6 +2617,10 @@ static void msdc_of_property_parse(struct platform_device *pdev,
 		host->cqhci = true;
 	else
 		host->cqhci = false;
+
+	host->disable_single_burst =
+		of_property_read_bool(pdev->dev.of_node,
+				      "mediatek,disable-single-burst");
 }
 
 static int msdc_of_clock_parse(struct platform_device *pdev,
