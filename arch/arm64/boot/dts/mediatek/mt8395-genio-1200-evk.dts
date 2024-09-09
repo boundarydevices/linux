@@ -1003,4 +1003,31 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&audio_default_pins>;
 	status = "okay";
+
+	dai-link-0 {
+		sound-dai = <&afe>;
+		dai-link-name = "DL_SRC_BE";
+
+		codec-0 {
+			sound-dai = <&pmic 0>;
+		};
+	};
+
+	dai-link-1 {
+		sound-dai = <&afe>;
+		dai-link-name = "UL_SRC1_BE";
+
+		codec-0 {
+			sound-dai = <&pmic 0>;
+		};
+	};
+
+	dai-link-2 {
+		sound-dai = <&afe>;
+		dai-link-name = "UL_SRC2_BE";
+
+		codec-0 {
+			sound-dai = <&pmic 1>;
+		};
+	};
 };
