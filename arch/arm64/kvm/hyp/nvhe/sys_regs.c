@@ -205,7 +205,7 @@ static u64 get_pvm_id_aa64mmfr2(const struct kvm_vcpu *vcpu)
 }
 
 /* Read a sanitized cpufeature ID register by its encoding */
-u64 pvm_read_id_reg(const struct kvm_vcpu *vcpu, u32 id)
+static u64 pvm_calc_id_reg(const struct kvm_vcpu *vcpu, u32 id)
 {
 	switch (id) {
 	case SYS_ID_AA64PFR0_EL1:
@@ -243,7 +243,15 @@ u64 pvm_read_id_reg(const struct kvm_vcpu *vcpu, u32 id)
 static u64 read_id_reg(const struct kvm_vcpu *vcpu,
 		       struct sys_reg_desc const *r)
 {
-	return pvm_read_id_reg(vcpu, reg_to_encoding(r));
+	struct kvm *kvm = vcpu->kvm;
+	u32 reg = reg_to_encoding(r);
+
+	BUG_ON(!test_bit(KVM_ARCH_FLAG_ID_REGS_INITIALIZED, &kvm->arch.flags));
+
+	if (reg >= sys_reg(3, 0, 0, 4, 0) && reg <= sys_reg(3, 0, 0, 7, 7))
+		return kvm->arch.id_regs[IDREG_IDX(reg)];
+
+	return 0;
 }
 
 /* Handler to RAZ/WI sysregs */
@@ -540,6 +548,21 @@ static const struct sys_reg_desc_reset pvm_sys_reg_reset_vals[] = {
  */
 void kvm_reset_pvm_sys_regs(struct kvm_vcpu *vcpu)
 {
+	/* List of feature registers to reset for protected VMs. */
+	const u32 pvm_feat_id_regs[] = {
+		SYS_ID_AA64PFR0_EL1,
+		SYS_ID_AA64PFR1_EL1,
+		SYS_ID_AA64ISAR0_EL1,
+		SYS_ID_AA64ISAR1_EL1,
+		SYS_ID_AA64ISAR2_EL1,
+		SYS_ID_AA64ZFR0_EL1,
+		SYS_ID_AA64MMFR0_EL1,
+		SYS_ID_AA64MMFR1_EL1,
+		SYS_ID_AA64MMFR2_EL1,
+		SYS_ID_AA64MMFR4_EL1,
+		SYS_ID_AA64DFR0_EL1,
+	};
+	struct kvm *kvm = vcpu->kvm;
 	unsigned long i;
 
 	for (i = 0; i < ARRAY_SIZE(pvm_sys_reg_reset_vals); i++) {
@@ -547,6 +570,18 @@ void kvm_reset_pvm_sys_regs(struct kvm_vcpu *vcpu)
 
 		r->reset(vcpu, r);
 	}
+
+	if (test_bit(KVM_ARCH_FLAG_ID_REGS_INITIALIZED, &kvm->arch.flags))
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(pvm_feat_id_regs); i++) {
+		struct kvm_arch *ka = &kvm->arch;
+		u32 reg = pvm_feat_id_regs[i];
+
+		ka->id_regs[IDREG_IDX(reg)] = pvm_calc_id_reg(vcpu, reg);
+	}
+
+	set_bit(KVM_ARCH_FLAG_ID_REGS_INITIALIZED, &kvm->arch.flags);
 }
 
 /*
