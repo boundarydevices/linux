@@ -991,3 +991,16 @@
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	status = "okay";
 };
+
+&afe {
+	memory-region = <&snd_dma_mem>;
+	status = "okay";
+};
+
+&sound {
+	compatible = "mediatek,mt8195_mt6359";
+	model = "mt8395-evk";
+	pinctrl-names = "default";
+	pinctrl-0 = <&audio_default_pins>;
+	status = "okay";
+};
