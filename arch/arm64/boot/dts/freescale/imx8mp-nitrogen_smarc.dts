@@ -46,6 +46,7 @@
 		ts_goodix = &ts_mipi_goodix;
 		ts_lvds_ft5x06 = &ts_lvds_ft5x06;
 		ts_lvds_goodix = &ts_lvds_goodix;
+		ts_lvds_goodix2 = &ts_lvds_goodix2;
 		usb_mux = &usb_mux;
 	};
 
