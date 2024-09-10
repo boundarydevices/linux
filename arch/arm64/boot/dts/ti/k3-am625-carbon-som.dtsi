@@ -796,6 +796,7 @@
 };
 
 &sdhci1 { /* SDIO_A */
+	bootph-all;
 	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mmc1_pins_default>;
