@@ -91,7 +91,7 @@ static struct lcdifv3_soc_pdata imx8mp_lcdif1_pdata = {
 static struct lcdifv3_soc_pdata imx8mp_lcdif2_pdata = {
 	.hsync_invert = false,
 	.vsync_invert = false,
-	.de_invert    = false,
+	.de_invert    = true,
 };
 
 static const struct of_device_id imx_lcdifv3_dt_ids[] = {
