@@ -21,12 +21,14 @@ struct pkvm_el2_module {
 	struct pkvm_module_section bss;
 	struct pkvm_module_section rodata;
 	struct pkvm_module_section data;
+	struct pkvm_module_section sections;
+	void *hyp_va;
 	kvm_nvhe_reloc_t *relocs;
 	unsigned int nr_relocs;
 	int (*init)(const struct pkvm_module_ops *ops);
 };
 
-void kvm_apply_hyp_module_relocations(void *mod_start, void *hyp_va,
+void kvm_apply_hyp_module_relocations(struct pkvm_el2_module *mod,
 				      kvm_nvhe_reloc_t *begin,
 				      kvm_nvhe_reloc_t *end);
 
