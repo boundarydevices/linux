@@ -42,7 +42,7 @@ static int __init early_page_shift_compat(char *buf)
 
 	return 0;
 }
-early_param("androidboot.page_shift", early_page_shift_compat);
+early_param("page_shift", early_page_shift_compat);
 
 static int __init init_mmap_rnd_bits(void)
 {
@@ -175,4 +175,30 @@ void ___filemap_fixup(unsigned long addr, unsigned long prot, unsigned long old_
 	anon_addr = do_mmap(NULL, anon_addr, anon_len, prot,
 					MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED|__MAP_NO_COMPAT,
 					0, 0, &populate, NULL);
+}
+
+/*
+ * Folds any anon fixup entries created by ___filemap_fixup()
+ * into the previous mapping so that /proc/<pid>/[s]maps don't
+ * show unaliged entries.
+ */
+void __fold_filemap_fixup_entry(struct vma_iterator *iter, unsigned long *end)
+{
+	struct vm_area_struct *next_vma;
+
+	/* Not emulating page size? */
+	if (!static_branch_unlikely(&page_shift_compat_enabled))
+		return;
+
+	/* Advance iterator */
+	next_vma = vma_next(iter);
+
+	/* If fixup VMA, adjust the end to cover its extent */
+	if (next_vma && (next_vma->vm_flags & __VM_NO_COMPAT)) {
+		*end = next_vma->vm_end;
+		return;
+	}
+
+	/* Rewind iterator */
+	vma_prev(iter);
 }
