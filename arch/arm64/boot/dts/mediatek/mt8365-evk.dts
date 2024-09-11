@@ -303,6 +303,17 @@
 			};
 		};
 	};
+
+	touch: gt911@5d {
+		compatible = "goodix,gt9271";
+		reg = <0x5d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ts_pins>;
+		interrupt-parent = <&pio>;
+		interrupts = <78 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&pio 78 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pio 79 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &i2c3 {
@@ -810,6 +821,19 @@
 		sys-en-pins {
 			pinmux = <MT8365_PIN_120_DMIC1_CLK__FUNC_GPIO120>;
 			output-high;
+		};
+	};
+
+	ts_pins: ts-pins {
+		ctp-int1-pins {
+			pinmux = <MT8365_PIN_78_CMHSYNC__FUNC_GPIO78>;
+			input-enable;
+			bias-disable;
+		};
+
+		rst-pins {
+			pinmux = <MT8365_PIN_78_CMHSYNC__FUNC_GPIO78>;
+			output-low;
 		};
 	};
 
