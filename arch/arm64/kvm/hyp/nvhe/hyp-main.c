@@ -735,7 +735,8 @@ static void fpsimd_host_restore(void)
 	}
 
 	if (system_supports_sve())
-		sve_cond_update_zcr_vq(ZCR_ELx_LEN_MASK, SYS_ZCR_EL2);
+		sve_cond_update_zcr_vq(sve_vq_from_vl(kvm_host_sve_max_vl) - 1,
+				       SYS_ZCR_EL2);
 }
 
 static void handle___pkvm_vcpu_load(struct kvm_cpu_context *host_ctxt)
