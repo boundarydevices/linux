@@ -372,7 +372,7 @@
 			AM62X_IOPAD(0x010, PIN_OUTPUT, 0) /* SPI_A_SDO (G24) OSPI0_D1 */
 
 			AM62X_IOPAD(0x02c, PIN_OUTPUT, 0) /* SPI_A_CS0# (F23) OSPI0_CSn0 */
-			AM62X_IOPAD(0x030, PIN_OUTPUT, 0) /* SPI_A_CS0# (G21) OSPI0_CSn1 */
+			AM62X_IOPAD(0x030, PIN_OUTPUT, 0) /* SPI_A_CS1# (G21) OSPI0_CSn1 */
 			AM62X_IOPAD(0x000, PIN_OUTPUT, 0) /* SPI_A_SCK (H24) OSPI0_CLK */
 
 			AM62X_IOPAD(0x014, PIN_INPUT, 7) /* SPI_A_/WP_ (F25) OSPI0_D2.GPIO0_5 */
@@ -390,6 +390,12 @@
 
 &main_spi0 { /* SPI_B */
 	status = "okay";
+
+	spidev@0 {
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <24000000>;
+		reg = <0>;
+	};
 };
 
 &main_uart4 { /* UART_D */
@@ -419,9 +425,22 @@
 };
 
 &ospi0 { /* SPI_A Used as a normal SPI */
-	status = "okay";
+	status = "disabled"; 	/* TODO */
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_spia_pins_default>;
+
+	flash@0 {
+		compatible = "winbond,w25q64jwz", "jedec,spi-nor";
+		reg = <0>;
+		spi-rx-bus-width = <1>;
+		spi-tx-bus-width = <1>;
+		spi-max-frequency = <25000000>;
+		cdns,tshsl-ns = <60>;
+		cdns,tsd2d-ns = <60>;
+		cdns,tchsh-ns = <60>;
+		cdns,tslch-ns = <60>;
+		cdns,read-delay = <4>;
+	};
 };
 
 &sdhci1 { /* SDIO_A uSD / M.2_SDIO */
