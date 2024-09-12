@@ -243,6 +243,12 @@ struct mx6s_fmt {
 
 static struct mx6s_fmt formats[] = {
 	{
+		.name		= "YUYV-16",
+		.fourcc		= V4L2_PIX_FMT_YUYV,
+		.pixelformat	= V4L2_PIX_FMT_YUYV,
+		.mbus_code	= MEDIA_BUS_FMT_UYVY8_2X8,
+		.bpp		= 2,
+	}, {
 		.name		= "UYVY-16",
 		.fourcc		= V4L2_PIX_FMT_UYVY,
 		.pixelformat	= V4L2_PIX_FMT_UYVY,
@@ -826,6 +832,9 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 	u32 cr1, cr18;
 	u32 width;
 
+	cr1 = csi_read(csi_dev, CSI_CSICR1);
+	cr1 &= ~BIT_PACK_DIR;
+
 	if (pix->field == V4L2_FIELD_INTERLACED) {
 		csi_deinterlace_enable(csi_dev, true);
 		csi_buf_stride_set(csi_dev, csi_dev->pix.width);
@@ -840,8 +849,11 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 	case V4L2_PIX_FMT_SBGGR8:
 		width = pix->width;
 		break;
-	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YUYV:
+		if (csi_dev->fmt->mbus_code == MEDIA_BUS_FMT_UYVY8_2X8)
+			cr1 |= BIT_PACK_DIR | BIT_SWAP16_EN;
+		fallthrough;
+	case V4L2_PIX_FMT_UYVY:
 		if (csi_dev->csi_mipi_mode == true)
 			width = pix->width;
 		else
@@ -855,9 +867,7 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 	csi_set_imagpara(csi_dev, width, pix->height);
 
 	if (csi_dev->csi_mipi_mode == true) {
-		cr1 = csi_read(csi_dev, CSI_CSICR1);
 		cr1 &= ~BIT_GCLK_MODE;
-		csi_write(csi_dev, cr1, CSI_CSICR1);
 
 		cr18 = csi_read(csi_dev, CSI_CSICR18);
 		cr18 &= ~BIT_MIPI_DATA_FORMAT_MASK;
@@ -878,6 +888,8 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 
 		csi_write(csi_dev, cr18, CSI_CSICR18);
 	}
+	csi_write(csi_dev, cr1, CSI_CSICR1);
+
 	return 0;
 }
 
