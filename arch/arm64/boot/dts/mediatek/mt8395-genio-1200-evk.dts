@@ -1072,6 +1072,7 @@
 	dr_mode = "otg";
 	mediatek,usb3-drd;
 	usb-role-switch;
+	/delete-property/ wakeup-source;
 	status = "okay";
 
 	port {
@@ -1090,6 +1091,7 @@
 	mediatek,force-vbus;
 	usb-role-switch;
 	dr_mode = "otg"; /* host, peripheral, otg */
+	/delete-property/ wakeup-source;
 	status = "okay";
 
 	connector {
