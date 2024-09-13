@@ -340,6 +340,7 @@
 			AM62X_IOPAD(0x0078, PIN_INPUT, 7) /* GPIO_B_6 (U24) GPMC0_AD15.GPIO0_30 */
 			AM62X_IOPAD(0x0098, PIN_INPUT, 7) /* GPIO_A_0 (U23) GPMC0_WAIT0.GPIO0_37 */
 			AM62X_IOPAD(0x009c, PIN_INPUT, 7) /* GPIO_B_2 (V25) GPMC0_WAIT1.GPIO0_38 */
+			AM62X_IOPAD(0x0088, PIN_INPUT, 7) /* RGB_RESET# (L24) GPMC0_OEn_REn.GPIO0_33 */
 		>;
 	};
 
@@ -461,7 +462,7 @@
 #endif
 
 &wkup_i2c0 { /* I2C_C */
-	status = "disabled";		/* TODO */
+	status = "okay";		/* TODO HW changes */
 	pinctrl-names = "default";
 	pinctrl-0 = <&wkupi2c1_pins_default>;
 	clock-frequency = <100000>;
