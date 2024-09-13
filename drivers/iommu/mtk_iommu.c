@@ -1746,7 +1746,7 @@ static const struct mtk_iommu_plat_data mt8195_data_vpp = {
 
 static const struct mtk_iommu_plat_data mt8365_data = {
 	.m4u_plat	= M4U_MT8365,
-	.flags		= RESET_AXI | INT_ID_PORT_WIDTH_6,
+	.flags		= RESET_AXI | INT_ID_PORT_WIDTH_6 | PM_CLK_AO,
 	.inv_sel_reg	= REG_MMU_INV_SEL_GEN1,
 	.banks_num	= 1,
 	.banks_enable	= {true},
