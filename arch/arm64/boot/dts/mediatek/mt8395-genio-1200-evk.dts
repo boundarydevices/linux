@@ -793,6 +793,7 @@
 &scp {
 	memory-region = <&scp_mem>;
 	status = "okay";
+	firmware-name = "mediatek/mt8195/scp.img";
 };
 
 &spi1 {
