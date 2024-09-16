@@ -30,7 +30,7 @@ This section targets the following platforms:
 
 ## Tungsten Linux kernel
 
-* The 5.15.x kernel is in branch [boundary-mtk-v5.15-dev][mtk-5.15.x]
+* The 5.15.x kernel is in branch [boundary-mtk-v5.15-v24.0][mtk-5.15.x]
 
 -------------------------------------------
 
@@ -65,4 +65,4 @@ This section targets the following platforms:
 [imx-6.1.x]:https://github.com/boundarydevices/linux/tree/boundary-imx_6.1.y "Ezurio 6.1.y kernel tree"
 [imx-6.6.x]:https://github.com/boundarydevices/linux/tree/ezurio-lf-6.6.y "Ezurio 6.6.y kernel tree"
 [tungsten-som]: https://www.ezurio.com/system-on-module/mediatek-genio "Tungsten SOM products"
-[mtk-5.15.x]: https://github.com/boundarydevices/linux/tree/boundary-mtk-v5.15-dev "Ezurio 5.15.x MTK kernel tree"
+[mtk-5.15.x]: https://github.com/boundarydevices/linux/tree/boundary-mtk-v5.15-v24.0 "Ezurio 5.15.x MTK kernel tree"
