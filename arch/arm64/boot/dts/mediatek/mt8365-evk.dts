@@ -250,6 +250,7 @@
 	clock-frequency = <100000>;
 	pinctrl-0 = <&i2c1_pins>;
 	pinctrl-names = "default";
+	vbus-supply = <&mt6357_vsim2_reg>;
 	status = "okay";
 
 	it66121_hdmi: hdmi@4c {
@@ -261,7 +262,6 @@
 		pinctrl-names = "default";
 		reg = <0x4c>;
 		reset-gpios = <&pio 69 GPIO_ACTIVE_LOW>;
-		vcn18-supply = <&mt6357_vsim2_reg>;
 		vcn33-supply = <&mt6357_vibr_reg>;
 		vrf12-supply = <&mt6357_vrf12_reg>;
 		status = "okay";
