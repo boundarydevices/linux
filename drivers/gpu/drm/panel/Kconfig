@@ -861,6 +861,18 @@ config DRM_PANEL_STARTEK_KD070FHFID015
 	  with a resolution of 1024 x 600 pixels. It provides a MIPI DSI interface to
 	  the host, a built-in LED backlight and touch controller.
 
+config DRM_PANEL_STARTEK_KD070FHFID078
+	tristate "STARTEK KD070FHFID078 panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for STARTEK KD070FHFID078 DSI panel
+	  based on RENESAS-R69429 controller. The pannel is a 7-inch TFT LCD display
+	  with a resolution of 1200 x 1920 pixels. It provides a MIPI DSI interface to
+	  the host, and a built-in touch controller. Additionally, it requires an
+	  additional PWM for controlling the backlight brightness.
+
 config DRM_PANEL_EDP
 	tristate "support for simple Embedded DisplayPort panels"
 	depends on OF
