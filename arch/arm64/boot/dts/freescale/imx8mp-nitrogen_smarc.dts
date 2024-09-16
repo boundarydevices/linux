@@ -10,6 +10,7 @@
 #include "imx8mp-nitrogen_smarc-som.dtsi"
 
 #include "../panel-m101nwwb.dtsi"
+#include "../panel-tm050jdhg33.dtsi"
 
 / {
 	model = "Boundary Nitrogen8M Plus SMARC board";
@@ -18,31 +19,23 @@
 	aliases {
 		backlight_lvds2 = &backlight_lvds2;
 		backlight_lvds = &backlight_lvds;
-		backlight_mipi = &backlight_mipi;
 		ethernet0 = &eqos;
 		ethernet1 = &fec;
 		fb_hdmi = &lcdif3;
 		fb_lvds2 = &lcdif2;
 		fb_lvds = &lcdif2;
-		fb_mipi = &mipi_fb;
 		lcdif = &lcdif1;
 		ldb_chan2 = &ldb_chan2;
 		ldb_chan = &ldb_chan;
 		ldb = &ldb;
-		mipi_dsi_bridge = &mipi_dsi;
-		mipi_dsi = &mipi_dsi;
-		mipi = &mipi_fb;
-		mipi_to_lvds = &mipi_to_lvds;
 		pcie-phy = &pcie_phy;
 		pwm_lvds2 = &pwm1;
 		pwm_lvds = &pwm2;
-		pwm_mipi = &pwm2;
 		rtc0 = &rv3028;
 		rtc1 = &snvs_rtc;
 		sound_hdmi= &sound_hdmi;
 		t_lvds2 = &t_lvds2;
 		t_lvds = &t_lvds;
-		t_mipi = &mipi_t;
 		ts_ft5x06 = &ts_mipi_ft5x06;
 		ts_goodix = &ts_mipi_goodix;
 		ts_lvds_ft5x06 = &ts_lvds_ft5x06;
@@ -81,7 +74,7 @@
 		default-brightness-level = <8>;
 		display = <&backlight_mipi>;
 		pwms = <&pwm2 0 30000 0>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	chosen {
@@ -677,8 +670,12 @@
 	};
 };
 
+&lcdif1 {
+	status = "okay";
+};
+
 &mipi_dsi {
-	status = "disabled";
+	status = "okay";
 
 	mipi_fb: panel@0 {
 		backlight = <&backlight_mipi>;
@@ -699,22 +696,23 @@
 		pinctrl-0 = <&pinctrl_mipi_sn65dsi83>;
 		power-supply = <&reg_vref_5v0>;
 		reg = <0>;
-		sn65dsi83 = <&mipi_to_lvds>;
 		spwg;
+		status = "okay";
+		mipi-cmds = <&mipi_cmds_tm050jdhg33g>;
 
 		display-timings {
 			mipi_t: t-dsi-default {
-				clock-frequency = <71700000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <5>;
-				hfront-porch = <151>;
-				vback-porch = <2>;
-				vfront-porch = <28>;
-				hsync-len = <4>;
+				clock-frequency = <76608000>;
+				hactive = <720>;
+				vactive = <1280>;
+				hback-porch = <150>;
+				hfront-porch = <80>;
+				vback-porch = <20>;
+				vfront-porch = <20>;
+				hsync-len = <1>;
 				vsync-len = <1>;
-				hsync-active = <0>;
-				vsync-active = <0>;
+				hsync-active = <10>;
+				vsync-active = <10>;
 				de-active = <1>;
 			};
 		};
