@@ -241,7 +241,7 @@ config DRM_PANEL_JDI_LT070ME05000
 	help
 	  Say Y here if you want to enable support for JDI DSI video mode
 	  panel as found in Google Nexus 7 (2013) devices.
-	  The panel has a 1200(RGB)×1920 (WUXGA) resolution and uses
+	  The panel has a 1200(RGB)?1920 (WUXGA) resolution and uses
 	  24 bit per pixel.
 
 config DRM_PANEL_JDI_R63452
@@ -745,6 +745,18 @@ config DRM_PANEL_STARTEK_KD070FHFID015
 	  with a resolution of 1024 x 600 pixels. It provides a MIPI DSI interface to
 	  the host, a built-in LED backlight and touch controller.
 
+config DRM_PANEL_STARTEK_KD070FHFID078
+	tristate "STARTEK KD070FHFID078 panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for STARTEK KD070FHFID078 DSI panel
+	  based on RENESAS-R69429 controller. The pannel is a 7-inch TFT LCD display
+	  with a resolution of 1200 x 1920 pixels. It provides a MIPI DSI interface to
+	  the host, and a built-in touch controller. Additionally, it requires an
+	  additional PWM for controlling the backlight brightness.
+
 config DRM_PANEL_TDO_TL070WSH30
 	tristate "TDO TL070WSH30 DSI panel"
 	depends on OF
@@ -752,7 +764,7 @@ config DRM_PANEL_TDO_TL070WSH30
 	depends on BACKLIGHT_CLASS_DEVICE
 	help
 	  Say Y here if you want to enable support for TDO TL070WSH30 TFT-LCD
-	  panel module. The panel has a 1024×600 resolution and uses
+	  panel module. The panel has a 1024?600 resolution and uses
 	  24 bit RGB per pixel. It provides a MIPI DSI interface to
 	  the host, a built-in LED backlight and touch controller.
 
