@@ -14,6 +14,7 @@
 #include <dt-bindings/power/mediatek,mt8365-power.h>
 #include <dt-bindings/memory/mediatek,mt8365-larb-port.h>
 #include <dt-bindings/mailbox/mediatek,mt8365-gce.h>
+#include <dt-bindings/thermal/thermal.h>
 
 / {
 	compatible = "mediatek,mt8365";
@@ -273,6 +274,79 @@
 		method = "smc";
 	};
 
+	thermal-zones {
+		cpu_thermal: cpu-thermal {
+			polling-delay-passive = <100>; /* milliseconds */
+			polling-delay = <1000>; /* milliseconds */
+			thermal-sensors = <&thermal 0>;
+			sustainable-power = <3000>;
+
+			trips {
+				threshold: trip-point0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
+				target: trip-point1 {
+					temperature = <85000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
+				cpu_crit: cpu_crit0 {
+					temperature = <115000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+
+			cooling-maps {
+				map0 {
+					trip = <&target>;
+					cooling-device =
+						<&cpu0
+						 THERMAL_NO_LIMIT
+						 THERMAL_NO_LIMIT>,
+						<&cpu1
+						 THERMAL_NO_LIMIT
+						 THERMAL_NO_LIMIT>,
+						<&cpu2
+						 THERMAL_NO_LIMIT
+						 THERMAL_NO_LIMIT>,
+						<&cpu3
+						 THERMAL_NO_LIMIT
+						 THERMAL_NO_LIMIT>;
+					contribution = <100>;
+				};
+			};
+		};
+
+		tzts1: tzts1 {
+			polling-delay-passive = <0>;
+			polling-delay = <0>;
+			thermal-sensors = <&thermal 1>;
+			trips {};
+			cooling-maps {};
+		};
+
+		tzts2: tzts2 {
+			polling-delay-passive = <0>;
+			polling-delay = <0>;
+			thermal-sensors = <&thermal 2>;
+			trips {};
+			cooling-maps {};
+		};
+
+		tzts3: tzts3 {
+			polling-delay-passive = <0>;
+			polling-delay = <0>;
+			thermal-sensors = <&thermal 3>;
+			trips {};
+			cooling-maps {};
+		};
+	};
+
 	soc {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -529,6 +603,15 @@
 			#dma-cells = <1>;
 		};
 
+		auxadc: adc@11001000 {
+			compatible = "mediatek,mt8365-auxadc",
+				     "mediatek,mt8173-auxadc";
+			reg = <0 0x11001000 0 0x1000>;
+			clocks = <&infracfg CLK_IFR_AUXADC>;
+			clock-names = "main";
+			#io-channel-cells = <1>;
+		};
+
 		uart0: serial@11002000 {
 			compatible = "mediatek,mt8365-uart", "mediatek,mt6577-uart";
 			reg = <0 0x11002000 0 0x1000>;
@@ -622,6 +705,20 @@
 				 <&infracfg CLK_IFR_SPI0>;
 			clock-names = "parent-clk", "sel-clk", "spi-clk";
 			status = "disabled";
+		};
+
+		thermal: thermal@1100b000 {
+			compatible = "mediatek,mt8365-thermal";
+			reg = <0 0x1100b000 0 0x1000>;
+			interrupts = <GIC_SPI 22 IRQ_TYPE_LEVEL_LOW>;
+			clocks = <&infracfg CLK_IFR_THERM>,
+				 <&infracfg CLK_IFR_AUXADC>;
+			clock-names = "therm", "auxadc";
+			mediatek,auxadc = <&auxadc>;
+			mediatek,apmixedsys = <&apmixedsys>;
+			nvmem-cells = <&thermal_calibration>;
+			nvmem-cell-names = "calibration-data";
+			#thermal-sensor-cells = <1>;
 		};
 
 		disp_pwm: pwm@1100e000 {
@@ -736,6 +833,25 @@
 			clocks = <&clk26m>;
 			#clock-cells = <0>;
 			#phy-cells = <0>;
+		};
+
+		efuse: efuse@11c50000 {
+			compatible = "mediatek,mt8365-efuse", "mediatek,efuse";
+			reg = <0 0x11c50000 0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			svs_calibration: calib@580 {
+				reg = <0x580 0x20>;
+			};
+
+			power_leakage: leakage@cd4 {
+				reg = <0xcd4 0x4>;
+			};
+
+			thermal_calibration: calib@180 {
+				reg = <0x180 0xc>;
+			};
 		};
 
 		gce: gce@1023c000 {
