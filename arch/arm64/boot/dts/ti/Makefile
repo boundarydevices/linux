@@ -16,6 +16,7 @@ dtb-$(CONFIG_ARCH_K3) += k3-am625-beagleplay-lincolntech-lcd185-panel.dtbo
 dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon.dtb
 dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-lvds-hdmi-adapter.dtbo
 dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-rgb-hdmi-adapter.dtbo
+dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-rgb-lvds-adapter.dtbo
 dtb-$(CONFIG_ARCH_K3) += k3-am625-phyboard-lyra-rdk.dtb
 dtb-$(CONFIG_ARCH_K3) += k3-am625-sk.dtb
 dtb-$(CONFIG_ARCH_K3) += k3-am625-sk-dmtimer-pwm.dtbo
