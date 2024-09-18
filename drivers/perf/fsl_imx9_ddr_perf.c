@@ -637,6 +637,9 @@ static int ddr_perf_event_add(struct perf_event *event, int flags)
 		imx95_ddr_perf_monitor_config(pmu, cfg, cfg1, cfg2);
 	}
 
+	if (flags & PERF_EF_START)
+		ddr_perf_event_start(event, flags);
+
 	return 0;
 }
 

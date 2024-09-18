@@ -151,9 +151,9 @@ static void imx_irqsteer_irq_bus_sync_unlock(struct irq_data *d)
 }
 
 static const struct irq_chip imx_irqsteer_irq_chip = {
-	.name		= "irqsteer",
-	.irq_mask	= imx_irqsteer_irq_mask,
-	.irq_unmask	= imx_irqsteer_irq_unmask,
+	.name			= "irqsteer",
+	.irq_mask		= imx_irqsteer_irq_mask,
+	.irq_unmask		= imx_irqsteer_irq_unmask,
 	.irq_bus_lock		= imx_irqsteer_irq_bus_lock,
 	.irq_bus_sync_unlock	= imx_irqsteer_irq_bus_sync_unlock,
 };
