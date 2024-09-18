@@ -299,6 +299,14 @@
 	pinctrl-0 = <&i2c2_pins>;
 	pinctrl-names = "default";
 	status = "okay";
+
+	it5205fn: it5205fn@48 {
+		compatible = "mediatek,it5205fn";
+		reg = <0x48>;
+		type3v3-supply = <&mt6359_vibr_ldo_reg>;
+		svid = /bits/ 16 <0xff01>;
+		status = "okay";
+	};
 };
 
 &i2c6 {
