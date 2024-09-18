@@ -87,6 +87,7 @@
 			pwms = <&epwm1 1 30000 0>; /* 3.3 KHz */
 		};
 
+#if 0
 		test_cam_mck: cam-mck {
 			function = LED_FUNCTION_STATUS;
 			label = "CAM_MCK";
@@ -94,6 +95,7 @@
 			max-brightness = <248>;
 			pwms = <&ecap2 0 50 0>; /* 1 / 50 ns = 20 MHz */
 		};
+#endif
 	};
 
 	transceiver1: can-phy0 {

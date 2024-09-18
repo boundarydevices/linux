@@ -88,7 +88,7 @@
 		linux,cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x00 0x8000000>;
+			size = <0x00 0x8000000>; /* 0x8000000 = 128MiB */
 			linux,cma-default;
 		};
 
@@ -115,9 +115,9 @@
 		compatible = "pwm-clock";
 		status = "disabled";
 		#clock-cells = <0>;
-		clock-frequency = <20000000>;
+		clock-frequency = <24000000>;
 		clock-output-names = "cam_mck";
-                pwms = <&ecap2 0 50 0>; /* 1 / 50 ns = 20 MHz */
+                pwms = <&ecap2 0 42 0>; /* 1 / 42 ns = 24 MHz */
 	};
 
 	vsys_5v: regulator-vcc-in-5v {
