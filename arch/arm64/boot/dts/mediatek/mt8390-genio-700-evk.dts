@@ -190,26 +190,6 @@
 		enable-active-high;
 	};
 
-	hub3v3: regulator@4 {
-		compatible = "regulator-fixed";
-		regulator-name = "vhub3v3";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&pio 112 0>; /* HUB_3V3_EN */
-		startup-delay-us = <10000>;
-		enable-active-high;
-	};
-
-	onboard_hub: regulator@5 {
-		compatible = "regulator-fixed";
-		regulator-name = "hub_reset";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-		gpio = <&pio 7 0>; /* HUB_RESET */
-		vin-supply = <&hub3v3>;
-		enable-active-low;
-	};
-
 	dsi0_en: dsi0-en {
 		compatible = "regulator-fixed";
 		regulator-name = "lcm1_en";
@@ -275,7 +255,7 @@
 };
 
 &i2c4 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "default";
 	pinctrl-0 = <&i2c4_pins>;
 	pinctrl-1 = <&rt1715_int_pins>;
 	clock-frequency = <1000000>;
@@ -292,6 +272,8 @@
 			compatible = "usb-c-connector";
 			label = "USB-C";
 			data-role = "dual";
+			power-role = "dual";
+			try-power-role = "sink";
 			source-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
 							PDO_FIXED_DATA_SWAP)>;
 			sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
@@ -1157,7 +1139,7 @@
 &xhci1 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	vbus-supply = <&onboard_hub>;
+	vbus-supply = <&usb_hub_reset_1v8>;
 };
 
 &ssusb2 {
