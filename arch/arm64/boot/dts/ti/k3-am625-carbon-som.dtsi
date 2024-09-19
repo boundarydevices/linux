@@ -619,6 +619,12 @@
 		>;
 	};
 
+	pmic_irq_pins_default: pmic-irq-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x01f4, PIN_INPUT, 0) /* (D16) EXTINTn */
+		>;
+	};
+
 	ospi0_pins_default: ospi0-default-pins {
 		bootph-all;
 		pinctrl-single,pins = <
@@ -728,12 +734,6 @@
 
 &mcu_pmx0 {
 
-	pmic_irq_pins_default: pmic-irq-default-pins {
-		pinctrl-single,pins = <
-			AM62X_IOPAD(0x01f4, PIN_INPUT, 0) /* (D16) EXTINTn */
-		>;
-	};
-
 	wkup_uart0_pins_default: wkup-uart0-default-pins {
 		bootph-pre-ram;
 		pinctrl-single,pins = <
@@ -833,7 +833,7 @@
 	bootph-all;
 	#address-cells = <1>;
 	#size-cells = <0>;
-	dr_mode = "otg";
+	dr_mode = "device";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_usb0_pins_default>;
 };
