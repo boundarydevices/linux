@@ -14,6 +14,7 @@
 #include <dt-bindings/regulator/mediatek,mt6360-regulator.h>
 #include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/usb/pd.h>
+#include <dt-bindings/pinctrl/mt8189-pinfunc.h>
 
 / {
 	model = "MediaTek Genio-720 EVK";

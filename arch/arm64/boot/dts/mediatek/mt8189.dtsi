@@ -211,6 +211,35 @@
 			};
 		};
 
+		pio: pinctrl@10005000 {
+			compatible = "mediatek,mt8189-pinctrl";
+			reg = <0 0x10005000 0 0x1000>,
+			      <0 0x11b50000 0 0x1000>,
+			      <0 0x11c50000 0 0x1000>,
+			      <0 0x11c60000 0 0x1000>,
+			      <0 0x11d20000 0 0x1000>,
+			      <0 0x11d30000 0 0x1000>,
+			      <0 0x11d40000 0 0x1000>,
+			      <0 0x11e20000 0 0x1000>,
+			      <0 0x11e30000 0 0x1000>,
+			      <0 0x11f20000 0 0x1000>;
+			reg-names = "gpio_base",
+						"iocfg_lm_base",
+						"iocfg_rb0_base",
+						"iocfg_rb1_base",
+						"iocfg_bm0_base",
+						"iocfg_bm1_base",
+						"iocfg_bm2_base",
+						"iocfg_lt0_base",
+						"iocfg_lt1_base",
+						"iocfg_rt_base";
+			gpio-controller;
+			#gpio-cells = <2>;
+			gpio-ranges = <&pio 0 0 182>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
 		uart0: serial@11001000 {
 			compatible = "mediatek,mt6577-uart";
 			reg = <0 0x11001000 0 0x1000>;
