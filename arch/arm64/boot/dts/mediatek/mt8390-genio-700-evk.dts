@@ -256,7 +256,7 @@
 		reg = <0x4e>;
 		interrupts-extended = <&pio 12 IRQ_TYPE_LEVEL_LOW>;
 		vbus-supply = <&usb_p1_vbus>;
-		status = "disabled";
+		status = "okay";
 
 		usb_con: connector {
 			compatible = "usb-c-connector";
@@ -272,6 +272,12 @@
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					tcpc_typec_usb: endpoint {
+							remote-endpoint = <&ssusb1_ep>;
+					};
+				};
 			};
 
 		};
@@ -1034,6 +1040,36 @@
 };
 
 &xhci0 {
+	status = "okay";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+};
+
+&ssusb1 {
+	pinctrl-0 = <&usb1_default_pins>;
+	pinctrl-names = "default";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	dr_mode = "otg";
+	mediatek,usb3-drd;
+	usb-role-switch;
+	status = "okay";
+	wakeup-source;
+
+	port {
+		ssusb1_ep: endpoint {
+			remote-endpoint = <&tcpc_typec_usb>;
+		};
+	};
+};
+
+&u2port1 {
+	status = "okay";
+};
+
+&u3port1 {
+	status = "okay";
+};
+
+&xhci1 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 };
