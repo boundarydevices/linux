@@ -250,6 +250,31 @@
 	pinctrl-1 = <&rt1715_int_pins>;
 	clock-frequency = <1000000>;
 	status = "okay";
+
+	rt1715@4e {
+		compatible = "richtek,rt1715";
+		reg = <0x4e>;
+		interrupts-extended = <&pio 12 IRQ_TYPE_LEVEL_LOW>;
+		vbus-supply = <&usb_p1_vbus>;
+		status = "disabled";
+
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "dual";
+			source-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			op-sink-microwatt = <10000000>;
+			orientation-switch = <&it5205fn>;
+			mode-switch = <&it5205fn>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+	};
 };
 
 &i2c5 {
