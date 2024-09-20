@@ -18,6 +18,10 @@
  * Bi-directional Current/Power Monitor with I2C Interface
  * Datasheet: https://www.ti.com/product/ina230
  *
+ * INA232:
+ * Bi-directional Current/Power Monitor with I2C Interface
+ * Datasheet: https://www.ti.com/product/ina232
+ *
  * Copyright (C) 2012 Lothar Felten <lothar.felten@gmail.com>
  * Thanks to Jan Volkering
  */
@@ -125,7 +129,7 @@ static const struct regmap_config ina2xx_regmap_config = {
 	.writeable_reg = ina2xx_writeable_reg,
 };
 
-enum ina2xx_ids { ina219, ina226 };
+enum ina2xx_ids { ina219, ina226, ina232 };
 
 struct ina2xx_config {
 	u16 config_default;
@@ -162,6 +166,14 @@ static const struct ina2xx_config ina2xx_config[] = {
 		.shunt_div = 400,
 		.bus_voltage_shift = 0,
 		.bus_voltage_lsb = 1250,
+		.power_lsb_factor = 25,
+	},
+	[ina232] = {
+		.config_default = INA226_CONFIG_DEFAULT,
+		.calibration_value = 2048,
+		.shunt_div = 400,
+		.bus_voltage_shift = 0,
+		.bus_voltage_lsb = 1600,
 		.power_lsb_factor = 25,
 	},
 };
@@ -872,6 +884,7 @@ static const struct i2c_device_id ina2xx_id[] = {
 	{ "ina226", ina226 },
 	{ "ina230", ina226 },
 	{ "ina231", ina226 },
+	{ "ina232", ina232 },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, ina2xx_id);
@@ -896,6 +909,10 @@ static const struct of_device_id __maybe_unused ina2xx_of_match[] = {
 	{
 		.compatible = "ti,ina231",
 		.data = (void *)ina226
+	},
+	{
+		.compatible = "ti,ina232",
+		.data = (void *)ina232
 	},
 	{ },
 };
