@@ -201,14 +201,14 @@
 // 0x69 TI, TPS65400QRGZTQ1
 
 	power-sensor-5v@40 {
-		compatible = "ti,ina231"; /* TI, INA232AIDDFR */
+		compatible = "ti,ina232"; /* TI, INA232AIDDFR */
 		reg = <0x40>;
 		vs-supply = <&vdd_3v3>;
 		shunt-resistor = <33000>; /* 0.033 Ohms */
 	};
 
 	power-sensor-3v3@41 {
-		compatible = "ti,ina231"; /* TI, INA232AIDDFR */
+		compatible = "ti,ina232"; /* TI, INA232AIDDFR */
 		reg = <0x41>;
 		vs-supply = <&vdd_3v3>;
 		shunt-resistor = <33000>; /* 0.033 Ohms */
