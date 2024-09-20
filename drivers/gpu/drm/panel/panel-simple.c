@@ -4007,6 +4007,7 @@ static const struct drm_display_mode toshiba_lt089ac29000_mode = {
 static const struct panel_desc toshiba_lt089ac29000 = {
 	.modes = &toshiba_lt089ac29000_mode,
 	.num_modes = 1,
+	.bpc = 8,
 	.size = {
 		.width = 194,
 		.height = 116,
