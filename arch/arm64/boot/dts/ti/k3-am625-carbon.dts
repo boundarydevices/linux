@@ -28,6 +28,28 @@
 		gpio = <&main_gpio0 18 GPIO_ACTIVE_HIGH>;
 	};
 
+	vdd_3v3: regulator-u4-sw2 {
+		/* output of U4 */
+		bootph-all;
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	vdd_1v8: regulator-u4-sw3 {
+		/* output of U4 */
+		bootph-all;
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
 #if 0
 	tlv320_mclk: clk-0 {
 		#clock-cells = <0>;
@@ -181,12 +203,14 @@
 	power-sensor-5v@40 {
 		compatible = "ti,ina232"; /* TI, INA232AIDDFR */
 		reg = <0x40>;
+		vs-supply = <&vdd_3v3>;
 		shunt-resistor = <33000>; /* 0.033 Ohms */
 	};
 
 	power-sensor-3v3@41 {
 		compatible = "ti,ina232"; /* TI, INA232AIDDFR */
 		reg = <0x41>;
+		vs-supply = <&vdd_3v3>;
 		shunt-resistor = <33000>; /* 0.033 Ohms */
 	};
 
@@ -194,11 +218,12 @@
 		/* U53 Giantec, GT24C256C-2GLI-TR */
 		compatible = "atmel,24c256";
 		reg = <0x54>;
+		vcc-supply = <&vdd_1v8>;
 	};
 
 	exp1: gpio@74 {
 		compatible = "ti,tca9539";
-		// TODO from U4 PMIC vcc-supply = <&vcc_1v8>;
+		vcc-supply = <&vdd_1v8>;
 		reg = <0x74>;
 		#gpio-cells = <2>;
 		gpio-controller;
@@ -214,6 +239,7 @@
 
 	exp2: gpio@75 {
 		compatible = "ti,tca9539";
+		vcc-supply = <&vdd_1v8>;
 		reg = <0x75>;
 		#gpio-cells = <2>;
 		gpio-controller;
@@ -238,6 +264,7 @@
 
 	exp3: gpio@77 {
 		compatible = "ti,tca9539";
+		vcc-supply = <&vdd_1v8>;
 		reg = <0x77>;
 		#gpio-cells = <2>;
 		gpio-controller;
@@ -285,7 +312,7 @@
 		compatible = "nxp,pca9546"; /* U34 TCA9546APWR */
 		reg = <0x73>;
 		/* No reset reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>; */
-		//vdd-supply = <&p3v3>;
+		vdd-supply = <&vdd_1v8>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -463,7 +490,7 @@
 		compatible = "nxp,pca9546"; /* U34 TCA9546APWR */
 		reg = <0x72>;
 		/* No reset reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>; */
-		//vdd-supply = <&p3v3>;
+		vdd-supply = <&vdd_1v8>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
