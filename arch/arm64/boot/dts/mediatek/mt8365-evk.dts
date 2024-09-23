@@ -738,6 +738,16 @@
 		};
 	};
 
+	spi_pins: spi-pins {
+		pins {
+			pinmux = <MT8365_PIN_26_SPI_CS__FUNC_SPI_CSB>,
+				 <MT8365_PIN_27_SPI_CK__FUNC_SPI_CLK>,
+				 <MT8365_PIN_28_SPI_MI__FUNC_SPI_MI>,
+				 <MT8365_PIN_29_SPI_MO__FUNC_SPI_MO>;
+			bias-disable;
+		};
+	};
+
 	ts_pins: ts-pins {
 		ctp-int1-pins {
 			pinmux = <MT8365_PIN_78_CMHSYNC__FUNC_GPIO78>;
@@ -801,6 +811,13 @@
 &pwm {
 	pinctrl-0 = <&pwm_pins>;
 	pinctrl-names = "default";
+	status = "okay";
+};
+
+&spi {
+	pinctrl-0 = <&spi_pins>;
+	pinctrl-names = "default";
+	mediatek,pad-select = <0>;
 	status = "okay";
 };
 
