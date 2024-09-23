@@ -161,6 +161,42 @@
 	};
 };
 
+&mipi_tx0 {
+	status = "disabled";
+};
+
+&dsi0 {
+	status = "disabled";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	poweron-in-hs-mode = <0>;
+	panel@0 {
+		compatible = "startek,kd070fhfid078";
+		status = "disabled";
+		reg = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel_pins_default>;
+		backlight = <&backlight_lcd0>;
+		reset-gpios = <&pio 108 GPIO_ACTIVE_HIGH>;
+		dcdc-gpios = <&pio 48 GPIO_ACTIVE_HIGH>;
+		iovcc-supply = <&mt6360_ldo2>;
+		pp3300-supply = <&mt6360_ldo1>;
+		port {
+			dsi_panel_in: endpoint {
+				remote-endpoint = <&dsi_out>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			dsi_out: endpoint {
+				remote-endpoint = <&dsi_panel_in>;
+			};
+		};
+	};
+};
+
 &disp_pwm0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwm0_default_pins>;
@@ -726,6 +762,23 @@
 				 <PINMUX_GPIO23__FUNC_CLKREQN_1>,
 				 <PINMUX_GPIO24__FUNC_WAKEN_1>;
 			bias-pull-up;
+		};
+	};
+
+	panel_pins_default: panel-pins-default {
+		panel-dcdc {
+			pinmux = <PINMUX_GPIO48__FUNC_GPIO48>;
+			output-low;
+		};
+
+		panel-en {
+			pinmux = <PINMUX_GPIO47__FUNC_GPIO47>;
+			output-low;
+		};
+
+		panel-rst {
+			pinmux = <PINMUX_GPIO108__FUNC_GPIO108>;
+			output-high;
 		};
 	};
 
