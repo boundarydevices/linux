@@ -994,6 +994,7 @@
 
 &afe {
 	memory-region = <&snd_dma_mem>;
+	mediatek,dmic-iir-on;
 	status = "okay";
 };
 
