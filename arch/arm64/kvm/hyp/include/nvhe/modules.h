@@ -13,7 +13,7 @@ enum pkvm_psci_notification;
 int __pkvm_register_psci_notifier(void (*cb)(enum pkvm_psci_notification, struct user_pt_regs *));
 
 #ifdef CONFIG_MODULES
-int __pkvm_init_module(void *module_init);
+int __pkvm_init_module(void *host_mod);
 int __pkvm_register_hcall(unsigned long hfn_hyp_va);
 int handle_host_dynamic_hcall(struct user_pt_regs *regs, int id);
 void __pkvm_close_module_registration(void);

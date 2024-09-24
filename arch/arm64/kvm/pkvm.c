@@ -1015,12 +1015,40 @@ static int pkvm_map_module_sections(struct pkvm_mod_sec_mapping *secs_map,
 
 	return 0;
 }
+
 static int __pkvm_cmp_mod_sec(const void *p1, const void *p2)
 {
 	struct pkvm_mod_sec_mapping const *s1 = p1;
 	struct pkvm_mod_sec_mapping const *s2 = p2;
 
 	return s1->sec->start < s2->sec->start ? -1 : s1->sec->start > s2->sec->start;
+}
+
+static void *pkvm_map_module_struct(struct pkvm_el2_module *mod)
+{
+	void *addr = (void *)__get_free_page(GFP_KERNEL);
+
+	if (!addr)
+		return NULL;
+
+	if (kvm_share_hyp(addr, addr + PAGE_SIZE)) {
+		free_page((unsigned long)addr);
+		return NULL;
+	}
+
+	/*
+	 * pkvm_el2_module being stored in vmalloc we can't guarantee a
+	 * linear map for the hypervisor to rely on. Copy the struct instead.
+	 */
+	memcpy(addr, mod, sizeof(*mod));
+
+	return addr;
+}
+
+static void pkvm_unmap_module_struct(void *addr)
+{
+	kvm_unshare_hyp(addr, addr + PAGE_SIZE);
+	free_page((unsigned long)addr);
 }
 
 int __pkvm_load_el2_module(struct module *this, unsigned long *token)
@@ -1033,11 +1061,11 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 		{ &mod->event_ids, KVM_PGTABLE_PROT_R },
 		{ &mod->data, KVM_PGTABLE_PROT_R | KVM_PGTABLE_PROT_W },
 	};
-	void *start, *end, *hyp_va;
+	void *start, *end, *hyp_va, *mod_remap;
 	struct arm_smccc_res res;
 	kvm_nvhe_reloc_t *endrel;
 	int ret, i, secs_first;
-	size_t offset, size;
+	size_t size;
 
 	/* The pKVM hyp only allows loading before it is fully initialized */
 	if (!is_protected_kvm_enabled() || is_pkvm_initialized())
@@ -1115,18 +1143,25 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 	if (ret)
 		kvm_err("Failed to init module events: %d\n", ret);
 
+	mod_remap = pkvm_map_module_struct(mod);
+	if (!mod_remap) {
+		module_put(this);
+		return -ENOMEM;
+	}
+
 	ret = pkvm_map_module_sections(secs_map + secs_first, hyp_va,
 				       ARRAY_SIZE(secs_map) - secs_first);
 	if (ret) {
 		kvm_err("Failed to map EL2 module page: %d\n", ret);
+		pkvm_unmap_module_struct(mod_remap);
 		module_put(this);
 		return ret;
 	}
 
 	pkvm_el2_mod_add(mod);
 
-	offset = (size_t)((void *)mod->init - start);
-	ret = kvm_call_hyp_nvhe(__pkvm_init_module, hyp_va + offset);
+	ret = kvm_call_hyp_nvhe(__pkvm_init_module, mod_remap);
+	pkvm_unmap_module_struct(mod_remap);
 	if (ret) {
 		kvm_err("Failed to init EL2 module: %d\n", ret);
 		list_del(&mod->node);

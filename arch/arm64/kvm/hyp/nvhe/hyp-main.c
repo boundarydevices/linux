@@ -1571,9 +1571,9 @@ static void handle___pkvm_unmap_module_page(struct kvm_cpu_context *host_ctxt)
 
 static void handle___pkvm_init_module(struct kvm_cpu_context *host_ctxt)
 {
-	DECLARE_REG(void *, ptr, host_ctxt, 1);
+	DECLARE_REG(void *, host_mod, host_ctxt, 1);
 
-	cpu_reg(host_ctxt, 1) = __pkvm_init_module(ptr);
+	cpu_reg(host_ctxt, 1) = __pkvm_init_module(host_mod);
 }
 
 static void handle___pkvm_register_hcall(struct kvm_cpu_context *host_ctxt)
