@@ -86,6 +86,23 @@ static const struct snd_soc_dapm_widget mt8195_mt6359_widgets[] = {
 
 static const struct snd_soc_dapm_route mt8195_mt6359_routes[] = {
 	/* headset */
+	{ "Headphone", NULL, "Headphone L" },
+	{ "Headphone", NULL, "Headphone R" },
+	{ "AIN1", NULL, "Headset Mic" },
+	/* SOF Uplink */
+	{SOF_DMA_UL4, NULL, "O034"},
+	{SOF_DMA_UL4, NULL, "O035"},
+	{SOF_DMA_UL5, NULL, "O036"},
+	{SOF_DMA_UL5, NULL, "O037"},
+	/* SOF Downlink */
+	{"I070", NULL, SOF_DMA_DL2},
+	{"I071", NULL, SOF_DMA_DL2},
+	{"I020", NULL, SOF_DMA_DL3},
+	{"I021", NULL, SOF_DMA_DL3},
+};
+
+static const struct snd_soc_dapm_route mt8195_mt6359_rt5682_routes[] = {
+	/* headset */
 	{ "Headphone", NULL, "HPOL" },
 	{ "Headphone", NULL, "HPOR" },
 	{ "IN1P", NULL, "Headset Mic" },
@@ -1396,6 +1413,16 @@ static int mt8195_mt6359_dev_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s new card name parsing error %d\n",
 			__func__, ret);
 		return ret;
+	}
+
+	switch (card_data->quirk) {
+	case RT1011_SPEAKER_AMP_PRESENT:
+	case RT1019_SPEAKER_AMP_PRESENT:
+	case MAX98390_SPEAKER_AMP_PRESENT:
+		card->dapm_routes = mt8195_mt6359_rt5682_routes;
+		break;
+	default:
+		break;
 	}
 
 	if (!card->name)
