@@ -74,7 +74,7 @@
 		};
 
 		/* 2 MiB reserved for ARM Trusted Firmware (BL31) */
-		bl31_secmon_mem: memory@54600000 {
+		bl31_secmon_reserved: secmon@54600000 {
 			no-map;
 			reg = <0 0x54600000 0x0 0x200000>;
 		};
