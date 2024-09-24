@@ -302,6 +302,40 @@
 	vqmmc-supply = <&mt6359_vsim1_ldo_reg>;
 };
 
+&wifi_pwrseq {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&wifi_pwrseq_pins>;
+
+	reset-gpios = <&pio 72 1>;
+	post-power-on-delay-ms = <200>;
+};
+
+&mmc2 {
+	status = "okay";
+	pinctrl-names = "default", "state_uhs", "state_eint",
+			"state_dat1";
+	pinctrl-0 = <&mmc2_default_pins>;
+	pinctrl-1 = <&mmc2_uhs_pins>;
+	pinctrl-2 = <&mmc2_eint_pins>;
+	pinctrl-3 = <&mmc2_dat1_pins>;
+	eint-gpios = <&pio 172 0>;
+	bus-width = <4>;
+	max-frequency = <200000000>;
+	cap-sd-highspeed;
+	sd-uhs-sdr104;
+	keep-power-in-suspend;
+	enable-sdio-wakeup;
+	cap-sdio-async-int;
+	cap-sdio-irq;
+	no-mmc;
+	no-sd;
+	non-removable;
+	vmmc-supply = <&sdio_fixed_3v3>;
+	vqmmc-supply = <&sdio_fixed_1v8>;
+	mmc-pwrseq = <&wifi_pwrseq>;
+};
+
 &mt6359_vbbck_ldo_reg {
 	regulator-always-on;
 };
