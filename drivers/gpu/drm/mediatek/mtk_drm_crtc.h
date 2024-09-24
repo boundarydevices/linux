@@ -7,6 +7,7 @@
 #define MTK_DRM_CRTC_H
 
 #include <drm/drm_crtc.h>
+#include "mtk_drm_drv.h"
 #include "mtk_drm_ddp_comp.h"
 #include "mtk_drm_plane.h"
 
@@ -18,7 +19,9 @@ void mtk_drm_crtc_commit(struct drm_crtc *crtc);
 int mtk_drm_crtc_create(struct drm_device *drm_dev,
 			const unsigned int *path,
 			unsigned int path_len,
-			int priv_data_index);
+			int priv_data_index,
+			const struct mtk_drm_route *conn_routes,
+			unsigned int conn_routes_num);
 int mtk_drm_crtc_plane_check(struct drm_crtc *crtc, struct drm_plane *plane,
 			     struct mtk_plane_state *state);
 void mtk_drm_crtc_async_update(struct drm_crtc *crtc, struct drm_plane *plane,
