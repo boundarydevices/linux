@@ -365,8 +365,12 @@
 };
 
 &mt6359_vproc2_buck_reg {
+	/* The name "vgpu" is required by mtk-regulator-coupler */
+	regulator-name = "vgpu";
 	regulator-min-microvolt = <550000>;
 	regulator-max-microvolt = <860000>;
+	regulator-coupled-with = <&mt6359_vsram_others_ldo_reg>;
+	regulator-coupled-max-spread = <6250>;
 };
 
 &mt6359_vpu_buck_reg {
@@ -381,10 +385,13 @@
 	regulator-enable-ramp-delay = <480>;
 };
 
-/* for GPU SRAM */
 &mt6359_vsram_others_ldo_reg {
-	regulator-min-microvolt = <850000>;
-	regulator-max-microvolt = <850000>;
+	/* The name "vsram_gpu" is required by mtk-regulator-coupler */
+	regulator-name = "vsram_gpu";
+	regulator-min-microvolt = <750000>;
+	regulator-max-microvolt = <800000>;
+	regulator-coupled-with = <&mt6359_vproc2_buck_reg>;
+	regulator-coupled-max-spread = <6250>;
 };
 
 &mt6359_vsram_md_ldo_reg {
