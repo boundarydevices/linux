@@ -727,6 +727,7 @@
 			pinmux = <PINMUX_GPIO12__FUNC_SDA2>,
 				 <PINMUX_GPIO13__FUNC_SCL2>;
 			bias-pull-up = <MTK_PULL_SET_RSEL_111>;
+			mediatek,drive-strength-adv = <0>;
 			drive-strength = <MTK_DRIVE_6mA>;
 		};
 	};
