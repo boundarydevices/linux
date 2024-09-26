@@ -1050,6 +1050,19 @@
 	};
 };
 
+&keypad {
+	mediatek,debounce-us = <32000>;
+	mediatek,double-keys;
+	keypad,num-rows = <1>;
+	keypad,num-columns = <2>;
+	linux,keymap =
+		<MATRIX_KEY(0x00, 0x00, KEY_VOLUMEDOWN)
+		 MATRIX_KEY(0x00, 0x01, KEY_VOLUMEUP)>;
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&gpio_key_pins>;
+};
+
 &scp {
 	memory-region = <&scp_mem>;
 	status = "okay";
