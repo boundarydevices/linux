@@ -313,13 +313,6 @@ static const struct mtk_pinctrl_devdata mt8516_pinctrl_data = {
 	.mode_mask = 0xf,
 	.mode_per_reg = 5,
 	.mode_shf = 4,
-	.eint_hw = {
-		.port_mask = 7,
-		.ports     = 6,
-		.ap_num    = 169,
-		.db_cnt    = 64,
-		.db_time   = debounce_time_mt6795,
-	},
 };
 
 static const struct of_device_id mt8516_pctrl_match[] = {

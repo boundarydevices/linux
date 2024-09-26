@@ -11,6 +11,25 @@
 
 #include <linux/irqdomain.h>
 
+#define MAX_PIN 999
+#define MTK_EINT_EDGE_SENSITIVE           0
+#define MTK_EINT_LEVEL_SENSITIVE          1
+#define MTK_EINT_DBNC_SET_DBNC_BITS       4
+#define MTK_EINT_DBNC_RST_BIT             (0x1 << 1)
+#define MTK_EINT_DBNC_SET_EN              (0x1 << 0)
+#define MTK_EINT_NO_OFFSET                0
+#define MAX_BIT                           32
+#define REG_OFFSET                        4
+#define REG_ONE                           5
+#define REG_VAL                           0xFFFFFFFF
+#define DB_ONE                            8
+#define FIRST                             1
+#define SECOND                            2
+#define THIRD                             3
+#define ARRAY_ELEMENT                     4
+
+//#define MTK_EINT_DEBUG
+
 struct mtk_eint_regs {
 	unsigned int	stat;
 	unsigned int	ack;
@@ -30,19 +49,36 @@ struct mtk_eint_regs {
 	unsigned int	dbnc_ctrl;
 	unsigned int	dbnc_set;
 	unsigned int	dbnc_clr;
+	unsigned int	event;
+	unsigned int	event_clr;
+	unsigned int	raw_stat;
 };
 
-struct mtk_eint_hw {
-	u8		port_mask;
-	u8		ports;
-	unsigned int	ap_num;
-	unsigned int	db_cnt;
-	const unsigned int *db_time;
+struct mtk_eint_ops {
+	void (*ack)(struct irq_data *d);
 };
 
-extern const unsigned int debounce_time_mt2701[];
-extern const unsigned int debounce_time_mt6765[];
-extern const unsigned int debounce_time_mt6795[];
+struct mtk_eint_compatible {
+	struct mtk_eint_ops ops;
+	const struct mtk_eint_regs *regs;
+};
+
+struct mtk_eint_pin {
+	bool enabled;
+	unsigned int instance;
+	unsigned int index;
+	bool debounce;
+	bool dual_edge;
+};
+
+struct mtk_eint_instance {
+	const char *name;
+	void __iomem *base;
+	unsigned int number;
+	unsigned int pin_list[MAX_PIN];
+	unsigned int *wake_mask;
+	unsigned int *cur_mask;
+};
 
 struct mtk_eint;
 
@@ -56,18 +92,17 @@ struct mtk_eint_xt {
 
 struct mtk_eint {
 	struct device *dev;
-	void __iomem *base;
 	struct irq_domain *domain;
 	int irq;
 
-	int *dual_edge;
-	u32 *wake_mask;
-	u32 *cur_mask;
-
-	/* Used to fit into various EINT device */
-	const struct mtk_eint_hw *hw;
-	const struct mtk_eint_regs *regs;
-	u16 num_db_time;
+	/* An array to record the coordinate, index by global EINT ID */
+	struct mtk_eint_pin *pins;
+	/* An array to record the global EINT ID, index by coordinate*/
+	struct mtk_eint_instance *instances;
+	unsigned int total_pin_number;
+	unsigned int instance_number;
+	unsigned int dump_target_eint;
+	const struct mtk_eint_compatible *comp;
 
 	/* Used to fit into various pinctrl device */
 	void *pctl;
@@ -81,6 +116,7 @@ int mtk_eint_do_resume(struct mtk_eint *eint);
 int mtk_eint_set_debounce(struct mtk_eint *eint, unsigned long eint_n,
 			  unsigned int debounce);
 int mtk_eint_find_irq(struct mtk_eint *eint, unsigned long eint_n);
+int dump_eint_pin_status(unsigned int eint_num, char *buf, unsigned int buf_size);
 
 #else
 static inline int mtk_eint_do_init(struct mtk_eint *eint)

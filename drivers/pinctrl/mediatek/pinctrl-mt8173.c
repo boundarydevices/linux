@@ -321,13 +321,6 @@ static const struct mtk_pinctrl_devdata mt8173_pinctrl_data = {
 	.mode_mask = 0xf,
 	.mode_per_reg = 5,
 	.mode_shf = 4,
-	.eint_hw = {
-		.port_mask = 7,
-		.ports     = 6,
-		.ap_num    = 224,
-		.db_cnt    = 16,
-		.db_time   = debounce_time_mt2701,
-	},
 };
 
 static int mt8173_pinctrl_probe(struct platform_device *pdev)

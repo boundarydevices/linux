@@ -841,14 +841,6 @@ static const struct function_desc mt7622_functions[] = {
 	{"watchdog", mt7622_wdt_groups, ARRAY_SIZE(mt7622_wdt_groups)},
 };
 
-static const struct mtk_eint_hw mt7622_eint_hw = {
-	.port_mask = 7,
-	.ports     = 7,
-	.ap_num    = ARRAY_SIZE(mt7622_pins),
-	.db_cnt    = 20,
-	.db_time   = debounce_time_mt6765,
-};
-
 static const struct mtk_pin_soc mt7622_data = {
 	.reg_cal = mt7622_reg_cals,
 	.pins = mt7622_pins,
@@ -857,7 +849,6 @@ static const struct mtk_pin_soc mt7622_data = {
 	.ngrps = ARRAY_SIZE(mt7622_groups),
 	.funcs = mt7622_functions,
 	.nfuncs = ARRAY_SIZE(mt7622_functions),
-	.eint_hw = &mt7622_eint_hw,
 	.gpio_m	= 1,
 	.ies_present = false,
 	.base_names = mtk_default_register_base_names,

@@ -561,13 +561,6 @@ static const struct mtk_pinctrl_devdata mt2712_pinctrl_data = {
 	.mode_mask = 0xf,
 	.mode_per_reg = 5,
 	.mode_shf = 4,
-	.eint_hw = {
-		.port_mask = 0xf,
-		.ports     = 8,
-		.ap_num    = 229,
-		.db_cnt    = 40,
-		.db_time   = debounce_time_mt2701,
-	},
 };
 
 static const struct of_device_id mt2712_pctrl_match[] = {

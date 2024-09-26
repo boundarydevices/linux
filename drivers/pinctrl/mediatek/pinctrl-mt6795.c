@@ -470,14 +470,6 @@ static const struct mtk_pin_reg_calc mt6795_reg_cals[PINCTRL_PIN_REG_MAX] = {
 	[PINCTRL_PIN_REG_PULLSEL] = MTK_RANGE(mt6795_pin_pullsel_range),
 };
 
-static const struct mtk_eint_hw mt6795_eint_hw = {
-	.port_mask = 7,
-	.ports     = 7,
-	.ap_num    = 224,
-	.db_cnt    = 32,
-	.db_time   = debounce_time_mt6795,
-};
-
 static const unsigned int mt6795_pull_type[] = {
 	MTK_PULL_PULLSEL_TYPE,/*0*/		MTK_PULL_PULLSEL_TYPE,/*1*/
 	MTK_PULL_PULLSEL_TYPE,/*2*/		MTK_PULL_PULLSEL_TYPE,/*3*/
@@ -586,7 +578,6 @@ static const struct mtk_pin_soc mt6795_data = {
 	.npins = ARRAY_SIZE(mtk_pins_mt6795),
 	.ngrps = ARRAY_SIZE(mtk_pins_mt6795),
 	.nfuncs = 8,
-	.eint_hw = &mt6795_eint_hw,
 	.gpio_m = 0,
 	.base_names = mtk_default_register_base_names,
 	.nbase_names = ARRAY_SIZE(mtk_default_register_base_names),

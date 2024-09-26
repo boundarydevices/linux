@@ -967,13 +967,6 @@ static const struct function_desc mt7981_functions[] = {
 	{"pcie", mt7981_pcie_groups, ARRAY_SIZE(mt7981_pcie_groups)},
 };
 
-static const struct mtk_eint_hw mt7981_eint_hw = {
-	.port_mask = 7,
-	.ports     = 7,
-	.ap_num    = ARRAY_SIZE(mt7981_pins),
-	.db_cnt    = 16,
-};
-
 static const char * const mt7981_pinctrl_register_base_names[] = {
 	"gpio", "iocfg_rt", "iocfg_rm", "iocfg_rb",
 	"iocfg_lb", "iocfg_bl", "iocfg_tm", "iocfg_tl",
@@ -987,7 +980,6 @@ static struct mtk_pin_soc mt7981_data = {
 	.ngrps = ARRAY_SIZE(mt7981_groups),
 	.funcs = mt7981_functions,
 	.nfuncs = ARRAY_SIZE(mt7981_functions),
-	.eint_hw = &mt7981_eint_hw,
 	.gpio_m = 0,
 	.ies_present = false,
 	.base_names = mt7981_pinctrl_register_base_names,

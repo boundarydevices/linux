@@ -1057,20 +1057,11 @@ static const char * const mt6765_pinctrl_register_base_names[] = {
 	"iocfg6", "iocfg7",
 };
 
-static const struct mtk_eint_hw mt6765_eint_hw = {
-	.port_mask = 7,
-	.ports     = 6,
-	.ap_num    = 160,
-	.db_cnt    = 13,
-	.db_time   = debounce_time_mt6765,
-};
-
 static const struct mtk_pin_soc mt6765_data = {
 	.reg_cal = mt6765_reg_cals,
 	.pins = mtk_pins_mt6765,
 	.npins = ARRAY_SIZE(mtk_pins_mt6765),
 	.ngrps = ARRAY_SIZE(mtk_pins_mt6765),
-	.eint_hw = &mt6765_eint_hw,
 	.gpio_m = 0,
 	.base_names = mt6765_pinctrl_register_base_names,
 	.nbase_names = ARRAY_SIZE(mt6765_pinctrl_register_base_names),

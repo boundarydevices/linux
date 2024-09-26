@@ -893,22 +893,6 @@ static const struct function_desc mt7986_functions[] = {
 	{"wifi", mt7986_wf_groups, ARRAY_SIZE(mt7986_wf_groups)},
 };
 
-static const struct mtk_eint_hw mt7986a_eint_hw = {
-	.port_mask = 7,
-	.ports = 7,
-	.ap_num = ARRAY_SIZE(mt7986a_pins),
-	.db_cnt = 16,
-	.db_time = debounce_time_mt6765,
-};
-
-static const struct mtk_eint_hw mt7986b_eint_hw = {
-	.port_mask = 7,
-	.ports = 7,
-	.ap_num = ARRAY_SIZE(mt7986b_pins),
-	.db_cnt = 16,
-	.db_time = debounce_time_mt6765,
-};
-
 static struct mtk_pin_soc mt7986a_data = {
 	.reg_cal = mt7986_reg_cals,
 	.pins = mt7986a_pins,
@@ -917,7 +901,6 @@ static struct mtk_pin_soc mt7986a_data = {
 	.ngrps = ARRAY_SIZE(mt7986_groups),
 	.funcs = mt7986_functions,
 	.nfuncs = ARRAY_SIZE(mt7986_functions),
-	.eint_hw = &mt7986a_eint_hw,
 	.gpio_m = 0,
 	.ies_present = false,
 	.base_names = mt7986_pinctrl_register_base_names,
@@ -943,7 +926,6 @@ static struct mtk_pin_soc mt7986b_data = {
 	.ngrps = ARRAY_SIZE(mt7986_groups),
 	.funcs = mt7986_functions,
 	.nfuncs = ARRAY_SIZE(mt7986_functions),
-	.eint_hw = &mt7986b_eint_hw,
 	.gpio_m = 0,
 	.ies_present = false,
 	.base_names = mt7986_pinctrl_register_base_names,

@@ -1620,20 +1620,11 @@ static const char * const mt8188_pinctrl_register_base_name[] = {
 	"iocfg0", "iocfg_rm", "iocfg_lt", "iocfg_lm", "iocfg_rt",
 };
 
-static const struct mtk_eint_hw mt8188_eint_hw = {
-	.port_mask = 0xf,
-	.ports     = 7,
-	.ap_num    = 225,
-	.db_cnt    = 32,
-	.db_time   = debounce_time_mt6765,
-};
-
 static const struct mtk_pin_soc mt8188_data = {
 	.reg_cal = mt8188_reg_cals,
 	.pins = mtk_pins_mt8188,
 	.npins = ARRAY_SIZE(mtk_pins_mt8188),
 	.ngrps = ARRAY_SIZE(mtk_pins_mt8188),
-	.eint_hw = &mt8188_eint_hw,
 	.nfuncs = 8,
 	.gpio_m = 0,
 	.base_names = mt8188_pinctrl_register_base_name,

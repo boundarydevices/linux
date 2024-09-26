@@ -1366,14 +1366,6 @@ static const char * const mt8192_pinctrl_register_base_names[] = {
 	"iocfg_lm", "iocfg_lb", "iocfg_rt", "iocfg_lt", "iocfg_tl",
 };
 
-static const struct mtk_eint_hw mt8192_eint_hw = {
-	.port_mask = 7,
-	.ports     = 7,
-	.ap_num    = 224,
-	.db_cnt    = 32,
-	.db_time   = debounce_time_mt6765,
-};
-
 static const struct mtk_pin_reg_calc mt8192_reg_cals[PINCTRL_PIN_REG_MAX] = {
 	[PINCTRL_PIN_REG_MODE] = MTK_RANGE(mt8192_pin_mode_range),
 	[PINCTRL_PIN_REG_DIR] = MTK_RANGE(mt8192_pin_dir_range),
@@ -1399,7 +1391,6 @@ static const struct mtk_pin_soc mt8192_data = {
 	.base_names = mt8192_pinctrl_register_base_names,
 	.nbase_names = ARRAY_SIZE(mt8192_pinctrl_register_base_names),
 	.pull_type = mt8192_pull_type,
-	.eint_hw = &mt8192_eint_hw,
 	.nfuncs = 8,
 	.gpio_m = 0,
 	.bias_set_combo = mtk_pinconf_bias_set_combo,
