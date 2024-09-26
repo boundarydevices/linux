@@ -936,6 +936,12 @@
 		};
 	};
 
+	pwm_pins: pwm-pins {
+		pins {
+			pinmux = <PINMUX_GPIO107__FUNC_PWM_3>;
+		};
+	};
+
 	touch_pins: touch-pins {
 		pins-irq {
 			pinmux = <PINMUX_GPIO132__FUNC_GPIO132>;
@@ -1199,4 +1205,10 @@
 			sound-dai = <&dmic_codec>;
 		};
 	};
+};
+
+&pwm {
+	pinctrl-0 = <&pwm_pins>;
+	pinctrl-names = "default";
+	status = "okay";
 };
