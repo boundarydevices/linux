@@ -559,6 +559,7 @@ static const struct ap1302_sensor_info ap1302_sensor_info_tpg = {
  */
 
 static const struct regmap_config ap1302_reg16_config = {
+	.name = "16bit",
 	.reg_bits = 16,
 	.val_bits = 16,
 	.reg_stride = 2,
@@ -568,6 +569,7 @@ static const struct regmap_config ap1302_reg16_config = {
 };
 
 static const struct regmap_config ap1302_reg32_config = {
+	.name = "32bit",
 	.reg_bits = 16,
 	.val_bits = 32,
 	.reg_stride = 4,
