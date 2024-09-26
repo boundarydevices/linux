@@ -201,6 +201,15 @@
 			interrupts = <GIC_SPI 225 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&gic>;
 			#interrupt-cells = <2>;
+			mediatek,eint = <&eint>;
+		};
+
+		eint: apirq@1000b000 {
+			compatible = "mediatek,mtk-eint";
+			reg = <0 0x1000b000 0 0x1000>;
+			reg-name = "eint";
+			interrupts = <GIC_SPI 225 IRQ_TYPE_LEVEL_HIGH>;
+			mediatek,total-pin-number = <101>;
 		};
 
 		sgmiisys0: syscon@10060000 {

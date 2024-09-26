@@ -879,6 +879,7 @@
 			interrupt-controller;
 			interrupts = <GIC_SPI 186 IRQ_TYPE_LEVEL_HIGH 0>;
 			#interrupt-cells = <2>;
+			mediatek,eint = <&eint>;
 		};
 
 		scpsys: syscon@10006000 {
@@ -1092,6 +1093,14 @@
 			mediatek,disable-extrst;
 			reg = <0 0x10007000 0 0x1000>;
 			#reset-cells = <1>;
+		};
+
+		eint: apirq@1000b000 {
+			compatible = "mediatek,mtk-eint";
+			reg = <0 0x1000b000 0 0x1000>;
+			reg-name = "eint";
+			interrupts = <GIC_SPI 186 IRQ_TYPE_LEVEL_HIGH 0>;
+			mediatek,total-pin-number = <217>;
 		};
 
 		apmixedsys: syscon@1000c000 {

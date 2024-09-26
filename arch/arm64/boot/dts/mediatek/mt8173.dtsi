@@ -382,6 +382,7 @@
 			interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>;
+			mediatek,eint = <&eint>;
 
 			hdmi_pin: xxx {
 
@@ -532,6 +533,14 @@
 			interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_LOW>;
 			clocks = <&infracfg CLK_INFRA_CLK_13M>,
 				 <&topckgen CLK_TOP_RTC_SEL>;
+		};
+
+		eint: apirq@1000b000 {
+			compatible = "mediatek,mtk-eint";
+			reg = <0 0x1000b000 0 0x1000>;
+			reg-name = "eint";
+			interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>;
+			mediatek,total-pin-number = <224>;
 		};
 
 		pwrap: pwrap@1000d000 {

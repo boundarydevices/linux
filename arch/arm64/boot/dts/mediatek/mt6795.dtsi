@@ -356,6 +356,7 @@
 			gpio-ranges = <&pio 0 0 196>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
+			mediatek,eint = <&eint>;
 		};
 
 		watchdog: watchdog@10007000 {
@@ -372,6 +373,14 @@
 			reg = <0 0x10008000 0 0x1000>;
 			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_LOW>;
 			clocks = <&system_clk>, <&clk32k>;
+		};
+
+		eint: apirq@1000b000 {
+			compatible = "mediatek,mtk-eint";
+			reg = <0 0x1000b000 0 0x1000>;
+			reg-name = "eint";
+			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH>;
+			mediatek,total-pin-number = <224>;
 		};
 
 		pwrap: pwrap@1000d000 {

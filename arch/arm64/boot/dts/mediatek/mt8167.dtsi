@@ -122,6 +122,15 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 			interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
+			mediatek,eint = <&eint>;
+		};
+
+		eint: apirq@1000b000 {
+			compatible = "mediatek,mtk-eint";
+			reg = <0 0x1000b000 0 0x1000>;
+			reg-name = "eint";
+			interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
+			mediatek,total-pin-number = <169>;
 		};
 
 		mmsys: syscon@14000000 {
