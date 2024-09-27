@@ -996,13 +996,13 @@
 };
 
 &ufshci {
-	status = "okay";
+	status = "disabled";
 	vcc-supply = <&mt6359_vemc_1_ldo_reg>;
 	vccq2-supply = <&mt6359_vufs_ldo_reg>;
 };
 
 &ufsphy {
-	status = "okay";
+	status = "disabled";
 };
 
 &pmic {
@@ -1117,10 +1117,6 @@
 	pinctrl-0 = <&uart1_pins>;
 	pinctrl-names = "default";
 	status = "okay";
-};
-
-&ufsphy {
-	status = "disabled";
 };
 
 &ssusb0 {
