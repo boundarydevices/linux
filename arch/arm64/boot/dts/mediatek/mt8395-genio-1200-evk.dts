@@ -196,6 +196,21 @@
 		num-channels = <2>;
 		wakeup-delay-ms = <30>;
 	};
+
+	fan0: pwm-fan {
+		compatible = "pwm-fan";
+		pinctrl-names = "default";
+		pinctrl-0 = <&fan0_pins_default>;
+		cooling-min-state = <0>;
+		cooling-max-state = <2>;
+		/* Period 40ns */
+		pwms = <&pwm 2 40000>;
+		/* Duty Cycle*/
+		/* min ---- max */
+		/* 20% 50% 100% */
+		cooling-levels = <50 127 255>;
+		status = "disabled";
+	};
 };
 
 &mipi_tx0 {
@@ -939,7 +954,14 @@
 
 	pwm_pins: pwm-pins {
 		pins {
-			pinmux = <PINMUX_GPIO107__FUNC_PWM_3>;
+			pinmux = <PINMUX_GPIO105__FUNC_PWM_2>;
+		};
+	};
+
+	fan0_pins_default: fan0-pins-default {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO129__FUNC_GPIO129>;
+			output-high;
 		};
 	};
 
