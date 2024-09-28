@@ -1635,7 +1635,7 @@ struct task_struct {
 };
 
 #ifdef CONFIG_SCHED_PROXY_EXEC
-DECLARE_STATIC_KEY_TRUE(__sched_proxy_exec);
+DECLARE_STATIC_KEY_FALSE(__sched_proxy_exec);
 static inline bool sched_proxy_exec(void)
 {
 	return static_branch_likely(&__sched_proxy_exec);

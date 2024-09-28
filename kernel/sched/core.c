@@ -127,7 +127,7 @@ DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 EXPORT_SYMBOL_GPL(runqueues);
 
 #ifdef CONFIG_SCHED_PROXY_EXEC
-DEFINE_STATIC_KEY_TRUE(__sched_proxy_exec);
+DEFINE_STATIC_KEY_FALSE(__sched_proxy_exec);
 static int __init setup_proxy_exec(char *str)
 {
 	bool proxy_enable;
