@@ -187,6 +187,26 @@
 		regulator-max-microvolt = <5000000>;
 		enable-active-high;
 	};
+
+	hub3v3: regulator@4 {
+		compatible = "regulator-fixed";
+		regulator-name = "vhub3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pio 112 0>; /* HUB_3V3_EN */
+		startup-delay-us = <10000>;
+		enable-active-high;
+	};
+
+	onboard_hub: regulator@5 {
+		compatible = "regulator-fixed";
+		regulator-name = "hub_reset";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&pio 7 0>; /* HUB_RESET */
+		vin-supply = <&hub3v3>;
+		enable-active-low;
+	};
 };
 
 &gpu {
@@ -219,6 +239,14 @@
 	pinctrl-0 = <&i2c1_pins>;
 	clock-frequency = <400000>;
 	status = "okay";
+
+	it5205fn: it5205fn@48 {
+		compatible = "mediatek,it5205fn";
+		reg = <0x48>;
+		type3v3-supply = <&mt6359_vcn33_1_bt_ldo_reg>;
+		svid = /bits/ 16 <0xff01>;
+		status = "okay";
+	};
 };
 
 &i2c2 {
@@ -241,6 +269,45 @@
 	pinctrl-1 = <&rt1715_int_pins>;
 	clock-frequency = <1000000>;
 	status = "okay";
+
+	rt1715@4e {
+		compatible = "richtek,rt1715";
+		reg = <0x4e>;
+		interrupts-extended = <&pio 12 IRQ_TYPE_LEVEL_LOW>;
+		vbus-supply = <&usb_p1_vbus>;
+		status = "okay";
+
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "dual";
+			source-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			op-sink-microwatt = <10000000>;
+			orientation-switch = <&it5205fn>;
+			mode-switch = <&it5205fn>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					tcpc_typec_usb: endpoint {
+							remote-endpoint = <&ssusb1_ep>;
+					};
+				};
+			};
+
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {};
+		};
+	};
 };
 
 &i2c5 {
@@ -983,15 +1050,82 @@
 	status = "okay";
 };
 
+&ssusb0 {
+	pinctrl-0 = <&usb_default_pins>;
+	pinctrl-names = "default";
+	maximum-speed = "high-speed";
+	usb-role-switch;
+	dr_mode = "otg";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	status = "okay";
+	wakeup-source;
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		id-gpios = <&pio 83 GPIO_ACTIVE_HIGH>;
+		vbus-supply = <&usb_p0_vbus>;
+	};
+};
+
+&u2port0 {
+	status = "okay";
+};
+
 &xhci0 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 };
 
+&ssusb1 {
+	pinctrl-0 = <&usb1_default_pins>;
+	pinctrl-names = "default";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	dr_mode = "otg";
+	mediatek,usb3-drd;
+	usb-role-switch;
+	status = "okay";
+	wakeup-source;
+
+	port {
+		ssusb1_ep: endpoint {
+			remote-endpoint = <&tcpc_typec_usb>;
+		};
+	};
+};
+
+&u2port1 {
+	status = "okay";
+};
+
+&u3port1 {
+	status = "okay";
+};
+
 &xhci1 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	vbus-supply = <&usb_hub_reset_1v8>;
+	vbus-supply = <&onboard_hub>;
+};
+
+&ssusb2 {
+	maximum-speed = "high-speed";
+	usb-role-switch;
+	dr_mode = "host";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	status = "okay";
+	wakeup-source;
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		id-gpios = <&pio 89 GPIO_ACTIVE_HIGH>;
+		vbus-supply = <&usb_p2_vbus>;
+	};
+};
+
+&u2port2 {
+	status = "okay";
 };
 
 &xhci2 {
