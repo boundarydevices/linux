@@ -987,6 +987,19 @@ static void stmmac_mac_link_down(struct phylink_config *config,
 		stmmac_fpe_link_state_handle(priv, false);
 }
 
+static void stmmac_wait_wol_resume_reset(struct stmmac_priv *priv)
+{
+	unsigned long orig_jiffies = jiffies;
+
+	while (!priv->wol_resume_reset) {
+		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(100))) {
+			netdev_dbg(priv->dev, "wait wol resume reset timeout\n");
+			break;
+		}
+		schedule();
+	}
+}
+
 static void stmmac_mac_link_up(struct phylink_config *config,
 			       struct phy_device *phy,
 			       unsigned int mode, phy_interface_t interface,
@@ -999,6 +1012,8 @@ static void stmmac_mac_link_up(struct phylink_config *config,
 	if ((priv->plat->flags & STMMAC_FLAG_SERDES_UP_AFTER_PHY_LINKUP) &&
 	    priv->plat->serdes_powerup)
 		priv->plat->serdes_powerup(priv->dev, priv->plat->bsp_priv);
+
+	stmmac_wait_wol_resume_reset(priv);
 
 	old_ctrl = readl(priv->ioaddr + MAC_CTRL_REG);
 	ctrl = old_ctrl & ~priv->hw->link.speed_mask;
@@ -1198,17 +1213,6 @@ static int stmmac_init_phy(struct net_device *dev)
 	return ret;
 }
 
-static void stmmac_set_half_duplex(struct stmmac_priv *priv)
-{
-	/* Half-Duplex can only work with single tx queue */
-	if (priv->plat->tx_queues_to_use > 1)
-		priv->phylink_config.mac_capabilities &=
-			~(MAC_10HD | MAC_100HD | MAC_1000HD);
-	else
-		priv->phylink_config.mac_capabilities |=
-			(MAC_10HD | MAC_100HD | MAC_1000HD);
-}
-
 static int stmmac_phy_setup(struct stmmac_priv *priv)
 {
 	struct stmmac_mdio_bus_data *mdio_bus_data;
@@ -1236,14 +1240,10 @@ static int stmmac_phy_setup(struct stmmac_priv *priv)
 		xpcs_get_interfaces(priv->hw->xpcs,
 				    priv->phylink_config.supported_interfaces);
 
-	priv->phylink_config.mac_capabilities = MAC_ASYM_PAUSE | MAC_SYM_PAUSE |
-						MAC_10FD | MAC_100FD |
-						MAC_1000FD;
-
-	stmmac_set_half_duplex(priv);
-
 	/* Get the MAC specific capabilities */
 	stmmac_mac_phylink_get_caps(priv);
+
+	priv->phylink_config.mac_capabilities = priv->hw->link.caps;
 
 	max_speed = priv->plat->max_speed;
 	if (max_speed)
@@ -3693,6 +3693,7 @@ static int stmmac_request_irq_single(struct net_device *dev)
 	/* Request the Wake IRQ in case of another line
 	 * is used for WoL
 	 */
+	priv->wol_irq_disabled = true;
 	if (priv->wol_irq > 0 && priv->wol_irq != dev->irq) {
 		ret = request_irq(priv->wol_irq, stmmac_interrupt,
 				  IRQF_SHARED, dev->name, dev);
@@ -7194,6 +7195,7 @@ int stmmac_reinit_queues(struct net_device *dev, u32 rx_cnt, u32 tx_cnt)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int ret = 0, i;
+	int max_speed;
 
 	if (netif_running(dev))
 		stmmac_release(dev);
@@ -7207,7 +7209,14 @@ int stmmac_reinit_queues(struct net_device *dev, u32 rx_cnt, u32 tx_cnt)
 			priv->rss.table[i] = ethtool_rxfh_indir_default(i,
 									rx_cnt);
 
-	stmmac_set_half_duplex(priv);
+	stmmac_mac_phylink_get_caps(priv);
+
+	priv->phylink_config.mac_capabilities = priv->hw->link.caps;
+
+	max_speed = priv->plat->max_speed;
+	if (max_speed)
+		phylink_limit_mac_speed(&priv->phylink_config, max_speed);
+
 	stmmac_napi_add(dev);
 
 	if (netif_running(dev))
@@ -7358,6 +7367,8 @@ int stmmac_dvr_probe(struct device *device,
 	priv = netdev_priv(ndev);
 	priv->device = device;
 	priv->dev = ndev;
+
+	priv->wol_resume_reset = true;
 
 	for (i = 0; i < MTL_MAX_RX_QUEUES; i++)
 		u64_stats_init(&priv->xstats.rxq_stats[i].napi_syncp);
@@ -7649,6 +7660,8 @@ error_phy_setup:
 	    priv->hw->pcs != STMMAC_PCS_RTBI)
 		stmmac_mdio_unregister(ndev);
 error_mdio_register:
+	pm_runtime_put_sync(device);
+	pm_runtime_disable(device);
 	stmmac_napi_del(ndev);
 error_hw_init:
 	destroy_workqueue(priv->wq);
@@ -7853,8 +7866,10 @@ int stmmac_resume(struct device *dev)
 
 	rtnl_lock();
 	if (device_may_wakeup(priv->device) && priv->plat->pmt) {
+		priv->wol_resume_reset = false;
 		phylink_resume(priv->phylink);
 	} else {
+		priv->wol_resume_reset = true;
 		phylink_resume(priv->phylink);
 		if (device_may_wakeup(priv->device))
 			phylink_speed_up(priv->phylink);
@@ -7869,6 +7884,7 @@ int stmmac_resume(struct device *dev)
 	stmmac_free_tx_skbufs(priv);
 
 	stmmac_hw_setup(ndev, false);
+	priv->wol_resume_reset = true;
 	stmmac_init_coalesce(priv);
 	stmmac_set_rx_mode(ndev);
 
