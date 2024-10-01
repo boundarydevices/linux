@@ -72,23 +72,6 @@ enum mdp_ycbcr_profile mdp_map_ycbcr_prof_mplane(struct v4l2_format *f,
 	}
 }
 
-static void mdp_bound_align_image(u32 *w, u32 *h,
-				  struct v4l2_frmsize_stepwise *s,
-				  unsigned int salign)
-{
-	unsigned int org_w, org_h;
-
-	org_w = *w;
-	org_h = *h;
-	v4l_bound_align_image(w, s->min_width, s->max_width, s->step_width,
-			      h, s->min_height, s->max_height, s->step_height,
-			      salign);
-
-	s->min_width = org_w;
-	s->min_height = org_h;
-	v4l2_apply_frmsize_constraints(w, h, s);
-}
-
 static int mdp_clamp_align(s32 *x, int min, int max, unsigned int align)
 {
 	unsigned int mask;
@@ -165,14 +148,14 @@ const struct mdp_format *mdp_try_fmt_mplane(struct mdp_dev *mdp,
 						&param->limit->cap_limit;
 	s.min_width = pix_limit->wmin;
 	s.max_width = pix_limit->wmax;
-	s.step_width = fmt->walign;
+	s.step_width = 1 << fmt->walign;
 	s.min_height = pix_limit->hmin;
 	s.max_height = pix_limit->hmax;
-	s.step_height = fmt->halign;
+	s.step_height = 1 << fmt->halign;
 	org_w = pix_mp->width;
 	org_h = pix_mp->height;
 
-	mdp_bound_align_image(&pix_mp->width, &pix_mp->height, &s, fmt->salign);
+	v4l2_apply_frmsize_constraints(&pix_mp->width, &pix_mp->height, &s);
 	if (org_w != pix_mp->width || org_h != pix_mp->height)
 		dev_dbg(dev, "%d: size change: %ux%u to %ux%u", ctx_id,
 			org_w, org_h, pix_mp->width, pix_mp->height);
