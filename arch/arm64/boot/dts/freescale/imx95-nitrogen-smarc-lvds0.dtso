@@ -1,0 +1,111 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/fsl,imx95-clock.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+#include "imx95-pinfunc.h"
+
+&{/} {
+	lvds0_backlight: lvds0-backlight {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		enable-gpios = <&pcal6524 20 GPIO_ACTIVE_HIGH>;
+		pwms = <&tpm4 2 30000 0>;
+	};
+};
+
+&{/soc/} {
+	lvds0-panel {
+		compatible = "boundary,bd070-101"; /* For BD070LIC3 and BD101LCC3 */
+		backlight = <&lvds0_backlight>;
+
+		port {
+			panel_lvds0_in: endpoint {
+				remote-endpoint = <&lvds0_out>;
+			};
+		};
+	};
+};
+
+&display_pixel_link {
+	status = "okay";
+};
+
+&displaymix_irqsteer {
+	status = "okay";
+};
+
+&dpu {
+	status = "okay";
+};
+
+&i2c_pmic {
+	ts_lvds_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		reg = <0x5d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_lvds_goodix>;
+		interrupts-extended = <&gpio5 6 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&gpio5 6 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+};
+
+&ldb {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	assigned-clocks = <&scmi_clk IMX95_CLK_LDBPLL_VCO>,
+			  <&scmi_clk IMX95_CLK_LDBPLL>;
+	assigned-clock-rates = <2986200000>, <497700000>;
+	status = "okay";
+
+	channel@0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			lvds0_out: endpoint {
+				remote-endpoint = <&panel_lvds0_in>;
+			};
+		};
+	};
+};
+
+&ldb0_phy {
+	status = "okay";
+};
+
+&pixel_interleaver {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	channel@0 {
+		reg = <0>;
+		status = "okay";
+	};
+};
+
+&tpm4 {
+	status = "okay";
+};
+
+&scmi_iomuxc {
+	pinctrl_lvds_goodix: lvds0-goodixgrp {
+		fsl,pins = <
+			IMX95_PAD_XSPI1_DATA6__GPIO5_IO_BIT6	0x37e
+		>;
+	};
+};
