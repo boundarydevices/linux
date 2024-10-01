@@ -21,7 +21,7 @@ SECTIONS {
 
 	.hyp.event_ids : {
 		HYP_SECTION_SYMBOL_NAME(.event_ids) = .;
-		*(HYP_SECTION_NAME(.event_ids))
+		*(SORT(HYP_SECTION_NAME(.event_ids.*)))
 		*(HYP_SECTION_NAME(.printk_fmt_offset))
 	}
 
