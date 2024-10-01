@@ -1,0 +1,314 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 Ezurio LLC
+ */
+
+/dts-v1/;
+
+#include "imx95-nitrogen-smarc.dtsi"
+
+/ {
+	model = "Ezurio Nitrogen95 SMARC board";
+	compatible = "fsl,imx95-nitrogen-smarc", "fsl,imx95";
+
+	aliases {
+		can0 = &flexcan1;
+		can1 = &flexcan2;
+		ethernet0 = &enetc_port0;
+		ethernet1 = &enetc_port1;
+		rtc0 = &rv3028;
+		rtc1 = &scmi_bbm;
+	};
+
+	reg_can1_stby: regulator-can1-stby {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_can1_stby>;
+		regulator-name = "can1-stby";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio2 22 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	reg_can2_stby: regulator-can2-stby {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_can2_stby>;
+		regulator-name = "can2-stby";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio2 28 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	reg_usb_otg_vbus: regulator-usb-otg-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_otg_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pcal6524 21 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	sound-wm8962 {
+		compatible = "fsl,imx-audio-wm8962";
+		model = "wm8962-audio";
+		audio-cpu = <&sai3>;
+		audio-codec = <&codec>;
+		audio-routing =
+			"Headphone Jack", "HPOUTL",
+			"Headphone Jack", "HPOUTR",
+			"Ext Spk", "SPKOUTL",
+			"Ext Spk", "SPKOUTR",
+			"AMIC", "MICBIAS",
+			"IN3R", "AMIC",
+			"IN1R", "AMIC";
+		codec-master;
+	};
+};
+
+&flexcan1 {
+	xceiver-supply = <&reg_can1_stby>;
+	status = "okay";
+};
+
+&flexcan2 {
+	xceiver-supply = <&reg_can2_stby>;
+	status = "okay";
+};
+
+&i2c_gp {
+	mux9546-gp@73 {
+		compatible = "nxp,pca9546";
+		reg = <0x73>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_mux9546_gp>;
+		reset-gpios = <&gpio2 30 GPIO_ACTIVE_LOW>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_gp_a: i2c2@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_gp_b: i2c2@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_gp_c: i2c2@2 {
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_gp_d: i2c2@3 {
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c_gp_a {
+	rv3028: rtc@52 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_rv3028>;
+		backup-switchover-dsm;
+		#clock-cells = <0>;
+		compatible = "microcrystal,rv3028";
+		reg = <0x52>;
+		interrupts-extended = <&gpio2 9 IRQ_TYPE_LEVEL_LOW>;
+		wakeup-source;
+	};
+};
+
+&i2c_gp_b {
+	usb_mux: hd3ss3220@60 {
+		compatible = "ti,hd3ss3220";
+		interrupts-extended = <&gpio2 3 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_hd3ss3220>;
+		reg = <0x60>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hd3ss3220_in_ep: endpoint {
+					remote-endpoint = <&ss_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				hd3ss3220_out_ep: endpoint {
+					remote-endpoint = <&usb_role_switch>;
+				};
+			};
+		};
+	};
+};
+
+&i2c_gp_c {
+	codec: wm8962@1a {
+		#sound-dai-cells = <0>;
+		compatible = "wlf,wm8962";
+		clocks = <&scmi_clk IMX95_CLK_SAI3>;
+		reg = <0x1a>;
+		gpio-cfg = <
+			0x0000 /* n/c */
+			0x0000 /* gpio2: */
+			0x0000 /* gpio3: */
+			0x0000 /* n/c */
+			0x8081 /* gpio5:HP detect */
+			0x8095 /* gpio6:Mic detect */
+		>;
+		gpio-line-names = "N/C", "GPIO2",
+			"GPIO3", "N/C",
+			"GPIO5:HP detect",
+			"GPIO6:Mic detect";
+	};
+};
+
+/* SMARC I2C_LCD */
+&lpi2c2 {
+	i2c2mux@73 {
+		pinctrl-names = "default";
+		compatible = "nxp,pca9546";
+		reg = <0x73>;
+		vdd-supply = <&reg_1p8v>;
+		reset-gpios = <&gpio2 8 GPIO_ACTIVE_LOW>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_lcd_exp1: i2c2mux@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_lcd_exp2: i2c2mux@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_lcd_dsi0: i2c2mux@2 {
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_lcd_dsi1: i2c2mux@3 {
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&sai3 {
+	#sound-dai-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai3>;
+	assigned-clocks = <&scmi_clk IMX95_CLK_SAI3>;
+	assigned-clock-parents = <&scmi_clk IMX95_CLK_AUDIOPLL1>;
+	assigned-clock-rates = <24000000>;
+	fsl,sai-mclk-direction-output;
+	status = "okay";
+};
+
+&usb2 {
+	vbus-supply = <&reg_usb_otg_vbus>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			usb_hs_ep: endpoint {
+				remote-endpoint = <&hs_ep>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			usb_role_switch: endpoint {
+				remote-endpoint = <&hd3ss3220_out_ep>;
+			};
+		};
+	};
+
+	connector {
+		compatible = "usb-c-connector";
+		label = "USB-C";
+		data-role = "dual";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hs_ep: endpoint {
+					remote-endpoint = <&usb_hs_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				ss_ep: endpoint {
+					remote-endpoint = <&hd3ss3220_in_ep>;
+				};
+			};
+		};
+	};
+};
+
+&scmi_iomuxc {
+	pinctrl_mux9546_gp: mux9546gpgrp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO30__GPIO2_IO_BIT30		0x31e
+		>;
+	};
+
+	pinctrl_hd3ss3220: hd3ss3220grp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO03__GPIO2_IO_BIT3		0x31e
+		>;
+	};
+
+	pinctrl_reg_can1_stby: regcan1stbygrp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO22__GPIO2_IO_BIT22		0x31e
+		>;
+	};
+
+	pinctrl_reg_can2_stby: regcan2stbygrp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO28__GPIO2_IO_BIT28		0x31e
+		>;
+	};
+
+	pinctrl_rv3028: rv3028grp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO09__GPIO2_IO_BIT9		0x31e
+		>;
+	};
+};
