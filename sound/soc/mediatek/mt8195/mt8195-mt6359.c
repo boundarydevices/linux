@@ -75,9 +75,27 @@ static struct snd_soc_jack_pin mt8195_jack_pins[] = {
 	},
 };
 
+/* HDMI jack detection DAPM pins */
+static struct snd_soc_jack_pin mt8195_hdmi_jack_pins[] = {
+	{
+		.pin = "HDMI",
+		.mask = SND_JACK_LINEOUT,
+	},
+};
+
+/* DP jack detection DAPM pins */
+static struct snd_soc_jack_pin mt8195_dp_jack_pins[] = {
+	{
+		.pin = "DP",
+		.mask = SND_JACK_LINEOUT,
+	},
+};
+
 static const struct snd_soc_dapm_widget mt8195_mt6359_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
+	SND_SOC_DAPM_SINK("HDMI"),
+	SND_SOC_DAPM_SINK("DP"),
 	SND_SOC_DAPM_MIXER(SOF_DMA_DL2, SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER(SOF_DMA_DL3, SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER(SOF_DMA_UL4, SND_SOC_NOPM, 0, 0, NULL, 0),
@@ -433,8 +451,9 @@ static int mt8195_dptx_codec_init(struct snd_soc_pcm_runtime *rtd)
 		asoc_rtd_to_codec(rtd, 0)->component;
 	int ret;
 
-	ret = snd_soc_card_jack_new(rtd->card, "DP Jack", SND_JACK_LINEOUT,
-				    &priv->dp_jack);
+	ret = snd_soc_card_jack_new_pins(rtd->card, "DP Jack", SND_JACK_LINEOUT,
+				    &priv->dp_jack, mt8195_dp_jack_pins,
+				    ARRAY_SIZE(mt8195_dp_jack_pins));
 	if (ret)
 		return ret;
 
@@ -449,8 +468,9 @@ static int mt8195_hdmi_codec_init(struct snd_soc_pcm_runtime *rtd)
 		asoc_rtd_to_codec(rtd, 0)->component;
 	int ret;
 
-	ret = snd_soc_card_jack_new(rtd->card, "HDMI Jack", SND_JACK_LINEOUT,
-				    &priv->hdmi_jack);
+	ret = snd_soc_card_jack_new_pins(rtd->card, "HDMI Jack", SND_JACK_LINEOUT,
+				    &priv->hdmi_jack, mt8195_hdmi_jack_pins,
+				    ARRAY_SIZE(mt8195_hdmi_jack_pins));
 	if (ret)
 		return ret;
 
