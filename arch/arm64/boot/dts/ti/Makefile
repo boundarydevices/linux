@@ -17,6 +17,7 @@ dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon.dtb
 dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-csi2-ov5640.dtbo
 dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-csi2-imx219.dtbo
 dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-lvds-hdmi-adapter.dtbo
+dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-m2-sdio.dtbo
 dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-rgb-hdmi-adapter.dtbo
 dtb-$(CONFIG_ARCH_K3) += k3-am625-carbon-rgb-lvds-adapter.dtbo
 dtb-$(CONFIG_ARCH_K3) += k3-am625-phyboard-lyra-rdk.dtb
