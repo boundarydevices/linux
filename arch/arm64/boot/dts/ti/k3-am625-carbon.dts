@@ -253,7 +253,7 @@
 			"", "", "", "";
 
 		/* Force SDIO_A_SEL output-low for SDCARD, high for M.2 */
-		sdio-a-sel-hog {
+		sdio_a_sel_hog: sdio-a-sel-hog {
 			/* SDIO_A_SEL U51 P10 */
 			gpio-hog;
 			gpios = <8 GPIO_ACTIVE_HIGH>;

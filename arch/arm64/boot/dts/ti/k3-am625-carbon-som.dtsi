@@ -18,8 +18,9 @@
 
 	aliases {
 		serial2 = &main_uart0; /* CONSOLE */
-		serial3 = &main_uart6; /* UART_A */
-		serial4 = &mcu_uart0;  /* UART_B */
+		serial3 = &main_uart1; /* BT */
+		serial4 = &main_uart6; /* UART_A */
+		serial5 = &mcu_uart0;  /* UART_B */
 		serial6 = &main_uart4; /* UART_D */
 		mmc0 = &sdhci0;
 		mmc1 = &sdhci1;
@@ -142,6 +143,26 @@
 		regulator-boot-on;
 	};
 
+	vcc_1v8_sys: regulator-u3-b2 {
+		/* output of U3 Buck 2 */
+		bootph-all;
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_1v8_sys";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&main_wifi_en_default>;
+		reset-gpios = <&main_gpio0 20 GPIO_ACTIVE_LOW>; /* W_DISABLE# */
+		post-power-on-delay-ms = <100>;
+		status = "okay";
+	};
+
 	vdd_sd: regulator-u3-ldo1 {
 		/* Output of U3 TPS6521920WRHBRQ1 VLDO1 */
 		bootph-all;
@@ -219,7 +240,7 @@
 		"","","","","",
 		"","","","","",					/* 10 - 14 */
 		"","","GPIO_B_7","SDIO_A_PWR_EN","GPIO_C_2",
-		"","","","","",					/* 20 - 24 */
+		"W_DISABLE#","","W_DISABLE2#","","",		/* 20 - 24 */
 		"GPIO_C_3","GPIO_C_6","","","GPIO_C_7",
 		"GPIO_B_6","SDIO_A_IOPWR","","RGB_RESET#","",	/* 30 - 34 */
 		"","GPIO_B_3","GPIO_A_0","GPIO_B_2","GPIO_C_0",
@@ -393,6 +414,13 @@
 		>;
 	};
 
+	main_bt_gpio_pins_default: main-bt-gpio-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0084, PIN_INPUT, 7) /* BT_HOST_WAKE (L23) GPMC0_ADVn_ALE.GPIO0_32 */
+			AM62X_IOPAD(0x0058, PIN_OUTPUT, 7) /* W_DISABLE2# (R23) GPMC0_AD7.GPIO0_22 */
+		>;
+	};
+
 	main_ecap2_pins_default: main-ecap2-default-pins {
 		pinctrl-single,pins = <
 			AM62X_IOPAD(0x01a4, PIN_OUTPUT, 2) /* CAM_MCK (B20) MCASP0_ACLKX.ECAP2_IN_APWM_OUT */
@@ -471,9 +499,10 @@
 			AM62X_IOPAD(0x0120, PIN_INPUT, 0) /* (C24) MMC2_CMD */
 			AM62X_IOPAD(0x0118, PIN_OUTPUT, 0) /* (D25) MMC2_CLK */
 			AM62X_IOPAD(0x0114, PIN_INPUT, 0) /* (B24) MMC2_DAT0 */
-			AM62X_IOPAD(0x0110, PIN_INPUT_PULLUP, 0) /* (C25) MMC2_DAT1 */
-			AM62X_IOPAD(0x010c, PIN_INPUT_PULLUP, 0) /* (E23) MMC2_DAT2 */
-			AM62X_IOPAD(0x0108, PIN_INPUT_PULLUP, 0) /* (D24) MMC2_DAT3 */
+			AM62X_IOPAD(0x0110, PIN_INPUT, 0) /* (C25) MMC2_DAT1 */
+			AM62X_IOPAD(0x010c, PIN_INPUT, 0) /* (E23) MMC2_DAT2 */
+			AM62X_IOPAD(0x0108, PIN_INPUT, 0) /* (D24) MMC2_DAT3 */
+			AM62X_IOPAD(0x11c, PIN_INPUT, 0) /* (#N/A) MMC2_CLKB */
 		>;
 	};
 
@@ -619,6 +648,18 @@
 		>;
 	};
 
+	main_wifi_en_default: main-wifi-en-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0050, PIN_OUTPUT, 7) /* W_DISABLE# (P22) GPMC0_AD5.GPIO0_20 */
+		>;
+	};
+
+	main_wifi_wake_default: main-wifi-wake-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0040, PIN_INPUT, 7) /* SDIO_WAKE# (N23) GPMC0_AD1.GPIO0_16 */
+		>;
+	};
+
 	pmic_irq_pins_default: pmic-irq-default-pins {
 		pinctrl-single,pins = <
 			AM62X_IOPAD(0x01f4, PIN_INPUT, 0) /* (D16) EXTINTn */
@@ -664,22 +705,31 @@
 };
 
 &main_uart1 {
-	/* Main UART1 is used by TIFS firmware */
-	bootph-pre-ram;
-	status = "reserved";
+	/* ttyS3 BT (Also used by TIFS firmware) */
+	bootph-all;
+	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&main_uart1_pins_default>;
+	pinctrl-0 = <&main_uart1_pins_default>, <&main_bt_gpio_pins_default>;
+	uart-has-rtscts;
+	// TODO interrupt <&main_gpio0 32 IRQ_TYPE_LEVEL_LOW>; /* BT_HOST_WAKE */
+
+	bluetooth {
+		shutdown-gpios = <&main_gpio0 22 GPIO_ACTIVE_HIGH>; /* W_DISABLE2# */
+		compatible = "infineon,cyw55572-bt";
+		brcm,requires-autobaud-mode;
+		max-speed = <921600>;
+	};
 };
 
 &main_uart4 {
-	/* UART_D */
+	/* ttyS6 UART_D */
 	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_uart4_pins_default>;
 };
 
 &main_uart6 {
-	/* UART_A */
+	/* ttyS4 UART_A */
 	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_uart6_pins_default>;
@@ -768,7 +818,7 @@
 };
 
 &mcu_uart0 {
-	/* UART_B */
+	/* ttyS5 UART_B */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_mcu_uart0>;
 	status = "disabled";
@@ -799,7 +849,21 @@
 &sdhci2 { /* SDIO_B  WIFI */
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&main_mmc2_pins_default>;
+	pinctrl-0 = <&main_mmc2_pins_default>, <&main_wifi_wake_default>;
+	vmmc-supply = <&vcc_3v3_sys>;
+	vqmmc-supply = <&vcc_1v8_sys>;
+	mmc-pwrseq = <&wifi_pwrseq>; /* W_DISABLE# */
+	non-removable;
+	ti,fails-without-test-cd;
+	cap-power-off-card;
+	keep-power-in-suspend;
+
+	wifi@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+		interrupts-extended = <&main_gpio0 16 IRQ_TYPE_LEVEL_LOW>; /* SDIO_WAKE# */
+		laird,regdomain = "US";
+	};
 };
 
 #define K3_TS_OFFSET(pa, val)	(0x4+(pa)*4) (0x10000 | val)
