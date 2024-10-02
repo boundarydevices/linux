@@ -231,12 +231,10 @@ DECLARE_RESTRICTED_HOOK(android_rvh_sched_balance_rt,
 	TP_PROTO(struct rq *rq, struct task_struct *p, int *done),
 	TP_ARGS(rq, p, done), 1);
 
-DECLARE_RESTRICTED_HOOK(android_rvh_check_preempt_wakeup,
+DECLARE_RESTRICTED_HOOK(android_rvh_check_preempt_wakeup_fair,
 	TP_PROTO(struct rq *rq, struct task_struct *p, bool *preempt, bool *nopreempt,
-			int wake_flags, struct sched_entity *se, struct sched_entity *pse,
-			int next_buddy_marked, unsigned int granularity),
-	TP_ARGS(rq, p, preempt, nopreempt, wake_flags, se, pse, next_buddy_marked,
-			granularity), 1);
+			int wake_flags, struct sched_entity *se, struct sched_entity *pse),
+	TP_ARGS(rq, p, preempt, nopreempt, wake_flags, se, pse), 1);
 
 DECLARE_RESTRICTED_HOOK(android_rvh_update_deadline,
 	TP_PROTO(struct cfs_rq *cfs_rq, struct sched_entity *se, bool *skip_preempt),
