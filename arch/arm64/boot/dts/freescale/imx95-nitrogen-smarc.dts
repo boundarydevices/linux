@@ -12,30 +12,32 @@
 	compatible = "fsl,imx95-nitrogen-smarc", "fsl,imx95";
 
 	aliases {
+		can0 = &flexcan1;
+		can1 = &flexcan2;
 		ethernet0 = &enetc_port0;
 		ethernet1 = &enetc_port1;
 		rtc0 = &rv3028;
 	};
 
-	reg_can1_stby: regulator-can0-stby {
+	reg_can1_stby: regulator-can1-stby {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_can1_stby>;
 		regulator-name = "can1-stby";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio2 22 GPIO_ACTIVE_HIGH>; /* CCM_CLK02 -> GPIO1 */
+		gpio = <&gpio2 22 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 
-	reg_can2_stby: regulator-can1-stby {
+	reg_can2_stby: regulator-can2-stby {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_can2_stby>;
 		regulator-name = "can2-stby";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio2 28 GPIO_ACTIVE_HIGH>; /* P1_7 -> GPIO4 */
+		gpio = <&gpio2 28 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 
