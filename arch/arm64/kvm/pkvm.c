@@ -873,6 +873,8 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 		return ret;
 	}
 
+	hyp_trace_enable_event_early();
+
 	return 0;
 }
 EXPORT_SYMBOL(__pkvm_load_el2_module);

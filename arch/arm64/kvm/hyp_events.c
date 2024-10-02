@@ -353,7 +353,7 @@ static __init int setup_hyp_event_early(char *str)
 }
 __setup("hyp_event=", setup_hyp_event_early);
 
-bool hyp_trace_init_event_early(void)
+bool hyp_event_early_probe(void)
 {
 	char *token, *buf = early_events;
 	bool enabled = false;
@@ -376,8 +376,6 @@ bool hyp_trace_init_event_early(void)
 						token, ret);
 				else
 					enabled = true;
-			} else {
-				pr_warn("Couldn't find hyp event %s\n", token);
 			}
 		}
 

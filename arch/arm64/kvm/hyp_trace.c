@@ -987,12 +987,21 @@ static void hyp_trace_buffer_printk(struct hyp_trace_buffer *hyp_buffer)
 	}
 }
 
+void hyp_trace_enable_event_early(void)
+{
+	if (hyp_event_early_probe()) {
+		int err = hyp_trace_start();
+
+		if (err)
+			pr_warn("Failed to start early events tracing: %d\n", err);
+	}
+}
+
 int hyp_trace_init_tracefs(void)
 {
 	struct dentry *root, *per_cpu_root;
 	char per_cpu_name[16];
 	long cpu;
-	int err;
 
 	if (!is_protected_kvm_enabled())
 		return 0;
@@ -1046,17 +1055,14 @@ int hyp_trace_init_tracefs(void)
 	}
 
 	hyp_trace_init_event_tracefs(root);
+
+	hyp_trace_enable_event_early();
+
 	hyp_trace_init_testing_tracefs(root);
 
 	if (hyp_trace_buffer.printk_on &&
 	    hyp_trace_buffer_printk_init(&hyp_trace_buffer))
 		pr_warn("Failed to init ht_printk");
-
-	if (hyp_trace_init_event_early()) {
-		err = hyp_trace_start();
-		if (err)
-			pr_warn("Failed to start early events tracing: %d\n", err);
-	}
 
 	return 0;
 }
