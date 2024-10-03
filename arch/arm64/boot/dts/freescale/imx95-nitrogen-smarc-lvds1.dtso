@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/fsl,imx95-clock.h>
+#include <dt-bindings/gpio/gpio.h>
+
+#include "imx95-pinfunc.h"
+
+&{/} {
+	lvds_backlight: lvds-backlight {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_lvds_backlight>;
+		pwms = <&tpm3 2 30000 0>;
+	};
+
+	lvds_panel {
+		compatible = "boundary,bd070-101"; /* For BD070LIC3 and BD101LCC3 */
+		backlight = <&lvds_backlight>;
+
+		port {
+			panel_lvds_in: endpoint {
+				remote-endpoint = <&lvds1_out>;
+			};
+		};
+	};
+};
+
+&display_pixel_link {
+	status = "okay";
+};
+
+&displaymix_irqsteer {
+	status = "okay";
+};
+
+&dpu {
+	status = "okay";
+};
+
+&ldb {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	//assigned-clocks = <&scmi_clk IMX95_CLK_LDBPLL_VCO>,
+	//		  <&scmi_clk IMX95_CLK_LDBPLL>;
+	//assigned-clock-rates = <4158000000>, <1039500000>;
+	status = "okay";
+
+	channel@1 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <1>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			lvds1_out: endpoint {
+				remote-endpoint = <&panel_lvds_in>;
+			};
+		};
+	};
+};
+
+&ldb1_phy {
+	status = "okay";
+};
+
+&pixel_interleaver {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	channel@1 {
+		reg = <1>;
+		status = "okay";
+	};
+};
+
+&tpm3 {
+	status = "okay";
+};
+
+&scmi_iomuxc {
+	pinctrl_lvds_backlight: lvds-backlightgrp {
+		fsl,pins = <
+			IMX95_PAD_XSPI1_DATA4__GPIO5_IO_BIT4	0x37e
+		>;
+	};
+};
