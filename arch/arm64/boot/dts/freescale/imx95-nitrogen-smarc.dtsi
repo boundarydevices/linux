@@ -112,7 +112,7 @@
 		regulator-name = "SD3_RST";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&pcal6534 14 GPIO_ACTIVE_HIGH>;
+		gpio = <&pcal6524 12 GPIO_ACTIVE_HIGH>;
 		startup-delay-us = <70000>;
 		enable-active-high;
 	};
@@ -182,8 +182,8 @@
 	pinctrl-1 = <&pinctrl_lpi2c1>;
 	status = "disabled"; // Can't use I2C1!
 
-	pcal6534: gpio@22 {
-		compatible = "nxp,pcal6534";
+	pcal6524: gpio@22 {
+		compatible = "nxp,pcal6524";
 		reg = <0x22>;
 		gpio-controller;
 		#gpio-cells = <2>;
@@ -218,7 +218,7 @@
 		compatible = "nxp,pca9546";
 		reg = <0x71>;
 		vdd-supply = <&reg_1p8v>;
-		reset-gpios = <&pcal6534 18 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&pcal6524 19 GPIO_ACTIVE_LOW>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -265,7 +265,7 @@
 	status = "okay";
 
 	bluetooth {
-		shutdown-gpios = <&pcal6534 4 GPIO_ACTIVE_HIGH>;
+		shutdown-gpios = <&pcal6524 2 GPIO_ACTIVE_HIGH>;
 		compatible = "infineon,cyw55572-bt";
 		brcm,requires-autobaud-mode;
 		max-speed = <921600>;
@@ -336,11 +336,13 @@
 
 &pcie0 {
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
+	reset-gpio = <&pcal6524 13 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
 &pcie1 {
 	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+	reset-gpio = <&pcal6524 14 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
@@ -432,6 +434,16 @@
 			};
 		};
 	};
+};
+
+&tpm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_tpm2>;
+};
+
+&tpm3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_tpm3>;
 };
 
 &usb2 {
@@ -620,6 +632,18 @@
 			IMX95_PAD_GPIO_IO26__SAI3_TX_SYNC			0x31e
 			IMX95_PAD_GPIO_IO20__SAI3_RX_DATA_BIT0			0x31e
 			IMX95_PAD_GPIO_IO21__SAI3_TX_DATA_BIT0			0x31e
+		>;
+	};
+
+	pinctrl_tpm2: tpm2grp {
+		fsl,pins = <
+			IMX95_PAD_PDM_BIT_STREAM1__AONMIX_TOP_TPM2_EXTCLK	0x31e
+		>;
+	};
+
+	pinctrl_tpm3: tpm3grp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO12__TPM3_CH2			0x31e
 		>;
 	};
 
