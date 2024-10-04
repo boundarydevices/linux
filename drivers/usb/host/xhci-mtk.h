@@ -162,6 +162,7 @@ struct xhci_hcd_mtk {
 	u32 uwk_vers;
 	/* quirk */
 	u32 rxfifo_depth;
+	bool fix_rx_depth;
 };
 
 static inline struct xhci_hcd_mtk *hcd_to_mtk(struct usb_hcd *hcd)

@@ -75,6 +75,7 @@
 #define FRMCNT_LEV1_RANG_MASK	GENMASK(19, 8)
 
 #define HSCH_CFG1		0x960
+#define SCH3_RXFIFO_DEPTH(p)   (p << 20)
 #define SCH3_RXFIFO_DEPTH_MASK	GENMASK(21, 20)
 
 #define SS_GEN2_EOF_CFG		0x990
@@ -130,6 +131,22 @@ enum ssusb_uwk_vers {
 	SSUSB_UWK_V1_5,		/* mt8195 IP2 */
 	SSUSB_UWK_V1_6,		/* mt8195 IP3 */
 };
+
+/*
+ * Some Chips has issues that host will send redunct ACK when receive
+ * a short packet with the end of burst flag, and cause some devices
+ * return meanningless data.
+ */
+static void xhci_mtk_rx_depth_set(struct xhci_hcd_mtk *mtk)
+{
+	struct usb_hcd *hcd = mtk->hcd;
+	u32 value;
+
+	value = readl(hcd->regs + HSCH_CFG1);
+	value &= ~SCH3_RXFIFO_DEPTH_MASK;
+	value |= SCH3_RXFIFO_DEPTH(2);
+	writel(value, hcd->regs + HSCH_CFG1);
+}
 
 /*
  * MT8195 has 4 controllers, the controller1~3's default SOF/ITP interval
@@ -310,9 +327,10 @@ static int xhci_mtk_ssusb_config(struct xhci_hcd_mtk *mtk)
 {
 	struct mu3c_ippc_regs __iomem *ippc = mtk->ippc_regs;
 	u32 value;
+	int ret = 0;
 
 	if (!mtk->has_ippc)
-		return 0;
+		goto out;
 
 	/* reset whole ip */
 	value = readl(&ippc->ip_pw_ctr0);
@@ -337,7 +355,13 @@ static int xhci_mtk_ssusb_config(struct xhci_hcd_mtk *mtk)
 	dev_dbg(mtk->dev, "%s u2p:%d, u3p:%d\n", __func__,
 			mtk->num_u2_ports, mtk->num_u3_ports);
 
-	return xhci_mtk_host_enable(mtk);
+	ret = xhci_mtk_host_enable(mtk);
+
+out:
+	if (mtk->fix_rx_depth)
+		xhci_mtk_rx_depth_set(mtk);
+
+	return ret;
 }
 
 /* only clocks can be turn off for ip-sleep wakeup mode */
@@ -562,6 +586,10 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 			     &mtk->u2p_dis_msk);
 
 	of_property_read_u32(node, "rx-fifo-depth", &mtk->rxfifo_depth);
+
+	/* modify u3 rx fifo depth */
+	mtk->fix_rx_depth =
+		of_property_read_bool(node, "mediatek,u3-rx-fifo-depth");
 
 	ret = usb_wakeup_of_property_parse(mtk, node);
 	if (ret) {
