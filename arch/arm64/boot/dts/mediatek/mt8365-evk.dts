@@ -261,7 +261,7 @@
 		vcn18-supply = <&mt6357_vsim2_reg>;
 		vcn33-supply = <&mt6357_vibr_reg>;
 		vrf12-supply = <&mt6357_vrf12_reg>;
-		status = "disabled";
+		status = "okay";
 
 		ports {
 			#address-cells = <1>;
