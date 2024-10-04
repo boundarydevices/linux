@@ -17,6 +17,7 @@
 		ethernet0 = &enetc_port0;
 		ethernet1 = &enetc_port1;
 		rtc0 = &rv3028;
+		rtc1 = &scmi_bbm;
 	};
 
 	reg_can1_stby: regulator-can1-stby {
@@ -75,8 +76,6 @@
 };
 
 &i2c_gp {
-	status = "disabled";
-
 	mux9546-gp@73 {
 		compatible = "nxp,pca9546";
 		reg = <0x73>;
@@ -162,6 +161,7 @@
 	codec: wm8962@1a {
 		#sound-dai-cells = <0>;
 		compatible = "wlf,wm8962";
+		clocks = <&scmi_clk IMX95_CLK_SAI3>;
 		reg = <0x1a>;
 		gpio-cfg = <
 			0x0000 /* n/c */
@@ -220,6 +220,17 @@
 			#size-cells = <0>;
 		};
 	};
+};
+
+&sai3 {
+	#sound-dai-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai3>;
+	assigned-clocks = <&scmi_clk IMX95_CLK_SAI3>;
+	assigned-clock-parents = <&scmi_clk IMX95_CLK_AUDIOPLL1>;
+	assigned-clock-rates = <24000000>;
+	fsl,sai-mclk-direction-output;
+	status = "okay";
 };
 
 &usb2 {
