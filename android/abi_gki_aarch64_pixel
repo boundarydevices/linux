@@ -1282,6 +1282,7 @@
   mbox_controller_unregister
   mbox_free_channel
   mbox_request_channel
+  mbox_request_channel_byname
   mbox_send_message
   memchr
   memchr_inv
@@ -1586,6 +1587,7 @@
   __pkvm_load_el2_module
   __pkvm_topup_hyp_alloc
   __pkvm_topup_hyp_alloc_mgt
+  __pkvm_topup_hyp_alloc_mgt_gfp
   platform_bus_type
   platform_device_add
   platform_device_add_data
@@ -2597,6 +2599,7 @@
   vmalloc_user
   vmap
   vmf_insert_pfn_prot
+  vm_unmapped_area
   vprintk
   vprintk_emit
   vring_del_virtqueue
