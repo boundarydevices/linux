@@ -46,4 +46,14 @@ config TYPEC_MUX_NB7VPQ904M
 	  Say Y or M if your system has a On Semiconductor NB7VPQ904M Type-C
 	  redriver chip found on some devices with a Type-C port.
 
+config TYPEC_MUX_IT5205
+	tristate "ITE IT5250FN USB3 Alternate Mode MUX"
+	depends on I2C
+	select USB_ROLE_SWITCH
+	help
+	  Say Y or M if your system has a ITE IT5250FN USB3
+	  Alternate Mode MUX. It can control the USB role switch and also
+	  the multiplexer/demultiplexer switches used with USB Type-C
+	  Alternate Modes.
+
 endmenu
