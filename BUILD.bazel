@@ -1268,11 +1268,13 @@ kernel_build(
     # Otherwise, Bazel thinks that there are no output files, and skip building.
     outs = [".config"],
     build_config = "build.config.allmodconfig.aarch64",
+    defconfig = "//build/kernel/kleaf:allmodconfig",
     make_goals = [
         "Image",
         "modules",
     ],
     makefile = ":Makefile",
+    post_defconfig_fragments = [":kmi/aarch64/defconfig/allmodconfig"],
     visibility = ["//visibility:private"],
 )
 
@@ -1285,11 +1287,13 @@ kernel_build(
     outs = [".config"],
     arch = "x86_64",
     build_config = "build.config.allmodconfig.x86_64",
+    defconfig = "//build/kernel/kleaf:allmodconfig",
     make_goals = [
         "bzImage",
         "modules",
     ],
     makefile = ":Makefile",
+    post_defconfig_fragments = [":kmi/x86_64/defconfig/allmodconfig"],
     visibility = ["//visibility:private"],
 )
 
@@ -1303,11 +1307,13 @@ kernel_build(
     outs = [".config"],
     arch = "arm",
     build_config = "build.config.allmodconfig.arm",
+    defconfig = "//build/kernel/kleaf:allmodconfig",
     make_goals = [
         "zImage",
         "modules",
     ],
     makefile = ":Makefile",
+    post_defconfig_fragments = [":kmi/arm/defconfig/allmodconfig"],
     visibility = ["//visibility:private"],
 )
 
