@@ -283,10 +283,10 @@ void mtk_mmsys_vpp_rsz_merge_config(struct device *dev, u32 id, bool enable,
 	u32 reg;
 
 	switch (id) {
-	case 2:
+	case 0:
 		reg = MT8195_SVPP2_BUF_BF_RSZ_SWITCH;
 		break;
-	case 3:
+	case 1:
 		reg = MT8195_SVPP3_BUF_BF_RSZ_SWITCH;
 		break;
 	default:
