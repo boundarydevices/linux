@@ -202,7 +202,6 @@
 		regulator-max-microvolt = <5000000>;
 		gpio = <&i2c7_pcal6524 3 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	reg_m2_pwr: regulator-m2-pwr {
