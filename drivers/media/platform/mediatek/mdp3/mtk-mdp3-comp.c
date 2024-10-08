@@ -589,7 +589,7 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rsz.subfrms[index].rsz_switch);
 
-		id = data->comp_data[public_id].match.alias_id;
+		id = merge->alias_id;
 		dev = ctx->comp->mdp_dev->mm_subsys[MDP_MM_SUBSYS_1].mmsys;
 		mtk_mmsys_vpp_rsz_merge_config(dev, id, reg, NULL);
 
