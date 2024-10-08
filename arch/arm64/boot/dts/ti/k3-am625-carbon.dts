@@ -385,21 +385,6 @@
 		>;
 	};
 
-	main_spia_pins_default: spia-default-pins {
-		bootph-all;
-		pinctrl-single,pins = <
-			AM62X_IOPAD(0x00c, PIN_INPUT, 0) /* SPI_A_SDI (E25) OSPI0_D0 */
-			AM62X_IOPAD(0x010, PIN_OUTPUT, 0) /* SPI_A_SDO (G24) OSPI0_D1 */
-
-			AM62X_IOPAD(0x02c, PIN_OUTPUT, 0) /* SPI_A_CS0# (F23) OSPI0_CSn0 */
-			AM62X_IOPAD(0x030, PIN_OUTPUT, 0) /* SPI_A_CS1# (G21) OSPI0_CSn1 */
-			AM62X_IOPAD(0x000, PIN_OUTPUT, 0) /* SPI_A_SCK (H24) OSPI0_CLK */
-
-			AM62X_IOPAD(0x014, PIN_INPUT, 7) /* SPI_A_/WP_ (F25) OSPI0_D2.GPIO0_5 */
-			AM62X_IOPAD(0x018, PIN_INPUT, 7) /* SPI_A_/HOLD (F24) OSPI0_D3.GPIO0_6 */
-		>;
-	};
-
 	main_vdd_sdio_a_gpio: main-vdd-sdio-a-default-pins {
 		bootph-all;
 		pinctrl-single,pins = <
@@ -444,22 +429,54 @@
 	status = "okay";
 };
 
-&ospi0 { /* SPI_A Used as a normal SPI */
-	status = "disabled"; 	/* TODO */
-	pinctrl-names = "default";
-	pinctrl-0 = <&main_spia_pins_default>;
+&ospi0 { /* SPI_A Used as a qSPI */
+	status = "okay";
 
 	flash@0 {
 		compatible = "winbond,w25q64jwz", "jedec,spi-nor";
 		reg = <0>;
-		spi-rx-bus-width = <1>;
-		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <4>;
 		spi-max-frequency = <25000000>;
 		cdns,tshsl-ns = <60>;
 		cdns,tsd2d-ns = <60>;
 		cdns,tchsh-ns = <60>;
 		cdns,tslch-ns = <60>;
 		cdns,read-delay = <4>;
+
+		partitions {
+			bootph-all;
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* TODO Define usage / partitions */
+			partition@0 {
+				label = "qspi.part0";
+				reg = <0x0 0x80000>;
+			};
+
+			partition@80000 {
+				label = "qspi.part1";
+				reg = <0x80000 0x200000>;
+			};
+
+			partition@280000 {
+				label = "qspi.part2";
+				reg = <0x280000 0x400000>;
+			};
+
+			partition@680000 {
+				label = "qspi.part3";
+				reg = <0x680000 0x40000>;
+			};
+
+			partition@6c0000 {
+				label = "qspi.part4";
+				reg = <0x6c0000 0x40000>;
+			};
+
+		};
 	};
 };
 
