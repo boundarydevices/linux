@@ -27,6 +27,7 @@
 		dpi1 = &disp_dpi1;
 		dp-intf0 = &dp_intf0;
 		dp-intf1 = &dp_intf1;
+		hdmi0 = &hdmi0;
 		gce0 = &gce0;
 		gce1 = &gce1;
 		ethdr0 = &ethdr0;
@@ -1954,11 +1955,14 @@
 				 <&infracfg_ao CLK_INFRA_AO_HDMI_26M>,
 				 <&apmixedsys CLK_APMIXED_HDMIPLL1>,
 				 <&apmixedsys CLK_APMIXED_HDMIPLL2>;
-			clock-names = "hdmi_xtal_sel", "hdmi_26m",
+			clock-names = "pll_ref", "hdmi_26m",
 				      "hdmi_pll1", "hdmi_pll2";
 			clock-output-names = "hdmi_txpll";
 			#clock-cells = <0>;
 			#phy-cells = <0>;
+			mediatek,ibias = <0xa>;
+			mediatek,ibias-up = <0x1c>;
+			status = "disabled";
 		};
 
 		i2c0: i2c@11e00000 {
@@ -3713,12 +3717,25 @@
 				      "gfx_fe1_async", "vdo_be_async";
 		};
 
-		disp_dpi1: disp-dpi1@1c112000 {
+		disp_dpi1: disp_dpi1@1c112000 {
 			compatible = "mediatek,mt8195-dpi";
 			reg = <0 0x1c112000 0 0x1000>;
+			mediatek,vdosys1-dpi = <&vdosys1 0x0>;
 			interrupts = <GIC_SPI 512 IRQ_TYPE_LEVEL_HIGH 0>;
 			clock-names = "pixel", "engine";
 			status = "disabled";
+			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_DPI1>;
+			reset-names = "dpi_on";
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					dpi1_out: endpoint {
+						remote-endpoint = <&hdmi0_in>;
+					};
+				};
+			};
 		};
 
 		hdmi0: hdmi@1c300000 {
@@ -3744,6 +3761,16 @@
 			cec = <&cec>;
 			ddc-i2c-bus = <&hdmiddc0>;
 			status = "disabled";
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					hdmi0_in: endpoint {
+						remote-endpoint = <&dpi1_out>;
+					};
+				};
+			};
 		};
 
 		hdmirx0: hdmirx@1c400000 {
