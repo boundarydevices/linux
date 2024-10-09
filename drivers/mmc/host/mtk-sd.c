@@ -2005,7 +2005,7 @@ static struct msdc_delay_phase get_best_delay(struct msdc_host *host, u64 delay)
 	struct msdc_delay_phase delay_phase = { 0, };
 
 	if (delay == 0) {
-		dev_info(host->dev, "phase error: [map:%01611x]\n", delay);
+		dev_info(host->dev, "phase error: [map:%016llx]\n", delay);
 		delay_phase.final_phase = final_phase;
 		return delay_phase;
 	}
@@ -2026,7 +2026,7 @@ static struct msdc_delay_phase get_best_delay(struct msdc_host *host, u64 delay)
 		final_phase = (start_final + len_final / 3) % TUNE_STEP_MAX;
 	else
 		final_phase = (start_final + len_final / 2) % TUNE_STEP_MAX;
-	dev_info(host->dev, "phase: [map:%01611x] [maxlen:%d] [final:%u]\n",
+	dev_info(host->dev, "phase: [map:%016llx] [maxlen:%d] [final:%u]\n",
 		 delay, len_final, final_phase);
 
 	delay_phase.maxlen = len_final;
