@@ -14,7 +14,7 @@
 
 &{/} {
 	dsi-panel {
-		compatible = "boundary,bd070-101"; /* For BD070LIC3 and BD101LCC3 */
+		compatible = "infovision,ivo-m101nwwb";
 
 		port {
 			panel_dsi_in: endpoint {
