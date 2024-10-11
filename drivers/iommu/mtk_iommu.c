@@ -1722,6 +1722,13 @@ static const struct mtk_iommu_plat_data mt8188_data_vpp = {
 			   27, 28 /* ccu0 */, MTK_INVALID_LARBID}, {4, 6}},
 };
 
+static const unsigned int mt8188_apu_region_msk[][MTK_LARB_NR_MAX] = {
+	[0] = {[26] = BIT(2), [27] = BIT(2)},   /* Region0: larb 26&27 APU_SECURE */
+	[1] = {[26] = BIT(0), [27] = BIT(0)},   /* Region1: larb 26&27 APU_CODE */
+	[2] = {[26] = BIT(3), [27] = BIT(3)},   /* Region2: larb 26&27 APU_VLM */
+	[3] = {[26] = BIT(1), [27] = BIT(1)},   /* Region3: larb 26&27 APU_DATA */
+};
+
 static const struct mtk_iommu_plat_data mt8188_data_apu = {
 	.m4u_plat       = M4U_MT8188,
 	.flags          = DCM_DISABLE | MTK_IOMMU_TYPE_APU |
@@ -1732,6 +1739,8 @@ static const struct mtk_iommu_plat_data mt8188_data_apu = {
 	.banks_enable    = {true},
 	.iova_region    = mt8188_multi_dom_apu,
 	.iova_region_nr = ARRAY_SIZE(mt8188_multi_dom_apu),
+	.iova_region_larb_msk = mt8188_apu_region_msk,
+	.larbid_remap	= {{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}},
 };
 
 static const unsigned int mt8192_larb_region_msk[MT8192_MULTI_REGION_NR_MAX][MTK_LARB_NR_MAX] = {
