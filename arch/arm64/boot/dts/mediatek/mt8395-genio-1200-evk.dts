@@ -559,6 +559,19 @@
 		};
 	};
 
+	u2_default: u2default {
+		pin-id {
+			pinmux = <PINMUX_GPIO130__FUNC_IDDIG_1P>;
+			input-enable;
+			bias-pull-up;
+		};
+
+		pin-usb-vbus {
+			pinmux = <PINMUX_GPIO131__FUNC_USB_DRVVBUS_1P>;
+			output-low;
+		};
+	};
+
 	audio_default_pins: audio-default-pins {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO61__FUNC_DMIC1_CLK>,
@@ -1070,8 +1083,20 @@
 };
 
 &ssusb2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&u2_default>;
+	maximum-speed = "high-speed";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	mediatek,force-vbus;
+	usb-role-switch;
+	dr_mode = "otg"; /* host, peripheral, otg */
 	status = "okay";
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		id-gpios = <&pio 130 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &ssusb3 {
