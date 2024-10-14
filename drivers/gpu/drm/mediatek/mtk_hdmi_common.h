@@ -25,12 +25,17 @@
 
 #include <sound/hdmi-codec.h>
 
+//TODO: see what can be done here... :-/
+#include "mtk_mt8195_hdmi_ddc.h"
+#include "mtk_mt8195_hdmi.h"
 #include "mtk_cec.h"
 #include "mtk_hdmi.h"
 
 struct mtk_hdmi_conf {
 	bool tz_disabled;
 	bool cea_modes_only;
+	bool is_mt8195;
+	bool low_power;
 	unsigned long max_mode_clock;
 };
 
@@ -127,6 +132,15 @@ enum hdmi_aud_channel_swap_type {
 	HDMI_AUD_SWAP_LR_STATUS,
 };
 
+enum mtk_hdmi_clk_id_mt8195 {
+	MTK_MT8195_HDMI_CLK_HDMI_APB_SEL,
+	MTK_MT8195_HDMI_HDCP_PARENT,
+	MTK_MT8195_HDMI_HDCP_SEL,
+	MTK_MT8195_HDMI_HDCP_24M_SEL,
+	MTK_MT8195_HDMI_VPP_SPLIT_HDMI,
+	MTK_MT8195_HDMI_CLK_COUNT,
+};
+
 enum mtk_hdmi_clk_id_mt8183 {
 	MTK_MT8183_HDMI_CLK_HDMI_PIXEL,
 	MTK_MT8183_HDMI_CLK_HDMI_PLL,
@@ -136,6 +150,7 @@ enum mtk_hdmi_clk_id_mt8183 {
 };
 
 extern const char *const mtk_hdmi_clk_names_mt8183[MTK_MT8183_HDMI_CLK_COUNT];
+extern const char *const mtk_hdmi_clk_names_mt8195[MTK_MT8195_HDMI_CLK_COUNT];
 
 enum hdmi_hpd_state {
 	HDMI_PLUG_OUT = 0,
@@ -160,7 +175,7 @@ struct mtk_hdmi {
 	const struct mtk_hdmi_conf *conf;
 	struct phy *phy;
 	struct i2c_adapter *ddc_adpt;
-	struct clk *clk[MTK_MT8183_HDMI_CLK_COUNT];
+	struct clk *clk[MTK_MT8195_HDMI_CLK_COUNT];
 	struct drm_display_mode mode;
 	bool dvi_mode;
 	struct regmap *sys_regmap;
@@ -225,9 +240,13 @@ int mtk_drm_hdmi_probe(struct platform_device *pdev);
 int mtk_drm_hdmi_remove(struct platform_device *pdev);
 
 //TODO: do better than this? function pointers?
+extern const struct drm_bridge_funcs mtk_mt8195_hdmi_bridge_funcs;
 extern const struct drm_bridge_funcs mtk_mt8183_hdmi_bridge_funcs;
 void mtk_hdmi_output_init_mt8183(struct mtk_hdmi *hdmi);
+void mtk_hdmi_output_init_mt8195(struct mtk_hdmi *hdmi);
+void mtk_hdmi_clk_disable_mt8195(struct mtk_hdmi *hdmi);
 void mtk_hdmi_clk_disable_mt8183(struct mtk_hdmi *hdmi);
+void set_hdmi_codec_pdata_mt8195(struct hdmi_codec_pdata *codec_data);
 void set_hdmi_codec_pdata_mt8183(struct hdmi_codec_pdata *codec_data);
 
 #endif //_MTK_HDMI_COMMON_H

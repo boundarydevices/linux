@@ -211,12 +211,18 @@ static int mtk_hdmi_ddc_write_msg(struct mtk_hdmi_ddc *ddc, struct i2c_msg *msg)
 static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter,
 			     struct i2c_msg *msgs, int num)
 {
-	struct mtk_hdmi_ddc *ddc = adapter->algo_data;
-	struct device *dev = adapter->dev.parent;
+	struct mtk_hdmi_ddc *ddc;
+	struct device *dev;
 	int ret;
 	int i;
 
-	if (!ddc) {
+	if (!adapter || !msgs)
+		return -EINVAL;
+
+	ddc = adapter->algo_data;
+	dev = adapter->dev.parent;
+
+	if (!ddc || !ddc->regs) {
 		dev_err(dev, "invalid arguments\n");
 		return -EINVAL;
 	}
@@ -235,6 +241,9 @@ static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter,
 
 	for (i = 0; i < num; i++) {
 		struct i2c_msg *msg = &msgs[i];
+
+		if (!msg->buf)
+			return -EINVAL;
 
 		dev_dbg(dev, "i2c msg, adr:0x%x, flags:%d, len :0x%x\n",
 			msg->addr, msg->flags, msg->len);

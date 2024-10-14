@@ -6,6 +6,14 @@
  */
 #include "mtk_hdmi_common.h"
 
+const char *const mtk_hdmi_clk_names_mt8195[MTK_MT8195_HDMI_CLK_COUNT] = {
+	[MTK_MT8195_HDMI_CLK_HDMI_APB_SEL] = "bus",
+	[MTK_MT8195_HDMI_HDCP_PARENT] = "hdcp-parent",
+	[MTK_MT8195_HDMI_HDCP_SEL] = "hdcp",
+	[MTK_MT8195_HDMI_HDCP_24M_SEL] = "hdcp24m",
+	[MTK_MT8195_HDMI_VPP_SPLIT_HDMI] = "hdmi-split",
+};
+
 const char * const mtk_hdmi_clk_names_mt8183[MTK_MT8183_HDMI_CLK_COUNT] = {
 	[MTK_MT8183_HDMI_CLK_HDMI_PIXEL] = "pixel",
 	[MTK_MT8183_HDMI_CLK_HDMI_PLL] = "pll",
@@ -144,6 +152,18 @@ int mtk_hdmi_setup_avi_infoframe(struct mtk_hdmi *hdmi, u8 *buffer, size_t bufsz
 		return err;
 	}
 
+	if (hdmi->conf && hdmi->conf->is_mt8195) {
+		frame.colorimetry = hdmi->colorimtery;
+		//no need, since we cannot support other extended colorimetry?
+		if (frame.colorimetry == HDMI_COLORIMETRY_EXTENDED)
+			frame.extended_colorimetry = hdmi->extended_colorimetry;
+
+		/* quantiation range:limited or full */
+		if (frame.colorspace == HDMI_COLORSPACE_RGB)
+			frame.quantization_range = hdmi->quantization_range;
+		else
+			frame.ycc_quantization_range = hdmi->ycc_quantization_range;
+	}
 	err = hdmi_avi_infoframe_pack(&frame, buffer, bufsz);
 
 	if (err < 0) {
@@ -159,6 +179,11 @@ void mtk_hdmi_send_infoframe(struct mtk_hdmi *hdmi, u8 *buffer_spd, size_t bufsz
 {
 	mtk_hdmi_setup_avi_infoframe(hdmi, buffer_avi, bufsz_avi, mode);
 	mtk_hdmi_setup_spd_infoframe(hdmi, buffer_spd, bufsz_spd, "mediatek", "On-chip HDMI");
+}
+
+static struct mtk_hdmi_ddc *hdmi_ddc_ctx_from_mtk_hdmi(struct mtk_hdmi *hdmi)
+{
+	return container_of(hdmi->ddc_adpt, struct mtk_hdmi_ddc, adap);
 }
 
 int mtk_hdmi_dt_parse_pdata(struct mtk_hdmi *hdmi, struct platform_device *pdev,
@@ -179,39 +204,41 @@ int mtk_hdmi_dt_parse_pdata(struct mtk_hdmi *hdmi, struct platform_device *pdev,
 		return ret;
 	}
 
-	/* The CEC module handles HDMI hotplug detection */
-	cec_np = of_get_compatible_child(np->parent, "mediatek,mt8173-cec");
-	if (!cec_np) {
-		dev_err(dev, "Failed to find CEC node\n");
-		return -EINVAL;
-	}
+	if (!hdmi->conf || !hdmi->conf->is_mt8195) {
+		/* The CEC module handles HDMI hotplug detection */
+		cec_np = of_get_compatible_child(np->parent, "mediatek,mt8173-cec");
+		if (!cec_np) {
+			dev_err(dev, "Failed to find CEC node\n");
+			return -EINVAL;
+		}
 
-	cec_pdev = of_find_device_by_node(cec_np);
-	if (!cec_pdev) {
-		dev_err(hdmi->dev, "Waiting for CEC device %pOF\n",
-				cec_np);
+		cec_pdev = of_find_device_by_node(cec_np);
+		if (!cec_pdev) {
+			dev_err(hdmi->dev, "Waiting for CEC device %pOF\n",
+					cec_np);
+			of_node_put(cec_np);
+			return -EPROBE_DEFER;
+		}
 		of_node_put(cec_np);
-		return -EPROBE_DEFER;
+		hdmi->cec_dev = &cec_pdev->dev;
+		/*
+		 * The mediatek,syscon-hdmi property contains a phandle link to the
+		 * MMSYS_CONFIG device and the register offset of the HDMI_SYS_CFG
+		 * registers it contains.
+		 */
+		regmap = syscon_regmap_lookup_by_phandle(np, "mediatek,syscon-hdmi");
+		ret = of_property_read_u32_index(np, "mediatek,syscon-hdmi", 1,
+				&hdmi->sys_offset);
+		if (IS_ERR(regmap))
+			ret = PTR_ERR(regmap);
+		if (ret) {
+			dev_err(dev,
+					"Failed to get system configuration registers: %d\n",
+					ret);
+			goto put_device;
+		}
+		hdmi->sys_regmap = regmap;
 	}
-	of_node_put(cec_np);
-	hdmi->cec_dev = &cec_pdev->dev;
-	/*
-	 * The mediatek,syscon-hdmi property contains a phandle link to the
-	 * MMSYS_CONFIG device and the register offset of the HDMI_SYS_CFG
-	 * registers it contains.
-	 */
-	regmap = syscon_regmap_lookup_by_phandle(np, "mediatek,syscon-hdmi");
-	ret = of_property_read_u32_index(np, "mediatek,syscon-hdmi", 1,
-			&hdmi->sys_offset);
-	if (IS_ERR(regmap))
-		ret = PTR_ERR(regmap);
-	if (ret) {
-		dev_err(dev,
-				"Failed to get system configuration registers: %d\n",
-				ret);
-		goto put_device;
-	}
-	hdmi->sys_regmap = regmap;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -225,19 +252,21 @@ int mtk_hdmi_dt_parse_pdata(struct mtk_hdmi *hdmi, struct platform_device *pdev,
 		goto put_device;
 	}
 
-	remote = of_graph_get_remote_node(np, 1, 0);
-	if (!remote) {
-		ret = -EINVAL;
-		goto put_device;
-	}
-
-	if (!of_device_is_compatible(remote, "hdmi-connector")) {
-		hdmi->next_bridge = of_drm_find_bridge(remote);
-		if (!hdmi->next_bridge) {
-			dev_err(dev, "Waiting for external bridge\n");
-			of_node_put(remote);
-			ret = -EPROBE_DEFER;
+	if (!hdmi->conf || !hdmi->conf->is_mt8195) {
+		remote = of_graph_get_remote_node(np, 1, 0);
+		if (!remote) {
+			ret = -EINVAL;
 			goto put_device;
+		}
+
+		if (!of_device_is_compatible(remote, "hdmi-connector")) {
+			hdmi->next_bridge = of_drm_find_bridge(remote);
+			if (!hdmi->next_bridge) {
+				dev_err(dev, "Waiting for external bridge\n");
+				of_node_put(remote);
+				ret = -EPROBE_DEFER;
+				goto put_device;
+			}
 		}
 	}
 
@@ -257,9 +286,16 @@ int mtk_hdmi_dt_parse_pdata(struct mtk_hdmi *hdmi, struct platform_device *pdev,
 		goto put_device;
 	}
 
+	//TODO: rework this... this is ugly
+	if (hdmi->conf && hdmi->conf->is_mt8195) {
+		ddc = hdmi_ddc_ctx_from_mtk_hdmi(hdmi);
+		ddc->regs = hdmi->regs;
+	}
+
 	return 0;
 put_device:
-	put_device(hdmi->cec_dev);
+	if (!hdmi->conf || !hdmi->conf->is_mt8195)
+		put_device(hdmi->cec_dev);
 	return ret;
 }
 
@@ -271,7 +307,10 @@ static int mtk_hdmi_register_audio_driver(struct device *dev)
 		.data = hdmi,
 	};
 
-	set_hdmi_codec_pdata_mt8183(&codec_data);
+	if (hdmi->conf && hdmi->conf->is_mt8195)
+		set_hdmi_codec_pdata_mt8195(&codec_data);
+	else
+		set_hdmi_codec_pdata_mt8183(&codec_data);
 
 	pdev = platform_device_register_data(dev, HDMI_CODEC_DRV_NAME,
 					     PLATFORM_DEVID_AUTO, &codec_data,
@@ -303,16 +342,25 @@ int mtk_drm_hdmi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = mtk_hdmi_dt_parse_pdata(hdmi, pdev, mtk_hdmi_clk_names_mt8183,
-				      ARRAY_SIZE(mtk_hdmi_clk_names_mt8183));
+	if (hdmi->conf && hdmi->conf->is_mt8195)
+		ret = mtk_hdmi_dt_parse_pdata(hdmi, pdev, mtk_hdmi_clk_names_mt8195,
+					      ARRAY_SIZE(mtk_hdmi_clk_names_mt8195));
+	else
+		ret = mtk_hdmi_dt_parse_pdata(hdmi, pdev, mtk_hdmi_clk_names_mt8183,
+					      ARRAY_SIZE(mtk_hdmi_clk_names_mt8183));
 
 	if (ret)
 		return ret;
 
 	platform_set_drvdata(pdev, hdmi);
 
-	mtk_hdmi_output_init_mt8183(hdmi);
-	hdmi->bridge.funcs = &mtk_mt8183_hdmi_bridge_funcs;
+	if (hdmi->conf && hdmi->conf->is_mt8195) {
+		mtk_hdmi_output_init_mt8195(hdmi);
+		hdmi->bridge.funcs = &mtk_mt8195_hdmi_bridge_funcs;
+	} else {
+		mtk_hdmi_output_init_mt8183(hdmi);
+		hdmi->bridge.funcs = &mtk_mt8183_hdmi_bridge_funcs;
+	}
 
 	hdmi->bridge.ops = DRM_BRIDGE_OP_DETECT | DRM_BRIDGE_OP_EDID | DRM_BRIDGE_OP_HPD;
 	hdmi->bridge.type = DRM_MODE_CONNECTOR_HDMIA;
@@ -333,7 +381,10 @@ int mtk_drm_hdmi_remove(struct platform_device *pdev)
 
 	drm_bridge_remove(&hdmi->bridge);
 
-	mtk_hdmi_clk_disable_mt8183(hdmi);
+	if (hdmi->conf && hdmi->conf->is_mt8195)
+		mtk_hdmi_clk_disable_mt8195(hdmi);
+	else
+		mtk_hdmi_clk_disable_mt8183(hdmi);
 	i2c_put_adapter(hdmi->ddc_adpt);
 
 	return 0;
@@ -348,6 +399,13 @@ static const struct mtk_hdmi_conf mtk_hdmi_conf_mt8167 = {
 	.cea_modes_only = true,
 };
 
+static const struct mtk_hdmi_conf mtk_hdmi_conf_mt8195 = {
+	.is_mt8195 = true,
+#ifdef CONFIG_DRM_MEDIATEK_HDMI_MT8195_SUSPEND_LOW_POWER
+	.low_power = true,
+#endif
+};
+
 static const struct of_device_id mtk_drm_hdmi_of_ids[] = {
 	{ .compatible = "mediatek,mt2701-hdmi",
 	  .data = &mtk_hdmi_conf_mt2701,
@@ -356,6 +414,9 @@ static const struct of_device_id mtk_drm_hdmi_of_ids[] = {
 	  .data = &mtk_hdmi_conf_mt8167,
 	},
 	{ .compatible = "mediatek,mt8173-hdmi",
+	},
+	{ .compatible = "mediatek,mt8195-hdmi",
+	  .data = &mtk_hdmi_conf_mt8195,
 	},
 	{}
 };
@@ -366,29 +427,47 @@ static __maybe_unused int mtk_hdmi_suspend(struct device *dev)
 {
 	struct mtk_hdmi *hdmi = dev_get_drvdata(dev);
 
-	device_set_wakeup_path(dev);
+	if (hdmi->conf && hdmi->conf->is_mt8195 && hdmi->conf->low_power) {
+		if (hdmi->power_clk_enabled) {
+			mtk_hdmi_clk_disable_mt8195(hdmi);
+			pm_runtime_put_sync(hdmi->dev);
+			hdmi->power_clk_enabled = false;
+		}
+	} else {
+		device_set_wakeup_path(dev);
+		if (!hdmi->conf || !hdmi->conf->is_mt8195)
+			mtk_hdmi_clk_disable_mt8183(hdmi);
+	}
 	dev_dbg(dev, "hdmi suspend success!\n");
-
-	mtk_hdmi_clk_disable_mt8183(hdmi);
-
 	return 0;
 }
 
 static __maybe_unused int mtk_hdmi_resume(struct device *dev)
 {
-	int ret = 0;
+
 	struct mtk_hdmi *hdmi = dev_get_drvdata(dev);
 
-	//mtk_hdmi_clk_enable(hdmi);
+	if (hdmi->conf && hdmi->conf->is_mt8195 && hdmi->conf->low_power) {
+		if (!hdmi->power_clk_enabled) {
+			pm_runtime_get_sync(hdmi->dev);
+			//TODO:
+			//mtk_hdmi_clk_enable(hdmi);
+			hdmi->power_clk_enabled = true;
+		}
 
+	} else {
+		int ret = 0;
+		struct mtk_hdmi *hdmi = dev_get_drvdata(dev);
+		//mtk_hdmi_clk_enable(hdmi);
+		//TODO:
+		//if(!hdmi->conf || !hdmi->conf->is_mt8195)
+		//ret = mtk_hdmi_clk_enable_audio(hdmi);
+		if (ret)
+			dev_err(dev, "hdmi resume failed!\n");
+		return ret;
+	}
 	dev_dbg(dev, "hdmi resume success!\n");
-
-	//TODO:
-	//ret = mtk_hdmi_clk_enable_audio(hdmi);
-	if (ret)
-		dev_err(dev, "hdmi resume failed!\n");
-
-	return ret;
+	return 0;
 }
 #endif
 
@@ -408,6 +487,7 @@ static struct platform_driver mtk_hdmi_driver = {
 static struct platform_driver * const mtk_hdmi_drivers[] = {
 	&mtk_hdmi_ddc_driver,
 	&mtk_cec_driver,
+	&mtk_hdmi_mt8195_ddc_driver,
 	&mtk_hdmi_driver,
 };
 
