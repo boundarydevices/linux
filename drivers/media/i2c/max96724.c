@@ -1124,7 +1124,7 @@ static int max96724_disable_streams(struct v4l2_subdev *sd, struct v4l2_subdev_s
 	u64 sink_streams = 0;
 	u64 sources_mask = streams_mask;
 	u32 remote_pad = 0;
-	int ret;
+	int ret = 0;
 
 	mutex_lock(&priv->lock);
 
@@ -1163,7 +1163,7 @@ static int max96724_disable_streams(struct v4l2_subdev *sd, struct v4l2_subdev_s
 unlock:
 	mutex_unlock(&priv->lock);
 
-	return 0;
+	return ret;
 }
 
 static int max96724_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
