@@ -537,6 +537,7 @@ static int netc_timer_init(struct netc_timer *priv)
 	u64 ns;
 
 	priv->caps = netc_timer_ptp_caps;
+	priv->oclk_prsc = NETC_TMR_DEFAULT_PRSC;
 
 	if (of_property_read_u32(node, "fsl,clk-select", &priv->clk_select))
 		priv->clk_select = NETC_TMR_SYSTEM_CLK;
@@ -548,15 +549,6 @@ static int netc_timer_init(struct netc_timer *priv)
 		dev_err(priv->dev, "Wrong clock source %d\n", priv->clk_select);
 
 		return -EINVAL;
-	}
-
-	/* Get the output clock division prescale factor, it must be an even value. */
-	if (of_property_read_u32(node, "fsl,oclk-prsc", &priv->oclk_prsc))
-		priv->oclk_prsc = NETC_TMR_DEFAULT_PRSC;
-	if (priv->oclk_prsc % 2) {
-		dev_warn(priv->dev, "PRSC_OCK should be an even value (PRSC_OCK: %d -> %d)\n",
-			 priv->oclk_prsc, priv->oclk_prsc + 1);
-		priv->oclk_prsc += 1;
 	}
 
 	err = netc_timer_get_clk_config(priv);
