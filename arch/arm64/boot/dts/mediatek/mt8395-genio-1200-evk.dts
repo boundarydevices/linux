@@ -1190,40 +1190,36 @@
 
 	dai-link-0 {
 		sound-dai = <&afe>;
-		dai-link-name = "DL_SRC_BE";
+		link-name = "DL_SRC_BE";
 
-		codec-0 {
+		codec {
 			sound-dai = <&pmic 0>;
 		};
 	};
 
 	dai-link-1 {
 		sound-dai = <&afe>;
-		dai-link-name = "UL_SRC1_BE";
+		link-name = "UL_SRC1_BE";
 
-		codec-0 {
-			sound-dai = <&pmic 0>;
-		};
-
-		codec-1 {
-			sound-dai = <&amic_codec>;
+		codec {
+			sound-dai = <&pmic 0>, <&amic_codec>;
 		};
 	};
 
 	dai-link-2 {
 		sound-dai = <&afe>;
-		dai-link-name = "UL_SRC2_BE";
+		link-name = "UL_SRC2_BE";
 
-		codec-0 {
+		codec {
 			sound-dai = <&pmic 1>;
 		};
 	};
 
 	dai-link-3 {
 		sound-dai = <&afe>;
-		dai-link-name = "DMIC_BE";
+		link-name = "DMIC_BE";
 
-		codec-0 {
+		codec {
 			sound-dai = <&dmic_codec>;
 		};
 	};
