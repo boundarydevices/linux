@@ -1495,6 +1495,8 @@ static void mtk_hdmi_bridge_disable(struct drm_bridge *bridge)
 	mtk_hdmi_disable_hdcp_encrypt(hdmi);
 	usleep_range(50000, 50050);
 
+	phy_power_off(hdmi->phy);
+
 	hdmi->enabled = false;
 }
 
