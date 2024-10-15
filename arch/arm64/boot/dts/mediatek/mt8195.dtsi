@@ -3722,7 +3722,11 @@
 			reg = <0 0x1c112000 0 0x1000>;
 			mediatek,vdosys1-dpi = <&vdosys1 0x0>;
 			interrupts = <GIC_SPI 512 IRQ_TYPE_LEVEL_HIGH 0>;
-			clock-names = "pixel", "engine";
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
+			clocks = <&vdosys1 CLK_VDO1_DPI1_MM>,
+				 <&vdosys1 CLK_VDO1_DPI1>,
+				 <&vdosys1 CLK_VDO1_DPI1_HDMI>;
+			clock-names = "engine", "pixel", "pll";
 			status = "disabled";
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_DPI1>;
 			reset-names = "dpi_on";
