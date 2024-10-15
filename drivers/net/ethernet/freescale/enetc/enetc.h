@@ -240,6 +240,7 @@ struct enetc_cbs {
 enum enetc_errata {
 	ENETC_ERR_VLAN_ISOL	= BIT(0),
 	ENETC_ERR_UCMCSWP	= BIT(1),
+	ENETC_ERR_SG_DROP_CNT	= BIT(2),
 };
 
 #define ENETC_SI_F_PSFP BIT(0)
