@@ -99,7 +99,7 @@ static struct operating_mode system_run_mode_91 = {
 		CLK_PATH(wakeup_axi, 400000000, 250000000, 200000000),
 		CLK_PATH(media_axi, 400000000, 200000000, 200000000),
 		CLK_PATH(ml_axi, 1000000000, 800000000, 500000000),
-		CLK_PATH(nic_axi, 500000000, 333000000, 200000000),
+		CLK_PATH(nic_axi, 500000000, 333000000, 250000000),
 		CLK_PATH(a55_periph, 400000000, 333000000, 200000000),
 		CLK_PATH(a55_core, 1700000000, 1400000000, 900000000),
 	},
@@ -314,6 +314,10 @@ static ssize_t lpm_enable_store(struct device *dev,
 
 	if (new_mode == OD_MODE && no_od_mode)
 		return -EINVAL;
+
+	/* Skip if set to the same mode */
+	if (new_mode == system_run_mode.current_mode)
+		return count;
 
 	/* make sure auto clock gating is disabled before DDR frequency scaling */
 	regmap_update_bits(regmap, AUTO_CG_CTRL, AUTO_CG_EN, 0);
