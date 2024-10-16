@@ -1844,7 +1844,7 @@ irqreturn_t host_wake_irq_handler(int irq, void *priv)
 	return IRQ_HANDLED;
 }
 
-static int __init imx6_pcie_compliance_test_enable(char *str)
+static int __init __maybe_unused imx6_pcie_compliance_test_enable(char *str)
 {
 	if (!strcmp(str, "yes")) {
 		pr_info("Enable the i.MX PCIe compliance tests mode.\n");
