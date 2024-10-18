@@ -776,9 +776,6 @@ static void flush_hyp_vcpu(struct pkvm_hyp_vcpu *hyp_vcpu)
 
 	fpsimd_sve_flush();
 
-	if (READ_ONCE(hyp_vcpu->power_state) == PSCI_0_2_AFFINITY_LEVEL_ON_PENDING)
-		pkvm_reset_vcpu(hyp_vcpu);
-
 	/*
 	 * If we deal with a non-protected guest and the state is potentially
 	 * dirty (from a host perspective), copy the state back into the hyp
@@ -1011,14 +1008,12 @@ static void handle___kvm_vcpu_run(struct kvm_cpu_context *host_ctxt)
 {
 	struct pkvm_hyp_vcpu *hyp_vcpu;
 	struct kvm_vcpu *host_vcpu;
-	int ret;
+	int ret = ARM_EXCEPTION_IL;
 
 	host_vcpu = get_host_hyp_vcpus(host_ctxt, 1, &hyp_vcpu);
 
-	if (!host_vcpu) {
-		ret = -EINVAL;
+	if (!host_vcpu)
 		goto out;
-	}
 
 	if (unlikely(hyp_vcpu)) {
 		/*
@@ -1027,10 +1022,14 @@ static void handle___kvm_vcpu_run(struct kvm_cpu_context *host_ctxt)
 		 * loading a vcpu. Therefore, if SME features enabled the host
 		 * is misbehaving.
 		 */
-		if (unlikely(system_supports_sme() && read_sysreg_s(SYS_SVCR))) {
-			ret = -EINVAL;
+		if (unlikely(system_supports_sme() && read_sysreg_s(SYS_SVCR)))
 			goto out;
-		}
+
+		if (hyp_vcpu->power_state == PSCI_0_2_AFFINITY_LEVEL_ON_PENDING)
+			pkvm_reset_vcpu(hyp_vcpu);
+
+		if (unlikely(hyp_vcpu->power_state != PSCI_0_2_AFFINITY_LEVEL_ON))
+			goto out;
 
 		flush_hyp_vcpu(hyp_vcpu);
 
