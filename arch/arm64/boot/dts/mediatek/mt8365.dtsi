@@ -1168,7 +1168,7 @@
 		};
 
 		dpi0: dpi@14018000 {
-			compatible = "mediatek,mt8365-dpi", "mediatek,mt8192-dpi";
+			compatible = "mediatek,mt8365-dpi";
 			reg = <0 0x14018000 0 0x1000>;
 			clocks = <&mmsys CLK_MM_DPI0_DPI0>,
 				 <&mmsys CLK_MM_MM_DPI0>,
