@@ -1133,3 +1133,11 @@
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 };
+
+&cam_vcore {
+	domain-supply = <&mt6359_vproc1_buck_reg>;
+};
+
+&img_vcore {
+	domain-supply = <&mt6359_vproc1_buck_reg>;
+};
