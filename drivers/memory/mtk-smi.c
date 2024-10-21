@@ -619,7 +619,7 @@ static int mtk_smi_larb_probe(struct platform_device *pdev)
 		if (!smi_node)
 			break;
 
-		larb->sub_comm_syscon[i] = syscon_node_to_regmap(smi_node);
+		larb->sub_comm_syscon[i] = device_node_to_regmap(smi_node);
 		ret = of_property_read_u32(dev->of_node,
 					   "mediatek,smi-sub-comm-inport",
 					   &larb->sub_comm_inport[i]);
