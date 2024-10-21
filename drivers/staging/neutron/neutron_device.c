@@ -222,7 +222,7 @@ static int neutron_firmw_request(struct neutron_device *ndev, struct neutron_buf
 int neutron_firmw_reload(struct neutron_device *ndev, struct neutron_buffer *buf)
 {
 	int ret = -1;
-	void *data_ddr;
+	void *data_ddr = NULL;
 	struct device *dev = ndev->dev;
 	struct rproc *rproc = ndev->rproc;
 
