@@ -16,7 +16,9 @@ description:
 
 properties:
   compatible:
-    const: mediatek,cpufreq-hw
+    enum:
+      - mediatek,cpufreq-hw
+      - mediatek,mt8188-cpufreq-hw
 
   reg:
     minItems: 1
