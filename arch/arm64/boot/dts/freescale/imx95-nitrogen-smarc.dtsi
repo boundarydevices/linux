@@ -173,14 +173,14 @@
 	pinctrl-0 = <&pinctrl_flexcan2>;
 };
 
-&lpi2c1 {
+&lpi2c2 {
 	#address-cells = <1>;
 	#size-cells = <0>;
 	clock-frequency = <400000>;
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&pinctrl_lpi2c1>;
-	pinctrl-1 = <&pinctrl_lpi2c1>;
-	status = "disabled"; // Can't use I2C1!
+	pinctrl-0 = <&pinctrl_lpi2c2>;
+	pinctrl-1 = <&pinctrl_lpi2c2>;
+	status = "okay";
 
 	pcal6524: gpio@22 {
 		compatible = "nxp,pcal6524";
@@ -192,16 +192,6 @@
 		interrupts-extended = <&gpio5 15 IRQ_TYPE_LEVEL_LOW>;
 		reset-gpios = <&gpio5 14 GPIO_ACTIVE_LOW>;
 	};
-};
-
-&lpi2c2 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	clock-frequency = <400000>;
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&pinctrl_lpi2c2>;
-	pinctrl-1 = <&pinctrl_lpi2c2>;
-	status = "okay";
 };
 
 &lpi2c3 {
@@ -571,20 +561,13 @@
 		>;
 	};
 
-	pinctrl_lpi2c1: lpi2c1grp {
-		fsl,pins = <
-			IMX95_PAD_I2C1_SCL__AONMIX_TOP_LPI2C1_SCL	0x40000b9e
-			IMX95_PAD_I2C1_SDA__AONMIX_TOP_LPI2C1_SDA	0x40000b9e
-			IMX95_PAD_GPIO_IO34__GPIO5_IO_BIT14		0x31e
-			IMX95_PAD_GPIO_IO35__GPIO5_IO_BIT15		0x31e
-		>;
-	};
-
 	pinctrl_lpi2c2: lpi2c2grp {
 		fsl,pins = <
 			IMX95_PAD_I2C2_SCL__AONMIX_TOP_LPI2C2_SCL	0x40000b9e
 			IMX95_PAD_I2C2_SDA__AONMIX_TOP_LPI2C2_SDA	0x40000b9e
 			IMX95_PAD_GPIO_IO08__GPIO2_IO_BIT8		0x31e
+			IMX95_PAD_GPIO_IO34__GPIO5_IO_BIT14		0x31e
+			IMX95_PAD_GPIO_IO35__GPIO5_IO_BIT15		0x31e
 		>;
 	};
 

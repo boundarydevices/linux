@@ -69,12 +69,6 @@
 	status = "okay";
 };
 
-&i2c_csi0 {
-};
-
-&i2c_csi1 {
-};
-
 &i2c_gp {
 	mux9546-gp@73 {
 		compatible = "nxp,pca9546";
@@ -176,9 +170,6 @@
 			"GPIO5:HP detect",
 			"GPIO6:Mic detect";
 	};
-};
-
-&i2c_pmic {
 };
 
 /* SMARC I2C_LCD */
