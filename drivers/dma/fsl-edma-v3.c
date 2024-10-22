@@ -1722,9 +1722,6 @@ static int fsl_edma3_suspend_late(struct device *dev)
 		    (!fsl_chan->edma3->drvdata->has_pd && !fsl_chan->srcid))
 			continue;
 
-		if (fsl_chan->edma3->drvdata->has_pd)
-			pm_runtime_get_sync(fsl_chan->dev);
-
 		spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
 		fsl_edma->edma_regs[i].csr = readl(addr + EDMA_CH_CSR);
 		fsl_edma->edma_regs[i].sbr = readl(addr + EDMA_CH_SBR);
@@ -1734,9 +1731,6 @@ static int fsl_edma3_suspend_late(struct device *dev)
 			fsl_edma3_disable_request(fsl_chan);
 		}
 		spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
-
-		if (fsl_chan->edma3->drvdata->has_pd)
-			pm_runtime_put_sync_suspend(fsl_chan->dev);
 	}
 
 	return 0;
