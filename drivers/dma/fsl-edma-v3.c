@@ -1642,8 +1642,6 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 			/* clear meaningless pending irq anyway */
 			writel(1, fsl_chan->membase + EDMA_CH_INT);
 
-			pm_runtime_use_autosuspend(fsl_chan->dev);
-			pm_runtime_set_autosuspend_delay(fsl_chan->dev, 200);
 			pm_runtime_set_active(fsl_chan->dev);
 			pm_runtime_put_sync_suspend(fsl_chan->dev);
 		}
