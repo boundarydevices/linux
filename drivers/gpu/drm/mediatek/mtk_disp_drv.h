@@ -159,4 +159,7 @@ void mtk_mdp_rdma_config(struct device *dev, struct mtk_mdp_rdma_cfg *cfg,
 const u32 *mtk_mdp_rdma_get_formats(struct device *dev);
 size_t mtk_mdp_rdma_get_num_formats(struct device *dev);
 
+int mtk_disp_padding_clk_enable(struct device *dev);
+void mtk_disp_padding_clk_disable(struct device *dev);
+void mtk_disp_padding_config(struct device *dev, struct cmdq_pkt *cmdq_pkt);
 #endif
