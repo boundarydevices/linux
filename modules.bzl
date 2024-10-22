@@ -157,7 +157,7 @@ _KUNIT_COMMON_MODULES_LIST = [
 # Modules defined by tools/testing/kunit/configs/android/kunit_clk_defconfig
 _KUNIT_CLK_MODULES_LIST = [
     "drivers/clk/clk-gate_test.ko",
-    "drivers/clk/clk_test.ko",
+    "drivers/clk/clk-test.ko",
     "drivers/clk/clk_kunit_helpers.ko",
 ]
 
