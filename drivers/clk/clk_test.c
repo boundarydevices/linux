@@ -466,7 +466,7 @@ clk_multiple_parents_mux_test_init(struct kunit *test)
 							    &clk_dummy_rate_ops,
 							    0);
 	ctx->parents_ctx[0].rate = DUMMY_CLOCK_RATE_1;
-	ret = clk_hw_register(NULL, &ctx->parents_ctx[0].hw);
+	ret = clk_hw_register_kunit(test, NULL, &ctx->parents_ctx[0].hw);
 	if (ret)
 		return ret;
 
@@ -474,7 +474,7 @@ clk_multiple_parents_mux_test_init(struct kunit *test)
 							    &clk_dummy_rate_ops,
 							    0);
 	ctx->parents_ctx[1].rate = DUMMY_CLOCK_RATE_2;
-	ret = clk_hw_register(NULL, &ctx->parents_ctx[1].hw);
+	ret = clk_hw_register_kunit(test, NULL, &ctx->parents_ctx[1].hw);
 	if (ret)
 		return ret;
 
@@ -482,21 +482,11 @@ clk_multiple_parents_mux_test_init(struct kunit *test)
 	ctx->hw.init = CLK_HW_INIT_PARENTS("test-mux", parents,
 					   &clk_multiple_parents_mux_ops,
 					   CLK_SET_RATE_PARENT);
-	ret = clk_hw_register(NULL, &ctx->hw);
+	ret = clk_hw_register_kunit(test, NULL, &ctx->hw);
 	if (ret)
 		return ret;
 
 	return 0;
-}
-
-static void
-clk_multiple_parents_mux_test_exit(struct kunit *test)
-{
-	struct clk_multiple_parent_ctx *ctx = test->priv;
-
-	clk_hw_unregister(&ctx->hw);
-	clk_hw_unregister(&ctx->parents_ctx[0].hw);
-	clk_hw_unregister(&ctx->parents_ctx[1].hw);
 }
 
 /*
@@ -554,18 +544,18 @@ clk_test_multiple_parents_mux_set_range_set_parent_get_rate(struct kunit *test)
 {
 	struct clk_multiple_parent_ctx *ctx = test->priv;
 	struct clk_hw *hw = &ctx->hw;
-	struct clk *clk = clk_hw_get_clk(hw, NULL);
+	struct clk *clk = clk_hw_get_clk_kunit(test, hw, NULL);
 	struct clk *parent1, *parent2;
 	unsigned long rate;
 	int ret;
 
 	kunit_skip(test, "This needs to be fixed in the core.");
 
-	parent1 = clk_hw_get_clk(&ctx->parents_ctx[0].hw, NULL);
+	parent1 = clk_hw_get_clk_kunit(test, &ctx->parents_ctx[0].hw, NULL);
 	KUNIT_ASSERT_NOT_ERR_OR_NULL(test, parent1);
 	KUNIT_ASSERT_TRUE(test, clk_is_match(clk_get_parent(clk), parent1));
 
-	parent2 = clk_hw_get_clk(&ctx->parents_ctx[1].hw, NULL);
+	parent2 = clk_hw_get_clk_kunit(test, &ctx->parents_ctx[1].hw, NULL);
 	KUNIT_ASSERT_NOT_ERR_OR_NULL(test, parent2);
 
 	ret = clk_set_rate(parent1, DUMMY_CLOCK_RATE_1);
@@ -586,10 +576,6 @@ clk_test_multiple_parents_mux_set_range_set_parent_get_rate(struct kunit *test)
 	KUNIT_ASSERT_GT(test, rate, 0);
 	KUNIT_EXPECT_GE(test, rate, DUMMY_CLOCK_RATE_1 - 1000);
 	KUNIT_EXPECT_LE(test, rate, DUMMY_CLOCK_RATE_1 + 1000);
-
-	clk_put(parent2);
-	clk_put(parent1);
-	clk_put(clk);
 }
 
 static struct kunit_case clk_multiple_parents_mux_test_cases[] = {
@@ -610,7 +596,6 @@ static struct kunit_suite
 clk_multiple_parents_mux_test_suite = {
 	.name = "clk-multiple-parents-mux-test",
 	.init = clk_multiple_parents_mux_test_init,
-	.exit = clk_multiple_parents_mux_test_exit,
 	.test_cases = clk_multiple_parents_mux_test_cases,
 };
 
@@ -630,27 +615,18 @@ clk_orphan_transparent_multiple_parent_mux_test_init(struct kunit *test)
 							    &clk_dummy_rate_ops,
 							    0);
 	ctx->parents_ctx[1].rate = DUMMY_CLOCK_INIT_RATE;
-	ret = clk_hw_register(NULL, &ctx->parents_ctx[1].hw);
+	ret = clk_hw_register_kunit(test, NULL, &ctx->parents_ctx[1].hw);
 	if (ret)
 		return ret;
 
 	ctx->hw.init = CLK_HW_INIT_PARENTS("test-orphan-mux", parents,
 					   &clk_multiple_parents_mux_ops,
 					   CLK_SET_RATE_PARENT);
-	ret = clk_hw_register(NULL, &ctx->hw);
+	ret = clk_hw_register_kunit(test, NULL, &ctx->hw);
 	if (ret)
 		return ret;
 
 	return 0;
-}
-
-static void
-clk_orphan_transparent_multiple_parent_mux_test_exit(struct kunit *test)
-{
-	struct clk_multiple_parent_ctx *ctx = test->priv;
-
-	clk_hw_unregister(&ctx->hw);
-	clk_hw_unregister(&ctx->parents_ctx[1].hw);
 }
 
 /*
@@ -905,7 +881,7 @@ clk_test_orphan_transparent_multiple_parent_mux_set_range_set_parent_get_rate(st
 {
 	struct clk_multiple_parent_ctx *ctx = test->priv;
 	struct clk_hw *hw = &ctx->hw;
-	struct clk *clk = clk_hw_get_clk(hw, NULL);
+	struct clk *clk = clk_hw_get_clk_kunit(test, hw, NULL);
 	struct clk *parent;
 	unsigned long rate;
 	int ret;
@@ -914,7 +890,7 @@ clk_test_orphan_transparent_multiple_parent_mux_set_range_set_parent_get_rate(st
 
 	clk_hw_set_rate_range(hw, DUMMY_CLOCK_RATE_1, DUMMY_CLOCK_RATE_2);
 
-	parent = clk_hw_get_clk(&ctx->parents_ctx[1].hw, NULL);
+	parent = clk_hw_get_clk_kunit(test, &ctx->parents_ctx[1].hw, NULL);
 	KUNIT_ASSERT_NOT_ERR_OR_NULL(test, parent);
 
 	ret = clk_set_parent(clk, parent);
@@ -924,9 +900,6 @@ clk_test_orphan_transparent_multiple_parent_mux_set_range_set_parent_get_rate(st
 	KUNIT_ASSERT_GT(test, rate, 0);
 	KUNIT_EXPECT_GE(test, rate, DUMMY_CLOCK_RATE_1);
 	KUNIT_EXPECT_LE(test, rate, DUMMY_CLOCK_RATE_2);
-
-	clk_put(parent);
-	clk_put(clk);
 }
 
 static struct kunit_case clk_orphan_transparent_multiple_parent_mux_test_cases[] = {
@@ -954,7 +927,6 @@ static struct kunit_case clk_orphan_transparent_multiple_parent_mux_test_cases[]
 static struct kunit_suite clk_orphan_transparent_multiple_parent_mux_test_suite = {
 	.name = "clk-orphan-transparent-multiple-parent-mux-test",
 	.init = clk_orphan_transparent_multiple_parent_mux_test_init,
-	.exit = clk_orphan_transparent_multiple_parent_mux_test_exit,
 	.test_cases = clk_orphan_transparent_multiple_parent_mux_test_cases,
 };
 
@@ -979,7 +951,7 @@ static int clk_single_parent_mux_test_init(struct kunit *test)
 				      &clk_dummy_rate_ops,
 				      0);
 
-	ret = clk_hw_register(NULL, &ctx->parent_ctx.hw);
+	ret = clk_hw_register_kunit(test, NULL, &ctx->parent_ctx.hw);
 	if (ret)
 		return ret;
 
@@ -987,7 +959,7 @@ static int clk_single_parent_mux_test_init(struct kunit *test)
 				   &clk_dummy_single_parent_ops,
 				   CLK_SET_RATE_PARENT);
 
-	ret = clk_hw_register(NULL, &ctx->hw);
+	ret = clk_hw_register_kunit(test, NULL, &ctx->hw);
 	if (ret)
 		return ret;
 
@@ -1053,7 +1025,7 @@ clk_test_single_parent_mux_set_range_disjoint_child_last(struct kunit *test)
 {
 	struct clk_single_parent_ctx *ctx = test->priv;
 	struct clk_hw *hw = &ctx->hw;
-	struct clk *clk = clk_hw_get_clk(hw, NULL);
+	struct clk *clk = clk_hw_get_clk_kunit(test, hw, NULL);
 	struct clk *parent;
 	int ret;
 
@@ -1067,8 +1039,6 @@ clk_test_single_parent_mux_set_range_disjoint_child_last(struct kunit *test)
 
 	ret = clk_set_rate_range(clk, 3000, 4000);
 	KUNIT_EXPECT_LT(test, ret, 0);
-
-	clk_put(clk);
 }
 
 /*
@@ -1085,7 +1055,7 @@ clk_test_single_parent_mux_set_range_disjoint_parent_last(struct kunit *test)
 {
 	struct clk_single_parent_ctx *ctx = test->priv;
 	struct clk_hw *hw = &ctx->hw;
-	struct clk *clk = clk_hw_get_clk(hw, NULL);
+	struct clk *clk = clk_hw_get_clk_kunit(test, hw, NULL);
 	struct clk *parent;
 	int ret;
 
@@ -1099,8 +1069,6 @@ clk_test_single_parent_mux_set_range_disjoint_parent_last(struct kunit *test)
 
 	ret = clk_set_rate_range(parent, 3000, 4000);
 	KUNIT_EXPECT_LT(test, ret, 0);
-
-	clk_put(clk);
 }
 
 /*
@@ -1231,7 +1199,6 @@ static struct kunit_suite
 clk_single_parent_mux_test_suite = {
 	.name = "clk-single-parent-mux-test",
 	.init = clk_single_parent_mux_test_init,
-	.exit = clk_single_parent_mux_test_exit,
 	.test_cases = clk_single_parent_mux_test_cases,
 };
 
