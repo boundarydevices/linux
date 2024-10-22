@@ -429,6 +429,13 @@ static int mtk_jpeg_s_fmt_mplane(struct mtk_jpeg_ctx *ctx,
 	q_data->fmt = mtk_jpeg_find_format(jpeg->variant->formats,
 					   jpeg->variant->num_formats,
 					   pix_mp->pixelformat, fmt_type);
+	if (q_data->fmt == NULL) {
+		v4l2_err(&jpeg->v4l2_dev,
+			 "Fourcc format (0x%08x) invalid.\n",
+			 pix_mp->pixelformat);
+		return -EINVAL;
+	}
+
 	q_data->pix_mp.width = pix_mp->width;
 	q_data->pix_mp.height = pix_mp->height;
 	q_data->enc_crop_rect.width = pix_mp->width;
@@ -839,6 +846,12 @@ static void mtk_jpeg_set_queue_data(struct mtk_jpeg_ctx *ctx,
 					   jpeg->variant->num_formats,
 					   param->dst_fourcc,
 					   MTK_JPEG_FMT_FLAG_CAPTURE);
+	if (q_data->fmt == NULL) {
+		v4l2_err(&jpeg->v4l2_dev,
+			 "Fourcc format (0x%08x) invalid.\n",
+			 param->dst_fourcc);
+		return;
+	}
 
 	for (i = 0; i < q_data->fmt->colplanes; i++) {
 		q_data->pix_mp.plane_fmt[i].bytesperline = param->mem_stride[i];
@@ -1238,6 +1251,12 @@ static void mtk_jpeg_set_default_params(struct mtk_jpeg_ctx *ctx)
 				      jpeg->variant->num_formats,
 				      jpeg->variant->out_q_default_fourcc,
 				      MTK_JPEG_FMT_FLAG_OUTPUT);
+	if (q->fmt == NULL) {
+		v4l2_err(&jpeg->v4l2_dev,
+			 "Fourcc format (0x%08x) invalid.\n",
+			 jpeg->variant->out_q_default_fourcc);
+		return;
+	}
 	q->pix_mp.width = MTK_JPEG_MIN_WIDTH;
 	q->pix_mp.height = MTK_JPEG_MIN_HEIGHT;
 	mtk_jpeg_try_fmt_mplane(&q->pix_mp, q->fmt);
@@ -1247,6 +1266,12 @@ static void mtk_jpeg_set_default_params(struct mtk_jpeg_ctx *ctx)
 				      jpeg->variant->num_formats,
 				      jpeg->variant->cap_q_default_fourcc,
 				      MTK_JPEG_FMT_FLAG_CAPTURE);
+	if (q->fmt == NULL) {
+		v4l2_err(&jpeg->v4l2_dev,
+			 "Fourcc format (0x%08x) invalid.\n",
+			 jpeg->variant->cap_q_default_fourcc);
+		return;
+	}
 	q->pix_mp.colorspace = V4L2_COLORSPACE_SRGB;
 	q->pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_601;
 	q->pix_mp.quantization = V4L2_QUANTIZATION_FULL_RANGE;
@@ -1343,6 +1368,10 @@ static void mtk_jpeg_job_timeout_work(struct work_struct *work)
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
 
 	ctx = v4l2_m2m_get_curr_priv(jpeg->m2m_dev);
+	if (!ctx) {
+		v4l2_err(&jpeg->v4l2_dev, "Context is NULL\n");
+		return;
+	}
 	src_buf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
 	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
 	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
@@ -1665,12 +1694,21 @@ static int mtk_jpegdec_set_hw_param(struct mtk_jpeg_ctx *ctx,
 	return 0;
 }
 
-static irqreturn_t mtk_jpeg_enc_done(struct mtk_jpeg_dev *jpeg)
+static irqreturn_t mtk_jpeg_enc_irq(int irq, void *priv)
 {
+	struct mtk_jpeg_dev *jpeg = priv;
+	u32 irq_status;
 	struct mtk_jpeg_ctx *ctx;
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
 	enum vb2_buffer_state buf_state = VB2_BUF_STATE_ERROR;
 	u32 result_size;
+
+	cancel_delayed_work(&jpeg->job_timeout_work);
+
+	irq_status = readl(jpeg->reg_base + JPEG_ENC_INT_STS) &
+		     JPEG_ENC_INT_STATUS_MASK_ALLIRQ;
+	if (irq_status)
+		writel(0, jpeg->reg_base + JPEG_ENC_INT_STS);
 
 	ctx = v4l2_m2m_get_curr_priv(jpeg->m2m_dev);
 	if (!ctx) {
@@ -1682,18 +1720,28 @@ static irqreturn_t mtk_jpeg_enc_done(struct mtk_jpeg_dev *jpeg)
 	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
 	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
 
+	if (irq_status & JPEG_ENC_INT_STATUS_STALL) {
+		v4l2_err(&jpeg->v4l2_dev, "irq stall need to check output buffer size\n");
+		goto enc_end;
+	}
+
+	if (!(irq_status & JPEG_ENC_INT_STATUS_DONE))
+		goto enc_end;
+
 	result_size = mtk_jpeg_enc_get_file_size(jpeg->reg_base,
 		jpeg->support_34bit);
 	v4l2_dbg(2, debug, &jpeg->v4l2_dev, "reult size = %d", result_size);
 	vb2_set_plane_payload(&dst_buf->vb2_buf, 0, result_size);
 
+	buf_state = VB2_BUF_STATE_DONE;
+
+enc_end:
+
 	if (v4l2_m2m_is_last_draining_src_buf(ctx->fh.m2m_ctx, src_buf)) {
-		v4l2_dbg(0, debug, &jpeg->v4l2_dev, "mark stopped\n");
+		v4l2_dbg(1, debug, &jpeg->v4l2_dev, "mark stopped\n");
 		dst_buf->flags |= V4L2_BUF_FLAG_LAST;
 		v4l2_m2m_mark_stopped(ctx->fh.m2m_ctx);
 	}
-
-	buf_state = VB2_BUF_STATE_DONE;
 
 	v4l2_m2m_buf_done(src_buf, buf_state);
 	v4l2_m2m_buf_done(dst_buf, buf_state);
@@ -1914,29 +1962,6 @@ getbuf_fail:
 	atomic_inc(&jpeg->hw_rdy);
 	mtk_jpegdec_put_hw(jpeg, hw_id);
 	v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
-}
-
-static irqreturn_t mtk_jpeg_enc_irq(int irq, void *priv)
-{
-	struct mtk_jpeg_dev *jpeg = priv;
-	u32 irq_status;
-	irqreturn_t ret = IRQ_NONE;
-
-	cancel_delayed_work(&jpeg->job_timeout_work);
-
-	irq_status = readl(jpeg->reg_base + JPEG_ENC_INT_STS) &
-		     JPEG_ENC_INT_STATUS_MASK_ALLIRQ;
-	if (irq_status)
-		writel(0, jpeg->reg_base + JPEG_ENC_INT_STS);
-
-	if (irq_status & JPEG_ENC_INT_STATUS_STALL)
-		pr_info("irq stall need to check output buffer size");
-
-	if (!(irq_status & JPEG_ENC_INT_STATUS_DONE))
-		return ret;
-
-	ret = mtk_jpeg_enc_done(jpeg);
-	return ret;
 }
 
 static irqreturn_t mtk_jpeg_dec_irq(int irq, void *priv)
