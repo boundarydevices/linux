@@ -42,6 +42,15 @@
 		enable-active-high;
 	};
 
+	reg_usb_otg_vbus: regulator-usb-otg-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_otg_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pcal6524 21 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
 	sound-wm8962 {
 		compatible = "fsl,imx-audio-wm8962";
 		model = "wm8962-audio";
@@ -225,6 +234,8 @@
 };
 
 &usb2 {
+	vbus-supply = <&reg_usb_otg_vbus>;
+
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;

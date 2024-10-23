@@ -83,6 +83,15 @@
 		regulator-name = "+V1.8_SW";
 	};
 
+	reg_usb_hub_vbus: regulator-usb-hub-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_hub_vbus";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pcal6524 22 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
 	reg_usdhc1_vmmc: regulator-usdhc1 {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
@@ -160,7 +169,7 @@
 	pinctrl-0 = <&pinctrl_enetc1>;
 	phy-handle = <&ethphy1>;
 	phy-mode = "rgmii-id";
-	status = "disabled";
+	status = "okay";
 };
 
 &flexcan1 {
@@ -431,6 +440,7 @@
 
 &usb3_phy {
 	status = "okay";
+	vbus-supply = <&reg_usb_hub_vbus>;
 };
 
 &usb3_dwc3 {
@@ -502,7 +512,7 @@
 };
 
 &scmi_iomuxc {
-	pinctrl_emdio: emdiogrp{
+	pinctrl_emdio: emdiogrp {
 		fsl,pins = <
 			IMX95_PAD_ENET1_MDC__NETCMIX_TOP_NETC_MDC		0x57e
 			IMX95_PAD_ENET1_MDIO__NETCMIX_TOP_NETC_MDIO		0x97e
