@@ -920,6 +920,7 @@ __get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
 	error = security_mmap_addr(addr);
 	return error ? error : addr;
 }
+EXPORT_SYMBOL(__get_unmapped_area);
 
 unsigned long
 mm_get_unmapped_area(struct mm_struct *mm, struct file *file,
