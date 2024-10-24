@@ -24,6 +24,15 @@
 
 	aliases {
 		serial0 = &uart0;
+		dsi0 = &dsi0;
+	};
+
+	backlight_lcd1: backlight-lcd1 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm1 0 500000>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
 	};
 
 	chosen {
@@ -206,6 +215,15 @@
 		gpio = <&pio 7 0>; /* HUB_RESET */
 		vin-supply = <&hub3v3>;
 		enable-active-low;
+	};
+
+	dsi0_en: dsi0-en {
+		compatible = "regulator-fixed";
+		regulator-name = "lcm1_en";
+		enable-active-high;
+		gpio = <&pio 111 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&dsi0_en_pins_default>;
 	};
 };
 
@@ -507,6 +525,44 @@
 	};
 };
 
+&dsi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "disabled";
+	poweron-in-hs-mode = <0>;
+
+	panel@0 {
+		compatible = "startek,kd070fhfid078";
+		status = "disabled";
+		reg = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel_pins_default>;
+		backlight = <&backlight_lcd1>;
+		reset-gpios = <&pio 25 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&pio 45 GPIO_ACTIVE_HIGH>;
+		iovcc-supply = <&dsi0_en>;
+		port {
+			panel0_in: endpoint {
+				remote-endpoint = <&dsi0_out>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			dsi0_out: endpoint {
+				remote-endpoint = <&panel0_in>;
+			};
+		};
+	};
+};
+
+&disp_pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&disp_pwm1_pin_default>;
+	status = "disabled";
+};
+
 &pio {
 	audio_default_pins: audio-default-pins {
 		pins-cmd-dat {
@@ -695,6 +751,31 @@
 			pinmux = <PINMUX_GPIO42__FUNC_B1_KPCOL0>,
 				 <PINMUX_GPIO43__FUNC_B1_KPCOL1>,
 				 <PINMUX_GPIO44__FUNC_B1_KPROW0>;
+		};
+	};
+
+	panel_pins_default: panel-pins-default {
+		panel-dcdc {
+			pinmux = <PINMUX_GPIO45__FUNC_B_GPIO45>;
+			output-low;
+		};
+
+		panel-rst {
+			pinmux = <PINMUX_GPIO25__FUNC_B_GPIO25>;
+			output-high;
+		};
+	};
+
+	dsi0_en_pins_default: dsi0-en-pins-default {
+		panel-en {
+			pinmux = <PINMUX_GPIO111__FUNC_B_GPIO111>;
+			output-low;
+		};
+	};
+
+	disp_pwm1_pin_default: disp-pwm1-pin-default {
+		pins1 {
+			pinmux = <PINMUX_GPIO30__FUNC_O_DISP_PWM1>;
 		};
 	};
 
@@ -1028,6 +1109,10 @@
 	pinctrl-0 = <&uart2_pins>;
 	pinctrl-names = "default";
 	status = "okay";
+};
+
+&mipi_tx0 {
+	status = "disabled";
 };
 
 &spi2 {
