@@ -68,7 +68,15 @@ int ele_msg_rcv(struct se_if_device_ctx *dev_ctx,
 		}
 	} while (err < 0);
 
-	return (err >= 0) ? se_clbk_hdl->rx_msg_sz : err;
+	if (err >= 0) {
+		se_dump_to_logfl(dev_ctx,
+				 SE_DUMP_MU_RCV_BUFS,
+				 se_clbk_hdl->rx_msg_sz,
+				 (u8 *)se_clbk_hdl->rx_msg);
+		err = se_clbk_hdl->rx_msg_sz;
+	}
+
+	return err;
 }
 
 int ele_msg_send(struct se_if_device_ctx *dev_ctx,
@@ -102,6 +110,7 @@ int ele_msg_send(struct se_if_device_ctx *dev_ctx,
 		return err;
 	}
 	err = tx_msg_sz;
+	se_dump_to_logfl(dev_ctx, SE_DUMP_MU_SND_BUFS, tx_msg_sz, tx_msg);
 
 	return err;
 }
@@ -175,6 +184,12 @@ void se_if_rx_callback(struct mbox_client *mbox_cl, void *msg)
 		dev_err(dev, "Message is invalid\n");
 		return;
 	}
+
+	if ((((uint32_t *)msg)[1] & 0xFFFF) == ELE_ABORT_ERR_CODE)
+		se_dump_to_logfl(priv->priv_dev_ctx,
+				 SE_DUMP_KDEBUG_BUFS, 0,
+				 "Rx-Msg(0x%x): Fatal abort received  by %s.\n",
+				 ((uint32_t *)msg)[0], priv->priv_dev_ctx->devname);
 
 	header = msg;
 	rx_msg_sz = header->size << 2;
