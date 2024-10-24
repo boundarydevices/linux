@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/iio/adc/mediatek-mt635x-auxadc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek mt635x-auxadc
+
+maintainers:
+  - Kevin.Shen <Kevin.Shen@mediatek.com>
+
+description: |
+  This binding is intended to represent mt635x-auxadc which is found in most MediaTek SOCs.
+
+
+properties:
+  compatible:
+    enum:
+      - mediatek,mt6359p-auxadc
+
+additionalProperties: false
