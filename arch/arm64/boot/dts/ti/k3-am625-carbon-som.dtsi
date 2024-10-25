@@ -158,6 +158,8 @@
 		compatible = "mmc-pwrseq-simple";
 		pinctrl-names = "default";
 		pinctrl-0 = <&main_wifi_en_default>;
+		clocks = <&rv3028>;
+		clock-names = "ext_clock";
 		reset-gpios = <&main_gpio0 20 GPIO_ACTIVE_LOW>; /* W_DISABLE# */
 		post-power-on-delay-ms = <100>;
 		status = "okay";
