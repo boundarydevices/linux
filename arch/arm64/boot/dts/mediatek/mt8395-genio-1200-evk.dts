@@ -215,7 +215,7 @@
 		pinctrl-0 = <&panel_pins_default>;
 		backlight = <&backlight_lcd0>;
 		reset-gpios = <&pio 108 GPIO_ACTIVE_HIGH>;
-		dcdc-gpios = <&pio 48 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&pio 48 GPIO_ACTIVE_HIGH>;
 		iovcc-supply = <&mt6360_ldo2>;
 		pp3300-supply = <&mt6360_ldo1>;
 		port {
