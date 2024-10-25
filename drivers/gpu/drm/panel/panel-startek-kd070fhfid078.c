@@ -43,7 +43,7 @@ struct startek_panel {
 	const struct panel_desc *desc;
 
 	struct gpio_desc *reset_gpio;
-	struct gpio_desc *dcdc_en_gpio;
+	struct gpio_desc *enable_gpio;
 	struct regulator *iovcc_supply;
 	struct regulator *pp3300_supply;
 
@@ -235,7 +235,7 @@ static int startek_panel_unprepare_power(struct drm_panel *panel)
 
 	gpiod_set_value(startek->reset_gpio, 0);
 	mdelay(15);
-	gpiod_set_value(startek->dcdc_en_gpio, 0);
+	gpiod_set_value(startek->enable_gpio, 0);
 	mdelay(3);
 	if (startek->iovcc_supply)
 		regulator_disable(startek->iovcc_supply);
@@ -278,7 +278,7 @@ static int startek_panel_prepare_power(struct drm_panel *panel)
 		return 0;
 
 	gpiod_set_value(startek->reset_gpio, 0);
-	gpiod_set_value(startek->dcdc_en_gpio, 0);
+	gpiod_set_value(startek->enable_gpio, 0);
 	mdelay(1);
 
 	if (startek->pp3300_supply) {
@@ -298,7 +298,7 @@ static int startek_panel_prepare_power(struct drm_panel *panel)
 	}
 	mdelay(10);
 
-	gpiod_set_value(startek->dcdc_en_gpio, 1);
+	gpiod_set_value(startek->enable_gpio, 1);
 	mdelay(15);
 	gpiod_set_value(startek->reset_gpio, 1);
 	mdelay(10);
@@ -407,9 +407,9 @@ static int startek_panel_add(struct startek_panel *startek)
 		return ret;
 	}
 
-	startek->dcdc_en_gpio = devm_gpiod_get(dev, "dcdc", GPIOD_OUT_LOW);
-	if (IS_ERR(startek->dcdc_en_gpio)) {
-		ret = PTR_ERR(startek->dcdc_en_gpio);
+	startek->enable_gpio = devm_gpiod_get(dev, "enable", GPIOD_OUT_LOW);
+	if (IS_ERR(startek->enable_gpio)) {
+		ret = PTR_ERR(startek->enable_gpio);
 		dev_err(dev, "cannot get dcdc-en-gpio %d\n", ret);
 		return ret;
 	}
