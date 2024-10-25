@@ -586,6 +586,7 @@ static int sec_mipi_dsim_host_attach(struct mipi_dsi_host *host,
 	const struct sec_mipi_dsim_plat_data *pdata = dsim->pdata;
 	struct device *dev = dsim->dev;
 	struct drm_panel *panel;
+	struct drm_bridge *bridge;
 
 	if (!dsi->lanes || dsi->lanes > pdata->max_data_lanes) {
 		dev_err(dev, "invalid data lanes number\n");
@@ -611,22 +612,48 @@ static int sec_mipi_dsim_host_attach(struct mipi_dsi_host *host,
 	}
 
 	if (!dsim->next) {
-		/* 'dsi' must be panel device */
+		/* 'dsi' may be panel device */
 		panel = of_drm_find_panel(dsi->dev.of_node);
 
-		if (!panel) {
-			dev_err(dev, "refuse unknown dsi device attach\n");
-			WARN_ON(!panel);
+		if (IS_ERR_OR_NULL(panel)) {
+			dev_dbg(dev, "panel not found, check for bridge\n");
+			dsim->panel = NULL;
+		} else {
+			/* Don't support multiple panels */
+			if (dsim->panel && panel && dsim->panel != panel) {
+				dev_err(dev, "don't support multiple panels\n");
+				return -EBUSY;
+			}
+
+			dsim->panel = panel;
+		}
+
+		/* `dsi` may be bridge device if panel not found */
+		if (!dsim->panel) {
+			bridge = of_drm_find_bridge(dsi->dev.of_node);
+
+			if (IS_ERR_OR_NULL(bridge)) {
+				dev_dbg(dev, "bridge not found\n");
+				dsim->bridge = NULL;
+			} else {
+				/* Don't support multiple bridges */
+				if (dsim->bridge && bridge &&
+				    dsim->bridge != bridge) {
+					dev_err(dev,
+						"don't support multiple bridges\n");
+					return -EBUSY;
+				}
+
+				dsim->bridge = bridge;
+			}
+		}
+
+		if (!dsim->panel && !dsim->bridge) {
+			dev_err(dev,
+				"refuse unknown dsi device attach: panel (%pe), bridge (%pe)\n",
+				panel, bridge);
 			return -ENODEV;
 		}
-
-		/* Don't support multiple panels */
-		if (dsim->panel && panel && dsim->panel != panel) {
-			dev_err(dev, "don't support multiple panels\n");
-			return -EBUSY;
-		}
-
-		dsim->panel = panel;
 	}
 
 	/* TODO: DSIM 3 lanes has some display issue, so
