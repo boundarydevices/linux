@@ -72,7 +72,7 @@
 			};
 
 			pwr_sel_input {
-				label = "ch1_input";
+				label = "pwr_sel_input";
 				gpios = <&gpio4 19 GPIO_ACTIVE_LOW>;
 				linux,code = <KEY_FN_F5>;
 			};
@@ -664,7 +664,6 @@
 			MX8MP_IOMUXC_SAI1_TXD1__GPIO4_IO13		0x1c0	/* AUDIO_GAIN1 */
 			MX8MP_IOMUXC_SAI1_TXD2__GPIO4_IO14		0x1c0	/* AUDIO_GAIN2 */
 			MX8MP_IOMUXC_SAI1_TXD4__GPIO4_IO16		0x1c0	/* RELAY_OUT_CH1 */
-			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19		0x1c0	/* PWR_SEL */
 			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00		0x1c0	/* 48V_CH1_EN */
 			MX8MP_IOMUXC_SAI1_RXD2__GPIO4_IO04		0x1c0	/* 24V_EN */
 			MX8MP_IOMUXC_SAI1_RXD3__GPIO4_IO05		0x1c0	/* PWM2	Simong to be patched as we need a PWM */
@@ -681,6 +680,7 @@
                         MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18		0x1c0   /* 5V_STAT */
 			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x1c0   /* 48V_STAT */
 			MX8MP_IOMUXC_SAI1_RXC__GPIO4_IO01		0x1c0   /* 48V_CH1_FAULT */
+			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19		0x1c0	/* PWR_SEL */
 		>;
 	};
 
