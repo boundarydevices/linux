@@ -143,13 +143,6 @@
 		regulator-boot-on;
 	};
 
-	vcc_3v3_sdio_b: regulator-sdio-b {
-		compatible = "regulator-fixed-clock";
-		clocks = <&rv3028>;
-                regulator-always-on;
-                regulator-name = "vcc_3v3_sdio_b";
-	};
-
 	vcc_1v8_sys: regulator-u3-b2 {
 		/* output of U3 Buck 2 */
 		bootph-all;
@@ -857,7 +850,7 @@
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mmc2_pins_default>, <&main_wifi_wake_default>;
-	vmmc-supply = <&vcc_3v3_sdio_b>;
+	vmmc-supply = <&vcc_3v3_sys>;
 	vqmmc-supply = <&vcc_1v8_sys>;
 	mmc-pwrseq = <&wifi_pwrseq>; /* W_DISABLE# */
 	non-removable;
