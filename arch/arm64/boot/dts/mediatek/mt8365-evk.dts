@@ -586,6 +586,18 @@
 		};
 	};
 
+	lvds_panel_default_pins: lvds-panel-default-pins {
+		panel-dcdc {
+			pinmux = <MT8365_PIN_129_TDM_TX_BCK__FUNC_GPIO129>;
+			output-low;
+		};
+
+		panel-rst {
+			pinmux = <MT8365_PIN_67_CMPCLK__FUNC_GPIO67>;
+			output-low;
+		};
+	};
+
 	mmc0_default_pins: mmc0-default-pins {
 		clk-pins {
 			pinmux = <MT8365_PIN_99_MSDC0_CLK__FUNC_MSDC0_CLK>;
