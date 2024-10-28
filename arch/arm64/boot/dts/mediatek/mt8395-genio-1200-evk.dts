@@ -346,6 +346,7 @@
 			compatible = "mediatek,mt6360-tcpc";
 			interrupts-extended = <&pio 17 IRQ_TYPE_LEVEL_LOW>;
 			interrupt-names = "PD_IRQB";
+			tcpc-vbus-supply = <&otg_vbus_regulator>;
 
 			connector {
 				compatible = "usb-c-connector";
