@@ -1243,3 +1243,37 @@
 &img_vcore {
 	domain-supply = <&mt6359_vproc1_buck_reg>;
 };
+
+&afe {
+	status = "okay";
+};
+
+&sound {
+	compatible = "mediatek,mt8188-mt6359";
+	model = "mt8390-evk";
+	pinctrl-names = "default";
+	pinctrl-0 = <&audio_default_pins>;
+	audio-routing =
+		"Headphone", "Headphone L",
+		"Headphone", "Headphone R",
+		"AIN1", "Headset Mic";
+	status = "okay";
+
+	dai-link-0 {
+		sound-dai = <&afe>;
+		link-name = "DL_SRC_BE";
+
+		codec {
+			sound-dai = <&pmic 0>;
+		};
+	};
+
+	dai-link-1 {
+		sound-dai = <&afe>;
+		link-name = "UL_SRC_BE";
+
+		codec {
+			sound-dai = <&pmic 0>;
+		};
+	};
+};
