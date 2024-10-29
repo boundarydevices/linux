@@ -22,7 +22,6 @@
 /*
  * Metrics for power management
  */
-
 #include <mali_kbase.h>
 #include <mali_kbase_config_defaults.h>
 #include <mali_kbase_pm.h>
@@ -102,28 +101,67 @@ static enum hrtimer_restart dvfs_callback(struct hrtimer *timer)
 int kbasep_pm_metrics_init(struct kbase_device *kbdev)
 {
 #if MALI_USE_CSF
-	struct kbase_ipa_control_perf_counter perf_counter;
+	struct kbase_ipa_control_perf_counter perf_counter[7];
 	int err;
 
 	/* One counter group */
-	const size_t NUM_PERF_COUNTERS = 1;
+	const size_t NUM_PERF_COUNTERS = 4;
 
 	KBASE_DEBUG_ASSERT(kbdev != NULL);
 	kbdev->pm.backend.metrics.kbdev = kbdev;
 	kbdev->pm.backend.metrics.time_period_start = ktime_get_raw();
 
-	perf_counter.scaling_factor = GPU_ACTIVE_SCALING_FACTOR;
+	perf_counter[0].scaling_factor = GPU_ACTIVE_SCALING_FACTOR;
 
 	/* Normalize values by GPU frequency */
-	perf_counter.gpu_norm = true;
+	perf_counter[0].gpu_norm = true;
 
 	/* We need the GPU_ACTIVE counter, which is in the CSHW group */
-	perf_counter.type = KBASE_IPA_CORE_TYPE_CSHW;
+	perf_counter[0].type = KBASE_IPA_CORE_TYPE_CSHW;
 
 	/* We need the GPU_ACTIVE counter */
-	perf_counter.idx = GPU_ACTIVE_CNT_IDX;
+	perf_counter[0].idx = GPU_ACTIVE_CNT_IDX;
 
-	err = kbase_ipa_control_register(kbdev, &perf_counter, NUM_PERF_COUNTERS,
+	//init perf_counter[1] for shader core
+	perf_counter[1].scaling_factor = GPU_ACTIVE_SCALING_FACTOR;
+
+	/* Normalize values by GPU frequency */
+	perf_counter[1].gpu_norm = true;
+
+	/* We need the shader counter */
+	perf_counter[1].type = KBASE_IPA_CORE_TYPE_SHADER;
+
+	/* We need the shader frag active counter */
+	perf_counter[1].idx = FRAG_ACTIVE_CNT_IDX;
+
+	//init perf_counter[2] for shader core
+	perf_counter[2].scaling_factor = GPU_ACTIVE_SCALING_FACTOR;
+
+	/* Normalize values by GPU frequency */
+	perf_counter[2].gpu_norm = true;
+
+	/* We need the shader counter */
+	perf_counter[2].type = KBASE_IPA_CORE_TYPE_SHADER;
+
+	/* We need the shader counter */
+	perf_counter[2].idx = COMPUTE_ACTIVE_CNT_IDX;
+
+	//init perf_counter[3] for Tiler core
+	perf_counter[3].scaling_factor = GPU_ACTIVE_SCALING_FACTOR;
+
+	/* Normalize values by GPU frequency */
+	perf_counter[3].gpu_norm = true;
+
+	/* We need the  counter */
+	perf_counter[3].type = KBASE_IPA_CORE_TYPE_TILER;
+
+	/* We need the shader counter */
+	perf_counter[3].idx = TILER_ACTIVE_CNT_IDX;
+
+	//init perf_counter[1] for shader core
+	perf_counter[3].scaling_factor = GPU_ACTIVE_SCALING_FACTOR;
+
+	err = kbase_ipa_control_register(kbdev, &perf_counter[0], NUM_PERF_COUNTERS,
 					 &kbdev->pm.backend.metrics.ipa_control_client);
 	if (err) {
 		dev_err(kbdev->dev, "Failed to register IPA with kbase_ipa_control: err=%d", err);
@@ -184,7 +222,7 @@ KBASE_EXPORT_TEST_API(kbasep_pm_metrics_term);
 static void kbase_pm_get_dvfs_utilisation_calc(struct kbase_device *kbdev)
 {
 	int err;
-	u64 gpu_active_counter;
+	u64 gpu_active_counter[4];
 	u64 protected_time;
 	ktime_t now;
 
@@ -194,7 +232,7 @@ static void kbase_pm_get_dvfs_utilisation_calc(struct kbase_device *kbdev)
 	 * info.
 	 */
 	err = kbase_ipa_control_query(kbdev, kbdev->pm.backend.metrics.ipa_control_client,
-				      &gpu_active_counter, 1, &protected_time);
+				      &gpu_active_counter[0], 4, &protected_time);
 
 	/* Read the timestamp after reading the GPU_ACTIVE counter value.
 	 * This ensures the time gap between the 2 reads is consistent for
@@ -239,11 +277,11 @@ static void kbase_pm_get_dvfs_utilisation_calc(struct kbase_device *kbdev)
 			u64 const MARGIN_NS =
 				IPA_CONTROL_TIMER_DEFAULT_VALUE_MS * NSEC_PER_MSEC * 3 / 2;
 
-			if (gpu_active_counter > (diff_ns + MARGIN_NS)) {
-				dev_info(
+			if (gpu_active_counter[0] > (diff_ns + MARGIN_NS)) {
+				dev_dbg(
 					kbdev->dev,
 					"GPU activity takes longer than time interval: %llu ns > %llu ns",
-					(unsigned long long)gpu_active_counter,
+					(unsigned long long)gpu_active_counter[0],
 					(unsigned long long)diff_ns);
 			}
 		}
@@ -263,17 +301,26 @@ static void kbase_pm_get_dvfs_utilisation_calc(struct kbase_device *kbdev)
 		 * the chances of overflows.
 		 */
 		protected_time >>= KBASE_PM_TIME_SHIFT;
-		gpu_active_counter >>= KBASE_PM_TIME_SHIFT;
-		gpu_active_counter += protected_time;
+		gpu_active_counter[0] >>= KBASE_PM_TIME_SHIFT;
+		gpu_active_counter[1] >>= KBASE_PM_TIME_SHIFT;
+		gpu_active_counter[2] >>= KBASE_PM_TIME_SHIFT;
+		gpu_active_counter[3] >>= KBASE_PM_TIME_SHIFT;
+
+		gpu_active_counter[0] += protected_time;
 
 		/* Ensure the following equations don't go wrong if ns_time is
 		 * slightly larger than gpu_active_counter somehow
 		 */
-		gpu_active_counter = MIN(gpu_active_counter, ns_time);
+		gpu_active_counter[0] = MIN(gpu_active_counter[0], ns_time);
+		gpu_active_counter[1] = MIN(gpu_active_counter[1], ns_time);
+		gpu_active_counter[2] = MIN(gpu_active_counter[2], ns_time);
+		gpu_active_counter[3] = MIN(gpu_active_counter[3], ns_time);
 
-		kbdev->pm.backend.metrics.values.time_busy += gpu_active_counter;
-
-		kbdev->pm.backend.metrics.values.time_idle += ns_time - gpu_active_counter;
+		kbdev->pm.backend.metrics.values.time_busy += gpu_active_counter[0];
+		kbdev->pm.backend.metrics.values.shader_frag_time_busy += gpu_active_counter[1];
+		kbdev->pm.backend.metrics.values.shader_time_busy += gpu_active_counter[1]+gpu_active_counter[2];
+		kbdev->pm.backend.metrics.values.tiler_time_busy += gpu_active_counter[3];
+		kbdev->pm.backend.metrics.values.time_idle += ns_time - gpu_active_counter[0];
 
 		/* Also make time in protected mode available explicitly,
 		 * so users of this data have this info, too.
@@ -338,6 +385,10 @@ void kbase_pm_get_dvfs_metrics(struct kbase_device *kbdev, struct kbasep_pm_metr
 
 #if MALI_USE_CSF
 	diff->time_in_protm = cur->time_in_protm - last->time_in_protm;
+	diff->shader_frag_time_busy = cur->shader_frag_time_busy - last->shader_frag_time_busy;
+	diff->shader_time_busy = cur->shader_time_busy - last->shader_time_busy;
+	diff->tiler_time_busy = cur->tiler_time_busy - last->tiler_time_busy;
+
 #else
 	diff->busy_cl[0] = cur->busy_cl[0] - last->busy_cl[0];
 	diff->busy_cl[1] = cur->busy_cl[1] - last->busy_cl[1];

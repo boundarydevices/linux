@@ -159,6 +159,10 @@ struct kbasep_pm_metrics {
 	u64 time_idle;
 #if MALI_USE_CSF
 	u64 time_in_protm;
+	u64 shader_frag_time_busy;
+	u64 shader_time_busy;
+	u64 tiler_time_busy;
+
 #else
 	u32 busy_cl[2];
 	u32 busy_gl;
