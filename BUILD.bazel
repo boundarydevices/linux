@@ -1562,6 +1562,7 @@ ddk_headers(
     hdrs = [
         "drivers/devfreq/governor.h",
         "drivers/pinctrl/core.h",
+        "drivers/ufs/host/ufshcd-pltfrm.h",
         "//build/kernel/kleaf:user_ddk_unsafe_headers",
     ],
     # The list of include directories where source files can #include headers
@@ -1570,6 +1571,7 @@ ddk_headers(
     includes = [
         "drivers/devfreq",
         "drivers/pinctrl",
+        "drivers/ufs/host",
     ],
     visibility = ["//visibility:private"],
 )
