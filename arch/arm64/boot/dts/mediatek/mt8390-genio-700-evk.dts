@@ -1246,6 +1246,8 @@
 
 &afe {
 	#sound-dai-cells = <0>;
+	mediatek,dmic-iir-on;
+	mediatek,dmic-clk-mono;
 	status = "okay";
 };
 
@@ -1257,7 +1259,11 @@
 	audio-routing =
 		"Headphone", "Headphone L",
 		"Headphone", "Headphone R",
-		"AIN1", "Headset Mic";
+		"AIN1", "Headset Mic",
+		"DMIC_INPUT", "AP DMIC",
+		"AP DMIC", "AUDGLB",
+		"AP DMIC", "MIC_BIAS_0",
+		"AP DMIC", "MIC_BIAS_2";
 	status = "okay";
 
 	dai-link-0 {
