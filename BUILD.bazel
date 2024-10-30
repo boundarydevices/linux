@@ -402,7 +402,8 @@ kernel_build(
         "vmlinux",
         "vmlinux.symvers",
     ],
-    build_config = "build.config.microdroid.aarch64",
+    build_config = "build.config.common",
+    defconfig = "arch/arm64/configs/microdroid_defconfig",
     make_goals = [
         "Image",
     ],
@@ -435,7 +436,8 @@ kernel_build(
         "vmlinux",
         "vmlinux.symvers",
     ],
-    build_config = "build.config.microdroid.aarch64",
+    build_config = "build.config.common",
+    defconfig = "arch/arm64/configs/microdroid_defconfig",
     make_goals = [
         "Image",
     ],
@@ -465,7 +467,8 @@ kernel_build(
     srcs = [":kernel_x86_64_sources"],
     outs = X86_64_OUTS,
     arch = "x86_64",
-    build_config = "build.config.microdroid.x86_64",
+    build_config = "build.config.common",
+    defconfig = "arch/x86/configs/microdroid_defconfig",
     make_goals = [
         "bzImage",
     ],
