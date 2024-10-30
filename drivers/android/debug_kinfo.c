@@ -20,7 +20,6 @@
  * These will be re-linked against their real values
  * during the second link stage.
  */
-extern const unsigned long kallsyms_addresses[] __weak;
 extern const int kallsyms_offsets[] __weak;
 extern const u8 kallsyms_names[] __weak;
 extern const u8 kallsyms_seqs_of_names[] __weak;
@@ -143,6 +142,7 @@ static int debug_kinfo_probe(struct platform_device *pdev)
 	info->symbol_len = KSYM_SYMBOL_LEN;
 	info->_relative_pa = (u64)__pa_symbol((volatile void *)kallsyms_relative_base);
 	info->_offsets_pa = (u64)__pa_symbol((volatile void *)kallsyms_offsets);
+	info->_text_pa = (u64)__pa_symbol(_text);
 	info->_stext_pa = (u64)__pa_symbol(_stext);
 	info->_etext_pa = (u64)__pa_symbol(_etext);
 	info->_sinittext_pa = (u64)__pa_symbol(_sinittext);
