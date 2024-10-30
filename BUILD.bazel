@@ -1547,9 +1547,7 @@ filegroup(
 # - be moved into all_headers
 ddk_headers(
     name = "all_headers_unsafe",
-    hdrs = [
-        "drivers/gpu/drm/virtio/virtgpu_trace.h",
-    ],
+    hdrs = [],
     # The list of include directories where source files can #include headers
     # from. In other words, these are the `-I` option to the C compiler.
     # Unsafe include directories are appended to ccflags-y.
