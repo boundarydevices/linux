@@ -205,6 +205,20 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&dsi0_en_pins_default>;
 	};
+
+	amic_codec: amic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <200>;
+	};
+
+	dmic_codec: dmic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <30>;
+	};
 };
 
 &gpu {
@@ -1286,7 +1300,16 @@
 		link-name = "UL_SRC_BE";
 
 		codec {
-			sound-dai = <&pmic 0>;
+			sound-dai = <&pmic 0>, <&amic_codec>;
+		};
+	};
+
+	dai-link-2 {
+		sound-dai = <&afe>;
+		link-name = "DMIC_BE";
+
+		codec {
+			sound-dai = <&dmic_codec>;
 		};
 	};
 };
