@@ -1563,13 +1563,17 @@ filegroup(
 ddk_headers(
     name = "all_headers_unsafe",
     hdrs = [
+        "drivers/devfreq/governor.h",
         "drivers/pinctrl/core.h",
         "//build/kernel/kleaf:user_ddk_unsafe_headers",
     ],
     # The list of include directories where source files can #include headers
     # from. In other words, these are the `-I` option to the C compiler.
     # Unsafe include directories are appended to ccflags-y.
-    includes = ["drivers/pinctrl"],
+    includes = [
+        "drivers/devfreq",
+        "drivers/pinctrl",
+    ],
     visibility = ["//visibility:private"],
 )
 
