@@ -795,9 +795,11 @@ kernel_build(
         "arch/arm64/boot/dts/qcom/sm8650-hdk.dtb",
         "arch/arm64/boot/dts/qcom/sm8650-qrd.dtb",
     ],
+    arch = "arm64",
     # Enable mixed build.
     base_kernel = ":kernel_aarch64",
     build_config = "build.config.db845c",
+    defconfig = "arch/arm64/configs/gki_defconfig",
     make_goals = [
         "modules",
         "qcom/qrb5165-rb5.dtb",
@@ -811,6 +813,7 @@ kernel_build(
     ],
     makefile = ":Makefile",
     module_outs = _DB845C_MODULE_OUTS + _DB845C_WATCHDOG_MODULE_OUTS,
+    pre_defconfig_fragments = ["arch/arm64/configs/db845c_gki.fragment"],
     strip_modules = True,
 )
 
@@ -827,9 +830,11 @@ kernel_build(
         "arch/arm64/boot/dts/qcom/sm8650-hdk.dtb",
         "arch/arm64/boot/dts/qcom/sm8650-qrd.dtb",
     ],
+    arch = "arm64",
     # Enable mixed build.
     base_kernel = ":kernel_aarch64",
     build_config = "build.config.db845c",
+    defconfig = "arch/arm64/configs/gki_defconfig",
     make_goals = [
         "modules",
         "qcom/qrb5165-rb5.dtb",
@@ -843,6 +848,7 @@ kernel_build(
     ],
     makefile = ":Makefile",
     module_outs = _DB845C_MODULE_OUTS,
+    pre_defconfig_fragments = ["arch/arm64/configs/db845c_gki.fragment"],
     strip_modules = True,
 )
 
