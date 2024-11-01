@@ -1191,7 +1191,9 @@ kernel_build(
         "vmlinux",
         "vmlinux.symvers",
     ],
-    build_config = "build.config.amlogic",
+    arch = "arm64",
+    build_config = "build.config.common",
+    defconfig = "arch/arm64/configs/gki_defconfig",
     make_goals = [
         "Image",
         "modules",
@@ -1202,6 +1204,7 @@ kernel_build(
     ],
     makefile = ":Makefile",
     module_outs = get_gki_modules_list("arm64") + get_kunit_modules_list("arm64") + _AMLOGIC_MODULE_OUTS + _AMLOGIC_WATCHDOG_MODULE_OUTS,
+    pre_defconfig_fragments = ["arch/arm64/configs/amlogic_gki.fragment"],
     visibility = ["//visibility:private"],
 )
 
@@ -1220,7 +1223,9 @@ kernel_build(
         "vmlinux",
         "vmlinux.symvers",
     ],
-    build_config = "build.config.amlogic",
+    arch = "arm64",
+    build_config = "build.config.common",
+    defconfig = "arch/arm64/configs/gki_defconfig",
     make_goals = [
         "Image",
         "modules",
@@ -1231,6 +1236,7 @@ kernel_build(
     ],
     makefile = ":Makefile",
     module_outs = get_gki_modules_list("arm64") + get_kunit_modules_list("arm64") + _AMLOGIC_MODULE_OUTS,
+    pre_defconfig_fragments = ["arch/arm64/configs/amlogic_gki.fragment"],
     visibility = ["//visibility:private"],
 )
 
