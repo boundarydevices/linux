@@ -1172,8 +1172,9 @@
 			reg = <0 0x14018000 0 0x1000>;
 			clocks = <&mmsys CLK_MM_DPI0_DPI0>,
 				 <&mmsys CLK_MM_MM_DPI0>,
-				 <&apmixedsys CLK_APMIXED_LVDSPLL>;
-			clock-names = "pixel", "engine", "pll";
+				 <&apmixedsys CLK_APMIXED_LVDSPLL>,
+				 <&topckgen CLK_TOP_DPI0_SEL>;
+			clock-names = "pixel", "engine", "pll", "dpi_sel";
 			interrupts = <GIC_SPI 197 IRQ_TYPE_LEVEL_LOW>;
 			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
 			status = "disabled";
