@@ -11363,7 +11363,7 @@ static struct sched_group *sched_balance_find_src_group(struct lb_env *env)
 	if (busiest->group_type == group_misfit_task)
 		goto force_balance;
 
-	trace_android_rvh_find_busiest_group(sds.busiest, env->dst_rq, &out_balance);
+	trace_android_rvh_sched_balance_find_src_group(sds.busiest, env->dst_rq, &out_balance);
 	if (!is_rd_overutilized(env->dst_rq->rd) &&
 	    rcu_dereference(env->dst_rq->rd->pd) && out_balance)
 		goto out_balanced;
