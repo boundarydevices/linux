@@ -5,21 +5,27 @@ Prerequisites
  * If you want to run a vendor module KUnit tests, please run the tests with a
    "no trim" kernel (e.g. add `--notrim` to bazel build command).
 
-Run test with a single shell script command:
-  $ common/tools/testing/android/bin/kunit.sh
+Run tests on a physical or virtual device:
+  $ kernel/tests/tools/run_test_only.sh -t kunit -s <serial_number>
 
-  By default, the script will build the kernel and launch an Android virtual
-  device and then run the tests. Additional options may be passed to change the
-  default behavior. The following are some examples on how to use it:
+Before the tests, you can use the following command to launch a virtual device:
+  $ kernel/tests/tools/launch_cvd.sh
 
-  * Build kernel, launch a virtual device, run KUnit tests:
-  $ common/tools/testing/android/bin/kunit.sh
+After the tests, you can use the following command to remove the virtual device:
+  $ prebuilts/asuite/acloud/linux-x86/acloud delete
 
-  * Run KUnit tests on a connected device directly:
-  $ common/tools/testing/android/bin/kunit.sh -s 127.0.0.1:37693
+The following are command examples:
+  * Build kernel and launch a virtual device from a specific platform build:
+  $ kernel/tests/tools/launch_cvd.sh -pb \
+        ab://aosp-main/aosp_cf_x86_64_phone-trunk_staging-userdebug/12505199
+
+  * Run a specific test:
+  $ kernel/tests/tools/run_test_only.sh \
+        -t 'kunit soc-utils-test' -s <serial_number>
 
   * Check other available options:
-  $ common/tools/testing/android/bin/kunit.sh -h
+  $ kernel/tests/tools/launch_cvd.sh -h
+  $ kernel/tests/tools/run_test_only.sh -h
 
 Load and run a test module on Android device manually
  * Push the KUnit test framework module kunit.ko over to the device. For
@@ -69,13 +75,13 @@ View test results
 
 Run KUnit tests on Android Device via test automation infrastructure tradefed
  * Build ACK KUnit tests and install (e.g. /tmp/kunit_tests):
-   $ tools/bazel run -- //common:kunit_tests_x86_64_install -v --destdir /tmp/kunit_tests
+   $ tools/bazel run -- //common:kunit_tests_x86_64 -v --destdir /tmp/kunit_tests
 
  * With device connected and accessible via adb run the tests:
    $ prebuilts/tradefed/filegroups/tradefed/tradefed.sh run commandAndExit \
          template/local_min --template:map test=suite/test_mapping_suite   \
          --include-filter kunit --tests-dir=/tmp/kunit_tests \
-         --primary-abi-only -s <your_device_serial_number>
+         -s <your_device_serial_number>
    ....
    =======================================================
    =============== Summary ===============

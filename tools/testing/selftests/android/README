@@ -1,18 +1,24 @@
 HOW TO RUN SELFTESTS IN ANDROID
 =================================
 
-Run test with a single shell script command:
-  $ common/tools/testing/android/bin/kselftest.sh
+Run tests on a physical or virtual device:
+  $ kernel/tests/tools/run_test_only.sh -t selftests -s <serial_number>
 
-  By default, the script will build the kernel and launch an Android virtual
-  device and then run the tests. Additional options may be passed to change
-  the default behavior. The following are some examples on how to use it:
+Before the tests, you can use the following command to launch a virtual device:
+  $ kernel/tests/tools/launch_cvd.sh
 
-  * Build kernel, launch a virtual device, run KUnit tests:
-  $ common/tools/testing/android/bin/kselftest.sh
+After the tests, you can use the following command to remove the virtual device:
+  $ prebuilts/asuite/acloud/linux-x86/acloud delete
 
-  * Run Selftests on a connected device directly:
-  $ common/tools/testing/android/bin/kselftest.sh -s 127.0.0.1:37693
+The following are command examples:
+  * Build kernel and launch a virtual device from a specific platform build:
+  $ kernel/tests/tools/launch_cvd.sh -pb \
+        ab://aosp-main/aosp_cf_x86_64_phone-trunk_staging-userdebug/12505199
+
+  * Run a specific test:
+  $ kernel/tests/tools/run_test_only.sh \
+        -t 'selftests kselftest_net_socket' -s <serial_number>
 
   * Check other available options:
-  $ common/tools/testing/android/bin/kselftest.sh -h
+  $ kernel/tests/tools/launch_cvd.sh -h
+  $ kernel/tests/tools/run_test_only.sh -h

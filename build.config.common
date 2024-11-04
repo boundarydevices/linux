@@ -5,12 +5,7 @@ KMI_GENERATION=0
 BRANCH=android16-6.12
 LLVM=1
 DEPMOD=depmod
-
-# TODO(b/296265825): Turn this into a proper error
-DTC=$(command -v dtc || { echo "WARNING: $BUILD_CONFIG loaded without Kleaf hermetic tools.
-    This will become an error in the future." >&2;
-    echo "${ROOT_DIR}/${BUILDTOOLS_PREBUILT_BIN}/dtc";
-})
+DTC=$(command -v dtc)
 
 KCFLAGS="${KCFLAGS} -D__ANDROID_COMMON_KERNEL__"
 EXTRA_CMDS=''

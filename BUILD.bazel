@@ -398,7 +398,9 @@ kernel_build(
         "vmlinux",
         "vmlinux.symvers",
     ],
-    build_config = "build.config.microdroid.aarch64",
+    arch = "arm64",
+    build_config = "build.config.common",
+    defconfig = "arch/arm64/configs/microdroid_defconfig",
     make_goals = [
         "Image",
     ],
@@ -420,6 +422,42 @@ pkg_install(
     destdir = "out/kernel_aarch64_microdroid/dist",
 )
 
+kernel_build(
+    name = "kernel_aarch64_microdroid_16k",
+    srcs = [":kernel_aarch64_sources"],
+    outs = [
+        "Image",
+        "System.map",
+        "modules.builtin",
+        "modules.builtin.modinfo",
+        "vmlinux",
+        "vmlinux.symvers",
+    ],
+    arch = "arm64",
+    build_config = "build.config.common",
+    defconfig = "arch/arm64/configs/microdroid_defconfig",
+    make_goals = [
+        "Image",
+    ],
+    makefile = ":Makefile",
+    page_size = "16k",
+)
+
+pkg_files(
+    name = "kernel_aarch64_microdroid_16k_dist_files",
+    srcs = [
+        ":kernel_aarch64_microdroid_16k",
+    ],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
+    name = "kernel_aarch64_microdroid_16k_dist",
+    srcs = ["kernel_aarch64_microdroid_16k_dist_files"],
+    destdir = "out/kernel_aarch64_microdroid_16k/dist",
+)
+
 # Microdroid is not a real device. The kernel image is built with special
 #  configs to reduce the size. Hence, not using mixed build.
 kernel_build(
@@ -427,7 +465,8 @@ kernel_build(
     srcs = [":kernel_x86_64_sources"],
     outs = X86_64_OUTS,
     arch = "x86_64",
-    build_config = "build.config.microdroid.x86_64",
+    build_config = "build.config.common",
+    defconfig = "arch/x86/configs/microdroid_defconfig",
     make_goals = [
         "bzImage",
     ],
@@ -455,7 +494,9 @@ kernel_build(
     outs = [
         "Image",
     ],
-    build_config = "build.config.crashdump.aarch64",
+    arch = "arm64",
+    build_config = "build.config.common",
+    defconfig = "arch/arm64/configs/crashdump_defconfig",
     make_goals = [
         "Image",
     ],
@@ -482,7 +523,8 @@ kernel_build(
     srcs = [":kernel_x86_64_sources"],
     outs = X86_64_OUTS,
     arch = "x86_64",
-    build_config = "build.config.crashdump.x86_64",
+    build_config = "build.config.common",
+    defconfig = "arch/x86/configs/crashdump_defconfig",
     make_goals = [
         "bzImage",
     ],
@@ -756,9 +798,11 @@ kernel_build(
         "arch/arm64/boot/dts/qcom/sm8650-hdk.dtb",
         "arch/arm64/boot/dts/qcom/sm8650-qrd.dtb",
     ],
+    arch = "arm64",
     # Enable mixed build.
     base_kernel = ":kernel_aarch64",
     build_config = "build.config.db845c",
+    defconfig = "arch/arm64/configs/gki_defconfig",
     make_goals = [
         "modules",
         "qcom/qrb5165-rb5.dtb",
@@ -772,6 +816,7 @@ kernel_build(
     ],
     makefile = ":Makefile",
     module_outs = _DB845C_MODULE_OUTS + _DB845C_WATCHDOG_MODULE_OUTS,
+    pre_defconfig_fragments = ["arch/arm64/configs/db845c_gki.fragment"],
     strip_modules = True,
 )
 
@@ -788,9 +833,11 @@ kernel_build(
         "arch/arm64/boot/dts/qcom/sm8650-hdk.dtb",
         "arch/arm64/boot/dts/qcom/sm8650-qrd.dtb",
     ],
+    arch = "arm64",
     # Enable mixed build.
     base_kernel = ":kernel_aarch64",
     build_config = "build.config.db845c",
+    defconfig = "arch/arm64/configs/gki_defconfig",
     make_goals = [
         "modules",
         "qcom/qrb5165-rb5.dtb",
@@ -804,6 +851,7 @@ kernel_build(
     ],
     makefile = ":Makefile",
     module_outs = _DB845C_MODULE_OUTS,
+    pre_defconfig_fragments = ["arch/arm64/configs/db845c_gki.fragment"],
     strip_modules = True,
 )
 
@@ -924,8 +972,11 @@ kernel_build(
         "vmlinux",
         "vmlinux.symvers",
     ],
+    arch = "arm64",
     build_config = "build.config.rockpi4",
+    defconfig = "arch/arm64/configs/gki_defconfig",
     dtstree = "//common-modules/virtual-device:rockpi4_dts",
+    kmi_symbol_list_strict_mode = False,
     make_goals = [
         "Image",
         "modules",
@@ -933,6 +984,8 @@ kernel_build(
     ],
     makefile = ":Makefile",
     module_outs = get_gki_modules_list("arm64") + get_kunit_modules_list("arm64") + _ROCKPI4_MODULE_OUTS + _ROCKPI4_WATCHDOG_MODULE_OUTS,
+    pre_defconfig_fragments = ["arch/arm64/configs/rockpi4_gki.fragment"],
+    trim_nonlisted_kmi = False,
     visibility = ["//visibility:private"],
 )
 
@@ -949,8 +1002,10 @@ kernel_build(
         "vmlinux",
         "vmlinux.symvers",
     ],
+    arch = "arm64",
     build_config = "build.config.rockpi4",
     dtstree = "//common-modules/virtual-device:rockpi4_dts",
+    kmi_symbol_list_strict_mode = False,
     make_goals = [
         "Image",
         "modules",
@@ -958,6 +1013,7 @@ kernel_build(
     ],
     makefile = ":Makefile",
     module_outs = get_gki_modules_list("arm64") + get_kunit_modules_list("arm64") + _ROCKPI4_MODULE_OUTS,
+    trim_nonlisted_kmi = False,
     visibility = ["//visibility:private"],
 )
 
@@ -977,6 +1033,7 @@ kernel_modules_install(
 initramfs(
     name = "rockpi4_initramfs",
     kernel_modules_install = ":rockpi4_modules_install",
+    ramdisk_compression = "lz4",
     visibility = ["//visibility:private"],
 )
 
@@ -1229,7 +1286,8 @@ kernel_build(
     # Hack to actually check the build.
     # Otherwise, Bazel thinks that there are no output files, and skip building.
     outs = [".config"],
-    build_config = "build.config.allmodconfig.aarch64",
+    arch = "arm64",
+    build_config = "build.config.common",
     defconfig = "//build/kernel/kleaf:allmodconfig",
     make_goals = [
         "Image",
@@ -1248,7 +1306,7 @@ kernel_build(
     # Otherwise, Bazel thinks that there are no output files, and skip building.
     outs = [".config"],
     arch = "x86_64",
-    build_config = "build.config.allmodconfig.x86_64",
+    build_config = "build.config.common",
     defconfig = "//build/kernel/kleaf:allmodconfig",
     make_goals = [
         "bzImage",
@@ -1268,7 +1326,7 @@ kernel_build(
     # Otherwise, Bazel thinks that there are no output files, and skip building.
     outs = [".config"],
     arch = "arm",
-    build_config = "build.config.allmodconfig.arm",
+    build_config = "build.config.common",
     defconfig = "//build/kernel/kleaf:allmodconfig",
     make_goals = [
         "zImage",
@@ -1505,8 +1563,8 @@ filegroup(
 ddk_headers(
     name = "all_headers_unsafe",
     hdrs = [
-        "drivers/gpu/drm/virtio/virtgpu_trace.h",
         "drivers/pinctrl/core.h",
+        "//build/kernel/kleaf:user_ddk_unsafe_headers",
     ],
     # The list of include directories where source files can #include headers
     # from. In other words, these are the `-I` option to the C compiler.
