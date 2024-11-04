@@ -81,7 +81,7 @@ DECLARE_RESTRICTED_HOOK(android_rvh_replace_next_task_fair,
 	TP_ARGS(rq, p, prev), 1);
 
 struct sched_group;
-DECLARE_RESTRICTED_HOOK(android_rvh_find_busiest_group,
+DECLARE_RESTRICTED_HOOK(android_rvh_sched_balance_find_src_group,
 	TP_PROTO(struct sched_group *busiest, struct rq *dst_rq, int *out_balance),
 		TP_ARGS(busiest, dst_rq, out_balance), 1);
 
