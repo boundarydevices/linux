@@ -1656,6 +1656,8 @@
 			power-domains = <&spm MT8188_POWER_DOMAIN_VPPSYS0>;
 			iommus = <&iommu_vpp M4U_PORT_L4_MDP_RDMA>;
 			clocks = <&vppsys0 CLK_VPP0_MDP_RDMA>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 			mboxes = <&gce0 13 CMDQ_THR_PRIO_1>,
 				 <&gce0 14 CMDQ_THR_PRIO_1>,
 				 <&gce0 16 CMDQ_THR_PRIO_1>,
