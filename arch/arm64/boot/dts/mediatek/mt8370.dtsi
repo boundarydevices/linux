@@ -1737,7 +1737,7 @@
 		};
 
 		dma-controller@1400c000 {
-			compatible = "mediatek,mt8183-mdp3-wrot";
+			compatible = "mediatek,mt8195-mdp3-wrot", "mediatek,mt8183-mdp3-wrot";
 			reg = <0 0x1400c000 0 0x1000>;
 			mediatek,gce-client-reg = <&gce1 SUBSYS_1400XXXX 0xc000 0x1000>;
 			mediatek,gce-events = <CMDQ_EVENT_VPP0_MDP_WROT_SOF>,
@@ -2008,7 +2008,7 @@
 		};
 
 		dma-controller@14f24000 {
-			compatible = "mediatek,mt8183-mdp3-wrot";
+			compatible = "mediatek,mt8195-mdp3-wrot", "mediatek,mt8183-mdp3-wrot";
 			reg = <0 0x14f24000 0 0x1000>;
 			mediatek,gce-client-reg = <&gce1 SUBSYS_14f2XXXX 0x4000 0x1000>;
 			mediatek,gce-events = <CMDQ_EVENT_VPP1_SVPP2_MDP_WROT_SOF>,
