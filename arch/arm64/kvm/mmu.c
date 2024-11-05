@@ -300,10 +300,18 @@ static int pkvm_unmap_guest(struct kvm *kvm, struct kvm_pinned_page *ppage)
 	if (ret)
 		return ret;
 
-	account_locked_vm(mm, 1, false);
 	unpin_user_pages_dirty_lock(&ppage->page, 1, ppage->dirty);
 	rb_erase(&ppage->node, &kvm->arch.pkvm.pinned_pages);
 	kfree(ppage);
+
+	/*
+	 * pkvm_unmap_guest() is only called with the mmu_lock held, and in
+	 * paths where releasing it transiently is tolerated (resched == true
+	 * in stage2_apply_range()).
+	 */
+	write_unlock(&kvm->mmu_lock);
+	account_locked_vm(mm, 1, false);
+	write_lock(&kvm->mmu_lock);
 
 	return 0;
 }
