@@ -71,6 +71,7 @@ void set_user_nice(struct task_struct *p, long nice)
 	struct rq *rq;
 	int old_prio;
 
+	trace_android_rvh_set_user_nice(p, &nice);
 	if (task_nice(p) == nice || nice < MIN_NICE || nice > MAX_NICE)
 		return;
 	/*
