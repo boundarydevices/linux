@@ -1,8 +1,5 @@
 . ${ROOT_DIR}/${KERNEL_DIR}/build.config.constants
 
 BRANCH=android-mainline
-LLVM=1
-DEPMOD=depmod
-DTC=$(command -v dtc)
 
 KCFLAGS="${KCFLAGS} -D__ANDROID_COMMON_KERNEL__"
