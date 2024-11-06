@@ -149,6 +149,7 @@ void mdp_video_device_release(struct video_device *vdev)
 		if (mdp->cmdq_clt[i])
 			cmdq_mbox_destroy(mdp->cmdq_clt[i]);
 
+	mdp_vpu_shared_mem_free(&mdp->vpu);
 	scp_put(mdp->scp);
 
 	destroy_workqueue(mdp->job_wq);
@@ -171,7 +172,6 @@ void mdp_video_device_release(struct video_device *vdev)
 			mtk_mutex_put(m);
 	}
 
-	mdp_vpu_shared_mem_free(&mdp->vpu);
 	v4l2_m2m_release(mdp->m2m_dev);
 	kfree(mdp);
 }
@@ -370,6 +370,9 @@ err_return:
 static void mdp_remove(struct platform_device *pdev)
 {
 	struct mdp_dev *mdp = platform_get_drvdata(pdev);
+
+	if (mdp->m2m_vdev)
+		video_unregister_device(mdp->m2m_vdev);
 
 	v4l2_device_unregister(&mdp->v4l2_dev);
 

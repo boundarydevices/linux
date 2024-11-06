@@ -1954,7 +1954,7 @@ void mdp_comp_destroy(struct mdp_dev *mdp)
 			if (is_dma_capable(mdp->comp[i]->type))
 				pm_runtime_disable(mdp->comp[i]->comp_dev);
 			mdp_comp_deinit(mdp->comp[i]);
-			devm_kfree(mdp->comp[i]->comp_dev, mdp->comp[i]);
+			devm_kfree(&mdp->pdev->dev, mdp->comp[i]);
 			mdp->comp[i] = NULL;
 		}
 	}
