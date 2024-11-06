@@ -229,6 +229,8 @@ properties:
           - meas,ms8607-temppressure
             # Measurement Specialties temperature sensor
           - meas,tsys01
+            # SPI dev for MediaTek Genio platform testing
+          - mediatek,aiot-board
             # MEMSIC magnetometer
           - memsic,mmc35240
             # MEMSIC 3-axis accelerometer
