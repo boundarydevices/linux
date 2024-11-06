@@ -521,6 +521,28 @@ static int mt8188_mt6359_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int mt8188_etdm_hw_params(struct snd_pcm_substream *substream,
+				 struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
+	unsigned int rate = params_rate(params);
+	unsigned int mclk_fs_ratio = 128;
+	unsigned int mclk_fs = rate * mclk_fs_ratio;
+	int ret;
+
+	ret = snd_soc_dai_set_sysclk(cpu_dai, 0, mclk_fs, SND_SOC_CLOCK_OUT);
+	if (ret) {
+		dev_err(card->dev, "failed to set sysclk\n");
+		return ret;
+	}
+	return 0;
+}
+static const struct snd_soc_ops mt8188_etdm_ops = {
+	.hw_params = mt8188_etdm_hw_params,
+};
+
 enum {
 	DAI_LINK_DL2_FE,
 	DAI_LINK_DL3_FE,
@@ -1173,6 +1195,7 @@ static struct snd_soc_dai_link mt8188_mt6359_dai_links[] = {
 			SND_SOC_DAIFMT_CBP_CFP,
 		.dpcm_capture = 1,
 		.ignore_suspend = 1,
+		.ops = &mt8188_etdm_ops,
 		SND_SOC_DAILINK_REG(etdm1_in),
 	},
 	[DAI_LINK_ETDM2_IN_BE] = {
@@ -1182,6 +1205,7 @@ static struct snd_soc_dai_link mt8188_mt6359_dai_links[] = {
 			SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBP_CFP,
 		.dpcm_capture = 1,
+		.ops = &mt8188_etdm_ops,
 		SND_SOC_DAILINK_REG(etdm2_in),
 	},
 	[DAI_LINK_ETDM1_OUT_BE] = {
@@ -1191,6 +1215,7 @@ static struct snd_soc_dai_link mt8188_mt6359_dai_links[] = {
 			SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBC_CFC,
 		.dpcm_playback = 1,
+		.ops = &mt8188_etdm_ops,
 		SND_SOC_DAILINK_REG(etdm1_out),
 	},
 	[DAI_LINK_ETDM2_OUT_BE] = {
@@ -1200,6 +1225,7 @@ static struct snd_soc_dai_link mt8188_mt6359_dai_links[] = {
 			SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBC_CFC,
 		.dpcm_playback = 1,
+		.ops = &mt8188_etdm_ops,
 		SND_SOC_DAILINK_REG(etdm2_out),
 	},
 	[DAI_LINK_ETDM3_OUT_BE] = {
