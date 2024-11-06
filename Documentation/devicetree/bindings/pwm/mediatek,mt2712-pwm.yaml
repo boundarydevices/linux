@@ -25,8 +25,8 @@ properties:
           - mediatek,mt7981-pwm
           - mediatek,mt7986-pwm
           - mediatek,mt8183-pwm
-          - mediatek,mt8365-pwm
           - mediatek,mt8188-pwm
+          - mediatek,mt8365-pwm
           - mediatek,mt8516-pwm
       - items:
           - enum:
