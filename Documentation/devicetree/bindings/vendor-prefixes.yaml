@@ -31,6 +31,8 @@ patternProperties:
     description: 8devices, UAB
   "^abb,.*":
     description: ABB
+  "^abeo,.*":
+    description: ABEO
   "^abilis,.*":
     description: Abilis Systems
   "^abracon,.*":
