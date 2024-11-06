@@ -111,6 +111,12 @@ static void pwm_mediatek_clk_disable(struct pwm_chip *chip,
 	clk_disable_unprepare(pc->clk_top);
 }
 
+static inline u32 pwm_mediatek_readl(struct pwm_mediatek_chip *chip,
+				     unsigned int num, unsigned int offset)
+{
+	return readl(chip->regs + chip->soc->reg_offset[num] + offset);
+}
+
 static inline void pwm_mediatek_writel(struct pwm_mediatek_chip *chip,
 				       unsigned int num, unsigned int offset,
 				       u32 value)
@@ -348,10 +354,18 @@ static const struct pwm_mediatek_of_data mt8183_pwm_data = {
 	.reg_offset = mtk_pwm_reg_offset_v1,
 };
 
+static const struct pwm_mediatek_of_data mt8188_pwm_data = {
+	.num_pwms = 4,
+	.pwm45_fixup = false,
+	.has_ck_26m_sel = true,
+	.reg_offset = mtk_pwm_reg_offset_v2,
+};
+
 static const struct pwm_mediatek_of_data mt8195_pwm_data = {
 	.num_pwms = 4,
 	.pwm45_fixup = false,
 	.has_ck_26m_sel = false,
+	.reg_offset = mtk_pwm_reg_offset_v1,
 };
 
 static const struct pwm_mediatek_of_data mt8365_pwm_data = {
@@ -378,6 +392,7 @@ static const struct of_device_id pwm_mediatek_of_match[] = {
 	{ .compatible = "mediatek,mt7981-pwm", .data = &mt7981_pwm_data },
 	{ .compatible = "mediatek,mt7986-pwm", .data = &mt7986_pwm_data },
 	{ .compatible = "mediatek,mt8183-pwm", .data = &mt8183_pwm_data },
+	{ .compatible = "mediatek,mt8188-pwm", .data = &mt8188_pwm_data },
 	{ .compatible = "mediatek,mt8195-pwm", .data = &mt8195_pwm_data },
 	{ .compatible = "mediatek,mt8365-pwm", .data = &mt8365_pwm_data },
 	{ .compatible = "mediatek,mt8516-pwm", .data = &mt8516_pwm_data },
