@@ -1521,7 +1521,7 @@ static int ele_mu_fops_open(struct inode *nd, struct file *fp)
 			       struct ele_mu_device_ctx,
 			       miscdev);
 	struct ele_mu_priv *priv = dev_ctx->priv;
-	int err;
+	int err = 0;
 
 	/* Avoid race if opened at the same time */
 	if (down_trylock(&dev_ctx->fops_lock))
