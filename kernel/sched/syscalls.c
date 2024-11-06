@@ -735,6 +735,7 @@ change:
 		__setscheduler_params(p, attr);
 		p->sched_class = next_class;
 		p->prio = newprio;
+		trace_android_rvh_setscheduler(p);
 	}
 	__setscheduler_uclamp(p, attr);
 	check_class_changing(rq, p, prev_class);
