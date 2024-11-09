@@ -95,6 +95,8 @@ static struct se_var_info var_se_info = {
 	},
 };
 
+static LIST_HEAD(priv_data_list);
+
 static struct se_if_node_info_list imx8ulp_info = {
 	.num_mu = 1,
 	.soc_id = SOC_ID_OF_IMX8ULP,
@@ -280,7 +282,7 @@ out:
  *
  * Return: SoC Id of the device.
  */
-uint32_t get_se_soc_id(struct se_if_priv *priv)
+u32 get_se_soc_id(struct se_if_priv *priv)
 {
 	const struct se_if_node_info_list *info_list =
 						device_get_match_data(priv->dev);
@@ -290,6 +292,36 @@ uint32_t get_se_soc_id(struct se_if_priv *priv)
 	else
 		return info_list->soc_id;
 }
+
+void *imx_get_se_data_info(u32 soc_id, u32 idx)
+{
+	const struct se_if_node_info_list *info_list;
+	struct se_if_priv *priv;
+
+	switch (soc_id) {
+	case SOC_ID_OF_IMX8ULP:
+		info_list = &imx8ulp_info; break;
+	case SOC_ID_OF_IMX93:
+		info_list = &imx93_info; break;
+	default:
+		return NULL;
+	}
+
+	if (idx >= info_list->num_mu) {
+		pr_err("%s-<index>, acceptable index range is 0..%d",
+		       NODE_NAME, info_list->num_mu - 1);
+		return NULL;
+	}
+
+	list_for_each_entry(priv, &priv_data_list, priv_data) {
+		if (priv->if_defs == &info_list->info[idx].if_defs)
+			return (void *)priv;
+	}
+	pr_err("No matching index found for soc_id = %d.", soc_id);
+
+	return NULL;
+}
+EXPORT_SYMBOL_GPL(imx_get_se_data_info);
 
 static struct se_fw_load_info *get_load_fw_instance(struct se_if_priv *priv)
 {
@@ -536,14 +568,14 @@ int se_dump_to_logfl(struct se_if_device_ctx *dev_ctx,
 			strlen(caller_type_str) + buf_size;
 	snprintf(dump_ln, dump_ln_len, fmt_str, log_tm.tv_sec, log_tm.tv_nsec,
 		 devname, caller_type_str, loc_buf,
-		 ((uint32_t *)buf)[0], ((uint32_t *)buf)[1],
-		 ((uint32_t *)buf)[2], ((uint32_t *)buf)[3],
-		 ((uint32_t *)buf)[4], ((uint32_t *)buf)[5],
-		 ((uint32_t *)buf)[6], ((uint32_t *)buf)[7],
-		 ((uint32_t *)buf)[8], ((uint32_t *)buf)[9],
-		 ((uint32_t *)buf)[10], ((uint32_t *)buf)[11],
-		 ((uint32_t *)buf)[12], ((uint32_t *)buf)[13],
-		 ((uint32_t *)buf)[14], ((uint32_t *)buf)[15]);
+		 ((u32 *)buf)[0], ((u32 *)buf)[1],
+		 ((u32 *)buf)[2], ((u32 *)buf)[3],
+		 ((u32 *)buf)[4], ((u32 *)buf)[5],
+		 ((u32 *)buf)[6], ((u32 *)buf)[7],
+		 ((u32 *)buf)[8], ((u32 *)buf)[9],
+		 ((u32 *)buf)[10], ((u32 *)buf)[11],
+		 ((u32 *)buf)[12], ((u32 *)buf)[13],
+		 ((u32 *)buf)[14], ((u32 *)buf)[15]);
 
 	wret = kernel_write(lg_fl_info->lg_file, dump_ln, dump_ln_len,
 			    &lg_fl_info->offset);
@@ -1394,6 +1426,7 @@ static void se_if_probe_cleanup(void *plat_dev)
 			pr_err("Error %pe closing log file.\n",	ERR_PTR(wret));
 	}
 
+	__list_del_entry(&priv->priv_data);
 	/* No need to check, if reserved memory is allocated
 	 * before calling for its release. Or clearing the
 	 * un-set bit.
@@ -1445,6 +1478,8 @@ static int se_if_probe(struct platform_device *pdev)
 	priv->dev = dev;
 	priv->if_defs = &info->if_defs;
 	dev_set_drvdata(dev, priv);
+
+	list_add_tail(&priv->priv_data, &priv_data_list);
 
 	ret = devm_add_action(dev, se_if_probe_cleanup, pdev);
 	if (ret)
