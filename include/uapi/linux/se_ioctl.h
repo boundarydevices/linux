@@ -6,6 +6,11 @@
 #ifndef SE_IOCTL_H
 #define SE_IOCTL_H
 
+#ifdef __KERNEL__
+#include <linux/time64.h>
+#else
+#include <linux/time_types.h>
+#endif
 #include <linux/types.h>
 
 #define SE_TYPE_STR_DBG			"dbg"
@@ -70,6 +75,16 @@ struct se_ioctl_signed_message {
 	__u32 error_code;
 };
 
+struct se_time_frame {
+#ifdef __KERNEL__
+	struct timespec64 t_start;
+	struct timespec64 t_end;
+#else
+	struct __kernel_timespec t_start;
+	struct __kernel_timespec t_end;
+#endif
+};
+
 /* IO Buffer Flags */
 #define SE_IO_BUF_FLAGS_IS_OUTPUT	(0x00u)
 #define SE_IO_BUF_FLAGS_IS_INPUT	(0x01u)
@@ -130,4 +145,11 @@ struct se_ioctl_signed_message {
  */
 #define SE_IOCTL_CMD_SEND_RCV_RSP _IOWR(SE_IOCTL, 0x07, \
 					struct se_ioctl_cmd_snd_rcv_rsp_info)
+
+/*
+ * ioctl to capture the timestamp at the request to FW and response from FW
+ * for a crypto operation
+ */
+#define SE_IOCTL_GET_TIMER	_IOR(SE_IOCTL, 0x08, struct se_time_frame)
+
 #endif

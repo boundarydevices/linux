@@ -1457,6 +1457,34 @@ static int se_ioctl_signed_msg_handler(struct file *fp,
 	return err;
 }
 
+/* IOCTL to provide request and response timestamps from FW for a crypto
+ * operation
+ */
+static int se_ioctl_get_time(struct se_if_device_ctx *dev_ctx, unsigned long arg)
+{
+	struct se_if_priv *priv = dev_ctx->priv;
+	int err = -EINVAL;
+	struct se_time_frame time_frame;
+
+	if (!priv) {
+		err = -EINVAL;
+		goto exit;
+	}
+
+	time_frame.t_start = priv->time_frame.t_start;
+	time_frame.t_end = priv->time_frame.t_end;
+	err = (int)copy_to_user((u8 *)arg, (u8 *)(&time_frame), sizeof(time_frame));
+	if (err) {
+		dev_err(dev_ctx->priv->dev,
+			"%s: Failed to copy timer to user\n",
+			dev_ctx->devname);
+		err  = -EFAULT;
+		goto exit;
+	}
+exit:
+	return err;
+}
+
 /*
  * File operations for user-space
  */
@@ -1696,6 +1724,9 @@ static long se_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			err = se_ioctl_signed_msg_handler(fp, dev_ctx, arg);
 		else
 			err = -EPERM;
+		break;
+	case SE_IOCTL_GET_TIMER:
+		err = se_ioctl_get_time(dev_ctx, arg);
 		break;
 	default:
 		err = -EINVAL;
