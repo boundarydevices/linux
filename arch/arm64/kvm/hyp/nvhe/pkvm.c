@@ -63,6 +63,30 @@ static void pkvm_vcpu_reset_hcr(struct kvm_vcpu *vcpu)
 		vcpu->arch.hcr_el2 |= (HCR_API | HCR_APK);
 }
 
+static void pkvm_vcpu_reset_hcrx(struct pkvm_hyp_vcpu *hyp_vcpu)
+{
+	struct kvm_vcpu *host_vcpu = hyp_vcpu->host_vcpu;
+	struct kvm_vcpu *vcpu = &hyp_vcpu->vcpu;
+
+	if (!cpus_have_final_cap(ARM64_HAS_HCX))
+		return;
+
+	/*
+	 * In general, all HCRX_EL2 bits are gated by a feature.
+	 * The only reason we can set SMPME without checking any
+	 * feature is that its effects are not directly observable
+	 * from the guest.
+	 */
+	vcpu->arch.hcrx_el2 = HCRX_EL2_SMPME;
+
+	/*
+	 * For non-protected VMs, the host is responsible for the guest's
+	 * features, so use the remaining host HCRX_EL2 bits.
+	 */
+	if ((!pkvm_hyp_vcpu_is_protected(hyp_vcpu)))
+		vcpu->arch.hcrx_el2 |= host_vcpu->arch.hcrx_el2;
+}
+
 static void pvm_init_traps_hcr(struct kvm_vcpu *vcpu)
 {
 	struct kvm *kvm = vcpu->kvm;
@@ -96,6 +120,26 @@ static void pvm_init_traps_hcr(struct kvm_vcpu *vcpu)
 
 	vcpu->arch.hcr_el2 |= hcr_set;
 	vcpu->arch.hcr_el2 &= ~hcr_clear;
+}
+
+static void pvm_init_traps_hcrx(struct kvm_vcpu *vcpu)
+{
+	struct kvm *kvm = vcpu->kvm;
+	u64 hcrx_set = 0;
+
+	if (!cpus_have_final_cap(ARM64_HAS_HCX))
+		return;
+
+	if (kvm_has_feat(kvm, ID_AA64ISAR2_EL1, MOPS, IMP))
+		hcrx_set |= (HCRX_EL2_MSCEn | HCRX_EL2_MCE2);
+
+	if (kvm_has_feat(kvm, ID_AA64MMFR3_EL1, TCRX, IMP))
+		hcrx_set |= HCRX_EL2_TCR2En;
+
+	if (kvm_has_fpmr(kvm))
+		hcrx_set |= HCRX_EL2_EnFPM;
+
+	vcpu->arch.hcrx_el2 |= hcrx_set;
 }
 
 static void pvm_init_traps_mdcr(struct kvm_vcpu *vcpu)
@@ -174,6 +218,7 @@ static int pkvm_vcpu_init_traps(struct pkvm_hyp_vcpu *hyp_vcpu)
 	vcpu->arch.mdcr_el2 = 0;
 
 	pkvm_vcpu_reset_hcr(vcpu);
+	pkvm_vcpu_reset_hcrx(hyp_vcpu);
 
 	if ((!pkvm_hyp_vcpu_is_protected(hyp_vcpu)))
 		return 0;
@@ -183,6 +228,7 @@ static int pkvm_vcpu_init_traps(struct pkvm_hyp_vcpu *hyp_vcpu)
 		return ret;
 
 	pvm_init_traps_hcr(vcpu);
+	pvm_init_traps_hcrx(vcpu);
 	pvm_init_traps_mdcr(vcpu);
 
 	return 0;
