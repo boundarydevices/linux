@@ -201,20 +201,20 @@ static int neutron_firmw_request(struct neutron_device *ndev, struct neutron_buf
 		return ret;
 	}
 
-	ret = rproc->ops->stop(rproc);
-	if (ret)
-		dev_err(dev, "could not stop neutron\n");
-
 	// remap ddr data address to kernel virt.
 	neu_dbg("data_ddr: 0x%lx,  sz: 0x%x\n", data_ddr, buf->firmware_p->size);
 
-	ret = neutron_rproc_elf_load(rproc, buf->firmware_p, data_ddr, 0);
+	/* Only the ddr data needs to be loaded on prepartion, other data
+	 * will be loaded on demand at runtime.
+	 */
+	ret = neutron_rproc_elf_load(rproc, buf->firmware_p, data_ddr, 2);
 	if (ret) {
 		dev_err(dev, "neutron_elf_load failed\n");
 		return ret;
 	}
 
-	rproc->ops->start(rproc);
+	/* Firmware is changed, it should be reloaded on next job */
+	ndev->firmw_id = 0;
 
 	return ret;
 }
