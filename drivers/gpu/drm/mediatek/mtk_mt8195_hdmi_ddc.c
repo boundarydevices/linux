@@ -311,20 +311,26 @@ ddcm_read_hdmi(struct mtk_hdmi_ddc *ddc,
 				}
 				return 0;
 			}
+
+			/* get the DDC data from FIFO */
 			for (uc_idx = 0; uc_idx < temp_length; uc_idx++) {
+				/* latch the FIFO output */
 				mtk_ddc_write(ddc, SI2C_CTRL,
 					      (SI2C_ADDR_READ
 					       << SI2C_ADDR_SHIFT) +
 						      SI2C_RD);
-				mtk_ddc_write(ddc, SI2C_CTRL,
-					      (SI2C_ADDR_READ
-					       << SI2C_ADDR_SHIFT) +
-						      SI2C_CONFIRM_READ);
 
+				/* read FIFO output value from DDC_STATUS */
 				puc_value[i * 16 + uc_idx] =
 					(mtk_ddc_read(ddc, HPD_DDC_STATUS) &
 					 DDC_DATA_OUT) >>
 					DDC_DATA_OUT_SHIFT;
+
+				/* increment read address of FIFO and un-latch the FIFO */
+				mtk_ddc_write(ddc, SI2C_CTRL,
+					      (SI2C_ADDR_READ
+					       << SI2C_ADDR_SHIFT) +
+						      SI2C_CONFIRM_READ);
 				/*
 				 * when reading edid, if hdmi module been reset,
 				 * ddc will fail and it's
