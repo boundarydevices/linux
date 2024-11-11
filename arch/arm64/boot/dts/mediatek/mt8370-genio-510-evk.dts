@@ -92,6 +92,35 @@
 			compatible = "shared-dma-pool";
 			reg = <0 0x57000000 0 0x1400000>; /* 20 MB */
 		};
+
+		/*
+		 * 24 MiB reserved for Audio AFE and ADSP
+		 * +-----------------------+ 0x6180_0000
+		 * |  AFE DMA MEM     8MiB |
+		 * +-----------------------+ 0x6100_0000
+		 * |  ADSP DMA MEM    1MiB |
+		 * +-----------------------+ 0x60f0_0000
+		 * |  ADSP MEM       15MiB |
+		 * +-----------------------+ 0x6000_0000
+		 */
+
+		adsp_mem_reserved: adsp-mem-region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60000000 0 0xf00000>;
+			no-map;
+		};
+
+		adsp_dma_mem_reserved: adsp-dma-mem-region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60f00000 0 0x100000>;
+			no-map;
+		};
+
+		afe_dma_mem_reserved: snd-dma-mem-region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x61000000 0 0x800000>;
+			no-map;
+		};
 	};
 
 	common_fixed_5v: regulator-0 {
@@ -1266,9 +1295,15 @@
 
 &afe {
 	#sound-dai-cells = <0>;
+	memory-region = <&afe_dma_mem_reserved>;
 	mediatek,dmic-iir-on;
 	mediatek,dmic-clk-mono;
 	status = "okay";
+};
+
+&adsp {
+	memory-region = <&adsp_dma_mem_reserved>,
+		<&adsp_mem_reserved>;
 };
 
 &sound {
