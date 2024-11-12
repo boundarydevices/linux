@@ -4,3 +4,5 @@ obj-$(CONFIG_IMX_SCU)		+= imx-scu.o misc.o imx-scu-irq.o rm.o imx-scu-soc.o seco
 obj-${CONFIG_IMX_SCMI_MISC_CONTROL}	+= sm-misc.o
 obj-$(CONFIG_IMX_SCMI_BBM_CONTROL) += sm-bbm.o
 obj-$(CONFIG_IMX_ISPMU)		+= isp-mu.o
+sec_enclave-objs		= se_ctrl.o ele_common.o ele_base_msg.o
+obj-${CONFIG_IMX_SEC_ENCLAVE}	+= sec_enclave.o
