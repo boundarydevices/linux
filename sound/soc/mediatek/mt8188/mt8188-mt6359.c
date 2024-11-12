@@ -17,6 +17,7 @@
 #include "mt8188-afe-common.h"
 #include "../../codecs/nau8825.h"
 #include "../../codecs/mt6359.h"
+#include "../../codecs/mt6359-accdet.h"
 #include "../../codecs/rt5682.h"
 #include "../common/mtk-afe-platform-driver.h"
 #include "../common/mtk-soundcard-driver.h"
@@ -239,6 +240,17 @@ struct mt8188_mt6359_priv {
 	struct snd_soc_jack hdmi_jack;
 	struct snd_soc_jack headset_jack;
 	void *private_data;
+};
+
+static struct snd_soc_jack_pin mt8188_headset_jack_pins[] = {
+	{
+		.pin = "Headphone",
+		.mask = SND_JACK_HEADPHONE,
+	},
+	{
+		.pin = "Headset Mic",
+		.mask = SND_JACK_MICROPHONE,
+	},
 };
 
 static struct snd_soc_jack_pin mt8188_hdmi_jack_pins[] = {
@@ -508,15 +520,43 @@ static int mt8188_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 
 static int mt8188_mt6359_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_component *cmpnt_codec =
-		asoc_rtd_to_codec(rtd, 0)->component;
+	struct mtk_soc_card_data *soc_card_data = snd_soc_card_get_drvdata(rtd->card);
+	struct mt8188_mt6359_priv *priv = soc_card_data->mach_priv;
+	struct snd_soc_jack *jack = &priv->headset_jack;
+	struct snd_soc_component *cmpnt;
+	struct snd_soc_dai *codec_dai;
+	int i, ret;
 
-	/* set mtkaif protocol */
-	mt6359_set_mtkaif_protocol(cmpnt_codec,
-				   MT6359_MTKAIF_PROTOCOL_2_CLK_P2);
+	for_each_rtd_codec_dais(rtd, i, codec_dai) {
+		cmpnt = codec_dai->component;
+		if (strcmp(cmpnt->name, "mt6359-sound") == 0) {
+			/* set mtkaif protocol */
+			mt6359_set_mtkaif_protocol(cmpnt,
+						   MT6359_MTKAIF_PROTOCOL_2_CLK_P2);
 
-	/* mtkaif calibration */
-	mt8188_mt6359_mtkaif_calibration(rtd);
+			/* mtkaif calibration */
+			mt8188_mt6359_mtkaif_calibration(rtd);
+		} else if (strcmp(cmpnt->name, "mt6359-accdet") == 0) {
+			ret = snd_soc_card_jack_new_pins(rtd->card, "Headset Jack",
+						    SND_JACK_HEADSET | SND_JACK_BTN_0 |
+						    SND_JACK_BTN_1 | SND_JACK_BTN_2 |
+						    SND_JACK_BTN_3,
+						    jack, mt8188_headset_jack_pins,
+						    ARRAY_SIZE(mt8188_headset_jack_pins));
+			if (ret) {
+				dev_err(rtd->dev, "Headset Jack create failed: %d\n", ret);
+				return ret;
+			}
+
+			ret = mt6359_accdet_enable_jack_detect(cmpnt, jack);
+			if (ret) {
+				dev_err(rtd->dev, "Headset Jack enable failed: %d\n", ret);
+				return ret;
+			}
+		} else {
+			dev_err(rtd->dev, "Component '%s' is invalid.\n", cmpnt->name);
+		}
+	}
 
 	return 0;
 }
