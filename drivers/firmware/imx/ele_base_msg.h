@@ -62,8 +62,11 @@ struct ele_dev_info {
 #define GET_SERIAL_NUM_FROM_UID(x, uid_word_sz) \
 	(((u64)(((u32 *)(x))[(uid_word_sz) - 1]) << 32) | ((u32 *)(x))[0])
 
+#define ELE_MAX_DBG_DMP_PKT		30
+#define ELE_NON_DUMP_BUFFER_SZ		3
 #define ELE_DEBUG_DUMP_REQ		0x21
-#define ELE_DEBUG_DUMP_RSP_SZ		0x17
+#define ELE_DEBUG_DUMP_REQ_SZ		0x4
+#define ELE_DEBUG_DUMP_RSP_SZ		0x5c
 
 #define ELE_PING_REQ			0x01
 #define ELE_PING_REQ_SZ			0x04
@@ -85,10 +88,11 @@ struct ele_dev_info {
 #define ELE_FW_AUTH_RSP_MSG_SZ		0x08
 
 int ele_get_info(struct se_if_priv *priv, struct ele_dev_info *s_info);
-int ele_fetch_soc_info(struct se_if_priv *priv, u16 *soc_rev, u64 *serial_num);
+int ele_fetch_soc_info(struct se_if_priv *priv, void *data);
 int ele_ping(struct se_if_priv *priv);
 int ele_service_swap(struct se_if_priv *priv,
 		     phys_addr_t addr,
 		     u32 addr_size, u16 flag);
 int ele_fw_authenticate(struct se_if_priv *priv, phys_addr_t addr);
+int ele_debug_dump(struct se_if_priv *priv);
 #endif

@@ -86,13 +86,12 @@ int ele_msg_send(struct se_if_device_ctx *dev_ctx,
 	 * carried in the message.
 	 */
 	if (header->size << 2 != tx_msg_sz) {
-		err = -EINVAL;
 		dev_err(priv->dev,
 			"%s: User buf hdr: 0x%x, sz mismatced with input-sz (%d != %d).",
 			dev_ctx->devname,
 			*(u32 *)header,
 			header->size << 2, tx_msg_sz);
-		goto exit;
+		return -EINVAL;
 	}
 
 	err = mbox_send_message(priv->tx_chan, tx_msg);
@@ -104,7 +103,6 @@ int ele_msg_send(struct se_if_device_ctx *dev_ctx,
 	}
 	err = tx_msg_sz;
 
-exit:
 	return err;
 }
 
@@ -320,7 +318,7 @@ int se_save_imem_state(struct se_if_priv *priv, struct se_imem_buf *imem)
 		imem->size = ret;
 	}
 
-	return ret;
+	return ret > 0 ? 0 : -1;
 }
 
 int se_restore_imem_state(struct se_if_priv *priv, struct se_imem_buf *imem)
@@ -336,8 +334,10 @@ int se_restore_imem_state(struct se_if_priv *priv, struct se_imem_buf *imem)
 	}
 	imem->state = s_info.d_addn_info.imem_state;
 
-	/* Get IMEM state, if 0xFE then import IMEM */
-	if (s_info.d_addn_info.imem_state == ELE_IMEM_STATE_BAD) {
+	/* Get IMEM state, if 0xFE and saved/exported IMEM buffer size is non-zero,
+	 * then import IMEM
+	 */
+	if (s_info.d_addn_info.imem_state == ELE_IMEM_STATE_BAD && imem->size) {
 		/* IMPORT command will restore IMEM from the given
 		 * address, here size is the actual size returned by ELE
 		 * during the export operation
