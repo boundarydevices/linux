@@ -155,7 +155,9 @@ static int recreate_hyp_mappings(phys_addr_t phys, unsigned long size,
 			return ret;
 	}
 
-	pkvm_create_host_sve_mappings();
+	ret = pkvm_create_host_sve_mappings();
+	if (ret)
+		return ret;
 
 	/*
 	 * Map the pvmfw section RO in the hypervisor, but transfer the
