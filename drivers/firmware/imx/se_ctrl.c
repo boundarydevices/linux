@@ -31,6 +31,8 @@
 #include "ele_fw_api.h"
 #include "ele_trng.h"
 #include "se_ctrl.h"
+#include "v2x_base_msg.h"
+#include "v2x_common.h"
 
 #define MAX_SOC_INFO_DATA_SZ		256
 #define MBOX_TX_NAME			"tx"
@@ -61,6 +63,7 @@ struct se_if_node_info {
 	u8 se_if_did;
 	struct se_if_defines if_defs;
 	u8 *pool_name;
+	u32 mu_buff_size;
 	bool reserved_dma_ranges;
 	int (*start_rng)(struct se_if_priv *priv);
 	int (*init_trng)(struct se_if_priv *priv);
@@ -112,6 +115,7 @@ static struct se_if_node_info_list imx8ulp_info = {
 			{
 			.se_if_id = 0,
 			.se_if_did = 7,
+			.mu_buff_size = 0,
 			.if_defs = {
 				.se_if_type = SE_TYPE_ID_HSM,
 				.se_instance_id = 0,
@@ -139,6 +143,7 @@ static struct se_if_node_info_list imx93_info = {
 	.info = {
 			{
 			.se_if_id = 0,
+			.mu_buff_size = 0,
 			.if_defs = {
 				.se_if_type = SE_TYPE_ID_HSM,
 				.se_instance_id = 0,
@@ -157,9 +162,97 @@ static struct se_if_node_info_list imx93_info = {
 	},
 };
 
+static struct se_if_node_info_list imx95_info = {
+	.num_mu = 4,
+	.soc_id = SOC_ID_OF_IMX95,
+	.soc_register = false,
+	.se_fetch_soc_info = ele_fetch_soc_info,
+	.load_hsm_fw = {
+		.prim_fw_nm_in_rfs = NULL,
+		.seco_fw_nm_in_rfs = NULL,
+		.is_fw_loaded = true,
+		.handle_susp_resm = false,
+	},
+	.info = {
+			{
+			.se_if_id = 0,
+			.mu_buff_size = 0,
+			.if_defs = {
+				.se_if_type = SE_TYPE_ID_HSM,
+				.se_instance_id = 0,
+				.cmd_tag = 0x17,
+				.rsp_tag = 0xe1,
+				.success_tag = ELE_SUCCESS_IND,
+				.base_api_ver = MESSAGING_VERSION_6,
+				.fw_api_ver = MESSAGING_VERSION_7,
+			},
+			.reserved_dma_ranges = false,
+			.start_rng = ele_start_rng,
+			.init_trng = ele_trng_init,
+			.se_if_early_init = NULL,
+			.se_if_late_init = v2x_late_init,
+			},
+			{
+			.se_if_id = 1,
+			.mu_buff_size = 0,
+			.if_defs = {
+				.se_if_type = SE_TYPE_ID_V2X_DBG,
+				.se_instance_id = 0,
+				.cmd_tag = 0x1a,
+				.rsp_tag = 0xe4,
+				.success_tag = ELE_SUCCESS_IND,
+				.base_api_ver = MESSAGING_VERSION_2,
+				.fw_api_ver = MESSAGING_VERSION_2,
+			},
+			.reserved_dma_ranges = false,
+			.start_rng = v2x_start_rng,
+			.init_trng = NULL,
+			.se_if_early_init = v2x_early_init,
+			.se_if_late_init = NULL,
+			},
+			{
+			.se_if_id = 2,
+			.mu_buff_size = 16,
+			.if_defs = {
+				.se_if_type = SE_TYPE_ID_V2X_SV,
+				.se_instance_id = 0,
+				.cmd_tag = 0x18,
+				.rsp_tag = 0xe2,
+				.success_tag = ELE_SUCCESS_IND,
+				.base_api_ver = MESSAGING_VERSION_2,
+				.fw_api_ver = MESSAGING_VERSION_2,
+			},
+			.reserved_dma_ranges = false,
+			.start_rng = NULL,
+			.init_trng = NULL,
+			.se_if_early_init = v2x_early_init,
+			.se_if_late_init = NULL,
+			},
+			{
+			.se_if_id = 3,
+			.mu_buff_size = 256,
+			.if_defs = {
+				.se_if_type = SE_TYPE_ID_V2X_SHE,
+				.se_instance_id = 0,
+				.cmd_tag = 0x1a,
+				.rsp_tag = 0xe4,
+				.success_tag = ELE_SUCCESS_IND,
+				.base_api_ver = MESSAGING_VERSION_2,
+				.fw_api_ver = MESSAGING_VERSION_2,
+			},
+			.reserved_dma_ranges = false,
+			.start_rng = NULL,
+			.init_trng = NULL,
+			.se_if_early_init = v2x_early_init,
+			.se_if_late_init = NULL,
+			},
+	},
+};
+
 static const struct of_device_id se_match[] = {
 	{ .compatible = "fsl,imx8ulp-se", .data = (void *)&imx8ulp_info},
 	{ .compatible = "fsl,imx93-se", .data = (void *)&imx93_info},
+	{ .compatible = "fsl,imx95-se", .data = (void *)&imx95_info},
 	{},
 };
 
@@ -303,6 +396,8 @@ void *imx_get_se_data_info(u32 soc_id, u32 idx)
 		info_list = &imx8ulp_info; break;
 	case SOC_ID_OF_IMX93:
 		info_list = &imx93_info; break;
+	case SOC_ID_OF_IMX95:
+		info_list = &imx95_info; break;
 	default:
 		return NULL;
 	}
@@ -665,8 +760,12 @@ static int se_dev_ctx_cpy_out_data(struct se_if_device_ctx *dev_ctx)
 			}
 		}
 
-		if (b_desc->shared_buf_ptr)
-			memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		if (b_desc->shared_buf_ptr) {
+			if (dev_ctx->priv->mu_mem.pos)
+				memset_io(b_desc->shared_buf_ptr, 0, b_desc->size);
+			else
+				memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		}
 
 		list_del(&b_desc->link);
 		kfree(b_desc);
@@ -689,10 +788,13 @@ static void se_dev_ctx_shared_mem_cleanup(struct se_if_device_ctx *dev_ctx)
 	int i;
 
 	for (i = 0; i < 2; i++) {
-		list_for_each_entry_safe(b_desc, temp,
-					 pending_lists[i], link) {
-			if (b_desc->shared_buf_ptr)
-				memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+		list_for_each_entry_safe(b_desc, temp, pending_lists[i], link) {
+			if (b_desc->shared_buf_ptr) {
+				if (dev_ctx->priv->mu_mem.pos)
+					memset_io(b_desc->shared_buf_ptr, 0, b_desc->size);
+				else
+					memset(b_desc->shared_buf_ptr, 0, b_desc->size);
+			}
 
 			list_del(&b_desc->link);
 			kfree(b_desc);
@@ -928,6 +1030,7 @@ static int se_ioctl_cmd_snd_rcv_rsp_handler(struct se_if_device_ctx *dev_ctx,
 
 exit:
 	se_dev_ctx_shared_mem_cleanup(dev_ctx);
+	priv->mu_mem.pos = 0;
 
 	if (copy_to_user((void __user *)arg, &cmd_snd_rcv_rsp_info,
 			 sizeof(cmd_snd_rcv_rsp_info))) {
@@ -1014,8 +1117,11 @@ static int se_ioctl_setup_iobuf_handler(struct se_if_device_ctx *dev_ctx,
 		goto copy;
 	}
 
-	/* No specific requirement for this buffer. */
-	shared_mem = &dev_ctx->se_shared_mem_mgmt.non_secure_mem;
+	/* Select the shared memory to be used for this buffer. */
+	if (io.flags & SE_IO_BUF_FLAGS_USE_MU_BUF)
+		shared_mem = &dev_ctx->priv->mu_mem;
+	else
+		shared_mem = &dev_ctx->se_shared_mem_mgmt.non_secure_mem;
 
 	/* Check there is enough space in the shared memory. */
 	dev_dbg(dev_ctx->priv->dev,
@@ -1038,7 +1144,11 @@ static int se_ioctl_setup_iobuf_handler(struct se_if_device_ctx *dev_ctx,
 	shared_mem->pos += round_up(io.length, 8u);
 	io.ele_addr = (u64)shared_mem->dma_addr + pos;
 
-	memset(shared_mem->ptr + pos, 0, io.length);
+	if (dev_ctx->priv->mu_mem.pos)
+		memset_io(shared_mem->ptr + pos, 0, io.length);
+	else
+		memset(shared_mem->ptr + pos, 0, io.length);
+
 	if ((io.flags & SE_IO_BUF_FLAGS_IS_INPUT) ||
 	    (io.flags & SE_IO_BUF_FLAGS_IS_IN_OUT)) {
 		/*
@@ -1479,6 +1589,13 @@ static int se_if_probe(struct platform_device *pdev)
 	priv->if_defs = &info->if_defs;
 	dev_set_drvdata(dev, priv);
 
+	if (info->se_if_early_init) {
+		/* start initializing ele fw */
+		ret = info->se_if_early_init(priv);
+		if (ret)
+			goto exit;
+	}
+
 	list_add_tail(&priv->priv_data, &priv_data_list);
 
 	ret = devm_add_action(dev, se_if_probe_cleanup, pdev);
@@ -1501,6 +1618,12 @@ static int se_if_probe(struct platform_device *pdev)
 	if (ret)
 		goto exit;
 
+	if (info->mu_buff_size) {
+		/* TODO: to get func get_mu_buf(), part of imx-mailbox.c */
+		priv->mu_mem.ptr = get_mu_buf(priv->tx_chan);
+		priv->mu_mem.size = info->mu_buff_size;
+		priv->mu_mem.dma_addr = (u64)priv->mu_mem.ptr;
+	}
 	mutex_init(&priv->se_if_cmd_lock);
 
 	init_completion(&priv->waiting_rsp_clbk_hdl.done);
@@ -1619,6 +1742,12 @@ static int se_suspend(struct device *dev)
 	int ret = 0;
 
 	se_rcv_msg_timeout = SE_RCV_MSG_DEFAULT_TIMEOUT;
+
+	if (priv->if_defs->se_if_type == SE_TYPE_ID_V2X_DBG) {
+		dev_err(dev, "V2X-FW: Suspend/resume not supported.");
+		return -EPERM;
+	}
+
 	load_fw = get_load_fw_instance(priv);
 
 	if (load_fw->imem_mgmt)

@@ -3,8 +3,11 @@
  * Copyright 2024-2025 NXP
  */
 
+#include <uapi/linux/se_ioctl.h>
+
 #include "ele_base_msg.h"
 #include "ele_common.h"
+#include "v2x_base_msg.h"
 
 extern u32 se_rcv_msg_timeout;
 
@@ -193,6 +196,12 @@ void se_if_rx_callback(struct mbox_client *mbox_cl, void *msg)
 
 	header = msg;
 	rx_msg_sz = header->size << 2;
+
+	if (priv->if_defs->se_if_type == SE_TYPE_ID_V2X_DBG &&
+	    header->tag == V2X_DBG_MU_MSG_RSP_TAG) {
+		header->tag = priv->if_defs->rsp_tag;
+		header->ver = priv->if_defs->base_api_ver;
+	}
 
 	/* Incoming command: wake up the receiver if any. */
 	if (header->tag == priv->if_defs->cmd_tag) {
