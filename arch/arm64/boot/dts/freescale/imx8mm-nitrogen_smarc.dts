@@ -123,9 +123,9 @@
 
 &ecspi2 {
 	spi@0 {
-		compatible = "spidev";
 		reg = <0>;
-		spi-max-frequency = <500000>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
 	};
 };
 
