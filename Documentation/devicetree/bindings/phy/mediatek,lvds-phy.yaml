@@ -5,7 +5,7 @@
 $id: http://devicetree.org/schemas/phy/mediatek,lvds-phy.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: MediaTek Low-Voltage Differential Signaling (LVDS) PHY binding
+title: MediaTek Low-Voltage Differential Signaling (LVDS) PHY
 
 maintainers:
   - Chun-Kuang Hu <chunkuang.hu@kernel.org>
@@ -54,7 +54,7 @@ additionalProperties: false
 
 examples:
   - |
-    #include <dt-bindings/clock/mt8365-clk.h>
+    #include <dt-bindings/clock/mediatek,mt8365-clk.h>
     lvds_tx: lvds-phy@11c00800 {
         compatible = "mediatek,mt8365-lvds-tx";
         reg = <0x11c00800 0x30>;
