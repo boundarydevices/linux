@@ -67,10 +67,8 @@
 #define IMX95_PE0_GEN_CTRL_3			0x1058
 #define IMX95_PCIE_LTSSM_EN			BIT(0)
 
-#define IMX95_PE0_PM_CTRL			0x1060
-#define IMX95_PCIE_PME_PF_INDEX			GENMASK(4, 0)
-#define IMX95_PCIE_PM_PME_REQ			BIT(16)
-#define IMX95_PCIE_PM_READY_ENTR_L23		BIT(19)
+#define IMX95_PE0_TX_MSG_REQ			0x1080
+#define IMX95_PCIE_PME_TURN_OFF_REQ		BIT(19)
 
 #define IMX95_PE0_PM_STS			0x1064
 #define IMX95_PCIE_PM_LINKST_IN_L2		BIT(14)
@@ -1691,32 +1689,11 @@ static void imx6_pcie_pm_turnoff(struct imx6_pcie *imx6_pcie)
 		break;
 	case IMX95:
 	case IMX95_EP:
-		regmap_update_bits(imx6_pcie->iomuxc_gpr,
-				IMX95_PE0_PM_CTRL,
-				IMX95_PCIE_PME_PF_INDEX, 0);
-		regmap_update_bits(imx6_pcie->iomuxc_gpr,
-				IMX95_PE0_PM_CTRL,
-				IMX95_PCIE_PM_PME_REQ,
-				IMX95_PCIE_PM_PME_REQ);
-		regmap_update_bits(imx6_pcie->iomuxc_gpr,
-				IMX95_PE0_PM_CTRL,
-				IMX95_PCIE_PM_PME_REQ, 0);
-		regmap_update_bits(imx6_pcie->iomuxc_gpr,
-				IMX95_PE0_PM_CTRL,
-				IMX95_PCIE_PM_READY_ENTR_L23,
-				IMX95_PCIE_PM_READY_ENTR_L23);
-
-		/* check the L2 is entered or not. */
-		if (regmap_read_poll_timeout(imx6_pcie->iomuxc_gpr,
-					IMX95_PE0_PM_STS, val,
-					val & IMX95_PCIE_PM_LINKST_IN_L2,
-					10, 10000))
-			dev_err(dev, "PCIE%d can't enter into L2.\n",
-					imx6_pcie->controller_id);
-		else
-			dev_info(dev, "PCIE%d enter into L2 (STTS:0x%08x).\n",
-					imx6_pcie->controller_id, val);
-
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, IMX95_PE0_TX_MSG_REQ,
+				IMX95_PCIE_PME_TURN_OFF_REQ,
+				IMX95_PCIE_PME_TURN_OFF_REQ);
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, IMX95_PE0_TX_MSG_REQ,
+				IMX95_PCIE_PME_TURN_OFF_REQ, 0);
 		break;
 	default:
 		dev_err(dev, "PME_Turn_Off not implemented\n");
