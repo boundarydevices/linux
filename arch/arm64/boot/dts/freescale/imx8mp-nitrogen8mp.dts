@@ -255,9 +255,9 @@
 	status = "okay";
 
 	spidev1: spi@0 {
-		compatible = "spidev";
 		reg = <0>;
-		spi-max-frequency = <500000>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
 	};
 };
 
@@ -434,11 +434,11 @@
 		#size-cells = <0>;
 
 		spidev_lcd: spidev@0 {
-			compatible = "spidev";
+			reg = <0>;
+			compatible = "lwn,bk4";
 			spi-cpha;
 			spi-cpol;
 			spi-max-frequency = <20000000>;
-			reg = <0>;
 		};
 	};
 
