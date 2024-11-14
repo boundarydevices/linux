@@ -1139,7 +1139,9 @@ static int pca953x_probe(struct i2c_client *client)
 	if (PCA_CHIP_TYPE(chip->driver_data) == PCAL653X_TYPE) {
 		chip->recalc_addr = pcal6534_recalc_addr;
 		chip->check_reg = pcal6534_check_register;
+#ifdef CONFIG_GPIO_PCA953X_IRQ
 		INIT_DELAYED_WORK(&chip->irq_edge_update, pca953x_irq_edge_update);
+#endif
 	} else {
 		chip->recalc_addr = pca953x_recalc_addr;
 		chip->check_reg = pca953x_check_register;
