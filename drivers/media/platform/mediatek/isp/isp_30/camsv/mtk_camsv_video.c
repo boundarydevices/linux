@@ -39,6 +39,46 @@ to_mtk_cam_dev_buffer(struct vb2_buffer *buf)
 
 static const struct mtk_cam_format_info mtk_cam_format_info[] = {
 	{
+		.fourcc = V4L2_PIX_FMT_MTISP_SBGGR12,
+		.code = MEDIA_BUS_FMT_SBGGR12_1X12,
+		.packed = true,
+		.bpp = 12,
+	}, {
+		.fourcc = V4L2_PIX_FMT_MTISP_SGBRG12,
+		.code = MEDIA_BUS_FMT_SGBRG12_1X12,
+		.packed = true,
+		.bpp = 12,
+	}, {
+		.fourcc = V4L2_PIX_FMT_MTISP_SGRBG12,
+		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
+		.packed = true,
+		.bpp = 12,
+	}, {
+		.fourcc = V4L2_PIX_FMT_MTISP_SRGGB12,
+		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
+		.packed = true,
+		.bpp = 12,
+	}, {
+		.fourcc = V4L2_PIX_FMT_MTISP_SBGGR10,
+		.code = MEDIA_BUS_FMT_SBGGR10_1X10,
+		.packed = true,
+		.bpp = 10,
+	}, {
+		.fourcc = V4L2_PIX_FMT_MTISP_SGBRG10,
+		.code = MEDIA_BUS_FMT_SGBRG10_1X10,
+		.packed = true,
+		.bpp = 10,
+	}, {
+		.fourcc = V4L2_PIX_FMT_MTISP_SGRBG10,
+		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
+		.packed = true,
+		.bpp = 10,
+	}, {
+		.fourcc = V4L2_PIX_FMT_MTISP_SRGGB10,
+		.code = MEDIA_BUS_FMT_SRGGB10_1X10,
+		.packed = true,
+		.bpp = 10,
+	}, {
 		.fourcc = V4L2_PIX_FMT_SBGGR8,
 		.code = MEDIA_BUS_FMT_SBGGR8_1X8,
 		.packed = true,
@@ -630,6 +670,14 @@ static const struct v4l2_file_operations mtk_cam_v4l2_fops = {
 
 static const u32 stream_out_fmts[] = {
 	/* The 1st entry is the default image format */
+	V4L2_PIX_FMT_MTISP_SGRBG12,
+	V4L2_PIX_FMT_MTISP_SBGGR12,
+	V4L2_PIX_FMT_MTISP_SGBRG12,
+	V4L2_PIX_FMT_MTISP_SRGGB12,
+	V4L2_PIX_FMT_MTISP_SGRBG10,
+	V4L2_PIX_FMT_MTISP_SBGGR10,
+	V4L2_PIX_FMT_MTISP_SGBRG10,
+	V4L2_PIX_FMT_MTISP_SRGGB10,
 	V4L2_PIX_FMT_SBGGR8,
 	V4L2_PIX_FMT_SGBRG8,
 	V4L2_PIX_FMT_SGRBG8,
