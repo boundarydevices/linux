@@ -108,22 +108,10 @@ static void __deactivate_pvm_traps_hfgxtr(struct kvm_vcpu *vcpu)
 		write_sysreg_s(ctxt_sys_reg(hctxt, HAFGRTR_EL2), SYS_HAFGRTR_EL2);
 }
 
-static void __activate_traps(struct kvm_vcpu *vcpu)
+static void __activate_cptr_traps(struct kvm_vcpu *vcpu)
 {
-	u64 val;
+	u64 val = kvm_get_reset_cptr_el2(vcpu);
 
-	___activate_traps(vcpu, vcpu->arch.hcr_el2);
-	__activate_traps_common(vcpu);
-
-	if (unlikely(vcpu_is_protected(vcpu))) {
-		__activate_pvm_traps_hcrx(vcpu);
-		__activate_pvm_traps_hfgxtr(vcpu);
-	} else {
-		__activate_traps_hcrx(vcpu);
-		__activate_traps_hfgxtr(vcpu);
-	}
-
-	val = vcpu->arch.cptr_el2;
 	val |= CPTR_EL2_TAM;	/* Same bit irrespective of E2H */
 	val |= has_hvhe() ? CPACR_EL1_TTA : CPTR_EL2_TTA;
 	if (cpus_have_final_cap(ARM64_SME)) {
@@ -142,7 +130,37 @@ static void __activate_traps(struct kvm_vcpu *vcpu)
 		__activate_traps_fpsimd32(vcpu);
 	}
 
+	if (vcpu_is_protected(vcpu)) {
+		struct kvm *kvm = vcpu->kvm;
+
+		if (!kvm_has_feat(kvm, ID_AA64PFR0_EL1, AMU, IMP))
+			val |= CPTR_EL2_TAM;
+
+		if (!vcpu_has_sve(vcpu)) {
+			if (has_hvhe())
+				val &= ~CPACR_ELx_ZEN;
+			else
+				val |= CPTR_EL2_TZ;
+		}
+	}
+
 	kvm_write_cptr_el2(val);
+}
+
+static void __activate_traps(struct kvm_vcpu *vcpu)
+{
+	___activate_traps(vcpu, vcpu->arch.hcr_el2);
+	__activate_traps_common(vcpu);
+	__activate_cptr_traps(vcpu);
+
+	if (unlikely(vcpu_is_protected(vcpu))) {
+		__activate_pvm_traps_hcrx(vcpu);
+		__activate_pvm_traps_hfgxtr(vcpu);
+	} else {
+		__activate_traps_hcrx(vcpu);
+		__activate_traps_hfgxtr(vcpu);
+	}
+
 	write_sysreg(__this_cpu_read(kvm_hyp_vector), vbar_el2);
 
 	if (cpus_have_final_cap(ARM64_WORKAROUND_SPECULATIVE_AT)) {
