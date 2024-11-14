@@ -876,9 +876,6 @@ unlock_vcpus:
 unlock_vm:
 	hyp_read_unlock(&vm_table_lock);
 
-	if (!ret)
-		hyp_vcpu->vcpu.arch.cptr_el2 = kvm_get_reset_cptr_el2(&hyp_vcpu->vcpu);
-
 	return ret;
 }
 
