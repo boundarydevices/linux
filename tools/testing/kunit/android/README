@@ -38,14 +38,14 @@ Load and run a test module on Android device manually
     $ insmod kunit.ko enable=1
 
  * Push the KUnit test module over to the device. For example using adb:
-   $ adb push kunit-test-example.ko /data
+   $ adb push kunit-example-test.ko /data
 
  * (Optional) - Mount debugfs on device:
     $ mount -t debugfs debugfs /sys/kernel/debug
 
  * Load test module on device:
     $ cd /data
-    $ insmod kunit-test-example.ko
+    $ insmod kunit-example-test.ko
 
 View test results
  * If debugfs is mounted:
