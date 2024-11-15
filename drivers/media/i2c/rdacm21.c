@@ -650,7 +650,7 @@ static const struct rdacm21_info rdacm21_info_rdacm21 = {
 
 static const struct rdacm21_info rdacm21_info_ag190c = {
 	.model = COMPAT_MODEL_AG190C,
-+       .need_init_isp = false,
+	.need_init_isp = false,
 };
 
 static const struct of_device_id rdacm21_of_ids[] = {
