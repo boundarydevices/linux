@@ -61,12 +61,6 @@
 
 /* runtime pm timeout */
 #define FSPI_RPM_TIMEOUT 50	/* 50ms */
-/*
- * The driver only uses one single LUT entry, that is updated on
- * each call of exec_op(). Index 0 is preset at boot with a basic
- * read operation, so let's use the last entry (15).
- */
-#define	SEQID_LUT			15
 
 /* Registers used by the driver */
 #define FSPI_MCR0			0x00
@@ -980,12 +974,12 @@ static int nxp_fspi_do_op(struct nxp_fspi *f, const struct spi_mem_op *op)
 
 	if (f->flags & FSPI_DTR_ODD_ADDR)
 		fspi_writel(f, (op->data.nbytes + 1) |
-			 (SEQID_LUT << FSPI_IPCR1_SEQID_SHIFT) |
+			 (seqid_lut << FSPI_IPCR1_SEQID_SHIFT) |
 			 (seqnum << FSPI_IPCR1_SEQNUM_SHIFT),
 			 base + FSPI_IPCR1);
 	else
 		fspi_writel(f, op->data.nbytes |
-			 (SEQID_LUT << FSPI_IPCR1_SEQID_SHIFT) |
+			 (seqid_lut << FSPI_IPCR1_SEQID_SHIFT) |
 			 (seqnum << FSPI_IPCR1_SEQNUM_SHIFT),
 			 base + FSPI_IPCR1);
 
