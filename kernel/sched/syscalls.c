@@ -17,6 +17,7 @@
 #include "autogroup.h"
 
 #include <trace/hooks/sched.h>
+#undef TRACE_INCLUDE_PATH
 
 static inline int __normal_prio(int policy, int rt_prio, int nice)
 {

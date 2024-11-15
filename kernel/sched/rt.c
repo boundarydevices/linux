@@ -5,6 +5,7 @@
  */
 
 #include <trace/hooks/sched.h>
+#undef TRACE_INCLUDE_PATH
 
 int sched_rr_timeslice = RR_TIMESLICE;
 /* More than 4 hours if BW_SHIFT equals 20. */
