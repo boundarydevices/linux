@@ -116,7 +116,6 @@ struct mtk_cam_video_device {
  * @clks: The clocks.
  * @irq: Irq fired when buffer is ready.
  * @conf: soc specific driver data.
- * @pipeline: Media pipeline information.
  * @subdev: The V4L2 sub-device instance.
  * @subdev_pads: Media pads of this sub-device.
  * @formats: Media bus format for all pads.
@@ -144,7 +143,6 @@ struct mtk_cam_dev {
 	unsigned int irq;
 	const struct mtk_cam_conf *conf;
 
-	struct media_pipeline pipeline;
 	struct v4l2_subdev subdev;
 	struct media_pad subdev_pads[MTK_CAM_CIO_NUM_PADS];
 	struct v4l2_mbus_framefmt formats[MTK_CAM_CIO_NUM_PADS];

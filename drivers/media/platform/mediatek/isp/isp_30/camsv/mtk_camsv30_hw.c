@@ -279,7 +279,7 @@ static int mtk_camsv30_runtime_resume(struct device *dev)
 		if (ret) {
 			cam_dev->stream_count--;
 			if (cam_dev->stream_count == 0)
-				media_pipeline_stop(vdev->vdev.entity.pads);
+				video_device_pipeline_stop(&vdev->vdev);
 		}
 		mutex_unlock(&cam_dev->op_lock);
 
