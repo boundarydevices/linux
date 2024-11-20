@@ -6,7 +6,10 @@ Prerequisites
    "no trim" kernel (e.g. add `--notrim` to bazel build command).
 
 Run tests on a physical or virtual device:
-  $ kernel/tests/tools/run_test_only.sh -t kunit -s <serial_number>
+  $ kernel/tests/tools/run_test_only.sh -t kunit -s <serial_number> -td <test_dir>
+
+  test_dir is the same directory as specified when running:
+  $ tools/bazel run //common:kunit_tests_arm64 -- -v --destdir <test_dir>
 
 Before the tests, you can use the following command to launch a virtual device:
   $ kernel/tests/tools/launch_cvd.sh
@@ -37,15 +40,19 @@ Load and run a test module on Android device manually
     $ cd /data
     $ insmod kunit.ko enable=1
 
+   If the kunit.ko has been installed already but without enable=1 passed,
+   it needs to remove it first via the rmmod command, and install again
+   via the insmod command
+
  * Push the KUnit test module over to the device. For example using adb:
-   $ adb push kunit-test-example.ko /data
+   $ adb push kunit-example-test.ko /data
 
  * (Optional) - Mount debugfs on device:
     $ mount -t debugfs debugfs /sys/kernel/debug
 
  * Load test module on device:
     $ cd /data
-    $ insmod kunit-test-example.ko
+    $ insmod kunit-example-test.ko
 
 View test results
  * If debugfs is mounted:
@@ -75,7 +82,10 @@ View test results
 
 Run KUnit tests on Android Device via test automation infrastructure tradefed
  * Build ACK KUnit tests and install (e.g. /tmp/kunit_tests):
-   $ tools/bazel run -- //common:kunit_tests_x86_64 -v --destdir /tmp/kunit_tests
+     $ tools/bazel run -- //common:kunit_tests_x86_64 -v --destdir /tmp/kunit_tests
+   Or
+     $ tools/bazel run -- //common:kunit_tests_arm64 -v --destdir /tmp/kunit_tests
+
 
  * With device connected and accessible via adb run the tests:
    $ prebuilts/tradefed/filegroups/tradefed/tradefed.sh run commandAndExit \
