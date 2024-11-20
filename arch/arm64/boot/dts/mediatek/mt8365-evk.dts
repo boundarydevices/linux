@@ -876,3 +876,12 @@
 	pinctrl-names = "default";
 	status = "okay";
 };
+
+&keys {
+	/delete-node/ key-home;
+
+	key-volume-down {
+		linux,keycodes = <KEY_VOLUMEDOWN>;
+		wakeup-source;
+	};
+};
