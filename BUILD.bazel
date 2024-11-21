@@ -28,7 +28,12 @@ load(
     "merged_kernel_uapi_headers",
 )
 load(":abi.bzl", "cc_binary_with_abi")
-load(":modules.bzl", "get_gki_modules_list", "get_kunit_modules_list")
+load(
+    ":modules.bzl",
+    "get_gki_modules_list",
+    "get_gki_protected_modules_list",
+    "get_kunit_modules_list",
+)
 
 package(
     default_visibility = [
@@ -93,12 +98,28 @@ write_file(
 )
 
 write_file(
+    name = "gki_aarch64_protected_modules",
+    out = "gki/aarch64/protected_modules",
+    content = get_gki_protected_modules_list("arm64") + [
+        "",  # Ensure new line at the end.
+    ],
+)
+
+write_file(
     name = "gki_system_dlkm_modules_x86_64",
     out = "gki/x86_64/system_dlkm_modules",
     # Do not built kunit modules into system_dlkm
     content = get_gki_modules_list("x86_64") + [
         # Ensure new line at the end.
         "",
+    ],
+)
+
+write_file(
+    name = "gki_x86_64_protected_modules",
+    out = "gki/x86_64/protected_modules",
+    content = get_gki_protected_modules_list("x86_64") + [
+        "",  # Ensure new line at the end.
     ],
 )
 
