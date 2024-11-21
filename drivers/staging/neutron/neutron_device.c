@@ -6,7 +6,6 @@
 
 #include <linux/dma-mapping.h>
 #include <linux/dma-map-ops.h>
-#include <linux/dma-direct.h>
 #include <linux/bitmap.h>
 #include <linux/interrupt.h>
 #include <linux/mutex.h>
@@ -97,8 +96,8 @@ struct rproc *neutron_get_rproc(struct neutron_device *ndev)
 	return ndev->rproc;
 }
 
-int neutron_rproc_elf_load(struct rproc *rproc, const struct firmware *fw,
-			   void *data_ddr, u8 skip_flag)
+static int neutron_rproc_elf_load(struct rproc *rproc, const struct firmware *fw,
+				  void *data_ddr, u8 skip_flag)
 {
 	struct device *dev = &rproc->dev;
 	int i, ret = 0;
@@ -184,7 +183,6 @@ static int neutron_firmw_request(struct neutron_device *ndev, struct neutron_buf
 	int ret = 0;
 	struct device *dev;
 	struct rproc *rproc = ndev->rproc;
-	phys_addr_t paddr;
 
 	if (!buf) {
 		dev_err(dev, "%s: invalid neutron bufffer\n", __func__);
@@ -217,8 +215,9 @@ static int neutron_firmw_request(struct neutron_device *ndev, struct neutron_buf
 	}
 
 	/* Sync the data for device */
-	paddr = dma_to_phys(ndev->dev, buf->dma_addr);
-	arch_sync_dma_for_device(paddr, buf->size, DMA_TO_DEVICE);
+	ndev->dev->dma_coherent = false;
+	dma_sync_single_for_device(ndev->dev, buf->dma_addr, buf->size, DMA_TO_DEVICE);
+	ndev->dev->dma_coherent = true;
 
 	/* Firmware is changed, it should be reloaded on next job */
 	ndev->firmw_id = 0;
@@ -503,7 +502,6 @@ static long neutron_ioctl(struct file *file,
 	case NEUTRON_IOCTL_CACHE_SYNC: {
 		struct neutron_uapi_cache_sync uapi;
 		struct neutron_buffer *buf;
-		phys_addr_t paddr;
 
 		ret = copy_from_user(&uapi, udata, sizeof(uapi));
 		if (ret)
@@ -527,11 +525,14 @@ static long neutron_ioctl(struct file *file,
 			ret = -EINVAL;
 		}
 
-		paddr = dma_to_phys(ndev->dev, buf->dma_addr + uapi.offset);
+		ndev->dev->dma_coherent = false;
 		if (uapi.direction)
-			arch_sync_dma_for_cpu(paddr, uapi.size, DMA_FROM_DEVICE);
+			dma_sync_single_for_cpu(ndev->dev, buf->dma_addr + uapi.offset,
+						uapi.size, DMA_FROM_DEVICE);
 		else
-			arch_sync_dma_for_device(paddr, uapi.size, DMA_TO_DEVICE);
+			dma_sync_single_for_device(ndev->dev, buf->dma_addr + uapi.offset,
+						   uapi.size, DMA_TO_DEVICE);
+		ndev->dev->dma_coherent = true;
 
 		break;
 	}
@@ -654,7 +655,7 @@ int neutron_dev_init(struct neutron_device *ndev,
 	}
 
 	dma_set_mask_and_coherent(ndev->dev, DMA_BIT_MASK(32));
-	arch_setup_dma_ops(ndev->dev, 0, 0, NULL, true);
+	ndev->dev->dma_coherent = true;
 
 	/* Init power state */
 	ndev->power_state = NEUTRON_POWER_OFF;
