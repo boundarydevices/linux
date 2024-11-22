@@ -361,6 +361,7 @@
 	cap-sdio-irq;
 	hs400-ds-delay = <0x12012>;
 	vmmc-supply = <&mmc2_vdd33>;
+	vqmmc-supply = <&mt6357_vcn18_reg>;
 	assigned-clocks = <&topckgen CLK_TOP_MSDC50_2_SEL>;
 	assigned-clock-parents = <&topckgen CLK_TOP_MSDCPLL>;
 	non-removable;
