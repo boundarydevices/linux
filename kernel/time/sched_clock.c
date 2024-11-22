@@ -75,11 +75,13 @@ notrace struct clock_read_data *sched_clock_read_begin(unsigned int *seq)
 	*seq = raw_read_seqcount_latch(&cd.seq);
 	return cd.read_data + (*seq & 1);
 }
+EXPORT_SYMBOL_GPL(sched_clock_read_begin);
 
 notrace int sched_clock_read_retry(unsigned int seq)
 {
 	return raw_read_seqcount_latch_retry(&cd.seq, seq);
 }
+EXPORT_SYMBOL_GPL(sched_clock_read_retry);
 
 unsigned long long noinstr sched_clock_noinstr(void)
 {
