@@ -7,6 +7,8 @@
  * Includes
  ****************************************************************************/
 
+#include <linux/dma-direct.h>
+#include <linux/dma-mapping.h>
 #include <linux/anon_inodes.h>
 #include <linux/file.h>
 #include <linux/fs.h>
@@ -86,6 +88,7 @@ int neutron_inference_run(struct neutron_inference *inf)
 {
 	struct neutron_device *ndev;
 	struct neutron_mbox_tx_msg msg;
+	phys_addr_t paddr;
 	u32 i, val;
 	int ret = 0;
 
@@ -100,6 +103,10 @@ int neutron_inference_run(struct neutron_inference *inf)
 		return 0;
 
 	ndev = inf->ndev;
+
+	/* Sync the input data for device before running inference job */
+	paddr = dma_to_phys(ndev->dev, inf->buf->dma_addr + inf->args.input_offset);
+	arch_sync_dma_for_device(paddr, inf->args.input_size, DMA_TO_DEVICE);
 
 	// reload only when firmware was changed
 	if (ndev->firmw_id  != inf->args.firmw_id) {
@@ -259,6 +266,7 @@ static void inference_done_callback(struct work_struct *work)
 	struct neutron_inference *inf;
 	struct neutron_device *ndev;
 	struct neutron_mbox *mbox;
+	phys_addr_t paddr;
 
 	spin_lock_bh(&queue->lock);
 	inf = queue->cur_inf;
@@ -273,11 +281,15 @@ static void inference_done_callback(struct work_struct *work)
 	if (inf->status == NEUTRON_UAPI_STATUS_RUNNING)
 		inf->status = NEUTRON_UAPI_STATUS_DONE;
 
-	/* Wake up the waiting process */
-	wake_up_interruptible(&inf->waitq);
-
 	ndev = inf->ndev;
 	mbox = ndev->mbox;
+
+	/* Sync the output data for cpu after inference is done */
+	paddr = dma_to_phys(ndev->dev, inf->buf->dma_addr + inf->args.output_offset);
+	arch_sync_dma_for_cpu(paddr, inf->args.output_size, DMA_FROM_DEVICE);
+
+	/* Wake up the waiting process */
+	wake_up_interruptible(&inf->waitq);
 
 	/* Reset neutron */
 	if (mbox->ops->send_reset(ndev->mbox))
