@@ -614,12 +614,9 @@ static const struct sys_reg_desc_reset pvm_sys_reg_reset_vals[] = {
 };
 
 /*
- * Sets system registers to reset value
- *
- * This function finds the right entry and sets the registers on the protected
- * vcpu to their architecturally defined reset values.
+ * Initializes feature registers for protected vms.
  */
-void kvm_reset_pvm_sys_regs(struct kvm_vcpu *vcpu)
+void kvm_init_pvm_id_regs(struct kvm_vcpu *vcpu)
 {
 	/* List of feature registers to reset for protected VMs. */
 	const u32 pvm_feat_id_regs[] = {
@@ -636,13 +633,7 @@ void kvm_reset_pvm_sys_regs(struct kvm_vcpu *vcpu)
 		SYS_ID_AA64DFR0_EL1,
 	};
 	struct kvm *kvm = vcpu->kvm;
-	unsigned long i;
-
-	for (i = 0; i < ARRAY_SIZE(pvm_sys_reg_reset_vals); i++) {
-		const struct sys_reg_desc_reset *r = &pvm_sys_reg_reset_vals[i];
-
-		r->reset(vcpu, r);
-	}
+	int i;
 
 	if (test_bit(KVM_ARCH_FLAG_ID_REGS_INITIALIZED, &kvm->arch.flags))
 		return;
@@ -655,6 +646,24 @@ void kvm_reset_pvm_sys_regs(struct kvm_vcpu *vcpu)
 	}
 
 	set_bit(KVM_ARCH_FLAG_ID_REGS_INITIALIZED, &kvm->arch.flags);
+}
+
+
+/*
+ * Sets system registers to reset value
+ *
+ * This function finds the right entry and sets the registers on the protected
+ * vcpu to their architecturally defined reset values.
+ */
+void kvm_reset_pvm_sys_regs(struct kvm_vcpu *vcpu)
+{
+	unsigned long i;
+
+	for (i = 0; i < ARRAY_SIZE(pvm_sys_reg_reset_vals); i++) {
+		const struct sys_reg_desc_reset *r = &pvm_sys_reg_reset_vals[i];
+
+		r->reset(vcpu, r);
+	}
 }
 
 /*
