@@ -20,6 +20,7 @@
 	compatible = "mediatek,mt8365-evk", "mediatek,mt8365";
 
 	aliases {
+		ethernet0 = &ethernet;
 		serial0 = &uart0;
 	};
 
