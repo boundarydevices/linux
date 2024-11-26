@@ -894,9 +894,8 @@
 			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
 			clocks = <&mmsys CLK_MM_LVDSTX_PXL>,
 				 <&mmsys CLK_MM_LVDSTX_CTS>,
-				 <&topckgen CLK_TOP_VPLL_DPIX_EN>,
 				 <&topckgen CLK_TOP_LVDSTX_CLKDIG_EN>;
-			clock-names = "pixel", "clkts", "dpix", "clkdig";
+			clock-names = "pixel", "clkts", "clkdig";
 			phys = <&lvds_tx>;
 			phy-names = "lvds";
 			status = "disabled";
