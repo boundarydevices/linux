@@ -157,6 +157,7 @@ static int panel_lvds_get_modes(struct drm_panel *panel,
 
 	mode->type |= DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
 	drm_mode_probed_add(connector, mode);
+	drm_mode_set_name(mode);
 
 	connector->display_info.width_mm = lvds->desc->width;
 	connector->display_info.height_mm = lvds->desc->height;
@@ -179,7 +180,7 @@ static int panel_lvds_probe(struct platform_device *pdev)
 {
 	struct panel_lvds *lvds;
 	const struct panel_desc *desc;
-printk("TOTO panel_lvds_probe\n");
+
 	lvds = devm_kzalloc(&pdev->dev, sizeof(*lvds), GFP_KERNEL);
 	if (!lvds)
 		return -ENOMEM;
