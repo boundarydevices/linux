@@ -195,7 +195,6 @@ struct mtk_lvds {
 	struct phy *phy;
 	struct clk *pix_clk_gate;
 	struct clk *clkts_clk_gate;
-	struct clk *dpix;
 	struct clk *clkdig;
 	struct drm_display_mode mode;
 	u32 lane_count;

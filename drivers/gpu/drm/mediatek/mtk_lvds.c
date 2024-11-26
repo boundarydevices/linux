@@ -84,18 +84,11 @@ static void mtk_lvds_poweron(struct mtk_lvds *lvds)
 	if (ret < 0)
 		dev_err(lvds->dev, "Failed to enable power domain: %d\n", ret);
 
-	ret = clk_prepare_enable(lvds->dpix);
-	if (ret != 0) {
-		dev_err(lvds->dev, "Failed to enable dpix clock gate: %d\n",
-			ret);
-		goto err_phy_power_off;
-	}
-
 	ret = clk_prepare_enable(lvds->clkdig);
 	if (ret != 0) {
 		dev_err(lvds->dev, "Failed to enable clkdig clock gate: %d\n",
 			ret);
-		goto err_disable_dpix;
+		goto err_phy_power_off;
 	}
 
 	ret = clk_prepare_enable(lvds->pix_clk_gate);
@@ -159,8 +152,6 @@ err_disable_pix_gate_clk:
 	clk_disable_unprepare(lvds->pix_clk_gate);
 err_disable_clkdig:
 	clk_disable_unprepare(lvds->clkdig);
-err_disable_dpix:
-	clk_disable_unprepare(lvds->dpix);
 err_phy_power_off:
 	lvds->refcount--;
 }
@@ -189,7 +180,7 @@ static void mtk_lvds_poweroff(struct mtk_lvds *lvds)
 	clk_disable_unprepare(lvds->clkts_clk_gate);
 	clk_disable_unprepare(lvds->pix_clk_gate);
 	clk_disable_unprepare(lvds->clkdig);
-	clk_disable_unprepare(lvds->dpix);
+
 	ret = phy_power_off(lvds->phy);
 	if (ret < 0)
 		DRM_ERROR("Failed to disable power domain: %d\n", ret);
@@ -235,11 +226,6 @@ static void mtk_lvds_bridge_disable(struct drm_bridge *bridge)
 	if (lvds->enabled == false)
 		return;
 
-	if (drm_panel_disable(lvds->panel)) {
-		dev_err(lvds->dev, "failed to disable panel\n");
-		return;
-	}
-
 	mtk_lvds_poweroff(lvds);
 	lvds->enabled = false;
 }
@@ -250,11 +236,6 @@ static void mtk_lvds_bridge_post_disable(struct drm_bridge *bridge)
 
 	if (lvds->powered == false)
 		return;
-
-	if (drm_panel_unprepare(lvds->panel)) {
-		dev_err(lvds->dev, "failed to unprepare panel\n");
-		return;
-	}
 
 	lvds->powered = false;
 }
@@ -384,13 +365,6 @@ static int mtk_drm_lvds_probe(struct platform_device *pdev)
 	if (IS_ERR(lvds->clkts_clk_gate)) {
 		ret = PTR_ERR(lvds->clkts_clk_gate);
 		dev_err(dev, "Failed to get clkts clock gate: %d\n", ret);
-		return ret;
-	}
-
-	lvds->dpix = devm_clk_get(dev, "dpix");
-	if (IS_ERR(lvds->dpix)) {
-		ret = PTR_ERR(lvds->dpix);
-		dev_err(dev, "Failed to get dpix clock gate: %d\n", ret);
 		return ret;
 	}
 
