@@ -298,6 +298,7 @@
 		irq-gpios = <&pio 78 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&pio 79 GPIO_ACTIVE_HIGH>;
 		VDDIO-supply = <&mt6357_vrf12_reg>;
+		status = "disabled";
 	};
 };
 
