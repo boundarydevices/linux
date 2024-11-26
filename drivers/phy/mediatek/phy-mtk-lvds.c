@@ -65,27 +65,8 @@ static int mtk_lvds_tx_power_on(struct phy *phy)
 	return 0;
 }
 
-static void mtk_lvds_tx_power_off_signal(struct phy *phy)
-{
-	struct mtk_lvds_tx *lvds_tx = phy_get_drvdata(phy);
-	u32 reg;
-
-	reg = readl(lvds_tx->regs + VOPLL_ANA1C) &
-		    (~(RG_LVDSTX_VPLL_SDM_PWR_ON | RG_LVDSTX_VPLL_SDM_ISO_EN));
-	writel(reg, lvds_tx->regs + VOPLL_ANA1C);
-
-	writel(0, lvds_tx->regs + VOPLL_ANA14);
-
-	reg = readl(lvds_tx->regs + LVDSTX_ANA04) &
-		    (~(RG_LVDSTX_BIAS_EN | RG_LVDSTX_LDO_EN));
-	writel(reg, lvds_tx->regs + LVDSTX_ANA04);
-
-	writel(0, lvds_tx->regs + LVDSTX_ANA08);
-}
-
 static int mtk_lvds_tx_power_off(struct phy *phy)
 {
-	mtk_lvds_tx_power_off_signal(phy);
 	return 0;
 }
 
