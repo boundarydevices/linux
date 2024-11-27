@@ -184,6 +184,11 @@
 		regulator-always-on;
 	};
 
+	mtk_fsource: mtk-fsource {
+		compatible = "regulator-output";
+		vout-supply = <&mt6359_vefuse_ldo_reg>;
+	};
+
 	touch0_fixed_3v3: regulator-5 {
 		compatible = "regulator-fixed";
 		regulator-name = "touch_3v3";
