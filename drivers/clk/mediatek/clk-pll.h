@@ -23,9 +23,19 @@ struct mtk_pll_div_table {
 #define PLL_AO		BIT(1)
 #define POSTDIV_MASK	GENMASK(2, 0)
 
+struct mtk_pll_setclr_data {
+	uint16_t en_ofs;
+	uint16_t en_set_ofs;
+	uint16_t en_clr_ofs;
+	uint16_t rstb_ofs;
+	uint16_t rstb_set_ofs;
+	uint16_t rstb_clr_ofs;
+};
+
 struct mtk_pll_data {
 	int id;
 	const char *name;
+	struct mtk_pll_setclr_data *pll_setclr;
 	u32 reg;
 	u32 pwr_reg;
 	u32 en_mask;
