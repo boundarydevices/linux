@@ -177,6 +177,11 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-name = "vsys_lcm";
 	};
+
+	mtk_fsource: mtk-fsource {
+		compatible = "regulator-output";
+		vout-supply = <&mt6357_vefuse_reg>;
+	};
 };
 
 &afe {
