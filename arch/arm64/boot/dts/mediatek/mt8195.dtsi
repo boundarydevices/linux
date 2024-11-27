@@ -985,6 +985,15 @@
 			status = "disabled";
 		};
 
+		rng: rng@1020f000 {
+			compatible = "mediatek,mt8195-rng",
+				     "mediatek,mt7623-rng";
+			reg = <0 0x1020f000 0 0x100>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_TRNG>;
+			clock-names = "rng";
+			polling-delay = <200>;
+		};
+
 		apdma: dma-controller@10220880 {
 			compatible = "mediatek,mt6577-uart-dma";
 			reg =   <0 0x10220880 0 0x80>,
