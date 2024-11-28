@@ -1101,9 +1101,12 @@
 };
 
 &spmi {
+	#address-cells = <2>;
+	#size-cells = <0>;
+
 	mt6315_6: mt6315@6 {
 		compatible = "mediatek,mt6315-regulator";
-		reg = <0x6 0 0xb 1>;
+		reg = <0x6 SPMI_USID>;
 
 		regulators {
 			mt6315_6_vbuck1: vbuck1 {
