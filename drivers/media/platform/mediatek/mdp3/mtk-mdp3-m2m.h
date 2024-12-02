@@ -40,15 +40,6 @@ struct mdp_m2m_ctx {
 	struct mutex			ctx_lock;
 };
 
-static struct v4l2_frmsize_stepwise mdp_frmsize_stepwise = {
-	.max_width =   0,
-	.min_width =   0,
-	.max_height =  0,
-	.min_height =  0,
-	.step_height = 2,
-	.step_width =  2,
-};
-
 int mdp_m2m_device_register(struct mdp_dev *mdp);
 void mdp_m2m_device_unregister(struct mdp_dev *mdp);
 void mdp_m2m_job_finish(struct mdp_m2m_ctx *ctx);

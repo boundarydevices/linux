@@ -10,6 +10,15 @@
 #include <media/videobuf2-dma-contig.h>
 #include "mtk-mdp3-m2m.h"
 
+struct v4l2_frmsize_stepwise mdp_frmsize_stepwise = {
+	.max_width =   0,
+	.min_width =   0,
+	.max_height =  0,
+	.min_height =  0,
+	.step_height = 2,
+	.step_width =  2,
+};
+
 static inline struct mdp_m2m_ctx *fh_to_ctx(struct v4l2_fh *fh)
 {
 	return container_of(fh, struct mdp_m2m_ctx, fh);
@@ -302,7 +311,7 @@ static int mdp_m2m_enum_framesizes(struct file *file, void *fh,
 	if (mdp_find_fmt(mdp_data, sizes->pixel_format, V4L2_BUF_TYPE_VIDEO_CAPTURE) == NULL)
 		return -EINVAL;
 
-	sizes->type = V4L2_FRMSIZE_TYPE_CONTINUOUS;
+	sizes->type = V4L2_FRMSIZE_TYPE_STEPWISE;
 	memcpy(&sizes->stepwise, &mdp_frmsize_stepwise, sizeof(sizes->stepwise));
 
 	return 0;
