@@ -723,13 +723,8 @@ int mdp_m2m_device_register(struct mdp_dev *mdp)
 	mdp->m2m_vdev->lock = &mdp->m2m_lock;
 	mdp->m2m_vdev->vfl_dir = VFL_DIR_M2M;
 	mdp->m2m_vdev->v4l2_dev = &mdp->v4l2_dev;
-	ret = snprintf(mdp->m2m_vdev->name, sizeof(mdp->m2m_vdev->name), "%s:m2m",
+	snprintf(mdp->m2m_vdev->name, sizeof(mdp->m2m_vdev->name), "%s:m2m",
 		 MDP_MODULE_NAME);
-	if (ret < 0 || ret >= sizeof(mdp->m2m_vdev->name)) {
-		dev_err(dev, "Failed to set module name\n");
-		goto err_m2m_init;
-	}
-
 	video_set_drvdata(mdp->m2m_vdev, mdp);
 
 	mdp->m2m_dev = v4l2_m2m_init(&mdp_m2m_ops);
@@ -747,12 +742,8 @@ int mdp_m2m_device_register(struct mdp_dev *mdp)
 
 	mdp->mdev.dev = dev;
 	strscpy(mdp->mdev.model, MDP_MODULE_NAME, sizeof(mdp->mdev.model));
-	ret = snprintf(mdp->mdev.bus_info, sizeof(mdp->mdev.bus_info), "platform:%s",
+	snprintf(mdp->mdev.bus_info, sizeof(mdp->mdev.bus_info), "platform:%s",
 				dev_name(dev));
-	if (ret < 0 || ret >= sizeof(mdp->mdev.bus_info)) {
-		dev_err(dev, "Failed to set bus_info\n");
-		goto err_vfd;
-	}
 
 	media_device_init(&mdp->mdev);
 	mdp->v4l2_dev.mdev = &mdp->mdev;
