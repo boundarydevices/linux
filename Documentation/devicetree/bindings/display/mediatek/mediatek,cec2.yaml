@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/mediatek/mediatek,cec2.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek HDMI CEC v2 Controller
+
+maintainers:
+  - CK Hu <ck.hu@mediatek.com>
+  - Jitao shi <jitao.shi@mediatek.com>
+
+description: |
+  The HDMI CEC controller handles hotplug detection and CEC communication.
+
+properties:
+  compatible:
+    enum:
+      - mediatek,cec2
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+  clocks:
+    items:
+      - description: CEC 66M H clock
+      - description: CEC 66M B clock
+      - description: HDMI 32K clock
+      - description: HDMI 26M cloci
+
+  clock-names:
+    items:
+      - const: cec_66m_h
+      - const: cec_66m_b
+      - const: hdmi_32k
+      - const: hdmi_26m
+
+  hdmi:
+    maxItems: 1
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clocks
+  - clock-names
+  - hdmi
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/mt8195-clk.h>
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+    #include <dt-bindings/interrupt-controller/irq.h>
+
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        cec: cec@10014000 {
+            compatible = "mediatek,cec2";
+            reg = <0 0x10014000 0 0x100>;
+            interrupts = <GIC_SPI 680 IRQ_TYPE_LEVEL_HIGH 0>;
+            clocks = <&infracfg_ao CLK_INFRA_AO_CEC_66M_H>,
+                    <&infracfg_ao CLK_INFRA_AO_CEC_66M_B>,
+                    <&infracfg_ao CLK_INFRA_AO_HDMI_32K>,
+                    <&infracfg_ao CLK_INFRA_AO_HDMI_26M>;
+            clock-names = "cec_66m_h",
+                    "cec_66m_b",
+                    "hdmi_32k",
+                    "hdmi_26m";
+            hdmi = <&hdmi0>;
+        };
+    };
+...
