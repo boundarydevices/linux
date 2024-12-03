@@ -1679,7 +1679,22 @@ static long hdmirx_ioctl(struct file *filp,
 		}
 		break;
 	}
-
+	case MTK_HDMIRX_SET_EDID:
+	{
+		if (copy_from_user(&myhdmi->user_edid[0], (void __user *)arg,
+			sizeof(struct HDMIRX_EDID_DATA))) {
+			RX_DEF_LOG("[RX] set EDID by user failed: %d\n", __LINE__);
+			myhdmi->chg_edid_by_user = FALSE;
+			r = -EFAULT;
+			break;
+		}
+		myhdmi->chg_edid_by_user = TRUE;
+		myhdmi->u1TxEdidReady = HDMI_PLUG_OUT;
+		myhdmi->u1TxEdidReadyOld = HDMI_PLUG_IDLE;
+		myhdmi->chg_edid = TRUE;
+		RX_DEF_LOG("[RX] set EDID by user\n");
+		break;
+	}
 	default:
 		r = -EFAULT;
 		RX_DEF_LOG("[RX] Unknown ioctl: 0x%x\n", cmd);
@@ -1760,6 +1775,13 @@ static long hdmirx_ioctl_compat(struct file *filp,
 		arg_k = compat_ptr(arg);
 		ret = filp->f_op->unlocked_ioctl(filp,
 			MTK_HDMIRX_DRV_VER,
+			(unsigned long)arg_k);
+		break;
+
+	case CP_MTK_HDMIRX_SET_EDID:
+		arg_k = compat_ptr(arg);
+		ret = filp->f_op->unlocked_ioctl(filp,
+			MTK_HDMIRX_SET_EDID,
 			(unsigned long)arg_k);
 		break;
 

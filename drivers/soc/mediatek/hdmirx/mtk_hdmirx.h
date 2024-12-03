@@ -2000,6 +2000,8 @@ struct HdmiVRR vrr_emp;
 
 	u8 sel_edid;
 	bool chg_edid;
+	bool chg_edid_by_user;
+	u8 user_edid[HDMIRX_EDID_SIZE];
 
 	u8 CP_VidDataBLK[E_VID_BLK_LEN];
 	// add PCM 3,4,5,6,7 channel, each 3 bytes

@@ -9,7 +9,7 @@
 #define HDMIRX_DEVNAME "hdmirx"
 
 #define HDMIRX_DRV_VER_MAJOR		1
-#define HDMIRX_DRV_VER_MINOR		0
+#define HDMIRX_DRV_VER_MINOR		1
 #define HDMIRX_DRV_VER_PATCHLEVEL	0
 
 #define VENDORSPEC_INFOFRAME_TYPE 0x01
@@ -196,6 +196,12 @@ enum HDMI_SWITCH_NO {
 	HDMI_SWITCH_4		/* invalid port */
 };
 
+#define HDMIRX_EDID_SIZE (512)
+
+struct HDMIRX_EDID_DATA {
+	u8 data[HDMIRX_EDID_SIZE];	/* EDID data */
+};
+
 #define HDMI_IOW(num, dtype)		_IOW('H', num, dtype)
 #define HDMI_IOR(num, dtype)		_IOR('H', num, dtype)
 #define HDMI_IOWR(num, dtype)		_IOWR('H', num, dtype)
@@ -224,6 +230,8 @@ enum HDMI_SWITCH_NO {
 #define MTK_HDMIRX_DRV_VER		HDMI_IOWR(7, struct HDMIRX_DRIVER_VERSION)
 /* get AVI packet */
 #define MTK_HDMIRX_AVI			HDMI_IOWR(8, struct hdr10InfoPkt)
+/* set edid by user */
+#define MTK_HDMIRX_SET_EDID		HDMI_IOWR(9, struct HDMIRX_EDID_DATA)
 
 #define CP_MTK_HDMIRX_VID_INFO		HDMI_IOWR(1, struct HDMIRX_VID_PARA)
 #define CP_MTK_HDMIRX_AUD_INFO		HDMI_IOWR(2, struct HDMIRX_AUD_INFO)
@@ -233,5 +241,6 @@ enum HDMI_SWITCH_NO {
 #define CP_MTK_HDMIRX_PKT		HDMI_IOWR(6, struct hdr10InfoPkt)
 #define CP_MTK_HDMIRX_DRV_VER		HDMI_IOWR(7, struct HDMIRX_DRIVER_VERSION)
 #define CP_MTK_HDMIRX_AVI		HDMI_IOWR(8, struct hdr10InfoPkt)
+#define CP_MTK_HDMIRX_SET_EDID		HDMI_IOWR(9, struct HDMIRX_EDID_DATA)
 
 #endif

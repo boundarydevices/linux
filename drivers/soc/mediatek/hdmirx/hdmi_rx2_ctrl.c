@@ -1253,17 +1253,37 @@ void vEdidUpdataChk(struct MTK_HDMI *myhdmi)
 		if (hdmi2_is_rpt(myhdmi))
 			txapi_hdmi_enable(myhdmi, FALSE);
 
-		if (myhdmi->u1TxEdidReady == HDMI_PLUG_OUT)	{
+		if (myhdmi->u1TxEdidReady == HDMI_PLUG_OUT) {
 #ifdef HDMIRX_RAW_DATA_EDID
-			RX_DEF_LOG("[RX] write hdmi2.0 raw EDID\n");
-			memcpy(&edid_buf[0], &hdmi20_raw_edid[0], E_BLOCK_SIZE);
-			hdmi2_edid_chksum(&edid_buf[0]);
-			hdmi2com_write_edid_to_sram(myhdmi, 0,
-				&edid_buf[0]);
-			memcpy(&edid_buf[0], &hdmi20_raw_edid[128], E_BLOCK_SIZE);
-			hdmi2_edid_chksum(&edid_buf[0]);
-			hdmi2com_write_edid_to_sram(myhdmi, 1,
-				&edid_buf[0]);
+			if (myhdmi->chg_edid_by_user) {
+				RX_DEF_LOG("[RX] write user EDID\n");
+				memcpy(&edid_buf[0], &myhdmi->user_edid[0], E_BLOCK_SIZE);
+				hdmi2_edid_chksum(&edid_buf[0]);
+				hdmi2com_write_edid_to_sram(myhdmi, 0,
+					&edid_buf[0]);
+				memcpy(&edid_buf[0], &myhdmi->user_edid[128], E_BLOCK_SIZE);
+				hdmi2_edid_chksum(&edid_buf[0]);
+				hdmi2com_write_edid_to_sram(myhdmi, 1,
+					&edid_buf[0]);
+				memcpy(&edid_buf[0], &myhdmi->user_edid[256], E_BLOCK_SIZE);
+				hdmi2_edid_chksum(&edid_buf[0]);
+				hdmi2com_write_edid_to_sram(myhdmi, 2,
+					&edid_buf[0]);
+				memcpy(&edid_buf[0], &myhdmi->user_edid[384], E_BLOCK_SIZE);
+				hdmi2_edid_chksum(&edid_buf[0]);
+				hdmi2com_write_edid_to_sram(myhdmi, 3,
+					&edid_buf[0]);
+			} else {
+				RX_DEF_LOG("[RX] write hdmi2.0 raw EDID\n");
+				memcpy(&edid_buf[0], &hdmi20_raw_edid[0], E_BLOCK_SIZE);
+				hdmi2_edid_chksum(&edid_buf[0]);
+				hdmi2com_write_edid_to_sram(myhdmi, 0,
+					&edid_buf[0]);
+				memcpy(&edid_buf[0], &hdmi20_raw_edid[128], E_BLOCK_SIZE);
+				hdmi2_edid_chksum(&edid_buf[0]);
+				hdmi2com_write_edid_to_sram(myhdmi, 1,
+					&edid_buf[0]);
+			}
 #else
 			RX_DEF_LOG("[RX] write default EDID\n");
 			Default_Edid_BL0_BL1_Write(myhdmi);
