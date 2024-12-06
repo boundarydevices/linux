@@ -12,6 +12,7 @@
 
 #include "ele_base_msg.h"
 #include "ele_common.h"
+#include "se_msg_sqfl_ctrl.h"
 
 #define FW_DBG_DUMP_FIXED_STR		"\nELEX: "
 
@@ -664,6 +665,9 @@ int ele_voltage_change_req(struct se_if_priv *priv, bool start)
 	if (ret)
 		goto exit;
 
+	se_continue_to_enforce_msg_seq_flow(&priv->se_msg_sq_ctl,
+					    tx_msg);
+
 	ret = ele_msg_send_rcv(priv->priv_dev_ctx,
 			       tx_msg,
 			       ELE_VOLT_CHANGE_REQ_MSG_SZ,
@@ -699,7 +703,18 @@ exit:
  */
 int imx_se_voltage_change_req(void *se_if_data, bool start)
 {
-	return ele_voltage_change_req((struct se_if_priv *)se_if_data, start);
+	struct se_if_priv *priv = se_if_data;
+	int ret;
+
+	if (start)
+		se_start_enforce_msg_seq_flow(&priv->se_msg_sq_ctl);
+
+	ret = ele_voltage_change_req(priv, start);
+
+	if (!start)
+		se_halt_to_enforce_msg_seq_flow(&priv->se_msg_sq_ctl);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(imx_se_voltage_change_req);
 
