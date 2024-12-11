@@ -106,18 +106,20 @@ static int kvm_ptdump_build_levels(struct ptdump_pg_level *level, u32 start_lvl)
 	return 0;
 }
 
+#define PKVM_HANDLE(kvm) ((kvm) != NULL ? (kvm)->arch.pkvm.handle : 0)
+
 static u32 ptdump_get_ranges(struct kvm *kvm)
 {
 	if (!is_protected_kvm_enabled())
 		return kvm->arch.mmu.pgt->ia_bits;
-	return kvm_call_hyp_nvhe(__pkvm_ptdump, kvm->arch.pkvm.handle, PKVM_PTDUMP_GET_RANGE);
+	return kvm_call_hyp_nvhe(__pkvm_ptdump, PKVM_HANDLE(kvm), PKVM_PTDUMP_GET_RANGE);
 }
 
 static s8 ptdump_get_level(struct kvm *kvm)
 {
 	if (!is_protected_kvm_enabled())
 		return kvm->arch.mmu.pgt->start_level;
-	return kvm_call_hyp_nvhe(__pkvm_ptdump, kvm->arch.pkvm.handle, PKVM_PTDUMP_GET_LEVEL);
+	return kvm_call_hyp_nvhe(__pkvm_ptdump, PKVM_HANDLE(kvm), PKVM_PTDUMP_GET_LEVEL);
 }
 
 static struct kvm_ptdump_guest_state *kvm_ptdump_parser_create(struct kvm *kvm)
@@ -137,7 +139,7 @@ static struct kvm_ptdump_guest_state *kvm_ptdump_parser_create(struct kvm *kvm)
 		return ERR_PTR(ret);
 	}
 
-	st->ipa_marker[0].name		= "Guest IPA";
+	st->ipa_marker[0].name		= kvm == NULL ? "Host IPA" : "Guest IPA";
 	st->ipa_marker[1].start_address = BIT(ia_bits);
 	st->range[0].end		= BIT(ia_bits);
 
@@ -337,7 +339,7 @@ static u64 pkvm_ptdump_unpack_pte(struct pkvm_ptdump_log *log)
 		FIELD_PREP(KVM_PGTABLE_PROT_SW0 | KVM_PGTABLE_PROT_SW1, log->page_state);
 }
 
-static int pkvm_ptdump_guest_show(struct seq_file *m, void *unused)
+static int pkvm_ptdump_show(struct seq_file *m, void *unused)
 {
 	struct kvm_ptdump_guest_state *st = m->private;
 	struct kvm *kvm = st->kvm;
@@ -353,7 +355,7 @@ static int pkvm_ptdump_guest_show(struct seq_file *m, void *unused)
 	parser_state->start_address = 0;
 
 retry_dump:
-	ret = kvm_call_hyp_nvhe(__pkvm_ptdump, kvm->arch.pkvm.handle,
+	ret = kvm_call_hyp_nvhe(__pkvm_ptdump, PKVM_HANDLE(kvm),
 				PKVM_PTDUMP_WALK_RANGE, st->log_pages);
 	if (ret == -ENOMEM) {
 		ret = pkvm_ptdump_alloc_page(&st->log_pages, &num_pages);
@@ -403,7 +405,7 @@ static int pkvm_ptdump_guest_open(struct inode *m, struct file *file)
 
 	pkvm_ptdump_alloc_page(&st->log_pages, NULL);
 
-	ret = single_open(file, pkvm_ptdump_guest_show, st);
+	ret = single_open(file, pkvm_ptdump_show, st);
 	if (!ret)
 		return 0;
 
@@ -441,4 +443,75 @@ void kvm_s2_ptdump_create_debugfs(struct kvm *kvm)
 			    &kvm_pgtable_range_fops);
 	debugfs_create_file("stage2_levels", 0400, kvm->debugfs_dentry,
 			    kvm, &kvm_pgtable_levels_fops);
+}
+
+static int kvm_host_pgtable_range_open(struct inode *m, struct file *file)
+{
+	return single_open(file, kvm_pgtable_range_show, NULL);
+}
+
+static int kvm_host_pgtable_levels_open(struct inode *m, struct file *file)
+{
+	return single_open(file, kvm_pgtable_levels_show, NULL);
+}
+
+static const struct file_operations kvm_host_pgtable_range_fops = {
+	.open		= kvm_host_pgtable_range_open,
+	.read		= seq_read,
+	.release	= single_release,
+};
+
+static const struct file_operations kvm_host_pgtable_levels_fops = {
+	.open		= kvm_host_pgtable_levels_open,
+	.read		= seq_read,
+	.release	= single_release,
+};
+
+static int kvm_ptdump_host_open(struct inode *m, struct file *file)
+{
+	struct kvm_ptdump_guest_state *st;
+	int ret;
+
+	st = kvm_ptdump_parser_create(NULL);
+	if (IS_ERR(st))
+		return PTR_ERR(st);
+
+	for (int i = 0; i < MAX_LOG_PAGES; i++)
+		pkvm_ptdump_alloc_page(&st->log_pages, NULL);
+
+	ret = single_open(file, pkvm_ptdump_show, st);
+	if (!ret)
+		return 0;
+
+	pkvm_ptdump_free_pages(st->log_pages);
+	kfree(st);
+	return ret;
+}
+
+static int kvm_ptdump_host_close(struct inode *m, struct file *file)
+{
+	struct kvm_ptdump_guest_state *st = ((struct seq_file *)file->private_data)->private;
+
+	pkvm_ptdump_free_pages(st->log_pages);
+	kfree(st);
+
+	return single_release(m, file);
+}
+
+static const struct file_operations kvm_ptdump_host_fops = {
+	.open		= kvm_ptdump_host_open,
+	.read		= seq_read,
+	.release	= kvm_ptdump_host_close,
+};
+
+void kvm_s2_ptdump_host_create_debugfs(void)
+{
+	struct dentry *kvm_debugfs_dir = debugfs_lookup("kvm", NULL);
+
+	debugfs_create_file("host_stage2_page_tables", 0400, kvm_debugfs_dir,
+			    NULL, &kvm_ptdump_host_fops);
+	debugfs_create_file("ipa_range", 0400, kvm_debugfs_dir, NULL,
+			    &kvm_host_pgtable_range_fops);
+	debugfs_create_file("stage2_levels", 0400, kvm_debugfs_dir,
+			    NULL, &kvm_host_pgtable_levels_fops);
 }

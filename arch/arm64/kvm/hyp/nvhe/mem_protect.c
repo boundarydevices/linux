@@ -2018,7 +2018,21 @@ int host_stage2_get_leaf(phys_addr_t phys, kvm_pte_t *ptep, s8 *level)
 	return ret;
 }
 
-u64 __pkvm_ptdump_get_config(pkvm_handle_t handle, enum pkvm_ptdump_ops op)
+static u64 __pkvm_ptdump_get_host_config(enum pkvm_ptdump_ops op)
+{
+	u64 ret = 0;
+
+	host_lock_component();
+	if (op == PKVM_PTDUMP_GET_LEVEL)
+		ret = host_mmu.pgt.start_level;
+	else
+		ret = host_mmu.pgt.ia_bits;
+	host_unlock_component();
+
+	return ret;
+}
+
+static u64 __pkvm_ptdump_get_guest_config(pkvm_handle_t handle, enum pkvm_ptdump_ops op)
 {
 	struct pkvm_hyp_vm *vm;
 	u64 ret = 0;
@@ -2034,6 +2048,14 @@ u64 __pkvm_ptdump_get_config(pkvm_handle_t handle, enum pkvm_ptdump_ops op)
 
 	put_pkvm_hyp_vm(vm);
 	return ret;
+}
+
+u64 __pkvm_ptdump_get_config(pkvm_handle_t handle, enum pkvm_ptdump_ops op)
+{
+	if (!handle)
+		return __pkvm_ptdump_get_host_config(op);
+
+	return __pkvm_ptdump_get_guest_config(handle, op);
 }
 
 static int pkvm_ptdump_walker(const struct kvm_pgtable_visit_ctx *ctx,
@@ -2105,10 +2127,33 @@ static int pkvm_ptdump_setup_log(struct pkvm_ptdump_log_hdr *log_hva)
 	return 0;
 }
 
+static int pkvm_ptdump_walk_host(struct kvm_pgtable_walker *walker)
+{
+	int ret;
+
+	host_lock_component();
+	ret = kvm_pgtable_walk(&host_mmu.pgt, 0, BIT(host_mmu.pgt.ia_bits), walker);
+	host_unlock_component();
+
+	return ret;
+}
+
+static int pkvm_ptdump_walk_guest(struct pkvm_hyp_vm *vm, struct kvm_pgtable_walker *walker)
+{
+	int ret;
+
+	guest_lock_component(vm);
+
+	ret = kvm_pgtable_walk(&vm->pgt, 0, BIT(vm->pgt.ia_bits), walker);
+
+	guest_unlock_component(vm);
+
+	return ret;
+}
+
 u64 __pkvm_ptdump_walk_range(pkvm_handle_t handle, struct pkvm_ptdump_log_hdr *log)
 {
 	struct pkvm_hyp_vm *vm;
-	struct kvm_pgtable *pgt;
 	int ret;
 	struct pkvm_ptdump_log_hdr *log_hyp = kern_hyp_va(log);
 	struct kvm_pgtable_walker walker = {
@@ -2117,24 +2162,23 @@ u64 __pkvm_ptdump_walk_range(pkvm_handle_t handle, struct pkvm_ptdump_log_hdr *l
 		.arg    = &log_hyp,
 	};
 
-	vm = get_pkvm_hyp_vm(handle);
-	if (!vm)
-		return -EINVAL;
-
 	ret = pkvm_ptdump_setup_log(log);
-	if (ret) {
-		put_pkvm_hyp_vm(vm);
+	if (ret)
 		return ret;
+
+	if (!handle)
+		ret = pkvm_ptdump_walk_host(&walker);
+	else {
+		vm = get_pkvm_hyp_vm(handle);
+		if (!vm) {
+			ret = -EINVAL;
+			goto teardown;
+		}
+
+		ret = pkvm_ptdump_walk_guest(vm, &walker);
+		put_pkvm_hyp_vm(vm);
 	}
-
-	pgt = &vm->pgt;
-	guest_lock_component(vm);
-
-	ret = kvm_pgtable_walk(pgt, 0, BIT(pgt->ia_bits), &walker);
-
-	guest_unlock_component(vm);
-
+teardown:
 	pkvm_ptdump_teardown_log(log, NULL);
-	put_pkvm_hyp_vm(vm);
 	return ret;
 }
