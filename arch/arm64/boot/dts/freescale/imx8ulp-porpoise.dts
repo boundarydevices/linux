@@ -1,0 +1,412 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright 2024 Ezurio
+ */
+
+/dts-v1/;
+
+#include "imx8ulp-nitrogen-som.dtsi"
+
+
+/ {
+	model = "Ezurio i.MX 8ULP Porpoise";
+	compatible = "ezurio,imx8ulp-trimble-porpoise", "fsl,imx8ulp";
+
+	chosen {
+		stdout-path = &lpuart7;
+		bootargs = "console=ttyLP3,115200 earlycon";
+	};
+
+	vcc_bt_en: regulator-bt-en {
+		bootph-all;
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_bt_en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		enable-active-high;
+		gpios = <&gpioe 10 GPIO_ACTIVE_HIGH>; /* BT_EN */
+	};
+
+	reg_vref_1p8v: regulator-vref-1p8v {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-1p8v";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	reg_usbotg2_vbus: regulator-usbotg2-vbus {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg2_vbus>;
+		regulator-name = "usb_otg2_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		enable-active-high;
+		gpio = <&gpioe 11 GPIO_ACTIVE_HIGH>; /* USB_VBUS_EN */
+	};
+
+	vcc_wl_reset: regulator-wl-reset-en {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_main_wifi_reset>;
+		regulator-name = "vcc_wl_reset";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		enable-active-high;
+		gpios = <&gpioe 8 GPIO_ACTIVE_HIGH>; /* WIFI_RESET */
+	};
+
+	vcc_wl_wake_en: regulator-wl-wake-en {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_main_wifi_wake>;
+		regulator-name = "vcc_wl_wake_en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		enable-active-high;
+		gpios = <&gpioe 13 GPIO_ACTIVE_HIGH>; /* WL_WAKE_IN */
+	};
+
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_main_wifi_en>;
+		reset-gpios = <&gpiof 27 GPIO_ACTIVE_LOW>; /* WIFI_PDn */
+		post-power-on-delay-ms = <100>;
+		status = "okay";
+	};
+};
+
+&fec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_fec>;
+	clocks = <&cgc1 IMX8ULP_CLK_XBAR_DIVBUS>,
+		 <&pcc4 IMX8ULP_CLK_ENET>,
+		 <&cgc1 IMX8ULP_CLK_ENET_TS_SEL>;
+	clock-names = "ipg", "ahb", "ptp";
+	phy-mode = "rmii";
+	phy-handle = <&ethphy>;
+	status = "okay";
+#if 0
+	phy-reset-gpios = <&gpiof 11 GPIO_ACTIVE_LOW>; /* PHY_RST */
+#endif
+
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ethphy: ethernet-phy@7 {
+			interrupts-extended = <&gpiof 10 IRQ_TYPE_LEVEL_LOW>; /* PHY_INT */
+			reg = <7>;
+		};
+	};
+};
+
+&gpiod {
+	gpio-line-names = "", "", "", "", "", 						/* 0-4 */
+			"", "", "", "", "",						/* 5-9 */
+			"", "WAKE_RADIO", "Fastboot", "ENA_MOD", "STAT",		/* 10-14 */
+			"SERVICE", "BAND_MODE", "TX_ON", "", "",			/* 15-19 */
+			"", "", "", "";							/* 20-23 */
+};
+
+&gpioe {
+	gpio-line-names = "", "", "", "", "",						/* 0-4 */
+			"", "WL_IRQ", "STM_USART_EN", "WIFI_RESET", "BT_HOST_WAKE",	/* 5-9 */
+			"BT_EN", "USB_VBUS_EN", "BT_WAKE_IN", "WL_WAKE_IN", "HW_RST",	/* 10-14 */
+			"HW_WAKE", "", "", "", "",					/* 15-19 */
+			"LYRA_RST", "LYRA_BOOT", "HW_BUSY", "MIKI_VCCIO_EN";		/* 20-23 */
+};
+
+&gpiof {
+	gpio-line-names = "", "", "", "", "",   					/* 0-4 */
+			"", "", "", "", "",						/* 5-9 */
+			"PHY_INT", "PHY_RST", "", "", "",				/* 10-14 */
+			"", "", "", "", "", 						/* 15-19 */
+			"STM_RESET", "PH3_BOOT", "", "", "Single_Ant_Port_EN1",		/* 20-24 */
+			"8ULP_LTE_SHDN", "1pps_EN", "WIFI_PDn", "WL_WAKE_OUT", "TP13",	/* 25-29 */
+			"USB_SW", "TP16";						/* 30-31 */
+};
+
+&haptics {
+	status = "disabled";
+};
+
+&hd3ss3220 {
+	status = "disabled";
+};
+
+&lpi2c5 {
+	status = "disabled";
+};
+
+&lpi2c6 {
+	status = "disabled";
+};
+
+&iomuxc1 {
+	/delete-property/ pinctrl_hog_som; /* Override imx8ulp-nitrogen-som.dtsi */
+
+	pinctrl_hog_som: hog-somgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTD11__PTD11		0x03	/* WAKE_RADIO */
+			MX8ULP_PAD_PTD12__PTD12		0x03	/* Fastboot */
+			MX8ULP_PAD_PTD13__PTD13		0x03	/* ENA_MOD */
+			MX8ULP_PAD_PTD14__PTD14		0x03	/* STAT */
+			MX8ULP_PAD_PTD15__PTD15		0x03	/* SERVICE */
+			MX8ULP_PAD_PTD16__PTD16		0x03	/* BAND_MODE */
+			MX8ULP_PAD_PTD17__PTD17		0x03	/* TX_ON */
+
+			MX8ULP_PAD_PTE7__PTE7		0x03	/* STM_USART_EN */
+			MX8ULP_PAD_PTE23__PTE23		0x03	/* MIKI_VCCIO_EN */
+
+			/* LYRA */
+			MX8ULP_PAD_PTE20__PTE20		0x03	/* LYRA_RST */
+			MX8ULP_PAD_PTE21__PTE21		0x03	/* LYRA_BOOT */
+			MX8ULP_PAD_PTF26__PTF26		0x03	/* 1pps_EN */
+
+			MX8ULP_PAD_PTF29__PTF29		0x7	/* TP13 */
+			MX8ULP_PAD_PTF30__PTF30		0x7	/* USB_SW */
+			MX8ULP_PAD_PTF31__PTF31		0x7	/* TP16 */
+
+			MX8ULP_PAD_PTF20__PTF20		0x02	/* STM_RESET (pull-down ) */
+			MX8ULP_PAD_PTF21__PTF21		0x03	/* PH3_BOOT */
+			MX8ULP_PAD_PTF24__PTF24		0x03	/* Single_Ant_Port_EN1 */
+			MX8ULP_PAD_PTF25__PTF25		0x03	/* 8ULP_LTE_SHDN */
+		>;
+	};
+
+	pinctrl_bt: btgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE10__PTE10		0x03	/* BT_EN */
+			MX8ULP_PAD_PTE9__PTE9		0x03	/* BT_HOST_WAKE */
+			MX8ULP_PAD_PTE12__PTE12		0x03	/* BT_WAKE_IN */
+		>;
+	};
+
+	pinctrl_fec: fecgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF8__ENET0_MDIO	0x43
+			MX8ULP_PAD_PTF9__ENET0_MDC	0x43
+			MX8ULP_PAD_PTF6__ENET0_CRS_DV	0x43
+			MX8ULP_PAD_PTF5__ENET0_RXER	0x43
+			MX8ULP_PAD_PTF1__ENET0_RXD0	0x43
+			MX8ULP_PAD_PTF0__ENET0_RXD1	0x43
+			MX8ULP_PAD_PTF4__ENET0_TXEN	0x43
+			MX8ULP_PAD_PTF3__ENET0_TXD0	0x43
+			MX8ULP_PAD_PTF2__ENET0_TXD1	0x43
+			MX8ULP_PAD_PTF7__ENET0_REFCLK	0x10043
+			MX8ULP_PAD_PTF11__PTF11		0x7
+			MX8ULP_PAD_PTF10__PTF10		0x7
+		>;
+	};
+
+	pinctrl_lpuart4: lpuart4grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE18__LPUART4_TX	0x03
+			MX8ULP_PAD_PTE19__LPUART4_RX	0x03
+			MX8ULP_PAD_PTE16__LPUART4_CTS_B	0x03
+			MX8ULP_PAD_PTE17__LPUART4_RTS_B 0x03
+		>;
+	};
+
+	pinctrl_lpuart5: lpuart5grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF12__LPUART5_CTS_B	0x03
+			MX8ULP_PAD_PTF13__LPUART5_RTS_B	0x03
+			MX8ULP_PAD_PTF14__LPUART5_TX	0x03
+			MX8ULP_PAD_PTF15__LPUART5_RX	0x03
+		>;
+	};
+
+	pinctrl_lpuart6: lpuart6grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF16__LPUART6_CTS_B	0x03
+			MX8ULP_PAD_PTF17__LPUART6_RTS_B	0x03
+			MX8ULP_PAD_PTF18__LPUART6_TX	0x03
+			MX8ULP_PAD_PTF19__LPUART6_RX	0x03
+		>;
+	};
+
+	pinctrl_lpuart7: lpuart7grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF22__LPUART7_TX	0x03
+			MX8ULP_PAD_PTF23__LPUART7_RX	0x03
+		>;
+	};
+
+	pinctrl_usdhc1: usdhc1grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTD22__SDHC1_CLK	0x10002
+			MX8ULP_PAD_PTD23__SDHC1_CMD	0x03
+			MX8ULP_PAD_PTD21__SDHC1_D0	0x03
+			MX8ULP_PAD_PTD20__SDHC1_D1	0x03
+			MX8ULP_PAD_PTD19__SDHC1_D2	0x03
+			MX8ULP_PAD_PTD18__SDHC1_D3	0x03
+		>;
+	};
+
+	pinctrl_usdhc2: usdhc2grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE2__SDHC2_CLK	0x10002
+			MX8ULP_PAD_PTE3__SDHC2_CMD	0x03
+			MX8ULP_PAD_PTE1__SDHC2_D0	0x03
+			MX8ULP_PAD_PTE0__SDHC2_D1	0x03
+			MX8ULP_PAD_PTE5__SDHC2_D2	0x03
+			MX8ULP_PAD_PTE4__SDHC2_D3	0x03
+		>;
+	};
+
+	pinctrl_main_wifi: wifigrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE6__PTE6		0x03	/* WL_IRQ */
+		>;
+	};
+
+	pinctrl_main_wifi_en: mainwifiengrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF27__PTF27		0x03	/* WIFI_PDn */
+		>;
+	};
+
+	pinctrl_main_wifi_reset: mainwifiresetgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE8__PTE8		0x03	/* WIFI_RESET */
+		>;
+	};
+
+	pinctrl_main_wifi_wake: mainwifiwakeingrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE13__PTE13		0x03	/* WL_WAKE_IN */
+			MX8ULP_PAD_PTF28__PTF28		0x03	/* WL_WAKE_OUT */
+		>;
+	};
+
+	pinctrl_reg_usbotg2_vbus: regusbotg2vbusgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE11__PTE11		0x03	/* USB_VBUS_EN */
+		>;
+	};
+
+	pinctrl_sxsdmah: mm610xgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE14__PTE14		0x03	/* HW_RST */
+			MX8ULP_PAD_PTE15__PTE15		0x03	/* HW_WAKE */
+			MX8ULP_PAD_PTE22__PTE22		0x03	/* HW_BUSY */
+		>;
+	};
+};
+
+&lpuart4 {
+	/* ttyLP0 M_UART (B2B) */
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpuart4>;
+	pinctrl-1 = <&pinctrl_lpuart4>;
+	uart-has-rtscts;
+	status = "okay";
+};
+
+&lpuart5 {
+	/* ttyLP1 NX611 BT */
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpuart5>,<&pinctrl_bt>;
+	pinctrl-1 = <&pinctrl_lpuart5>,<&pinctrl_bt>;
+	uart-has-rtscts;
+	status = "okay";
+
+	bluetooth {
+		compatible = "nxp,88w8987-bt";
+	};
+};
+
+&lpuart6 {
+	/* ttyLP2 ZIF(UHF) */
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpuart6>;
+	pinctrl-1 = <&pinctrl_lpuart6>;
+	uart-has-rtscts;
+	status = "okay";
+};
+
+&lpuart7 {
+	/* ttyLP3 console */
+	/delete-property/ dmas;
+	/delete-property/ dma-names;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpuart7>;
+	pinctrl-1 = <&pinctrl_lpuart7>;
+	status = "okay";
+};
+
+&usbmisc1 {
+	status = "okay";
+};
+
+&usbotg1 { /* USB0 / MAIN_USB (ZIF) */
+	dr_mode = "host";
+	status = "okay";
+};
+
+&usbphy1 {
+	fsl,tx-d-cal = <88>;
+	status = "okay";
+};
+
+&usbmisc2 {
+	status = "okay";
+};
+
+&usbotg2 { /* USB1 / LTE_USB (B2B) */
+	dr_mode = "host";
+	status = "okay";
+	vbus-supply = <&reg_usbotg2_vbus>;
+};
+
+&usbphy2 {
+	fsl,tx-d-cal = <88>;
+	status = "okay";
+};
+
+&usdhc1 { /* Wifi NX611 */
+	bus-width = <4>;
+	non-removable;
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc1>,<&pinctrl_main_wifi>;
+	pinctrl-1 = <&pinctrl_usdhc1>,<&pinctrl_main_wifi>;
+	pinctrl-2 = <&pinctrl_usdhc1>,<&pinctrl_main_wifi>;
+	vmmc-supply = <&vcc_wl_wake_en>; /* WL_WAKE_IN */
+	vqmmc-supply = <&reg_vref_1p8v>;
+	mmc-pwrseq = <&wifi_pwrseq>; /* WIFI_PDn */
+	non-removable;
+	status = "okay";
+};
+
+&usdhc2 { /* Wifi Halow */
+	#address-cells = <1>;
+	#size-cells = <0>;
+	bus-width = <4>;
+	non-removable;
+	no-sd;
+	fsl,sdio-async-interrupt-enabled;
+	sdhci-caps-mask = <0x0 0x00080000>; /* disable ADMA2 */
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_sxsdmah>;
+	pinctrl-1 = <&pinctrl_usdhc2>, <&pinctrl_sxsdmah>;
+	pinctrl-2 = <&pinctrl_usdhc2>, <&pinctrl_sxsdmah>;
+	vqmmc-supply = <&reg_vref_1p8v>;
+	status = "disabled";
+
+	sx_sdmah: sx-sdmah@0 {
+		reg = <0>;
+		compatible = "morse,mm610x";
+		reset-gpios = <&gpioe 14 GPIO_ACTIVE_LOW>; /* HW_RST */
+		power-gpios = <&gpioe 15 GPIO_ACTIVE_HIGH>, /* HW_WAKE */
+			<&gpioe 22 GPIO_ACTIVE_HIGH>; /* HW_BUSY */
+		status = "okay";
+		bus-width = <4>;
+	};
+};

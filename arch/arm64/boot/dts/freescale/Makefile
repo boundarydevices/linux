@@ -770,4 +770,5 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mq-nitrogen8m.dtb imx8mq-nitrogen8m-rpmsg.dtb \
 			  imx8mq-nitrogen8m_som-sd.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8ulp-nitrogen-som.dtb \
+			  imx8ulp-porpoise.dtb \
 			  imx8ulp-tag.dtb \
