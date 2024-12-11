@@ -265,7 +265,7 @@
 		vib-overdrive-mv = <3200>;
 	};
 
-	hd3ss3220@60 {
+	hd3ss3220: hd3ss3220@60 {
 		/* tusb320 is compatible with hd3ss3220 */
 		compatible = "ti,hd3ss3220";
 		interrupts-extended = <&gpioe 1 IRQ_TYPE_LEVEL_LOW>;
