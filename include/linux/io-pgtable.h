@@ -193,6 +193,8 @@ struct arm_lpae_io_pgtable_walk_data {
 	u64 ptes[4];
 	int level;
 	void *cookie;
+	void (*visit_post_table)(struct arm_lpae_io_pgtable_walk_data *data,
+				 arm_lpae_iopte *ptep, int lvl);
 };
 
 /**
