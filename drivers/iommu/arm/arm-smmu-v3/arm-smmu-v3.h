@@ -156,22 +156,6 @@ struct arm_smmu_s2_cfg {
 	u16				vmid;
 };
 
-struct arm_smmu_strtab_cfg {
-	union {
-		struct {
-			struct arm_smmu_ste *table;
-			dma_addr_t ste_dma;
-			unsigned int num_ents;
-		} linear;
-		struct {
-			struct arm_smmu_strtab_l1 *l1tab;
-			struct arm_smmu_strtab_l2 **l2ptrs;
-			dma_addr_t l1_dma;
-			unsigned int num_l1_ents;
-		} l2;
-	};
-};
-
 struct arm_smmu_impl_ops {
 	int (*device_reset)(struct arm_smmu_device *smmu);
 	void (*device_remove)(struct arm_smmu_device *smmu);
@@ -351,6 +335,16 @@ void arm_smmu_get_resv_regions(struct device *dev,
 			       struct list_head *head);
 
 int arm_smmu_device_hw_probe(struct arm_smmu_device *smmu);
+int arm_smmu_init_one_queue(struct arm_smmu_device *smmu,
+			    struct arm_smmu_queue *q,
+			    void __iomem *page,
+			    unsigned long prod_off,
+			    unsigned long cons_off,
+			    size_t dwords, const char *name);
+int arm_smmu_init_strtab(struct arm_smmu_device *smmu);
+void arm_smmu_write_strtab_l1_desc(struct arm_smmu_strtab_l1 *dst,
+				   dma_addr_t l2ptr_dma);
+void arm_smmu_write_strtab(struct arm_smmu_device *smmu);
 
 void arm_smmu_tlb_inv_asid(struct arm_smmu_device *smmu, u16 asid);
 void arm_smmu_tlb_inv_range_asid(unsigned long iova, size_t size, int asid,

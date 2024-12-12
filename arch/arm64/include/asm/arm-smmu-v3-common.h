@@ -3,6 +3,7 @@
 #define _ARM_SMMU_V3_COMMON_H
 
 #include <linux/bitfield.h>
+#include <linux/bits.h>
 
 /* MMIO registers */
 #define ARM_SMMU_IDR0			0x0
@@ -198,6 +199,22 @@ struct arm_smmu_strtab_l1 {
 };
 #define STRTAB_MAX_L1_ENTRIES		(1 << 17)
 
+struct arm_smmu_strtab_cfg {
+	union {
+		struct {
+			struct arm_smmu_ste *table;
+			dma_addr_t ste_dma;
+			unsigned int num_ents;
+		} linear;
+		struct {
+			struct arm_smmu_strtab_l1 *l1tab;
+			struct arm_smmu_strtab_l2 **l2ptrs;
+			dma_addr_t l1_dma;
+			unsigned int num_l1_ents;
+		} l2;
+	};
+};
+
 static inline u32 arm_smmu_strtab_l1_idx(u32 sid)
 {
 	return sid / STRTAB_NUM_L2_STES;
@@ -206,6 +223,18 @@ static inline u32 arm_smmu_strtab_l1_idx(u32 sid)
 static inline u32 arm_smmu_strtab_l2_idx(u32 sid)
 {
 	return sid % STRTAB_NUM_L2_STES;
+}
+
+static inline void arm_smmu_write_strtab_l1_desc(struct arm_smmu_strtab_l1 *dst,
+						 dma_addr_t l2ptr_dma)
+{
+	u64 val = 0;
+
+	val |= FIELD_PREP(STRTAB_L1_DESC_SPAN, STRTAB_SPLIT + 1);
+	val |= l2ptr_dma & STRTAB_L1_DESC_L2PTR_MASK;
+
+	/* The HW has 64 bit atomicity with stores to the L2 STE table */
+	WRITE_ONCE(dst->l2ptr, cpu_to_le64(val));
 }
 
 #define STRTAB_STE_0_V			(1UL << 0)
