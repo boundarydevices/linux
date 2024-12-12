@@ -130,12 +130,20 @@ static void smmu_reclaim_pages(u64 phys, size_t size)
 #define Q_WRAP(smmu, reg)	((reg) & (1 << (smmu)->cmdq_log2size))
 #define Q_IDX(smmu, reg)	((reg) & ((1 << (smmu)->cmdq_log2size) - 1))
 
-static bool smmu_cmdq_full(struct hyp_arm_smmu_v3_device *smmu)
+static bool smmu_cmdq_has_space(struct hyp_arm_smmu_v3_device *smmu, u32 n)
 {
-	u64 cons = readl_relaxed(smmu->base + ARM_SMMU_CMDQ_CONS);
+	u64 smmu_cons = readl_relaxed(smmu->base + ARM_SMMU_CMDQ_CONS);
+	u32 space, prod, cons;
 
-	return Q_IDX(smmu, smmu->cmdq_prod) == Q_IDX(smmu, cons) &&
-	       Q_WRAP(smmu, smmu->cmdq_prod) != Q_WRAP(smmu, cons);
+	prod = Q_IDX(smmu, smmu->cmdq_prod);
+	cons = Q_IDX(smmu, smmu_cons);
+
+	if (Q_WRAP(smmu, smmu->cmdq_prod) == Q_WRAP(smmu, smmu_cons))
+		space = (1 << smmu->cmdq_log2size) - (prod - cons);
+	else
+		space = cons - prod;
+
+	return space >= n;
 }
 
 static bool smmu_cmdq_empty(struct hyp_arm_smmu_v3_device *smmu)
@@ -146,19 +154,8 @@ static bool smmu_cmdq_empty(struct hyp_arm_smmu_v3_device *smmu)
 	       Q_WRAP(smmu, smmu->cmdq_prod) == Q_WRAP(smmu, cons);
 }
 
-static int smmu_add_cmd(struct hyp_arm_smmu_v3_device *smmu,
-			struct arm_smmu_cmdq_ent *ent)
+static int smmu_build_cmd(u64 *cmd, struct arm_smmu_cmdq_ent *ent)
 {
-	int i;
-	int ret;
-	u64 cmd[CMDQ_ENT_DWORDS] = {};
-	int idx = Q_IDX(smmu, smmu->cmdq_prod);
-	u64 *slot = smmu->cmdq_base + idx * CMDQ_ENT_DWORDS;
-
-	ret = smmu_wait_event(smmu, !smmu_cmdq_full(smmu));
-	if (ret)
-		return ret;
-
 	cmd[0] |= FIELD_PREP(CMDQ_0_OP, ent->opcode);
 
 	switch (ent->opcode) {
@@ -206,13 +203,44 @@ static int smmu_add_cmd(struct hyp_arm_smmu_v3_device *smmu,
 		return -EINVAL;
 	}
 
-	for (i = 0; i < CMDQ_ENT_DWORDS; i++)
-		slot[i] = cpu_to_le64(cmd[i]);
+	return 0;
+}
 
-	smmu->cmdq_prod++;
+static int smmu_issue_cmds(struct hyp_arm_smmu_v3_device *smmu,
+			   u64 *cmds, int n)
+{
+	int idx = Q_IDX(smmu, smmu->cmdq_prod);
+	u64 *slot = smmu->cmdq_base + idx * CMDQ_ENT_DWORDS;
+	int i;
+	int ret;
+	u32 prod;
+
+	ret = smmu_wait_event(smmu, smmu_cmdq_has_space(smmu, n));
+	if (ret)
+		return ret;
+
+	for (i = 0; i < CMDQ_ENT_DWORDS * n; i++)
+		slot[i] = cpu_to_le64(cmds[i]);
+
+	prod = (Q_WRAP(smmu, smmu->cmdq_prod) | Q_IDX(smmu, smmu->cmdq_prod)) + n;
+	smmu->cmdq_prod = Q_OVF(smmu->cmdq_prod) | Q_WRAP(smmu, prod) | Q_IDX(smmu, prod);
+
 	writel(Q_IDX(smmu, smmu->cmdq_prod) | Q_WRAP(smmu, smmu->cmdq_prod),
 	       smmu->base + ARM_SMMU_CMDQ_PROD);
 	return 0;
+}
+
+static int smmu_add_cmd(struct hyp_arm_smmu_v3_device *smmu,
+			struct arm_smmu_cmdq_ent *ent)
+{
+	u64 cmd[CMDQ_ENT_DWORDS] = {};
+	int ret;
+
+	ret = smmu_build_cmd(cmd, ent);
+	if (ret)
+		return ret;
+
+	return smmu_issue_cmds(smmu, cmd, 1);
 }
 
 static int smmu_sync_cmd(struct hyp_arm_smmu_v3_device *smmu)
@@ -733,6 +761,23 @@ static void smmu_tlb_flush_all(void *cookie)
 	hyp_read_unlock(&smmu_domain->list_lock);
 }
 
+static void smmu_cmdq_batch_add(struct hyp_arm_smmu_v3_device *smmu,
+				struct arm_smmu_cmdq_batch *cmds,
+				struct arm_smmu_cmdq_ent *cmd)
+{
+	int index;
+
+	if (cmds->num == CMDQ_BATCH_ENTRIES) {
+		smmu_issue_cmds(smmu, cmds->cmds, cmds->num);
+		cmds->num = 0;
+	}
+
+	index = cmds->num * CMDQ_ENT_DWORDS;
+	smmu_build_cmd(&cmds->cmds[index], cmd);
+
+	cmds->num++;
+}
+
 static int smmu_tlb_inv_range_smmu(struct hyp_arm_smmu_v3_device *smmu,
 				   struct kvm_hyp_iommu_domain *domain,
 				   struct arm_smmu_cmdq_ent *cmd,
@@ -742,6 +787,7 @@ static int smmu_tlb_inv_range_smmu(struct hyp_arm_smmu_v3_device *smmu,
 	unsigned long end = iova + size, num_pages = 0, tg = 0;
 	size_t inv_range = granule;
 	struct hyp_arm_smmu_v3_domain *smmu_domain = domain->priv;
+	struct arm_smmu_cmdq_batch cmds;
 
 	kvm_iommu_lock(&smmu->iommu);
 	if (smmu->iommu.power_is_off)
@@ -771,6 +817,8 @@ static int smmu_tlb_inv_range_smmu(struct hyp_arm_smmu_v3_device *smmu,
 			num_pages++;
 	}
 
+	cmds.num = 0;
+
 	while (iova < end) {
 		if (smmu->features & ARM_SMMU_FEAT_RANGE_INV) {
 			/*
@@ -797,11 +845,12 @@ static int smmu_tlb_inv_range_smmu(struct hyp_arm_smmu_v3_device *smmu,
 			num_pages -= num << scale;
 		}
 		cmd->tlbi.addr = iova;
-		WARN_ON(smmu_add_cmd(smmu, cmd));
+		smmu_cmdq_batch_add(smmu, &cmds, cmd);
 		BUG_ON(iova + inv_range < iova);
 		iova += inv_range;
 	}
 
+	WARN_ON(smmu_issue_cmds(smmu, cmds.cmds, cmds.num));
 	ret = smmu_sync_cmd(smmu);
 out_ret:
 	kvm_iommu_unlock(&smmu->iommu);
