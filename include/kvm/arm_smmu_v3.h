@@ -2,6 +2,7 @@
 #ifndef __KVM_ARM_SMMU_V3_H
 #define __KVM_ARM_SMMU_V3_H
 
+#include <asm/arm-smmu-v3-common.h>
 #include <asm/kvm_asm.h>
 #include <kvm/iommu.h>
 
@@ -22,6 +23,8 @@ struct hyp_arm_smmu_v3_device {
 	u32			cmdq_prod;
 	u64			*cmdq_base;
 	size_t			cmdq_log2size;
+	/* strtab_cfg.l2.l2ptrs is not used, instead computed from L1 */
+	struct arm_smmu_strtab_cfg strtab_cfg;
 };
 
 extern size_t kvm_nvhe_sym(kvm_hyp_arm_smmu_v3_count);

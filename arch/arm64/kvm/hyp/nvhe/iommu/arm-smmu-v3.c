@@ -174,7 +174,6 @@ static int smmu_sync_cmd(struct hyp_arm_smmu_v3_device *smmu)
 	return smmu_wait_event(smmu, smmu_cmdq_empty(smmu));
 }
 
-__maybe_unused
 static int smmu_send_cmd(struct hyp_arm_smmu_v3_device *smmu,
 			 struct arm_smmu_cmdq_ent *cmd)
 {
@@ -184,6 +183,94 @@ static int smmu_send_cmd(struct hyp_arm_smmu_v3_device *smmu,
 		return ret;
 
 	return smmu_sync_cmd(smmu);
+}
+
+__maybe_unused
+static int smmu_sync_ste(struct hyp_arm_smmu_v3_device *smmu, u32 sid)
+{
+	struct arm_smmu_cmdq_ent cmd = {
+		.opcode = CMDQ_OP_CFGI_STE,
+		.cfgi.sid = sid,
+		.cfgi.leaf = true,
+	};
+
+	return smmu_send_cmd(smmu, &cmd);
+}
+
+static int smmu_alloc_l2_strtab(struct hyp_arm_smmu_v3_device *smmu, u32 sid)
+{
+	struct arm_smmu_strtab_cfg *cfg = &smmu->strtab_cfg;
+	struct arm_smmu_strtab_l1 *l1_desc;
+	dma_addr_t l2ptr_dma;
+	struct arm_smmu_strtab_l2 *l2table;
+	size_t l2_order = get_order(sizeof(struct arm_smmu_strtab_l2));
+	int flags = 0;
+
+	l1_desc = &cfg->l2.l1tab[arm_smmu_strtab_l1_idx(sid)];
+	if (l1_desc->l2ptr)
+		return 0;
+
+	if (!(smmu->features & ARM_SMMU_FEAT_COHERENCY))
+		flags |= IOMMU_PAGE_NOCACHE;
+
+	l2table = kvm_iommu_donate_pages(l2_order, flags);
+	if (!l2table)
+		return -ENOMEM;
+
+	l2ptr_dma = hyp_virt_to_phys(l2table);
+
+	if (l2ptr_dma & (~STRTAB_L1_DESC_L2PTR_MASK | ~PAGE_MASK)) {
+		kvm_iommu_reclaim_pages(l2table, l2_order);
+		return -EINVAL;
+	}
+
+	/* Ensure the empty stream table is visible before the descriptor write */
+	wmb();
+
+	arm_smmu_write_strtab_l1_desc(l1_desc, l2ptr_dma);
+	return 0;
+}
+
+static struct arm_smmu_ste *
+smmu_get_ste_ptr(struct hyp_arm_smmu_v3_device *smmu, u32 sid)
+{
+	struct arm_smmu_strtab_cfg *cfg = &smmu->strtab_cfg;
+
+	if (smmu->features & ARM_SMMU_FEAT_2_LVL_STRTAB) {
+		struct arm_smmu_strtab_l1 *l1_desc =
+					&cfg->l2.l1tab[arm_smmu_strtab_l1_idx(sid)];
+		struct arm_smmu_strtab_l2 *l2ptr;
+
+		if (arm_smmu_strtab_l1_idx(sid) > cfg->l2.num_l1_ents)
+			return NULL;
+		/* L2 should be allocated before calling this. */
+		if (WARN_ON(!l1_desc->l2ptr))
+			return NULL;
+
+		l2ptr = hyp_phys_to_virt(l1_desc->l2ptr & STRTAB_L1_DESC_L2PTR_MASK);
+		/* Two-level walk */
+		return &l2ptr->stes[arm_smmu_strtab_l2_idx(sid)];
+	}
+
+	if (sid > cfg->linear.num_ents)
+		return NULL;
+	/* Simple linear lookup */
+	return &cfg->linear.table[sid];
+}
+
+__maybe_unused
+static struct arm_smmu_ste *
+smmu_get_alloc_ste_ptr(struct hyp_arm_smmu_v3_device *smmu, u32 sid)
+{
+	if (smmu->features & ARM_SMMU_FEAT_2_LVL_STRTAB) {
+		int ret = smmu_alloc_l2_strtab(smmu, sid);
+
+		if (ret) {
+			WARN_ON(ret != -ENOMEM);
+			return NULL;
+		}
+	}
+	return smmu_get_ste_ptr(smmu, sid);
 }
 
 static int smmu_init_registers(struct hyp_arm_smmu_v3_device *smmu)
@@ -255,6 +342,70 @@ static int smmu_init_cmdq(struct hyp_arm_smmu_v3_device *smmu)
 	return 0;
 }
 
+static int smmu_init_strtab(struct hyp_arm_smmu_v3_device *smmu)
+{
+	int ret;
+	u64 strtab_base;
+	size_t strtab_size;
+	u32 strtab_cfg, fmt;
+	int split, log2size;
+	struct arm_smmu_strtab_cfg *cfg = &smmu->strtab_cfg;
+	enum kvm_pgtable_prot prot = PAGE_HYP;
+
+	if (!(smmu->features & ARM_SMMU_FEAT_COHERENCY))
+		prot |= KVM_PGTABLE_PROT_NORMAL_NC;
+
+	strtab_base = readq_relaxed(smmu->base + ARM_SMMU_STRTAB_BASE);
+	if (strtab_base & ~(STRTAB_BASE_ADDR_MASK | STRTAB_BASE_RA))
+		return -EINVAL;
+
+	strtab_cfg = readl_relaxed(smmu->base + ARM_SMMU_STRTAB_BASE_CFG);
+	if (strtab_cfg & ~(STRTAB_BASE_CFG_FMT | STRTAB_BASE_CFG_SPLIT |
+			   STRTAB_BASE_CFG_LOG2SIZE))
+		return -EINVAL;
+
+	fmt = FIELD_GET(STRTAB_BASE_CFG_FMT, strtab_cfg);
+	split = FIELD_GET(STRTAB_BASE_CFG_SPLIT, strtab_cfg);
+	log2size = FIELD_GET(STRTAB_BASE_CFG_LOG2SIZE, strtab_cfg);
+	strtab_base &= STRTAB_BASE_ADDR_MASK;
+
+	switch (fmt) {
+	case STRTAB_BASE_CFG_FMT_LINEAR:
+		if (split)
+			return -EINVAL;
+		cfg->linear.num_ents = 1 << log2size;
+		strtab_size = cfg->linear.num_ents * sizeof(struct arm_smmu_ste);
+		cfg->linear.ste_dma = strtab_base;
+		ret = ___pkvm_host_donate_hyp_prot(strtab_base >> PAGE_SHIFT,
+						   PAGE_ALIGN(strtab_size) >> PAGE_SHIFT,
+						   false, prot);
+		if (ret)
+			return -EINVAL;
+		cfg->linear.table = hyp_phys_to_virt(strtab_base);
+		/* Disable all STEs */
+		memset(cfg->linear.table, 0, strtab_size);
+		break;
+	case STRTAB_BASE_CFG_FMT_2LVL:
+		if (split != STRTAB_SPLIT)
+			return -EINVAL;
+		cfg->l2.num_l1_ents = 1 << max(0, log2size - split);
+		strtab_size = cfg->l2.num_l1_ents * sizeof(struct arm_smmu_strtab_l1);
+		cfg->l2.l1_dma = strtab_base;
+		ret = ___pkvm_host_donate_hyp_prot(strtab_base >> PAGE_SHIFT,
+						   PAGE_ALIGN(strtab_size) >> PAGE_SHIFT,
+						   false, prot);
+		if (ret)
+			return -EINVAL;
+		cfg->l2.l1tab = hyp_phys_to_virt(strtab_base);
+		/* Disable all STEs */
+		memset(cfg->l2.l1tab, 0, strtab_size);
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
 static int smmu_init_device(struct hyp_arm_smmu_v3_device *smmu)
 {
 	int ret;
@@ -275,6 +426,10 @@ static int smmu_init_device(struct hyp_arm_smmu_v3_device *smmu)
 		return ret;
 
 	ret = smmu_init_cmdq(smmu);
+	if (ret)
+		return ret;
+
+	ret = smmu_init_strtab(smmu);
 	if (ret)
 		return ret;
 
