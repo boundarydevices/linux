@@ -3,6 +3,7 @@
 #define __KVM_IOMMU_H
 
 #include <asm/kvm_host.h>
+#include <kvm/power_domain.h>
 #include <linux/io-pgtable.h>
 #ifdef __KVM_NVHE_HYPERVISOR__
 #include <nvhe/spinlock.h>
@@ -51,6 +52,8 @@ struct kvm_hyp_iommu {
 #else
 	u32				unused;
 #endif
+	struct kvm_power_domain		power_domain;
+	bool				power_is_off;
 };
 
 #endif /* __KVM_IOMMU_H */
