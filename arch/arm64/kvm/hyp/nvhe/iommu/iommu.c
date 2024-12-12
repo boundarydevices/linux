@@ -263,22 +263,96 @@ int kvm_iommu_detach_dev(pkvm_handle_t iommu_id, pkvm_handle_t domain_id,
 	return ret;
 }
 
+#define IOMMU_PROT_MASK (IOMMU_READ | IOMMU_WRITE | IOMMU_CACHE |\
+			 IOMMU_NOEXEC | IOMMU_MMIO | IOMMU_PRIV)
+
 size_t kvm_iommu_map_pages(pkvm_handle_t domain_id,
 			   unsigned long iova, phys_addr_t paddr, size_t pgsize,
 			   size_t pgcount, int prot)
 {
-	return 0;
+	size_t size;
+	int ret;
+	size_t total_mapped = 0;
+	struct kvm_hyp_iommu_domain *domain;
+
+	if (prot & ~IOMMU_PROT_MASK)
+		return 0;
+
+	if (__builtin_mul_overflow(pgsize, pgcount, &size) ||
+	    iova + size < iova || paddr + size < paddr)
+		return 0;
+
+	domain = handle_to_domain(domain_id);
+	if (!domain || domain_get(domain))
+		return 0;
+
+	ret = __pkvm_host_use_dma(paddr, size);
+	if (ret)
+		return 0;
+
+	kvm_iommu_ops->map_pages(domain, iova, paddr, pgsize, pgcount, prot, &total_mapped);
+
+	pgcount -= total_mapped / pgsize;
+	/*
+	 * unuse the bits that haven't been mapped yet. The host calls back
+	 * either to continue mapping, or to unmap and unuse what's been done
+	 * so far.
+	 */
+	if (pgcount)
+		__pkvm_host_unuse_dma(paddr + total_mapped, pgcount * pgsize);
+
+	domain_put(domain);
+	return total_mapped;
 }
 
 size_t kvm_iommu_unmap_pages(pkvm_handle_t domain_id, unsigned long iova,
 			     size_t pgsize, size_t pgcount)
 {
-	return 0;
+	size_t size;
+	size_t unmapped;
+	struct kvm_hyp_iommu_domain *domain;
+
+	if (!pgsize || !pgcount)
+		return 0;
+
+	if (__builtin_mul_overflow(pgsize, pgcount, &size) ||
+	    iova + size < iova)
+		return 0;
+
+	domain = handle_to_domain(domain_id);
+	if (!domain || domain_get(domain))
+		return 0;
+
+	/*
+	 * Unlike map, the common code doesn't call the __pkvm_host_unuse_dma,
+	 * because this means that we need either walk the table using iova_to_phys
+	 * similar to VFIO then unmap and call this function, or unmap leaf (page or
+	 * block) at a time, where both might be suboptimal.
+	 * For some IOMMU, we can do 2 walks where one only invalidate the pages
+	 * and the other decrement the refcount.
+	 * As, semantics for this might differ between IOMMUs and it's hard to
+	 * standardized, we leave that to the driver.
+	 */
+	unmapped = kvm_iommu_ops->unmap_pages(domain, iova, pgsize,
+						pgcount);
+
+	domain_put(domain);
+	return unmapped;
 }
 
 phys_addr_t kvm_iommu_iova_to_phys(pkvm_handle_t domain_id, unsigned long iova)
 {
-	return 0;
+	phys_addr_t phys = 0;
+	struct kvm_hyp_iommu_domain *domain;
+
+	domain = handle_to_domain( domain_id);
+
+	if (!domain || domain_get(domain))
+		return 0;
+
+	phys = kvm_iommu_ops->iova_to_phys(domain, iova);
+	domain_put(domain);
+	return phys;
 }
 
 /* Must be called from the IOMMU driver per IOMMU */
