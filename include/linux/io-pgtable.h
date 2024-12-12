@@ -89,6 +89,8 @@ struct io_pgtable_cfg {
 	 *	attributes set in the TCR for a non-coherent page-table walker.
 	 *
 	 * IO_PGTABLE_QUIRK_ARM_HD: Enables dirty tracking in stage 1 pagetable.
+	 *
+	 * IO_PGTABLE_QUIRK_UNMAP_INVAL: Only invalidate PTE on unmap, don't clear it.
 	 */
 	#define IO_PGTABLE_QUIRK_ARM_NS			BIT(0)
 	#define IO_PGTABLE_QUIRK_NO_PERMS		BIT(1)
@@ -97,6 +99,7 @@ struct io_pgtable_cfg {
 	#define IO_PGTABLE_QUIRK_ARM_TTBR1		BIT(5)
 	#define IO_PGTABLE_QUIRK_ARM_OUTER_WBWA		BIT(6)
 	#define IO_PGTABLE_QUIRK_ARM_HD			BIT(7)
+	#define IO_PGTABLE_QUIRK_UNMAP_INVAL		BIT(8)
 	unsigned long			quirks;
 	unsigned long			pgsize_bitmap;
 	unsigned int			ias;
@@ -194,7 +197,7 @@ struct arm_lpae_io_pgtable_walk_data {
 	int level;
 	void *cookie;
 	void (*visit_post_table)(struct arm_lpae_io_pgtable_walk_data *data,
-				 arm_lpae_iopte *ptep, int lvl);
+				 u64 *ptep, int lvl);
 };
 
 /**

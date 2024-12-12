@@ -21,7 +21,7 @@ struct io_pgtable_walk_data {
 	struct io_pgtable_walk_common	*data;
 	int (*visit)(struct io_pgtable_walk_data *walk_data, int lvl,
 		     arm_lpae_iopte *ptep, size_t size);
-	void (*visit_post_table)(struct arm_lpae_io_pgtable_walk_data *data,
+	void (*visit_post_table)(struct io_pgtable_walk_data *walk_data,
 				 arm_lpae_iopte *ptep, int lvl);
 	unsigned long			flags;
 	u64				addr;
@@ -191,6 +191,11 @@ static inline bool iopte_table(arm_lpae_iopte pte, int lvl)
 	if (lvl == (ARM_LPAE_MAX_LEVELS - 1))
 		return false;
 	return iopte_type(pte) == ARM_LPAE_PTE_TYPE_TABLE;
+}
+
+static inline bool iopte_valid(arm_lpae_iopte pte)
+{
+	return pte & ARM_LPAE_PTE_VALID;
 }
 
 #ifdef __KVM_NVHE_HYPERVISOR__
