@@ -215,6 +215,19 @@ static int smmu_sync_ste(struct hyp_arm_smmu_v3_device *smmu, u32 sid)
 	return smmu_send_cmd(smmu, &cmd);
 }
 
+__maybe_unused
+static int smmu_sync_cd(struct hyp_arm_smmu_v3_device *smmu, u32 sid, u32 ssid)
+{
+	struct arm_smmu_cmdq_ent cmd = {
+		.opcode = CMDQ_OP_CFGI_CD,
+		.cfgi.sid	= sid,
+		.cfgi.ssid	= ssid,
+		.cfgi.leaf = true,
+	};
+
+	return smmu_send_cmd(smmu, &cmd);
+}
+
 static int smmu_alloc_l2_strtab(struct hyp_arm_smmu_v3_device *smmu, u32 sid)
 {
 	struct arm_smmu_strtab_cfg *cfg = &smmu->strtab_cfg;
@@ -289,6 +302,46 @@ smmu_get_alloc_ste_ptr(struct hyp_arm_smmu_v3_device *smmu, u32 sid)
 		}
 	}
 	return smmu_get_ste_ptr(smmu, sid);
+}
+
+__maybe_unused
+static u64 *smmu_get_cd_ptr(u64 *cdtab, u32 ssid)
+{
+	/* Only linear supported for now. */
+	return cdtab + ssid * CTXDESC_CD_DWORDS;
+}
+
+__maybe_unused
+static u64 *smmu_alloc_cd(struct hyp_arm_smmu_v3_device *smmu, u32 pasid_bits)
+{
+	u64 *cd_table;
+	int flags = 0;
+	u32 requested_order = get_order((1 << pasid_bits) *
+					(CTXDESC_CD_DWORDS << 3));
+
+	/*
+	 * We support max of 64K linear tables only, this should be enough
+	 * for 128 pasids
+	 */
+	if (WARN_ON(requested_order > 4))
+		return NULL;
+
+	if (!(smmu->features & ARM_SMMU_FEAT_COHERENCY))
+		flags |= IOMMU_PAGE_NOCACHE;
+
+	cd_table = kvm_iommu_donate_pages(requested_order, flags);
+	if (!cd_table)
+		return NULL;
+	return (u64 *)hyp_virt_to_phys(cd_table);
+}
+
+__maybe_unused
+static void smmu_free_cd(u64 *cd_table, u32 pasid_bits)
+{
+	u32 order = get_order((1 << pasid_bits) *
+			      (CTXDESC_CD_DWORDS << 3));
+
+	kvm_iommu_reclaim_pages(cd_table, order);
 }
 
 static int smmu_init_registers(struct hyp_arm_smmu_v3_device *smmu)
