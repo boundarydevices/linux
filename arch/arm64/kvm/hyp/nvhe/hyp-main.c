@@ -1814,6 +1814,8 @@ static void handle_host_smc(struct kvm_cpu_context *host_ctxt)
 	handled = kvm_host_psci_handler(host_ctxt, func_id);
 	if (!handled)
 		handled = kvm_host_ffa_handler(host_ctxt, func_id);
+	if (!handled)
+		handled = kvm_host_scmi_handler(host_ctxt);
 	if (!handled && smp_load_acquire(&default_host_smc_handler))
 		handled = default_host_smc_handler(&host_ctxt->regs);
 	if (!handled) {

@@ -158,6 +158,8 @@ int pkvm_init_hvc_pd(struct kvm_power_domain *pd,
 		     const struct kvm_power_domain_ops *ops);
 
 int pkvm_host_hvc_pd(u64 device_id, u64 on);
+int pkvm_init_scmi_pd(struct kvm_power_domain *pd,
+		      const struct kvm_power_domain_ops *ops);
 
 /*
  * Register a power domain. When the hypervisor catches power requests from the
@@ -171,6 +173,8 @@ static inline int pkvm_init_power_domain(struct kvm_power_domain *pd,
 		return 0;
 	case KVM_POWER_DOMAIN_HOST_HVC:
 		return pkvm_init_hvc_pd(pd, ops);
+	case KVM_POWER_DOMAIN_ARM_SCMI:
+		return pkvm_init_scmi_pd(pd, ops);
 	default:
 		return -EOPNOTSUPP;
 	}
