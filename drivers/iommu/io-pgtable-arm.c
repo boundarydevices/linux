@@ -194,6 +194,13 @@ out_free_data:
 	return NULL;
 }
 
+static int arm_64_lpae_configure_s1(struct io_pgtable_cfg *cfg)
+{
+	struct arm_lpae_io_pgtable data = {};
+
+	return arm_lpae_init_pgtable_s1(cfg, &data);
+}
+
 static struct io_pgtable *
 arm_64_lpae_alloc_pgtable_s2(struct io_pgtable_cfg *cfg, void *cookie)
 {
@@ -223,6 +230,13 @@ arm_64_lpae_alloc_pgtable_s2(struct io_pgtable_cfg *cfg, void *cookie)
 out_free_data:
 	kfree(data);
 	return NULL;
+}
+
+static int arm_64_lpae_configure_s2(struct io_pgtable_cfg *cfg)
+{
+	struct arm_lpae_io_pgtable data = {};
+
+	return arm_lpae_init_pgtable_s2(cfg, &data);
 }
 
 static struct io_pgtable *
@@ -312,12 +326,14 @@ struct io_pgtable_init_fns io_pgtable_arm_64_lpae_s1_init_fns = {
 	.caps	= IO_PGTABLE_CAP_CUSTOM_ALLOCATOR,
 	.alloc	= arm_64_lpae_alloc_pgtable_s1,
 	.free	= arm_lpae_free_pgtable,
+	.configure	= arm_64_lpae_configure_s1,
 };
 
 struct io_pgtable_init_fns io_pgtable_arm_64_lpae_s2_init_fns = {
 	.caps	= IO_PGTABLE_CAP_CUSTOM_ALLOCATOR,
 	.alloc	= arm_64_lpae_alloc_pgtable_s2,
 	.free	= arm_lpae_free_pgtable,
+	.configure	= arm_64_lpae_configure_s2,
 };
 
 struct io_pgtable_init_fns io_pgtable_arm_32_lpae_s1_init_fns = {
