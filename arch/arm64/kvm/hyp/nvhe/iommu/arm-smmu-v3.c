@@ -365,7 +365,6 @@ static int smmu_init_registers(struct hyp_arm_smmu_v3_device *smmu)
 	      FIELD_PREP(CR1_QUEUE_IC, CR1_CACHE_WB);
 	writel_relaxed(val, smmu->base + ARM_SMMU_CR1);
 	writel_relaxed(CR2_PTM, smmu->base + ARM_SMMU_CR2);
-	writel_relaxed(0, smmu->base + ARM_SMMU_IRQ_CTRL);
 
 	val = readl_relaxed(smmu->base + ARM_SMMU_GERROR);
 	old = readl_relaxed(smmu->base + ARM_SMMU_GERRORN);
@@ -545,7 +544,7 @@ static int smmu_reset_device(struct hyp_arm_smmu_v3_device *smmu)
 		goto err_disable_cmdq;
 
 	/* Enable translation */
-	return smmu_write_cr0(smmu, CR0_SMMUEN | CR0_CMDQEN | CR0_ATSCHK);
+	return smmu_write_cr0(smmu, CR0_SMMUEN | CR0_CMDQEN | CR0_ATSCHK | CR0_EVTQEN);
 
 err_disable_cmdq:
 	return smmu_write_cr0(smmu, 0);
