@@ -195,23 +195,15 @@ static inline bool iopte_table(arm_lpae_iopte pte, int lvl)
 #define __arm_lpae_phys_to_virt	__va
 
 /* Generic functions */
-int arm_lpae_map_pages(struct io_pgtable_ops *ops, unsigned long iova,
-		       phys_addr_t paddr, size_t pgsize, size_t pgcount,
-		       int iommu_prot, gfp_t gfp, size_t *mapped);
-size_t arm_lpae_unmap_pages(struct io_pgtable_ops *ops, unsigned long iova,
-			    size_t pgsize, size_t pgcount,
-			    struct iommu_iotlb_gather *gather);
-phys_addr_t arm_lpae_iova_to_phys(struct io_pgtable_ops *ops,
-				  unsigned long iova);
 void __arm_lpae_free_pgtable(struct arm_lpae_io_pgtable *data, int lvl,
 			     arm_lpae_iopte *ptep);
 
-int arm_lpae_read_and_clear_dirty(struct io_pgtable_ops *ops,
-				  unsigned long iova, size_t size,
-				  unsigned long flags,
-				  struct iommu_dirty_bitmap *dirty);
-
-int arm_lpae_pgtable_walk(struct io_pgtable_ops *ops, unsigned long iova, void *wd);
+int arm_lpae_init_pgtable(struct io_pgtable_cfg *cfg,
+			  struct arm_lpae_io_pgtable *data);
+int arm_lpae_init_pgtable_s1(struct io_pgtable_cfg *cfg,
+			     struct arm_lpae_io_pgtable *data);
+int arm_lpae_init_pgtable_s2(struct io_pgtable_cfg *cfg,
+			     struct arm_lpae_io_pgtable *data);
 
 int __arm_lpae_iopte_walk(struct arm_lpae_io_pgtable *data,
 			  struct io_pgtable_walk_data *walk_data,
