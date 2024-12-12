@@ -335,7 +335,6 @@ static u64 *smmu_alloc_cd(struct hyp_arm_smmu_v3_device *smmu, u32 pasid_bits)
 	return (u64 *)hyp_virt_to_phys(cd_table);
 }
 
-__maybe_unused
 static void smmu_free_cd(u64 *cd_table, u32 pasid_bits)
 {
 	u32 order = get_order((1 << pasid_bits) *
@@ -1057,6 +1056,80 @@ out_unlock:
 	return ret;
 }
 
+static int smmu_detach_dev(struct kvm_hyp_iommu *iommu, struct kvm_hyp_iommu_domain *domain,
+			   u32 sid, u32 pasid)
+{
+	struct arm_smmu_ste *dst;
+	int i, ret;
+	struct hyp_arm_smmu_v3_device *smmu = to_smmu(iommu);
+	struct hyp_arm_smmu_v3_domain *smmu_domain = domain->priv;
+	u32 pasid_bits = 0;
+	u64 *cd_table, *cd;
+
+	kvm_iommu_lock(iommu);
+	dst = smmu_get_ste_ptr(smmu, sid);
+	if (!dst) {
+		ret = -ENODEV;
+		goto out_unlock;
+	}
+
+	/*
+	 * For stage-1:
+	 * - The kernel has to detach pasid = 0 the last.
+	 * - This will free the CD.
+	 */
+	if (smmu_domain->type == KVM_ARM_SMMU_DOMAIN_S1) {
+		pasid_bits = FIELD_GET(STRTAB_STE_0_S1CDMAX, dst->data[0]);
+		if (pasid >= (1 << pasid_bits)) {
+			ret = -E2BIG;
+			goto out_unlock;
+		}
+		cd_table = (u64 *)(dst->data[0] & STRTAB_STE_0_S1CTXPTR_MASK);
+		if (WARN_ON(!cd_table)) {
+			ret = -ENODEV;
+			goto out_unlock;
+		}
+
+		cd_table = hyp_phys_to_virt((phys_addr_t)cd_table);
+		if (pasid == 0) {
+			int j;
+
+			/* Ensure other pasids are detached. */
+			for (j = 1 ; j < (1 << pasid_bits) ; ++j) {
+				cd = smmu_get_cd_ptr(cd_table, j);
+				if (cd[0] & CTXDESC_CD_0_V) {
+					ret = -EINVAL;
+					goto out_unlock;
+				}
+			}
+		} else {
+			cd = smmu_get_cd_ptr(cd_table, pasid);
+			cd[0] = 0;
+			smmu_sync_cd(smmu, sid, pasid);
+			cd[1] = 0;
+			cd[2] = 0;
+			cd[3] = 0;
+			ret = smmu_sync_cd(smmu, sid, pasid);
+			goto out_unlock;
+		}
+	}
+	/* For stage-2 and pasid = 0 */
+	dst->data[0] = 0;
+	ret = smmu_sync_ste(smmu, sid);
+	if (ret)
+		goto out_unlock;
+	for (i = 1; i < STRTAB_STE_DWORDS; i++)
+		dst->data[i] = 0;
+
+	ret = smmu_sync_ste(smmu, sid);
+
+	smmu_free_cd(cd_table, pasid_bits);
+
+out_unlock:
+	kvm_iommu_unlock(iommu);
+	return ret;
+}
+
 /* Shared with the kernel driver in EL1 */
 struct kvm_iommu_ops smmu_ops = {
 	.init				= smmu_init,
@@ -1065,4 +1138,5 @@ struct kvm_iommu_ops smmu_ops = {
 	.free_domain			= smmu_free_domain,
 	.iotlb_sync			= smmu_iotlb_sync,
 	.attach_dev			= smmu_attach_dev,
+	.detach_dev			= smmu_detach_dev,
 };
