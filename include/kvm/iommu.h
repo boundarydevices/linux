@@ -45,4 +45,12 @@ extern void **kvm_nvhe_sym(kvm_hyp_iommu_domains);
 #define KVM_IOMMU_DOMAINS_ROOT_ORDER_NR	\
 	(1 << get_order(KVM_IOMMU_DOMAINS_ROOT_SIZE))
 
+struct kvm_hyp_iommu {
+#ifdef __KVM_NVHE_HYPERVISOR__
+	hyp_spinlock_t			lock;
+#else
+	u32				unused;
+#endif
+};
+
 #endif /* __KVM_IOMMU_H */
