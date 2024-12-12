@@ -455,6 +455,64 @@ bool kvm_iommu_host_dabt_handler(struct kvm_cpu_context *host_ctxt, u64 esr, u64
 	return ret;
 }
 
+size_t kvm_iommu_map_sg(pkvm_handle_t domain_id, unsigned long iova, struct kvm_iommu_sg *sg,
+			unsigned int nent, unsigned int prot)
+{
+	int ret;
+	size_t total_mapped = 0, mapped;
+	struct kvm_hyp_iommu_domain *domain;
+	phys_addr_t phys;
+	size_t size, pgsize, pgcount;
+	unsigned int orig_nent = nent;
+	struct kvm_iommu_sg *orig_sg = sg;
+
+	if (!kvm_iommu_ops || !kvm_iommu_ops->map_pages)
+		return 0;
+
+	if (prot & ~IOMMU_PROT_MASK)
+		return 0;
+
+	domain = handle_to_domain(domain_id);
+	if (!domain || domain_get(domain))
+		return 0;
+
+	ret = hyp_pin_shared_mem(sg, sg + nent);
+	if (ret)
+		goto out_put_domain;
+
+	while (nent--) {
+		phys = sg->phys;
+		pgsize = sg->pgsize;
+		pgcount = sg->pgcount;
+
+		if (__builtin_mul_overflow(pgsize, pgcount, &size) ||
+		    iova + size < iova)
+			goto out_unpin_sg;
+
+		ret = __pkvm_host_use_dma(phys, size);
+		if (ret)
+			goto out_unpin_sg;
+
+		mapped = 0;
+		kvm_iommu_ops->map_pages(domain, iova, phys, pgsize, pgcount, prot, &mapped);
+		total_mapped += mapped;
+		phys += mapped;
+		iova += mapped;
+		/* Might need memory */
+		if (mapped != size) {
+			__pkvm_host_unuse_dma(phys, size - mapped);
+			break;
+		}
+		sg++;
+	}
+
+out_unpin_sg:
+	hyp_unpin_shared_mem(orig_sg, orig_sg + orig_nent);
+out_put_domain:
+	domain_put(domain);
+	return total_mapped;
+}
+
 static int iommu_power_on(struct kvm_power_domain *pd)
 {
 	struct kvm_hyp_iommu *iommu = container_of(pd, struct kvm_hyp_iommu,
