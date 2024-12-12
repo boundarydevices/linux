@@ -4,6 +4,8 @@
 
 #include <asm/kvm_host.h>
 
+#include <kvm/iommu.h>
+
 #include <nvhe/alloc_mgt.h>
 
 /* Hypercall handlers */
@@ -31,6 +33,8 @@ void kvm_iommu_reclaim_pages(void *p, u8 order);
 
 struct kvm_iommu_ops {
 	int (*init)(void);
+	int (*alloc_domain)(struct kvm_hyp_iommu_domain *domain, int type);
+	void (*free_domain)(struct kvm_hyp_iommu_domain *domain);
 };
 
 int kvm_iommu_init(void);

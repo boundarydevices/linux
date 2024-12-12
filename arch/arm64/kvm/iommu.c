@@ -5,6 +5,9 @@
  */
 
 #include <asm/kvm_mmu.h>
+
+#include <kvm/iommu.h>
+
 #include <linux/kvm_host.h>
 
 struct kvm_iommu_driver *iommu_driver;
@@ -36,6 +39,13 @@ int kvm_iommu_init_driver(void)
 		kvm_err("pKVM enabled without an IOMMU driver, do not run confidential workloads in virtual machines\n");
 		return -ENODEV;
 	}
+
+	kvm_hyp_iommu_domains = (void *)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+				get_order(KVM_IOMMU_DOMAINS_ROOT_SIZE));
+	if (!kvm_hyp_iommu_domains)
+		return -ENOMEM;
+
+	kvm_hyp_iommu_domains = kern_hyp_va(kvm_hyp_iommu_domains);
 
 	return iommu_driver->init_driver();
 }
