@@ -11,6 +11,7 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 
 #include <kvm/arm_smmu_v3.h>
 
@@ -127,6 +128,12 @@ static struct iommu_device *kvm_arm_smmu_probe_device(struct device *dev)
 	master->ssid_bits = min(smmu->ssid_bits, master->ssid_bits);
 	xa_init(&master->domains);
 	dev_iommu_priv_set(dev, master);
+	if (!device_link_add(dev, smmu->dev,
+			     DL_FLAG_PM_RUNTIME |
+			     DL_FLAG_AUTOREMOVE_SUPPLIER)) {
+		kfree(master);
+		return ERR_PTR(-ENOLINK);
+	}
 
 	return &smmu->iommu;
 }
@@ -818,6 +825,14 @@ static int kvm_arm_smmu_probe(struct platform_device *pdev)
 	hyp_smmu->iommu.power_domain = host_smmu->power_domain;
 	kvm_arm_smmu_cur++;
 
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+	/*
+	 * Take a reference to keep the SMMU powered on while the hypervisor
+	 * initializes it.
+	 */
+	pm_runtime_resume_and_get(dev);
+
 	return arm_smmu_register_iommu(smmu, &kvm_arm_smmu_ops, ioaddr);
 }
 
@@ -826,6 +841,8 @@ static void kvm_arm_smmu_remove(struct platform_device *pdev)
 	struct arm_smmu_device *smmu = platform_get_drvdata(pdev);
 	struct host_arm_smmu_device *host_smmu = smmu_to_host(smmu);
 
+	pm_runtime_disable(&pdev->dev);
+	pm_runtime_set_suspended(&pdev->dev);
 	/*
 	 * There was an error during hypervisor setup. The hyp driver may
 	 * have already enabled the device, so disable it.
@@ -833,6 +850,30 @@ static void kvm_arm_smmu_remove(struct platform_device *pdev)
 	arm_smmu_device_disable(smmu);
 	arm_smmu_update_gbpa(smmu, host_smmu->boot_gbpa, GBPA_ABORT);
 }
+
+static int kvm_arm_smmu_suspend(struct device *dev)
+{
+	struct arm_smmu_device *smmu = dev_get_drvdata(dev);
+	struct host_arm_smmu_device *host_smmu = smmu_to_host(smmu);
+
+	if (host_smmu->power_domain.type == KVM_POWER_DOMAIN_HOST_HVC)
+		return kvm_call_hyp_nvhe(__pkvm_host_hvc_pd, host_smmu->id, 0);
+	return 0;
+}
+
+static int kvm_arm_smmu_resume(struct device *dev)
+{
+	struct arm_smmu_device *smmu = dev_get_drvdata(dev);
+	struct host_arm_smmu_device *host_smmu = smmu_to_host(smmu);
+
+	if (host_smmu->power_domain.type == KVM_POWER_DOMAIN_HOST_HVC)
+		return kvm_call_hyp_nvhe(__pkvm_host_hvc_pd, host_smmu->id, 1);
+	return 0;
+}
+
+static const struct dev_pm_ops kvm_arm_smmu_pm_ops = {
+	SET_RUNTIME_PM_OPS(kvm_arm_smmu_suspend, kvm_arm_smmu_resume, NULL)
+};
 
 static const struct of_device_id arm_smmu_of_match[] = {
 	{ .compatible = "arm,smmu-v3", },
@@ -843,6 +884,7 @@ static struct platform_driver kvm_arm_smmu_driver = {
 	.driver = {
 		.name = "kvm-arm-smmu-v3",
 		.of_match_table = arm_smmu_of_match,
+		.pm = &kvm_arm_smmu_pm_ops,
 	},
 	.remove = kvm_arm_smmu_remove,
 };
@@ -877,6 +919,12 @@ static void kvm_arm_smmu_array_free(void)
 	free_pages((unsigned long)kvm_arm_smmu_array, order);
 }
 
+static int smmu_put_device(struct device *dev, void *data)
+{
+	pm_runtime_put(dev);
+	return 0;
+}
+
 static int kvm_arm_smmu_v3_init_drv(void)
 {
 	int ret;
@@ -905,6 +953,7 @@ static int kvm_arm_smmu_v3_init_drv(void)
 	 */
 	kvm_hyp_arm_smmu_v3_smmus = kvm_arm_smmu_array;
 	kvm_hyp_arm_smmu_v3_count = kvm_arm_smmu_count;
+
 	return 0;
 
 err_free:
@@ -931,4 +980,21 @@ static int kvm_arm_smmu_v3_register(void)
 					kern_hyp_va(lm_alias(&kvm_nvhe_sym(smmu_ops))));
 };
 
+/*
+ * KVM init hypervisor at device_sync init call,
+ * so we drop the PM references of the SMMU taken at probe
+ * at the late initcall where it's guaranteed the hypervisor
+ * has initialized the SMMUs.
+ */
+static int kvm_arm_smmu_v3_post_init(void)
+{
+	if (!kvm_arm_smmu_count)
+		return 0;
+
+	WARN_ON(driver_for_each_device(&kvm_arm_smmu_driver.driver, NULL,
+				       NULL, smmu_put_device));
+	return 0;
+}
+
 core_initcall(kvm_arm_smmu_v3_register);
+late_initcall(kvm_arm_smmu_v3_post_init);
