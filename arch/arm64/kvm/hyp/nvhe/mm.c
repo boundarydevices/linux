@@ -564,3 +564,20 @@ int reclaim_hyp_pool(struct hyp_pool *pool, struct kvm_hyp_memcache *host_mc,
 
 	return 0;
 }
+
+/* Remap hyp memory with different cacheability */
+int pkvm_remap_range(void *va, int nr_pages, bool nc)
+{
+	size_t size = nr_pages << PAGE_SHIFT;
+	phys_addr_t phys = hyp_virt_to_phys(va);
+	enum kvm_pgtable_prot prot = PKVM_HOST_MEM_PROT;
+	int ret;
+
+	if (nc)
+		prot |= KVM_PGTABLE_PROT_NORMAL_NC;
+	hyp_spin_lock(&pkvm_pgd_lock);
+	WARN_ON(kvm_pgtable_hyp_unmap(&pkvm_pgtable, (u64)va, size) != size);
+	ret = kvm_pgtable_hyp_map(&pkvm_pgtable, (u64)va, size, phys, prot);
+	hyp_spin_unlock(&pkvm_pgd_lock);
+	return ret;
+}

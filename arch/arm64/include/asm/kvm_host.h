@@ -1629,6 +1629,7 @@ void kvm_set_vm_id_reg(struct kvm *kvm, u32 reg, u64 val);
 
 /* Allocator interface IDs. */
 #define HYP_ALLOC_MGT_HEAP_ID		0
+#define HYP_ALLOC_MGT_IOMMU_ID		1
 
 unsigned long __pkvm_reclaim_hyp_alloc_mgt(unsigned long nr_pages);
 
