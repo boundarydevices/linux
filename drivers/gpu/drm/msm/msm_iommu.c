@@ -200,6 +200,9 @@ msm_iommu_pagetable_walk(struct msm_mmu *mmu, unsigned long iova, uint64_t ptes[
 {
 	struct msm_iommu_pagetable *pagetable;
 	struct arm_lpae_io_pgtable_walk_data wd = {};
+	struct io_pgtable_walk_common walker = {
+		.data = &wd,
+	};
 
 	if (mmu->type != MSM_MMU_IOMMU_PAGETABLE)
 		return -EINVAL;
@@ -209,7 +212,7 @@ msm_iommu_pagetable_walk(struct msm_mmu *mmu, unsigned long iova, uint64_t ptes[
 	if (!pagetable->pgtbl_ops->pgtable_walk)
 		return -EINVAL;
 
-	pagetable->pgtbl_ops->pgtable_walk(pagetable->pgtbl_ops, iova, &wd);
+	pagetable->pgtbl_ops->pgtable_walk(pagetable->pgtbl_ops, iova, 1, &walker);
 
 	for (int i = 0; i < ARRAY_SIZE(wd.ptes); i++)
 		ptes[i] = wd.ptes[i];

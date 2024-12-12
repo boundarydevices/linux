@@ -185,12 +185,25 @@ struct io_pgtable_cfg {
  *
  * @ptes:     The recorded PTE values from the walk
  * @level:    The level of the last PTE
+ * @cookie:   Cookie set by caller to identify it
  *
  * @level also specifies the last valid index in @ptes
  */
 struct arm_lpae_io_pgtable_walk_data {
 	u64 ptes[4];
 	int level;
+	void *cookie;
+};
+
+/**
+ * struct io_pgtable_walk_common - common information from a pgtable walk
+ * @visit_leaf: callback for each leaf providing it's physical address and size
+ */
+struct io_pgtable_walk_common {
+	void (*visit_leaf)(phys_addr_t paddr, size_t size,
+			   struct io_pgtable_walk_common *data,
+			   void *wd);
+	void *data; /* pointer to walk data as arm_lpae_io_pgtable_walk_data*/
 };
 
 /**
@@ -199,7 +212,7 @@ struct arm_lpae_io_pgtable_walk_data {
  * @map_pages:    Map a physically contiguous range of pages of the same size.
  * @unmap_pages:  Unmap a range of virtually contiguous pages of the same size.
  * @iova_to_phys: Translate iova to physical address.
- * @pgtable_walk: (optional) Perform a page table walk for a given iova.
+ * @pgtable_walk: (optional) Perform a page table walk for a given iova and size.
  *
  * These functions map directly onto the iommu_ops member functions with
  * the same names.
@@ -213,7 +226,8 @@ struct io_pgtable_ops {
 			      struct iommu_iotlb_gather *gather);
 	phys_addr_t (*iova_to_phys)(struct io_pgtable_ops *ops,
 				    unsigned long iova);
-	int (*pgtable_walk)(struct io_pgtable_ops *ops, unsigned long iova, void *wd);
+	int (*pgtable_walk)(struct io_pgtable_ops *ops, unsigned long iova,
+			    size_t size, struct io_pgtable_walk_common *walker);
 	int (*read_and_clear_dirty)(struct io_pgtable_ops *ops,
 				    unsigned long iova, size_t size,
 				    unsigned long flags,

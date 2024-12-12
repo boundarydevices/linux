@@ -18,7 +18,7 @@ struct arm_lpae_io_pgtable {
 
 struct io_pgtable_walk_data {
 	struct io_pgtable		*iop;
-	void				*data;
+	struct io_pgtable_walk_common	*data;
 	int (*visit)(struct io_pgtable_walk_data *walk_data, int lvl,
 		     arm_lpae_iopte *ptep, size_t size);
 	unsigned long			flags;

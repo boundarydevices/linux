@@ -121,7 +121,8 @@ static void arm_lpae_free_pgtable(struct io_pgtable *iop)
 static int visit_dirty(struct io_pgtable_walk_data *walk_data, int lvl,
 		       arm_lpae_iopte *ptep, size_t size)
 {
-	struct iommu_dirty_bitmap *dirty = walk_data->data;
+	struct io_pgtable_walk_common *walker = walk_data->data;
+	struct iommu_dirty_bitmap *dirty = walker->data;
 
 	if (!iopte_leaf(*ptep, lvl, walk_data->iop->fmt))
 		return 0;
@@ -135,16 +136,19 @@ static int visit_dirty(struct io_pgtable_walk_data *walk_data, int lvl,
 	return 0;
 }
 
-int arm_lpae_read_and_clear_dirty(struct io_pgtable_ops *ops,
-				  unsigned long iova, size_t size,
-				  unsigned long flags,
-				  struct iommu_dirty_bitmap *dirty)
+static int arm_lpae_read_and_clear_dirty(struct io_pgtable_ops *ops,
+					 unsigned long iova, size_t size,
+					 unsigned long flags,
+					 struct iommu_dirty_bitmap *dirty)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
 	struct io_pgtable_cfg *cfg = &data->iop.cfg;
+	struct io_pgtable_walk_common walker = {
+		.data = dirty,
+	};
 	struct io_pgtable_walk_data walk_data = {
 		.iop = &data->iop,
-		.data = dirty,
+		.data = &walker,
 		.visit = visit_dirty,
 		.flags = flags,
 		.addr = iova,
