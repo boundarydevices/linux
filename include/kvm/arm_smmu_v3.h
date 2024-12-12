@@ -25,6 +25,10 @@ struct hyp_arm_smmu_v3_device {
 	size_t			cmdq_log2size;
 	/* strtab_cfg.l2.l2ptrs is not used, instead computed from L1 */
 	struct arm_smmu_strtab_cfg strtab_cfg;
+	size_t			oas;
+	size_t			ias;
+	size_t			pgsize_bitmap;
+	size_t			ssid_bits;
 };
 
 extern size_t kvm_nvhe_sym(kvm_hyp_arm_smmu_v3_count);
