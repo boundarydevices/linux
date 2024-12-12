@@ -7,6 +7,7 @@
 #include <asm/kvm_pkvm.h>
 #include <asm/kvm_mmu.h>
 
+#include <linux/arm-smccc.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 
@@ -25,9 +26,26 @@ struct host_arm_smmu_device {
 #define smmu_to_host(_smmu) \
 	container_of(_smmu, struct host_arm_smmu_device, smmu);
 
+struct kvm_arm_smmu_master {
+	struct arm_smmu_device		*smmu;
+	struct device			*dev;
+	struct kvm_arm_smmu_domain      *domain;
+};
+
+struct kvm_arm_smmu_domain {
+	struct iommu_domain		domain;
+	struct arm_smmu_device		*smmu;
+	struct mutex			init_mutex;
+	pkvm_handle_t			id;
+};
+
+#define to_kvm_smmu_domain(_domain) \
+	container_of(_domain, struct kvm_arm_smmu_domain, domain)
+
 static size_t				kvm_arm_smmu_cur;
 static size_t				kvm_arm_smmu_count;
 static struct hyp_arm_smmu_v3_device	*kvm_arm_smmu_array;
+static DEFINE_IDA(kvm_arm_smmu_domain_ida);
 
 static int kvm_arm_smmu_topup_memcache(struct arm_smccc_res *res, gfp_t gfp)
 {
@@ -67,6 +85,267 @@ static int kvm_arm_smmu_topup_memcache(struct arm_smccc_res *res, gfp_t gfp)
 	} while (__res.a1 && !kvm_arm_smmu_topup_memcache(&__res, GFP_KERNEL));\
 	__res.a1;							\
 })
+
+static struct platform_driver kvm_arm_smmu_driver;
+
+static struct arm_smmu_device *
+kvm_arm_smmu_get_by_fwnode(struct fwnode_handle *fwnode)
+{
+	struct device *dev;
+
+	dev = driver_find_device_by_fwnode(&kvm_arm_smmu_driver.driver, fwnode);
+	put_device(dev);
+	return dev ? dev_get_drvdata(dev) : NULL;
+}
+
+static struct iommu_ops kvm_arm_smmu_ops;
+
+static struct iommu_device *kvm_arm_smmu_probe_device(struct device *dev)
+{
+	struct arm_smmu_device *smmu;
+	struct kvm_arm_smmu_master *master;
+	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
+
+	if (WARN_ON_ONCE(dev_iommu_priv_get(dev)))
+		return ERR_PTR(-EBUSY);
+
+	smmu = kvm_arm_smmu_get_by_fwnode(fwspec->iommu_fwnode);
+	if (!smmu)
+		return ERR_PTR(-ENODEV);
+
+	master = kzalloc(sizeof(*master), GFP_KERNEL);
+	if (!master)
+		return ERR_PTR(-ENOMEM);
+
+	master->dev = dev;
+	master->smmu = smmu;
+	dev_iommu_priv_set(dev, master);
+
+	return &smmu->iommu;
+}
+
+static struct iommu_domain *kvm_arm_smmu_domain_alloc(unsigned type)
+{
+	struct kvm_arm_smmu_domain *kvm_smmu_domain;
+
+	/*
+	 * We don't support
+	 * - IOMMU_DOMAIN_DMA_FQ because lazy unmap would clash with memory
+	 *   donation to guests.
+	 * - IOMMU_DOMAIN_IDENTITY: Requires a stage-2 only transparent domain.
+	 */
+	if (type != IOMMU_DOMAIN_DMA &&
+	    type != IOMMU_DOMAIN_UNMANAGED)
+		return ERR_PTR(-EOPNOTSUPP);
+
+	kvm_smmu_domain = kzalloc(sizeof(*kvm_smmu_domain), GFP_KERNEL);
+	if (!kvm_smmu_domain)
+		return ERR_PTR(-ENOMEM);
+
+	mutex_init(&kvm_smmu_domain->init_mutex);
+
+	return &kvm_smmu_domain->domain;
+}
+
+static int kvm_arm_smmu_domain_finalize(struct kvm_arm_smmu_domain *kvm_smmu_domain,
+					struct kvm_arm_smmu_master *master)
+{
+	int ret = 0;
+	struct arm_smmu_device *smmu = master->smmu;
+	unsigned int max_domains;
+	enum kvm_arm_smmu_domain_type type;
+	struct io_pgtable_cfg cfg;
+	unsigned long ias;
+
+	if (kvm_smmu_domain->smmu && (kvm_smmu_domain->smmu != smmu))
+		return -EINVAL;
+
+	if (kvm_smmu_domain->smmu)
+		return 0;
+	/* Default to stage-1. */
+	if (smmu->features & ARM_SMMU_FEAT_TRANS_S1) {
+		ias = (smmu->features & ARM_SMMU_FEAT_VAX) ? 52 : 48;
+		cfg = (struct io_pgtable_cfg) {
+			.fmt = ARM_64_LPAE_S1,
+			.pgsize_bitmap = smmu->pgsize_bitmap,
+			.ias = min_t(unsigned long, ias, VA_BITS),
+			.oas = smmu->ias,
+			.coherent_walk = smmu->features & ARM_SMMU_FEAT_COHERENCY,
+		};
+		ret = io_pgtable_configure(&cfg);
+		if (ret)
+			return ret;
+
+		type = KVM_ARM_SMMU_DOMAIN_S1;
+		kvm_smmu_domain->domain.pgsize_bitmap = cfg.pgsize_bitmap;
+		kvm_smmu_domain->domain.geometry.aperture_end = (1UL << cfg.ias) - 1;
+		max_domains = 1 << smmu->asid_bits;
+	} else {
+		cfg = (struct io_pgtable_cfg) {
+			.fmt = ARM_64_LPAE_S2,
+			.pgsize_bitmap = smmu->pgsize_bitmap,
+			.ias = smmu->ias,
+			.oas = smmu->oas,
+			.coherent_walk = smmu->features & ARM_SMMU_FEAT_COHERENCY,
+		};
+		ret = io_pgtable_configure(&cfg);
+		if (ret)
+			return ret;
+
+		type = KVM_ARM_SMMU_DOMAIN_S2;
+		kvm_smmu_domain->domain.pgsize_bitmap = cfg.pgsize_bitmap;
+		kvm_smmu_domain->domain.geometry.aperture_end = (1UL << cfg.ias) - 1;
+		max_domains = 1 << smmu->vmid_bits;
+	}
+	kvm_smmu_domain->domain.geometry.force_aperture = true;
+
+	/*
+	 * The hypervisor uses the domain_id for asid/vmid so it has to be
+	 * unique, and it has to be in range of this smmu, which can be
+	 * either 8 or 16 bits.
+	 */
+	ret = ida_alloc_range(&kvm_arm_smmu_domain_ida, 0,
+			      min(KVM_IOMMU_MAX_DOMAINS, max_domains), GFP_KERNEL);
+	if (ret < 0)
+		return ret;
+
+	kvm_smmu_domain->id = ret;
+
+	ret = kvm_call_hyp_nvhe_mc(__pkvm_host_iommu_alloc_domain,
+				   kvm_smmu_domain->id, type);
+	if (ret) {
+		ida_free(&kvm_arm_smmu_domain_ida, kvm_smmu_domain->id);
+		return ret;
+	}
+
+	kvm_smmu_domain->smmu = smmu;
+	return 0;
+}
+
+static void kvm_arm_smmu_domain_free(struct iommu_domain *domain)
+{
+	int ret;
+	struct kvm_arm_smmu_domain *kvm_smmu_domain = to_kvm_smmu_domain(domain);
+	struct arm_smmu_device *smmu = kvm_smmu_domain->smmu;
+
+	if (smmu) {
+		ret = kvm_call_hyp_nvhe(__pkvm_host_iommu_free_domain, kvm_smmu_domain->id);
+		ida_free(&kvm_arm_smmu_domain_ida, kvm_smmu_domain->id);
+	}
+	kfree(kvm_smmu_domain);
+}
+
+static int kvm_arm_smmu_detach_dev(struct host_arm_smmu_device *host_smmu,
+				   struct kvm_arm_smmu_master *master)
+{
+	int i, ret;
+	struct arm_smmu_device *smmu = &host_smmu->smmu;
+	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(master->dev);
+	struct kvm_arm_smmu_domain *domain = master->domain;
+
+	if (!domain)
+		return 0;
+
+	for (i = 0; i < fwspec->num_ids; i++) {
+		int sid = fwspec->ids[i];
+
+		ret = kvm_call_hyp_nvhe(__pkvm_host_iommu_detach_dev,
+					host_smmu->id, domain->id, sid, 0);
+		if (ret) {
+			dev_err(smmu->dev, "cannot detach device %s (0x%x): %d\n",
+				dev_name(master->dev), sid, ret);
+			break;
+		}
+	}
+
+	master->domain = NULL;
+
+	return ret;
+}
+
+static void kvm_arm_smmu_release_device(struct device *dev)
+{
+	struct kvm_arm_smmu_master *master = dev_iommu_priv_get(dev);
+	struct host_arm_smmu_device *host_smmu = smmu_to_host(master->smmu);
+
+	kvm_arm_smmu_detach_dev(host_smmu, master);
+	kfree(master);
+	iommu_fwspec_free(dev);
+}
+
+static int kvm_arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
+{
+	int i, ret;
+	struct arm_smmu_device *smmu;
+	struct host_arm_smmu_device *host_smmu;
+	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
+	struct kvm_arm_smmu_master *master = dev_iommu_priv_get(dev);
+	struct kvm_arm_smmu_domain *kvm_smmu_domain = to_kvm_smmu_domain(domain);
+
+	if (!master)
+		return -ENODEV;
+
+	smmu = master->smmu;
+	host_smmu = smmu_to_host(smmu);
+
+	ret = kvm_arm_smmu_detach_dev(host_smmu, master);
+	if (ret)
+		return ret;
+
+	mutex_lock(&kvm_smmu_domain->init_mutex);
+	ret = kvm_arm_smmu_domain_finalize(kvm_smmu_domain, master);
+	mutex_unlock(&kvm_smmu_domain->init_mutex);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < fwspec->num_ids; i++) {
+		int sid = fwspec->ids[i];
+
+		ret = kvm_call_hyp_nvhe_mc(__pkvm_host_iommu_attach_dev,
+					   host_smmu->id, kvm_smmu_domain->id,
+					   sid, 0, 0);
+		if (ret) {
+			dev_err(smmu->dev, "cannot attach device %s (0x%x): %d\n",
+				dev_name(dev), sid, ret);
+			goto out_ret;
+		}
+	}
+	master->domain = kvm_smmu_domain;
+
+out_ret:
+	if (ret)
+		kvm_arm_smmu_detach_dev(host_smmu, master);
+	return ret;
+}
+
+static bool kvm_arm_smmu_capable(struct device *dev, enum iommu_cap cap)
+{
+	struct kvm_arm_smmu_master *master = dev_iommu_priv_get(dev);
+
+	switch (cap) {
+	case IOMMU_CAP_CACHE_COHERENCY:
+		return master->smmu->features & ARM_SMMU_FEAT_COHERENCY;
+	case IOMMU_CAP_NOEXEC:
+	default:
+		return false;
+	}
+}
+
+static struct iommu_ops kvm_arm_smmu_ops = {
+	.capable		= kvm_arm_smmu_capable,
+	.device_group		= arm_smmu_device_group,
+	.of_xlate		= arm_smmu_of_xlate,
+	.get_resv_regions	= arm_smmu_get_resv_regions,
+	.probe_device		= kvm_arm_smmu_probe_device,
+	.release_device		= kvm_arm_smmu_release_device,
+	.domain_alloc		= kvm_arm_smmu_domain_alloc,
+	.pgsize_bitmap		= -1UL,
+	.owner			= THIS_MODULE,
+	.default_domain_ops = &(const struct iommu_domain_ops) {
+		.attach_dev	= kvm_arm_smmu_attach_dev,
+		.free		= kvm_arm_smmu_domain_free,
+	}
+};
 
 static bool kvm_arm_smmu_validate_features(struct arm_smmu_device *smmu)
 {
@@ -182,6 +461,11 @@ static int kvm_arm_smmu_probe(struct platform_device *pdev)
 
 	if (!kvm_arm_smmu_validate_features(smmu))
 		return -ENODEV;
+
+	if (kvm_arm_smmu_ops.pgsize_bitmap == -1UL)
+		kvm_arm_smmu_ops.pgsize_bitmap = smmu->pgsize_bitmap;
+	else
+		kvm_arm_smmu_ops.pgsize_bitmap |= smmu->pgsize_bitmap;
 
 	ret = arm_smmu_init_one_queue(smmu, &smmu->cmdq.q, smmu->base,
 				      ARM_SMMU_CMDQ_PROD, ARM_SMMU_CMDQ_CONS,
