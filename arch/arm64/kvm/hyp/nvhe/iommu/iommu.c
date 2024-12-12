@@ -305,12 +305,30 @@ size_t kvm_iommu_map_pages(pkvm_handle_t domain_id,
 	return total_mapped;
 }
 
+static inline void kvm_iommu_iotlb_sync(struct kvm_hyp_iommu_domain *domain,
+					struct iommu_iotlb_gather *iotlb_gather)
+{
+	if (kvm_iommu_ops->iotlb_sync)
+		kvm_iommu_ops->iotlb_sync(domain, iotlb_gather);
+
+	iommu_iotlb_gather_init(iotlb_gather);
+}
+
+void kvm_iommu_iotlb_gather_add_page(struct kvm_hyp_iommu_domain *domain,
+				     struct iommu_iotlb_gather *gather,
+				     unsigned long iova,
+				     size_t size)
+{
+	_iommu_iotlb_add_page(domain, gather, iova, size, kvm_iommu_iotlb_sync);
+}
+
 size_t kvm_iommu_unmap_pages(pkvm_handle_t domain_id, unsigned long iova,
 			     size_t pgsize, size_t pgcount)
 {
 	size_t size;
 	size_t unmapped;
 	struct kvm_hyp_iommu_domain *domain;
+	struct iommu_iotlb_gather iotlb_gather;
 
 	if (!pgsize || !pgcount)
 		return 0;
@@ -323,6 +341,7 @@ size_t kvm_iommu_unmap_pages(pkvm_handle_t domain_id, unsigned long iova,
 	if (!domain || domain_get(domain))
 		return 0;
 
+	iommu_iotlb_gather_init(&iotlb_gather);
 	/*
 	 * Unlike map, the common code doesn't call the __pkvm_host_unuse_dma,
 	 * because this means that we need either walk the table using iova_to_phys
@@ -334,7 +353,8 @@ size_t kvm_iommu_unmap_pages(pkvm_handle_t domain_id, unsigned long iova,
 	 * standardized, we leave that to the driver.
 	 */
 	unmapped = kvm_iommu_ops->unmap_pages(domain, iova, pgsize,
-						pgcount);
+						pgcount, &iotlb_gather);
+	kvm_iommu_iotlb_sync(domain, &iotlb_gather);
 
 	domain_put(domain);
 	return unmapped;
