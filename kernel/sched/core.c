@@ -4112,10 +4112,18 @@ static inline bool proxy_needs_return(struct rq *rq, struct task_struct *p)
 	raw_spin_unlock(&p->blocked_lock);
 	return ret;
 }
+
+static inline void _trace_sched_pe_return_migration(struct task_struct *p)
+{
+	trace_sched_pe_return_migration(p, p->wake_cpu);
+}
 #else /* !CONFIG_SMP */
 static inline bool proxy_needs_return(struct rq *rq, struct task_struct *p)
 {
 	return false;
+}
+static inline void _trace_sched_pe_return_migration(struct task_struct *p)
+{
 }
 #endif /*CONFIG_SMP */
 
@@ -4221,7 +4229,7 @@ static int ttwu_runnable(struct task_struct *p, int wake_flags)
 			wakeup_preempt(rq, p, wake_flags);
 		}
 		if (proxy_needs_return(rq, p)) {
-			trace_sched_pe_return_migration(p, p->wake_cpu);
+			_trace_sched_pe_return_migration(p);
 			goto out;
 		}
 		ttwu_do_wakeup(p);
@@ -5590,6 +5598,10 @@ void balance_callbacks(struct rq *rq, struct balance_callback *head)
 }
 
 #else
+
+static inline void zap_balance_callbacks(struct rq *rq)
+{
+}
 
 static inline void __balance_callbacks(struct rq *rq)
 {
@@ -7463,7 +7475,7 @@ needs_return:
 		return proxy_resched_idle(rq);
 
 	p->blocked_on_state = BO_RUNNABLE;
-	trace_sched_pe_return_migration(p, p->wake_cpu);
+	_trace_sched_pe_return_migration(p);
 	proxy_migrate_task(rq, rf, p, p->wake_cpu);
 	return NULL;
 
