@@ -289,8 +289,8 @@ static const struct snd_soc_dapm_route mtk_dai_adda_routes[] = {
 	{"INT ADDA Playback", NULL, "ADDA_DL_CH1"},
 	{"INT ADDA Playback", NULL, "ADDA_DL_CH2"},
 	{"AIN Mux", "INT ADC", "INT ADDA Capture"},
-	{"ADDA_DL_CH1", "GAIN1_OUT_CH1", "Hostless FM DL"},
-	{"ADDA_DL_CH2", "GAIN1_OUT_CH2", "Hostless FM DL"},
+	{"ADDA_DL_CH1", "GAIN1_OUT_CH1 Switch", "Hostless FM DL"},
+	{"ADDA_DL_CH2", "GAIN1_OUT_CH2 Switch", "Hostless FM DL"},
 };
 
 int mt8365_dai_adda_register(struct mtk_base_afe *afe)
