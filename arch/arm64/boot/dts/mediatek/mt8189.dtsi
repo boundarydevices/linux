@@ -14,6 +14,7 @@
 #include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/power/mediatek,mt8189-power.h>
 #include <dt-bindings/gce/mt8189-gce.h>
+#include <dt-bindings/thermal/thermal.h>
 
 / {
 	compatible = "mediatek,mt8189";
@@ -1773,8 +1774,12 @@
 				reg = <0x1a0 0xc>;
 			};
 
-			lvts_efuse_data1: lvts1-calib@1ac {
-				reg = <0x1ac 0x40>;
+			lvts_e_data1: data1@1b4 {
+				reg = <0x1b4 0x54>;
+			};
+
+			lvts_e_data2: data2@e4 {
+				reg = <0xe4 0x8>;
 			};
 
 			socinfo-data1@7a0 {
@@ -1784,6 +1789,18 @@
 			socinfo-data2@7e0 {
 				reg = <0x7e0 0x4>;
 			};
+		};
+
+		lvts: lvts@10315000 {
+			compatible = "mediatek,mt8189-lvts";
+			#thermal-sensor-cells = <1>;
+			reg = <0 0x10315000 0 0x1000>,
+				<0 0x10316000 0 0x1000>;
+			interrupts = <GIC_SPI 218 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 219 IRQ_TYPE_LEVEL_HIGH 0>;
+
+			nvmem-cells = <&lvts_e_data1>, <&lvts_e_data2>;
+			nvmem-cell-names = "e_data1", "e_data2";
 		};
 
 		spmi: spmi@1cc06000 {
@@ -1875,5 +1892,251 @@
 				#phy-cells = <1>;
 			};
 		};
+
+		thermal_zones: thermal-zones {
+			soc_max: soc_max {
+				polling-delay = <1000>; /* milliseconds */
+				polling-delay-passive = <100>; /* milliseconds */
+				thermal-sensors = <&lvts 0>;
+				sustainable-power = <1200>;
+
+				trips {
+					threshold: trip-point@0 {
+						temperature = <68000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+
+					target: target@1 {
+						temperature = <85000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+
+					soc_max_crit: soc-max-crit@0 {
+						temperature = <115000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-big1 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 1>;
+				trips {
+					cpu_big1_crit: cpu-big1-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-big2 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 2>;
+				trips {
+					cpu_big2_crit: cpu-big2-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-big3 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 3>;
+				trips {
+					cpu_big3_crit: cpu-big3-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-big4 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 4>;
+				trips {
+					cpu_big4_crit: cpu-big4-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-little1 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 5>;
+				trips {
+					cpu_little1_crit: cpu-little1-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-little2 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 6>;
+				trips {
+					cpu_little2_crit: cpu-little2-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-little3 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 7>;
+				trips {
+					cpu_little3_crit: cpu-little3-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-little4 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 8>;
+				trips {
+					cpu_little4_crit: cpu-little4-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-little5 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 9>;
+				trips {
+					cpu_little5_crit: cpu-little5-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-little6 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 10>;
+				trips {
+					cpu_little6_crit: cpu-little6-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-little7 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 11>;
+				trips {
+					cpu_little7_crit: cpu-little7-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			cpu-little8 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 12>;
+				trips {
+					cpu_little8_crit: cpu-little8-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			soc1 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 13>;
+				trips {
+					soc1_crit: soc1-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			soc2 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 14>;
+				trips {
+					soc2_crit: soc2-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			soc3 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 15>;
+				trips {
+					soc3_crit: soc3-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			apu {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 16>;
+				trips {
+					apu_crit: apu-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			gpu1 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 17>;
+				trips {
+					gpu1_crit: gpu1-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+			gpu2 {
+				polling-delay = <0>; /* milliseconds */
+				polling-delay-passive = <0>; /* milliseconds */
+				thermal-sensors = <&lvts 18>;
+				trips {
+					gpu2_crit: gpu2-crit {
+						temperature = <119000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+		};
+
 	};
 };
