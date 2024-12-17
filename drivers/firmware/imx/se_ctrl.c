@@ -2040,8 +2040,11 @@ static int se_suspend(struct device *dev)
 	se_rcv_msg_timeout = SE_RCV_MSG_DEFAULT_TIMEOUT;
 
 	if (priv->if_defs->se_if_type == SE_TYPE_ID_V2X_DBG) {
-		dev_err(dev, "V2X-FW: Suspend/resume not supported.");
-		return -EPERM;
+		ret = v2x_suspend(priv);
+		if (ret) {
+			dev_err(dev, "Failure V2X-FW suspend[0x%x].", ret);
+			return ret;
+		}
 	}
 
 	load_fw = get_load_fw_instance(priv);
@@ -2056,13 +2059,19 @@ static int se_resume(struct device *dev)
 {
 	struct se_if_priv *priv = dev_get_drvdata(dev);
 	struct se_fw_load_info *load_fw;
+	int ret = 0;
+
+	if (priv->if_defs->se_if_type == SE_TYPE_ID_V2X_DBG) {
+		if (v2x_resume(priv))
+			dev_err(dev, "Failure V2X-FW resume[0x%x].", ret);
+	}
 
 	load_fw = get_load_fw_instance(priv);
 
 	if (load_fw->imem_mgmt)
 		se_restore_imem_state(priv, &load_fw->imem);
 
-	return 0;
+	return ret;
 }
 
 static const struct dev_pm_ops se_pm = {
