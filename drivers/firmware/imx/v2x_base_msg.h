@@ -25,6 +25,17 @@
 #define V2X_PERM_DENIED_FAIL_IND	0xF329
 #define V2X_INVAL_OPS_FAIL_IND		0xC029
 
+#define V2X_DEBUG_MU_MSG_VERS		0x02
+#define V2X_DEBUG_MU_MSG_CMD_TAG	0x17
+#define V2X_DEBUG_MU_MSG_RSP_TAG	0xE1
+
+#define V2X_MAX_DBG_DMP_PKT		15
+#define V2X_NON_DUMP_BUFFER_SZ		3
+#define V2X_DEBUG_DUMP_REQ		0x02
+#define V2X_DEBUG_DUMP_REQ_SZ		0x08
+#define V2X_DEBUG_DUMP_RSP_SZ		0x5c
+
 int v2x_start_rng(struct se_if_priv *priv);
 int v2x_pwr_state(struct se_if_priv *priv, u16 action);
+int v2x_debug_dump(struct se_if_priv *priv);
 #endif
