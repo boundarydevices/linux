@@ -497,7 +497,6 @@
 &iomuxc {
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
-			MX93_PAD_CCM_CLKO1__GPIO3_IO26                          0x31e /* CSI0_EN */
 			MX93_PAD_ENET1_MDC__ENET_QOS_MDC			0x57e
 			MX93_PAD_ENET1_MDIO__ENET_QOS_MDIO			0x57e
 			MX93_PAD_ENET1_RD0__ENET_QOS_RGMII_RD0			0x37e
