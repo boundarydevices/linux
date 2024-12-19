@@ -272,15 +272,24 @@ struct kvm_pinned_page {
 	struct rb_node		node;
 	struct page		*page;
 	u64			ipa;
+	u64			__subtree_last;
 	bool			dirty;
+	u8			order;
 };
+
+struct kvm_pinned_page
+*kvm_pinned_pages_iter_first(struct rb_root_cached *root, u64 start, u64 end);
+struct kvm_pinned_page
+*kvm_pinned_pages_iter_next(struct kvm_pinned_page *ppage, u64 start, u64 end);
+void kvm_pinned_pages_remove(struct kvm_pinned_page *ppage,
+			     struct rb_root_cached *root);
 
 typedef unsigned int pkvm_handle_t;
 
 struct kvm_protected_vm {
 	pkvm_handle_t handle;
 	struct kvm_hyp_memcache stage2_teardown_mc;
-	struct rb_root pinned_pages;
+	struct rb_root_cached pinned_pages;
 	gpa_t pvmfw_load_addr;
 	bool enabled;
 };
