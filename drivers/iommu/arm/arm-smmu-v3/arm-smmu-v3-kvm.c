@@ -13,9 +13,8 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 
-#include <kvm/arm_smmu_v3.h>
-
 #include "arm-smmu-v3.h"
+#include "pkvm/arm_smmu_v3.h"
 
 extern struct kvm_iommu_ops kvm_nvhe_sym(smmu_ops);
 

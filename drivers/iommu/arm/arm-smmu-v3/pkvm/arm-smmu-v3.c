@@ -6,7 +6,6 @@
  */
 #include <asm/arm-smmu-v3-common.h>
 #include <asm/kvm_hyp.h>
-#include <kvm/arm_smmu_v3.h>
 #include <linux/io-pgtable-arm.h>
 #include <nvhe/alloc.h>
 #include <nvhe/iommu.h>
@@ -14,6 +13,8 @@
 #include <nvhe/mm.h>
 #include <nvhe/pkvm.h>
 #include <nvhe/trap_handler.h>
+
+#include "arm_smmu_v3.h"
 
 #define ARM_SMMU_POLL_TIMEOUT_US	100000 /* 100ms arbitrary timeout */
 
