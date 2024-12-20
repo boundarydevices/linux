@@ -35,7 +35,7 @@ int kvm_iommu_register_driver(struct kvm_iommu_driver *kern_ops, struct kvm_iomm
 
 int kvm_iommu_init_driver(void)
 {
-	if (WARN_ON(!smp_load_acquire(&iommu_driver))) {
+	if (!smp_load_acquire(&iommu_driver)) {
 		kvm_err("pKVM enabled without an IOMMU driver, do not run confidential workloads in virtual machines\n");
 		return 0;
 	}
