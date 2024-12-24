@@ -1049,18 +1049,19 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 		return ret;
 	}
 
+	pkvm_el2_mod_add(mod);
+
 	offset = (size_t)((void *)mod->init - start);
 	ret = kvm_call_hyp_nvhe(__pkvm_init_module, hyp_va + offset);
 	if (ret) {
 		kvm_err("Failed to init EL2 module: %d\n", ret);
+		list_del(&mod->node);
 		pkvm_unmap_module_sections(secs_map, hyp_va, ARRAY_SIZE(secs_map));
 		module_put(this);
 		return ret;
 	}
 
 	hyp_trace_enable_event_early();
-
-	pkvm_el2_mod_add(mod);
 
 	return 0;
 }
