@@ -22,6 +22,7 @@
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-dma-contig.h>
+#include <linux/dma-buf.h>
 
 #include "mtk_jpeg_enc_hw.h"
 #include "mtk_jpeg_dec_hw.h"
@@ -804,6 +805,30 @@ static int mtk_jpeg_buf_prepare(struct vb2_buffer *vb)
 	return 0;
 }
 
+static void mtk_jpeg_buf_finish(struct vb2_buffer *vb)
+{
+	struct mtk_jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+
+	if (vb->vb2_queue->memory == VB2_MEMORY_DMABUF &&
+	    vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE &&
+	    vb->planes[0].bytesused > 0) {
+		struct dma_buf_attachment *buf_att;
+		struct sg_table *sgt;
+
+		if (vb->planes[0].dbuf == NULL)
+			return;
+
+		buf_att = dma_buf_attach(vb->planes[0].dbuf,
+					 ctx->jpeg->dev);
+
+		sgt = dma_buf_map_attachment(buf_att, DMA_TO_DEVICE);
+		dma_buf_begin_cpu_access(vb->planes[0].dbuf,
+					 DMA_FROM_DEVICE);
+		dma_buf_unmap_attachment(buf_att, sgt, DMA_TO_DEVICE);
+		dma_buf_detach(vb->planes[0].dbuf, buf_att);
+	}
+}
+
 static bool mtk_jpeg_check_resolution_change(struct mtk_jpeg_ctx *ctx,
 					     struct mtk_jpeg_dec_param *param)
 {
@@ -1012,6 +1037,7 @@ static const struct vb2_ops mtk_jpeg_enc_qops = {
 	.buf_queue          = mtk_jpeg_enc_buf_queue,
 	.wait_prepare       = vb2_ops_wait_prepare,
 	.wait_finish        = vb2_ops_wait_finish,
+	.buf_finish         = mtk_jpeg_buf_finish,
 	.stop_streaming     = mtk_jpeg_enc_stop_streaming,
 };
 
@@ -2128,3 +2154,4 @@ module_platform_driver(mtk_jpeg_driver);
 
 MODULE_DESCRIPTION("MediaTek JPEG codec driver");
 MODULE_LICENSE("GPL v2");
+MODULE_IMPORT_NS(DMA_BUF);
