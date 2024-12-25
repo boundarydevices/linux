@@ -28,24 +28,7 @@
 #include "wave6-vdi.h"
 #include "wave6-vpu-ctrl.h"
 
-#define wave6_wait_event_freezable_timeout(wq_head, condition, timeout)	 \
-({                                                                       \
-	int wave6_wait_ret = 0;                                          \
-	unsigned long _timeout = timeout;                                \
-	unsigned long stop;                                              \
-	stop = jiffies + _timeout;                                       \
-	do {                                                             \
-		if (wave6_wait_ret == -ERESTARTSYS && freezing(current)) \
-			clear_thread_flag(TIF_SIGPENDING);               \
-		_timeout = stop - jiffies;                               \
-		if ((long)_timeout <= 0) {                               \
-			wave6_wait_ret = -ERESTARTSYS;                   \
-			break;                                           \
-		}                                                        \
-		wave6_wait_ret = wait_event_freezable_timeout(wq_head, condition, _timeout); \
-	} while (wave6_wait_ret == -ERESTARTSYS && freezing(current));   \
-	wave6_wait_ret;                                                  \
-})
+#define VPU_CTRL_PLATFORM_DEVICE_NAME "wave6-vpu-ctrl"
 
 static unsigned int debug;
 module_param(debug, uint, 0644);
@@ -53,16 +36,40 @@ module_param(debug, uint, 0644);
 static unsigned int reload_firmware;
 module_param(reload_firmware, uint, 0644);
 
+static bool wave6_cooling_disable;
+module_param(wave6_cooling_disable, bool, 0644);
+MODULE_PARM_DESC(wave6_cooling_disable, "enable or disable cooling");
+
 #define dprintk(dev, fmt, arg...)					\
 	do {								\
 		if (debug)						\
 			dev_info(dev, fmt, ## arg);			\
 	} while (0)
 
+#define wave6_wait_event_freezable_timeout(wq_head, condition, timeout)		\
+({										\
+	int wave6_wait_ret = 0;							\
+	unsigned long _timeout = timeout;					\
+	unsigned long stop;							\
+	stop = jiffies + _timeout;						\
+	do {									\
+		if (wave6_wait_ret == -ERESTARTSYS && freezing(current))	\
+			clear_thread_flag(TIF_SIGPENDING);			\
+		_timeout = stop - jiffies;					\
+		if ((long)_timeout <= 0) {					\
+			wave6_wait_ret = -ERESTARTSYS;				\
+			break;							\
+		}								\
+		wave6_wait_ret = wait_event_freezable_timeout(wq_head, condition, _timeout);	\
+	} while (wave6_wait_ret == -ERESTARTSYS && freezing(current));		\
+	wave6_wait_ret;								\
+})
+
 struct vpu_ctrl_resource {
 	const char *fw_name;
 	u32 sram_size;
 };
+
 
 #define WAVE6_ENABLE_SW_UART	1
 
@@ -91,10 +98,6 @@ struct vpu_ctrl_buf {
 	struct vpu_buf buf;
 };
 
-static int wave6_cooling_disable;
-module_param(wave6_cooling_disable, int, 0644);
-MODULE_PARM_DESC(wave6_cooling_disable, "enable or disable cooling");
-
 struct vpu_ctrl {
 	struct device *dev;
 	void __iomem *reg_base;
@@ -102,7 +105,7 @@ struct vpu_ctrl {
 	int num_clks;
 	struct vpu_dma_buf boot_mem;
 	u32 state;
-	struct mutex ctrl_lock;
+	struct mutex ctrl_lock; /* the lock for vpu control device */
 	struct wave6_vpu_entity *current_entity;
 	struct list_head entities;
 	const struct vpu_ctrl_resource *res;
@@ -110,7 +113,7 @@ struct vpu_ctrl {
 	struct vpu_dma_buf sram_buf;
 	struct list_head buffers;
 	bool support_follower;
-	wait_queue_head_t  load_fw_wq;
+	wait_queue_head_t load_fw_wq;
 #if WAVE6_ENABLE_SW_UART
 	struct vpu_buf loger_buf;
 	struct loger_t *loger;
@@ -119,18 +122,19 @@ struct vpu_ctrl {
 	int thermal_event;
 	int thermal_max;
 	struct thermal_cooling_device *cooling;
-	struct dev_pm_domain_list  *pd_list;
+	struct dev_pm_domain_list *pd_list;
 	struct device *dev_perf;
 	int clk_id;
 	unsigned long *freq_table;
 };
 
-#define DOMAIN_VPU_PWR  0
-#define DOMAIN_VPU_PERF 1
+#define DOMAIN_VPU_PWR	0
+#define DOMAIN_VPU_PERF	1
 
 static const struct vpu_ctrl_resource wave633c_ctrl_data = {
 	.fw_name = "wave633c_codec_fw.bin",
-	.sram_size = 0x18000,
+	/* For HEVC, AVC, 4096x4096, 8bit */
+	.sram_size = 0x14800,
 };
 
 #if WAVE6_ENABLE_SW_UART
@@ -226,7 +230,7 @@ static void wave6_vpu_ctrl_create_debugfs(struct vpu_ctrl *ctrl)
 
 	if (!wave6_dbgfs)
 		wave6_dbgfs = debugfs_create_dir("wave6", NULL);
-	if (!wave6_dbgfs)
+	if (IS_ERR_OR_NULL(wave6_dbgfs))
 		return;
 
 	ctrl->debugfs = debugfs_create_file("fwlog",
@@ -253,111 +257,6 @@ static void wave6_vpu_ctrl_writel(struct device *dev, u32 addr, u32 data)
 	writel(data, ctrl->reg_base + addr);
 }
 
-static void byte_swap(unsigned char *data, int len)
-{
-	u8 temp;
-	int i;
-
-	for (i = 0; i < len; i += 2) {
-		temp = data[i];
-		data[i] = data[i + 1];
-		data[i + 1] = temp;
-	}
-}
-
-static void word_swap(unsigned char *data, int len)
-{
-	u16 temp;
-	u16 *ptr = (u16 *)data;
-	int i;
-	s32 size = len / sizeof(uint16_t);
-
-	for (i = 0; i < size; i += 2) {
-		temp = ptr[i];
-		ptr[i] = ptr[i + 1];
-		ptr[i + 1] = temp;
-	}
-}
-
-static void dword_swap(unsigned char *data, int len)
-{
-	u32 temp;
-	u32 *ptr = (u32 *)data;
-	s32 size = len / sizeof(uint32_t);
-	int i;
-
-	for (i = 0; i < size; i += 2) {
-		temp = ptr[i];
-		ptr[i] = ptr[i + 1];
-		ptr[i + 1] = temp;
-	}
-}
-
-static void lword_swap(unsigned char *data, int len)
-{
-	u64 temp;
-	u64 *ptr = (u64 *)data;
-	s32 size = len / sizeof(uint64_t);
-	int i;
-
-	for (i = 0; i < size; i += 2) {
-		temp = ptr[i];
-		ptr[i] = ptr[i + 1];
-		ptr[i + 1] = temp;
-	}
-}
-
-int wave6_convert_endian(unsigned int endian)
-{
-	switch (endian) {
-	case VDI_LITTLE_ENDIAN:
-		endian = 0x00;
-		break;
-	case VDI_BIG_ENDIAN:
-		endian = 0x0f;
-		break;
-	case VDI_32BIT_LITTLE_ENDIAN:
-		endian = 0x04;
-		break;
-	case VDI_32BIT_BIG_ENDIAN:
-		endian = 0x03;
-		break;
-	}
-
-	return (endian & 0x0f);
-}
-EXPORT_SYMBOL_GPL(wave6_convert_endian);
-
-void wave6_swap_endian(u8 *data, int len, int endian)
-{
-	int changes;
-	int sys_endian;
-	bool byte_change, word_change, dword_change, lword_change;
-
-	sys_endian = VDI_128BIT_LITTLE_ENDIAN;
-
-	endian = wave6_convert_endian(endian);
-	sys_endian = wave6_convert_endian(sys_endian);
-	if (endian == sys_endian)
-		return;
-
-	changes = endian ^ sys_endian;
-	byte_change = changes & 0x01;
-	word_change = ((changes & 0x02) == 0x02);
-	dword_change = ((changes & 0x04) == 0x04);
-	lword_change = ((changes & 0x08) == 0x08);
-
-	if (byte_change)
-		byte_swap(data, len);
-	if (word_change)
-		word_swap(data, len);
-	if (dword_change)
-		dword_swap(data, len);
-	if (lword_change)
-		lword_swap(data, len);
-}
-EXPORT_SYMBOL_GPL(wave6_swap_endian);
-
 int wave6_alloc_dma(struct device *dev, struct vpu_buf *vb)
 {
 	void *vaddr;
@@ -378,7 +277,7 @@ int wave6_alloc_dma(struct device *dev, struct vpu_buf *vb)
 }
 EXPORT_SYMBOL_GPL(wave6_alloc_dma);
 
-int wave6_write_dma(struct vpu_buf *vb, size_t offset, u8 *data, int len, int endian)
+int wave6_write_dma(struct vpu_buf *vb, size_t offset, u8 *data, int len)
 {
 	if (!vb)
 		return -EINVAL;
@@ -393,9 +292,7 @@ int wave6_write_dma(struct vpu_buf *vb, size_t offset, u8 *data, int len, int en
 		return -ENOSPC;
 	}
 
-	wave6_swap_endian(data, len, endian);
 	memcpy(vb->vaddr + offset, data, len);
-
 	return len;
 }
 EXPORT_SYMBOL_GPL(wave6_write_dma);
@@ -481,6 +378,7 @@ static int wave6_vpu_ctrl_init_vpu(struct vpu_ctrl *ctrl)
 	int ret;
 
 	dprintk(ctrl->dev, "cold boot vpu\n");
+
 	entity->write_reg(entity->dev, W6_VPU_BUSY_STATUS, 1);
 	entity->write_reg(entity->dev, W6_CMD_INIT_VPU_SEC_AXI_BASE_CORE0,
 				       ctrl->sram_buf.dma_addr);
@@ -521,6 +419,7 @@ static void wave6_vpu_ctrl_clear_firmware_buffers(struct vpu_ctrl *ctrl,
 	int ret;
 
 	dprintk(ctrl->dev, "clear firmware work buffers\n");
+
 	entity->write_reg(entity->dev, W6_VPU_BUSY_STATUS, 1);
 	entity->write_reg(entity->dev, W6_COMMAND, W6_INIT_WORK_BUF);
 	entity->write_reg(entity->dev, W6_VPU_HOST_INT_REQ, 1);
@@ -577,6 +476,7 @@ static void wave6_vpu_ctrl_clear_buffers(struct vpu_ctrl *ctrl)
 	struct vpu_ctrl_buf *pbuf, *tmp;
 
 	dprintk(ctrl->dev, "clear all buffers\n");
+
 	entity = list_first_entry_or_null(&ctrl->entities,
 					  struct wave6_vpu_entity, list);
 	if (entity)
@@ -596,13 +496,13 @@ static void wave6_vpu_ctrl_boot_done(struct vpu_ctrl *ctrl, int wakeup)
 	if (ctrl->state == WAVE6_VPU_STATE_ON)
 		return;
 
-	dprintk(ctrl->dev, "boot done from %s\n", wakeup ? "wakeup" : "cold boot");
-
 	if (!wakeup)
 		wave6_vpu_ctrl_clear_buffers(ctrl);
 
 	list_for_each_entry(entity, &ctrl->entities, list)
 		wave6_vpu_ctrl_on_boot(entity);
+
+	dprintk(ctrl->dev, "boot done from %s\n", wakeup ? "wakeup" : "cold boot");
 
 	wave6_vpu_ctrl_set_state(ctrl, WAVE6_VPU_STATE_ON);
 }
@@ -637,8 +537,6 @@ static void wave6_vpu_ctrl_load_firmware(const struct firmware *fw, void *contex
 		return;
 	}
 
-	dprintk(ctrl->dev, "loading firmware\n");
-
 	if (!fw || !fw->data) {
 		dev_err(ctrl->dev, "No firmware.\n");
 		ret = -EINVAL;
@@ -659,7 +557,6 @@ static void wave6_vpu_ctrl_load_firmware(const struct firmware *fw, void *contex
 		goto exit;
 	}
 
-	wave6_swap_endian((u8 *)fw->data, fw->size, VDI_128BIT_LITTLE_ENDIAN);
 	memcpy(ctrl->boot_mem.vaddr, fw->data, fw->size);
 
 exit:
@@ -691,6 +588,7 @@ static int wave6_vpu_ctrl_sleep(struct vpu_ctrl *ctrl, struct wave6_vpu_entity *
 	int ret;
 
 	dprintk(ctrl->dev, "sleep firmware\n");
+
 	entity->write_reg(entity->dev, W6_VPU_BUSY_STATUS, 1);
 	entity->write_reg(entity->dev, W6_CMD_INSTANCE_INFO, (0 << 16) | 0);
 	entity->write_reg(entity->dev, W6_COMMAND, W6_SLEEP_VPU);
@@ -720,6 +618,7 @@ static int wave6_vpu_ctrl_wakeup(struct vpu_ctrl *ctrl, struct wave6_vpu_entity 
 	int ret;
 
 	dprintk(ctrl->dev, "wakeup firmware\n");
+
 	wave6_vpu_ctrl_remap_code_buffer(ctrl);
 
 	entity->write_reg(entity->dev, W6_VPU_BUSY_STATUS, 1);
@@ -970,6 +869,7 @@ static int wave6_vpu_ctrl_thermal_update(struct device *dev, int state)
 	new_clock_rate = DIV_ROUND_UP(ctrl->freq_table[state], HZ_PER_KHZ);
 	dev_dbg(dev, "receive cooling set state: %d, new clock rate %ld\n",
 		state, new_clock_rate);
+
 	ret = dev_pm_genpd_set_performance_state(ctrl->dev_perf, new_clock_rate);
 	dev_dbg(dev, "clk set to %lu\n", clk_get_rate(ctrl->clks[ctrl->clk_id].clk));
 	if (ret && !((ret == -ENODEV) || (ret == -EOPNOTSUPP))) {
@@ -981,16 +881,17 @@ static int wave6_vpu_ctrl_thermal_update(struct device *dev, int state)
 }
 
 static int wave6_cooling_get_max_state(struct thermal_cooling_device *cdev,
-	unsigned long *state)
+				       unsigned long *state)
 {
 	struct vpu_ctrl *ctrl = cdev->devdata;
 
 	*state = ctrl->thermal_max;
+
 	return 0;
 }
 
 static int wave6_cooling_get_cur_state(struct thermal_cooling_device *cdev,
-	unsigned long *state)
+				       unsigned long *state)
 {
 	struct vpu_ctrl *ctrl = cdev->devdata;
 
@@ -1000,7 +901,7 @@ static int wave6_cooling_get_cur_state(struct thermal_cooling_device *cdev,
 }
 
 static int wave6_cooling_set_cur_state(struct thermal_cooling_device *cdev,
-	unsigned long state)
+				       unsigned long state)
 {
 	struct vpu_ctrl *ctrl = cdev->devdata;
 	struct wave6_vpu_entity *entity;
@@ -1064,15 +965,17 @@ static void wave6_cooling_init(struct vpu_ctrl *ctrl)
 	unsigned long freq;
 
 	ctrl->clk_id = -1;
-	for (i = 0; i < ctrl->num_clks; i++)
+	for (i = 0; i < ctrl->num_clks; i++) {
 		if (!strcmp("vpu", ctrl->clks[i].id)) {
 			ctrl->clk_id = i;
 			break;
 		}
+	}
 	if (ctrl->clk_id == -1) {
 		dev_err(ctrl->dev, "cooling device unable to get clock\n");
 		return;
 	}
+
 	ret = dev_pm_domain_attach_list(ctrl->dev, &pd_data, &ctrl->pd_list);
 	ctrl->dev_perf = NULL;
 	if (ret < 0)
@@ -1088,6 +991,7 @@ static void wave6_cooling_init(struct vpu_ctrl *ctrl)
 		dev_err(ctrl->dev, "fail to get pm opp count, ret = %d\n", num_opps);
 		goto error;
 	}
+
 	ctrl->freq_table = kcalloc(num_opps, sizeof(*ctrl->freq_table), GFP_KERNEL);
 	if (!ctrl->freq_table)
 		goto error;
@@ -1098,26 +1002,31 @@ static void wave6_cooling_init(struct vpu_ctrl *ctrl)
 		opp = dev_pm_opp_find_freq_floor(ctrl->dev_perf, &freq);
 		if (IS_ERR(opp))
 			break;
+
 		dev_pm_opp_put(opp);
 
 		dev_dbg(ctrl->dev, "[%d] = %ld\n", i, freq);
 		if (freq < 100 * HZ_PER_MHZ)
 			break;
+
 		ctrl->freq_table[i] = freq;
 		ctrl->thermal_max = i;
 	}
+
 	if (!ctrl->thermal_max)
 		goto error;
 
 	ctrl->thermal_event = 0;
 	ctrl->cooling = thermal_of_cooling_device_register(ctrl->dev->of_node,
-		(char *)dev_name(ctrl->dev), ctrl, &wave6_cooling_ops);
+							   (char *)dev_name(ctrl->dev),
+							   ctrl,
+							   &wave6_cooling_ops);
 	if (IS_ERR(ctrl->cooling)) {
 		dev_err(ctrl->dev, "register cooling device failed\n");
 		goto error;
 	}
-	return;
 
+	return;
 error:
 	wave6_cooling_remove(ctrl);
 }
@@ -1130,8 +1039,11 @@ static int wave6_vpu_ctrl_probe(struct platform_device *pdev)
 	int ret;
 
 	/* physical addresses limited to 32 bits */
-	dma_set_mask(&pdev->dev, DMA_BIT_MASK(32));
-	dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));
+	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (ret < 0) {
+		dev_err(&pdev->dev, "dma_set_mask_and_coherent failed: %d\n", ret);
+		return ret;
+	}
 
 	res = of_device_get_match_data(&pdev->dev);
 	if (!res)
@@ -1141,6 +1053,10 @@ static int wave6_vpu_ctrl_probe(struct platform_device *pdev)
 	if (!ctrl)
 		return -ENOMEM;
 
+	mutex_init(&ctrl->ctrl_lock);
+	init_waitqueue_head(&ctrl->load_fw_wq);
+	INIT_LIST_HEAD(&ctrl->entities);
+	INIT_LIST_HEAD(&ctrl->buffers);
 	dev_set_drvdata(&pdev->dev, ctrl);
 	ctrl->dev = &pdev->dev;
 	ctrl->res = res;
@@ -1189,10 +1105,10 @@ static int wave6_vpu_ctrl_probe(struct platform_device *pdev)
 			 &ctrl->sram_buf.phys_addr, &ctrl->sram_buf.dma_addr, ctrl->sram_buf.size);
 	}
 
-	mutex_init(&ctrl->ctrl_lock);
-	init_waitqueue_head(&ctrl->load_fw_wq);
-	INIT_LIST_HEAD(&ctrl->entities);
-	INIT_LIST_HEAD(&ctrl->buffers);
+	if (of_find_property(pdev->dev.of_node, "support-follower", NULL))
+		ctrl->support_follower = true;
+
+	wave6_cooling_init(ctrl);
 
 #if WAVE6_ENABLE_SW_UART
 	wave6_vpu_ctrl_init_loger(ctrl);
@@ -1200,11 +1116,6 @@ static int wave6_vpu_ctrl_probe(struct platform_device *pdev)
 #endif
 
 	pm_runtime_enable(&pdev->dev);
-
-	wave6_cooling_init(ctrl);
-
-	if (of_find_property(pdev->dev.of_node, "support-follower", NULL))
-		ctrl->support_follower = true;
 
 	return 0;
 }
@@ -1284,7 +1195,7 @@ MODULE_DEVICE_TABLE(of, wave6_ctrl_ids);
 
 static struct platform_driver wave6_vpu_ctrl_driver = {
 	.driver = {
-		.name = "vpu-ctrl",
+		.name = VPU_CTRL_PLATFORM_DEVICE_NAME,
 		.of_match_table = of_match_ptr(wave6_ctrl_ids),
 		.pm = &wave6_vpu_ctrl_pm_ops,
 	},

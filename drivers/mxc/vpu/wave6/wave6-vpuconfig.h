@@ -36,7 +36,6 @@
 #define W6_MAX_DEC_PIC_WIDTH            4096U
 #define W6_MAX_DEC_PIC_HEIGHT           2304U
 #define W6_DEC_PIC_SIZE_STEP            1
-#define W6_MAX_FB_NUM                   31
 
 #define W6_DEF_ENC_PIC_WIDTH            416U
 #define W6_DEF_ENC_PIC_HEIGHT           240U
@@ -50,12 +49,8 @@
 
 #define W6_VPU_POLL_TIMEOUT             300000
 #define W6_BOOT_WAIT_TIMEOUT            10000
-
-//  application specific configuration
 #define W6_VPU_TIMEOUT                  6000
 #define W6_VPU_TIMEOUT_CYCLE_COUNT      (8000000 * 4 * 4)
-#define VPU_ENC_TIMEOUT                 6000
-#define VPU_DEC_TIMEOUT                 6000
 
 #define HOST_ENDIAN                     VDI_128BIT_LITTLE_ENDIAN
 #define VPU_FRAME_ENDIAN                HOST_ENDIAN
