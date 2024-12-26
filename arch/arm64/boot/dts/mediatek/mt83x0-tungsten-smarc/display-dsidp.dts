@@ -1,50 +1,24 @@
 /dts-v1/;
 /plugin/;
 
+#include "display-dsi.dts"
+
 / {
-	fragment@0 {
+	fragment@8 {
 		target = <&dp_tx>;
 		__overlay__ {
 			status = "okay";
 		};
 	};
 
-	fragment@1 {
+	fragment@9 {
 		target = <&dp_intf1>;
 		__overlay__ {
 			status = "okay";
 		};
 	};
 
-	fragment@2 {
-		target = <&dpi1>;
-		__overlay__ {
-			status = "disabled";
-		};
-	};
-
-	fragment@3 {
-		target = <&hdmi0>;
-		__overlay__ {
-			status = "disabled";
-		};
-	};
-
-	fragment@4 {
-		target = <&hdmi_phy>;
-		__overlay__ {
-			status = "disabled";
-		};
-	};
-
-	fragment@5 {
-		target = <&cec>;
-		__overlay__ {
-			status = "disabled";
-		};
-	};
-
-	fragment@6 {
+	fragment@10 {
 		target = <&sound>;
 		__overlay__ {
 			dai-link-1 { /* HDMI */
