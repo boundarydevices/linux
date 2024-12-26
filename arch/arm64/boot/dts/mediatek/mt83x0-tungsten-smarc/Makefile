@@ -9,6 +9,7 @@ dtbo-$(CONFIG_ARCH_MEDIATEK) += \
 	display-dsidp.dtbo \
 	display-dsi.dtbo \
 	display-dsiedp.dtbo \
+	display-dsihdmi.dtbo \
 	display-edpdp.dtbo \
 	display-edp.dtbo \
 	display-edphdmi.dtbo \

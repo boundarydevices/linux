@@ -1,0 +1,12 @@
+/dts-v1/;
+/plugin/;
+
+#include "display-dsi.dts"
+
+/ {
+	/delete-node/ fragment@0;
+	/delete-node/ fragment@1;
+	/delete-node/ fragment@2;
+	/delete-node/ fragment@3;
+	/delete-node/ fragment@4;
+};
