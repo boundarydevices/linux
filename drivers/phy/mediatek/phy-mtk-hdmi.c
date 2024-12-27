@@ -125,10 +125,10 @@ static int mtk_hdmi_phy_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return dev_err_probe(dev, ret, "Failed to get ibias\n");
 
-	ret = of_property_read_u32(dev->of_node, "mediatek,ibias_up",
+	ret = of_property_read_u32(dev->of_node, "mediatek,ibias-up",
 				   &hdmi_phy->ibias_up);
 	if (ret < 0)
-		return dev_err_probe(dev, ret, "Failed to get ibias_up\n");
+		return dev_err_probe(dev, ret, "Failed to get ibias-up\n");
 
 	dev_info(dev, "Using default TX DRV impedance: 4.2k/36\n");
 	hdmi_phy->drv_imp_clk = 0x30;
