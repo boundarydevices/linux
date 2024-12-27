@@ -478,6 +478,20 @@ static int mtk_hdmi_phy_configure(struct phy *phy, union phy_configure_opts *opt
 	return ret;
 }
 
+static void mtk_hdmi_power_control(struct mtk_hdmi_phy *hdmi_phy, bool enable)
+{
+	void __iomem *regs = hdmi_phy->regs;
+
+	dev_dbg(hdmi_phy->dev, "%s: enable = %d\n", __func__, enable);
+
+	pr_notice("%s: enable = %d\n", __func__, enable);
+
+	if (enable)
+		mtk_phy_set_bits(regs + HDMI_CTL_1, RG_HDMITX_PWR5V_O);
+	else
+		mtk_phy_clear_bits(regs + HDMI_CTL_1, RG_HDMITX_PWR5V_O);
+}
+
 struct mtk_hdmi_phy_conf mtk_hdmi_phy_8195_conf = {
 	/* TODO: CLK_SET_RATE_GATE causes hdmi_txpll clock
 	 * set_rate() fails. We need to adjust client
@@ -488,6 +502,7 @@ struct mtk_hdmi_phy_conf mtk_hdmi_phy_8195_conf = {
 	.hdmi_phy_enable_tmds = mtk_hdmi_phy_enable_tmds,
 	.hdmi_phy_disable_tmds = mtk_hdmi_phy_disable_tmds,
 	.hdmi_phy_configure = mtk_hdmi_phy_configure,
+	.power_control = mtk_hdmi_power_control,
 };
 
 MODULE_AUTHOR("Can Zeng <can.zeng@mediatek.com>");

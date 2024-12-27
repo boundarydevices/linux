@@ -220,6 +220,7 @@ struct mtk_hdmi_phy_conf mtk_hdmi_phy_2701_conf = {
 	.hdmi_phy_clk_ops = &mtk_hdmi_phy_pll_ops,
 	.hdmi_phy_enable_tmds = mtk_hdmi_phy_enable_tmds,
 	.hdmi_phy_disable_tmds = mtk_hdmi_phy_disable_tmds,
+	.power_control = NULL,
 };
 
 MODULE_AUTHOR("Chunhui Dai <chunhui.dai@mediatek.com>");

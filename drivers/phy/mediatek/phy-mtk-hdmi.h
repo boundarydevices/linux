@@ -24,6 +24,7 @@ struct mtk_hdmi_phy_conf {
 	void (*hdmi_phy_enable_tmds)(struct mtk_hdmi_phy *hdmi_phy);
 	void (*hdmi_phy_disable_tmds)(struct mtk_hdmi_phy *hdmi_phy);
 	int (*hdmi_phy_configure)(struct phy *phy, union phy_configure_opts *opts);
+	void (*power_control)(struct mtk_hdmi_phy *hdmi_phy, bool enable);
 };
 
 struct mtk_hdmi_phy {
