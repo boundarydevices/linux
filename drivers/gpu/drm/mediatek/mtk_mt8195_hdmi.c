@@ -1233,7 +1233,7 @@ static enum hdmi_hpd_state mtk_hdmi_hpd_pord_status(struct mtk_hdmi *hdmi)
 	if ((hpd_status & (HPD_PIN_STA | PORD_PIN_STA)) ==
 	    (HPD_PIN_STA | PORD_PIN_STA))
 		return HDMI_PLUG_IN_AND_SINK_POWER_ON;
-	else if ((hpd_status & (HPD_PIN_STA | PORD_PIN_STA)) == PORD_PIN_STA)
+	else if ((hpd_status & (HPD_PIN_STA | PORD_PIN_STA)) == HPD_PIN_STA)
 		return HDMI_PLUG_IN_ONLY;
 	else
 		return HDMI_PLUG_OUT;
