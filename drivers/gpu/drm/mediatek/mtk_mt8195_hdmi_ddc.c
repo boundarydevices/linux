@@ -423,6 +423,7 @@ static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter, struct i2c_msg *msgs,
 	struct device *dev;
 	int ret;
 	int i;
+	unsigned char offset = 0;
 
 	if (!adapter || !msgs)
 		return -EINVAL;
@@ -439,12 +440,25 @@ static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter, struct i2c_msg *msgs,
 		if (!msg->buf)
 			return -EINVAL;
 
-		if (msg->flags & I2C_M_RD)
-			ret = fg_ddc_data_read(ddc, msg->addr, msg->buf[0],
+		if (msg->flags & I2C_M_RD) {
+			/* The underlying DDC hardware always issue a write request
+			 * that assigns the read offset as part of the read operation.
+			 * Therefore we need to use the offset value assigned
+			 * in the previous write request from the drm_edid.c
+			 */
+			ret = fg_ddc_data_read(ddc, msg->addr,
+						offset, /* determined by previous write requests */
 					    (msg->len), &msg->buf[0]);
-		else
+		} else {
 			ret = fg_ddc_data_write(ddc, msg->addr, msg->buf[0],
 					     (msg->len - 1), &msg->buf[1]);
+
+			/* we store the offset value requested by drm_edid framework
+			 * to use in subsequent read requests.
+			 */
+			if (DDC_ADDR == msg->addr && 1 == msg->len)
+				offset = msg->buf[0];
+		}
 
 		if (ret <= 0)
 			goto xfer_end;
