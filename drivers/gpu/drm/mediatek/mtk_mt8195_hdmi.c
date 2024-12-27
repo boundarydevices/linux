@@ -56,6 +56,11 @@
 	(((msb & 0xff) << 24) + ((b1 & 0xff) << 16) + ((b2 & 0xff) << 8) +     \
 	 ((lsb & 0xff)))
 
+// Define MTK hardware-specific buffer size for HW alignment required.
+// It greater than or equal to the size defined in HDMI specification.
+#define MT8195_HDMI_SPD_BUFFER_SIZE (31)
+#define MT8195_HDMI_AVI_BUFFER_SIZE (17)
+
 static inline struct mtk_hdmi *hdmi_ctx_from_conn(struct drm_connector *c)
 {
 	return container_of(c, struct mtk_hdmi, conn);
@@ -1526,8 +1531,8 @@ static void mtk_hdmi_bridge_post_disable(struct drm_bridge *bridge)
 static void mtk_hdmi_bridge_pre_enable(struct drm_bridge *bridge)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
-	u8 buffer_spd[HDMI_INFOFRAME_HEADER_SIZE + HDMI_SPD_INFOFRAME_SIZE];
-	u8 buffer_avi[HDMI_INFOFRAME_HEADER_SIZE + HDMI_AVI_INFOFRAME_SIZE];
+	u8 buffer_spd[MT8195_HDMI_SPD_BUFFER_SIZE];
+	u8 buffer_avi[MT8195_HDMI_AVI_BUFFER_SIZE];
 	union phy_configure_opts opts = {
 		.dp = { .link_rate = hdmi->mode.clock * 1000 }
 	};
