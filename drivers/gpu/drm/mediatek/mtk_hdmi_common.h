@@ -226,6 +226,7 @@ void mtk_hdmi_send_infoframe(struct mtk_hdmi *hdmi, u8 *buffer_spd, size_t bufsz
 			     u8 *buffer_avi, size_t bufsz_avi, struct drm_display_mode *mode);
 int mtk_hdmi_get_all_clk(struct mtk_hdmi *hdmi, struct device_node *np,
 			 const char *const *clk_names, size_t num_clocks);
+void mtk_hdmi_show_EDID_raw_data(struct mtk_hdmi *hdmi, struct edid *edid);
 struct edid *mtk_hdmi_bridge_get_edid(struct drm_bridge *bridge,
 				      struct drm_connector *connector);
 bool mtk_hdmi_bridge_mode_fixup(struct drm_bridge *bridge,

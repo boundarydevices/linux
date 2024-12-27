@@ -1202,6 +1202,8 @@ void mtk_hdmi_clk_enable(struct mtk_hdmi *hdmi)
 {
 	int i;
 
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],enable clock new\n", __func__, __LINE__);
+
 	clk_set_parent(hdmi->clk[MTK_MT8195_HDMI_HDCP_SEL],
 		       hdmi->clk[MTK_MT8195_HDMI_HDCP_PARENT]);
 
@@ -1216,6 +1218,8 @@ void mtk_hdmi_clk_enable(struct mtk_hdmi *hdmi)
 void mtk_hdmi_clk_disable_mt8195(struct mtk_hdmi *hdmi)
 {
 	int i;
+
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],disable clock\n", __func__, __LINE__);
 
 	for (i = 0; i < ARRAY_SIZE(mtk_hdmi_clk_names_mt8195); i++) {
 		if (i == MTK_MT8195_HDMI_HDCP_PARENT)
@@ -1238,6 +1242,8 @@ static enum hdmi_hpd_state mtk_hdmi_hpd_pord_status(struct mtk_hdmi *hdmi)
 	unsigned int hpd_status;
 
 	hpd_status = mtk_hdmi_read(hdmi, HPD_DDC_STATUS);
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],hpd status:0x%x\n",
+			    __func__, __LINE__, hpd_status);
 	if ((hpd_status & (HPD_PIN_STA | PORD_PIN_STA)) ==
 	    (HPD_PIN_STA | PORD_PIN_STA))
 		return HDMI_PLUG_IN_AND_SINK_POWER_ON;
@@ -1254,6 +1260,8 @@ static irqreturn_t mtk_hdmi_isr(int irq, void *arg)
 	int ret = IRQ_HANDLED;
 
 	int_status = mtk_hdmi_read(hdmi, TOP_INT_STA00);
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],int status:0x%X\n",
+			    __func__, __LINE__, int_status);
 
 	/* handle hpd interrupt */
 	if (int_status & (PORD_F_INT_STA | PORD_R_INT_STA | HTPLG_F_INT_STA |
@@ -1278,7 +1286,10 @@ static irqreturn_t mtk_hdmi_hpd_work_handle(int irq, void *arg)
 	msleep(30);
 
 	hpd = mtk_hdmi_hpd_pord_status(hdmi);
+	dev_info(hdmi->dev, "hpd:%d\n", hpd);
+
 	if (hpd != hdmi->hpd) {
+		dev_info(hdmi->dev, "Hot Plug State Change! old:%d, new:%d\n", hdmi->hpd, hpd);
 		hdmi->hpd = hpd;
 		mtk_hdmi_hpd_event(hpd, hdmi->dev);
 	}
@@ -1295,6 +1306,8 @@ static int mtk_hdmi_enable_disable(struct mtk_hdmi *hdmi, bool enable)
 		if (!hdmi->power_clk_enabled) {
 			/* power domain on */
 			ret = pm_runtime_get_sync(hdmi->dev);
+			DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],power domain on %d\n",
+					    __func__, __LINE__, ret);
 
 			/* clk on */
 			mtk_hdmi_clk_enable(hdmi);
@@ -1329,6 +1342,8 @@ static int mtk_hdmi_enable_disable(struct mtk_hdmi *hdmi, bool enable)
 			mtk_hdmi_clk_disable_mt8195(hdmi);
 			/* power domain off */
 			ret = pm_runtime_put_sync(hdmi->dev);
+			DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],power domain off %d\n",
+					    __func__, __LINE__, ret);
 			hdmi->power_clk_enabled = false;
 		}
 	}
@@ -1419,6 +1434,9 @@ static void mtk_hdmi_convert_colorspace_depth(struct mtk_hdmi *hdmi)
 		hdmi->csp = HDMI_COLORSPACE_RGB;
 		hdmi->color_depth = HDMI_8_BIT;
 	}
+
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "color space:%d, color depth:%d\n",
+			    hdmi->csp, hdmi->color_depth);
 }
 
 static int mtk_hdmi_conn_get_modes(struct drm_connector *conn)
@@ -1427,12 +1445,16 @@ static int mtk_hdmi_conn_get_modes(struct drm_connector *conn)
 	struct edid *edid;
 	int ret;
 
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+
 	if (!hdmi->ddc_adpt)
 		return -ENODEV;
 
 	edid = drm_get_edid(conn, hdmi->ddc_adpt);
 	if (!edid)
 		return -ENODEV;
+
+	mtk_hdmi_show_EDID_raw_data(hdmi, edid);
 
 	hdmi->dvi_mode = !drm_detect_hdmi_monitor(edid);
 
@@ -1448,6 +1470,10 @@ static int mtk_hdmi_conn_get_modes(struct drm_connector *conn)
 static int mtk_hdmi_conn_mode_valid(struct drm_connector *conn,
 				    struct drm_display_mode *mode)
 {
+	struct mtk_hdmi *hdmi = hdmi_ctx_from_conn(conn);
+
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+
 	if (mode->clock < 27000)
 		return MODE_CLOCK_LOW;
 	if (mode->clock > 594000)
@@ -1479,6 +1505,8 @@ static int mtk_hdmi_bridge_attach(struct drm_bridge *bridge,
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 	int ret;
 
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+
 	if (!(flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR)) {
 		DRM_ERROR("%s: The flag DRM_BRIDGE_ATTACH_NO_CONNECTOR must be supplied\n",
 				__func__);
@@ -1500,6 +1528,8 @@ static int mtk_hdmi_bridge_attach(struct drm_bridge *bridge,
 static void mtk_hdmi_bridge_disable(struct drm_bridge *bridge)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
+
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
 
 	if (!hdmi->enabled)
 		return;
@@ -1526,6 +1556,8 @@ static void mtk_hdmi_bridge_post_disable(struct drm_bridge *bridge)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+
 	if (!hdmi->powered)
 		return;
 
@@ -1548,6 +1580,8 @@ static void mtk_hdmi_bridge_pre_enable(struct drm_bridge *bridge)
 		.dp = { .link_rate = hdmi->mode.clock * 1000 }
 	};
 
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+
 	mtk_hdmi_convert_colorspace_depth(hdmi);
 	mtk_hdmi_output_set_display_mode(hdmi, &hdmi->mode);
 	phy_configure(hdmi->phy, &opts);
@@ -1564,6 +1598,8 @@ static void mtk_hdmi_bridge_enable(struct drm_bridge *bridge)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+
 	phy_power_on(hdmi->phy);
 	mtk_hdmi_hw_vid_black(hdmi, false);
 	mtk_hdmi_hw_aud_unmute(hdmi);
@@ -1577,6 +1613,8 @@ static void mtk_hdmi_bridge_enable(struct drm_bridge *bridge)
 static enum drm_connector_status mtk_hdmi_bridge_detect(struct drm_bridge *bridge)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
+
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
 
 	if (hdmi->hpd != HDMI_PLUG_IN_AND_SINK_POWER_ON &&
 	    hdmi->hpd != HDMI_PLUG_IN_ONLY) {

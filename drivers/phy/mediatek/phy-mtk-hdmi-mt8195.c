@@ -13,6 +13,8 @@
 #include <linux/units.h>
 #include <linux/nvmem-consumer.h>
 
+#include <drm/drm_print.h>
+
 #include "phy-mtk-io.h"
 #include "phy-mtk-hdmi.h"
 #include "phy-mtk-hdmi-mt8195.h"
@@ -445,10 +447,13 @@ static void vtx_signal_en(struct mtk_hdmi_phy *hdmi_phy, bool on)
 {
 	void __iomem *regs = hdmi_phy->regs;
 
-	if (on)
+	if (on) {
+		DRM_DEV_DEBUG_DRIVER(hdmi_phy->dev, "HDMI Tx TMDS ON\n");
 		mtk_phy_set_bits(regs + HDMI_1_CFG_0, RG_HDMITX21_DRV_EN);
-	else
+	} else {
+		DRM_DEV_DEBUG_DRIVER(hdmi_phy->dev, "HDMI Tx TMDS OFF\n");
 		mtk_phy_clear_bits(regs + HDMI_1_CFG_0, RG_HDMITX21_DRV_EN);
+	}
 }
 
 static void mtk_hdmi_phy_enable_tmds(struct mtk_hdmi_phy *hdmi_phy)

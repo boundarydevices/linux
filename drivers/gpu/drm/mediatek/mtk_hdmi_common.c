@@ -106,17 +106,52 @@ int mtk_hdmi_get_all_clk(struct mtk_hdmi *hdmi, struct device_node *np,
 	return 0;
 }
 
+void mtk_hdmi_show_EDID_raw_data(struct mtk_hdmi *hdmi, struct edid *edid)
+{
+	unsigned short bTemp, i, j;
+	unsigned char *raw;
+	unsigned char *p;
+
+	raw = (unsigned char *)edid;
+
+	for (bTemp = 0; bTemp < (1 + raw[0x7e]); bTemp++) {
+		DRM_DEV_DEBUG_DRIVER(hdmi->dev,
+			"===================================================================\n");
+		DRM_DEV_DEBUG_DRIVER(hdmi->dev, "EDID Block Number=#%d\n", bTemp);
+		DRM_DEV_DEBUG_DRIVER(hdmi->dev,
+			"   | 00  01  02  03  04  05  06  07  08  09  0a  0b  0c  0d  0e  0f\n");
+		DRM_DEV_DEBUG_DRIVER(hdmi->dev,
+			"===================================================================\n");
+		j = bTemp * EDID_LENGTH;
+		for (i = 0; i < 8; i++) {
+			p = &raw[j + i * 16];
+			DRM_DEV_DEBUG_DRIVER(hdmi->dev,
+				"%02x:  %02x  %02x  %02x  %02x  %02x  %02x  %02x  %02x  %02x  %02x  ",
+				i * 16 + j,
+				p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9]);
+			DRM_DEV_DEBUG_DRIVER(hdmi->dev, "%02x  %02x  %02x  %02x  %02x  %02x\n",
+				p[10], p[11], p[12], p[13], p[14], p[15]);
+		}
+	}
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "===========================================\n");
+}
+
 struct edid *mtk_hdmi_bridge_get_edid(struct drm_bridge *bridge,
 					     struct drm_connector *connector)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 	struct edid *edid;
 
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+
 	if (!hdmi->ddc_adpt)
 		return NULL;
 	edid = drm_get_edid(connector, hdmi->ddc_adpt);
 	if (!edid)
 		return NULL;
+
+	mtk_hdmi_show_EDID_raw_data(hdmi, edid);
+
 	return edid;
 }
 
@@ -133,6 +168,30 @@ mtk_hdmi_bridge_mode_set(struct drm_bridge *bridge,
 			 const struct drm_display_mode *adjusted_mode)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
+
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev,
+		"vic:%d,name:%s,hdisplay:%d,fresh_rate:%d\n",
+		drm_match_cea_mode(adjusted_mode),
+		adjusted_mode->name,
+		adjusted_mode->hdisplay,
+		drm_mode_vrefresh(adjusted_mode));
+
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev,
+		"hsync_start:%d,hsync_end:%d,htotal:%d,hskew:%d,vdisplay:%d",
+		adjusted_mode->hsync_start,
+		adjusted_mode->hsync_end,
+		adjusted_mode->htotal,
+		adjusted_mode->hskew,
+		adjusted_mode->vdisplay);
+
+	DRM_DEV_DEBUG_DRIVER(hdmi->dev,
+		"vsync_start:%d,vsync_end:%d,vtotal:%d,vscan:%d,flag:%d",
+		adjusted_mode->vsync_start,
+		adjusted_mode->vsync_end,
+		adjusted_mode->vtotal,
+		adjusted_mode->vscan,
+		adjusted_mode->flags);
 
 	drm_mode_copy(&hdmi->mode, adjusted_mode);
 }
@@ -426,11 +485,14 @@ MODULE_DEVICE_TABLE(of, mtk_drm_hdmi_of_ids);
 static __maybe_unused int mtk_hdmi_suspend(struct device *dev)
 {
 	struct mtk_hdmi *hdmi = dev_get_drvdata(dev);
+	int ret;
 
 	if (hdmi->conf && hdmi->conf->is_mt8195 && hdmi->conf->low_power) {
 		if (hdmi->power_clk_enabled) {
 			mtk_hdmi_clk_disable_mt8195(hdmi);
-			pm_runtime_put_sync(hdmi->dev);
+			ret = pm_runtime_put_sync(hdmi->dev);
+			DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],power domain off %d\n",
+					     __func__, __LINE__, ret);
 			hdmi->power_clk_enabled = false;
 		}
 	} else {
@@ -446,10 +508,13 @@ static __maybe_unused int mtk_hdmi_resume(struct device *dev)
 {
 
 	struct mtk_hdmi *hdmi = dev_get_drvdata(dev);
+	int ret;
 
 	if (hdmi->conf && hdmi->conf->is_mt8195 && hdmi->conf->low_power) {
 		if (!hdmi->power_clk_enabled) {
-			pm_runtime_get_sync(hdmi->dev);
+			ret = pm_runtime_get_sync(hdmi->dev);
+			DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d],power domain on %d\n",
+					    __func__, __LINE__, ret);
 			//TODO:
 			//mtk_hdmi_clk_enable(hdmi);
 			hdmi->power_clk_enabled = true;
