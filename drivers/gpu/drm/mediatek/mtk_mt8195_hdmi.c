@@ -1144,6 +1144,7 @@ static void mtk_hdmi_change_video_resolution(struct mtk_hdmi *hdmi)
 	bool is_over_340M = false;
 	bool is_hdmi_sink = false;
 	bool ret = false;
+	struct drm_scdc *scdc;
 
 	mtk_hdmi_hw_reset(hdmi);
 	mtk_hdmi_set_sw_hpd(hdmi, true);
@@ -1166,15 +1167,20 @@ static void mtk_hdmi_change_video_resolution(struct mtk_hdmi *hdmi)
 	mtk_hdmi_mask(hdmi, TOP_CFG01, NULL_PKT_VSYNC_HIGH_EN,
 		      NULL_PKT_VSYNC_HIGH_EN | NULL_PKT_EN);
 
+	scdc = &hdmi->conn.display_info.hdmi.scdc;
+
 	is_over_340M = mtk_hdmi_tmds_over_340M(hdmi);
 	dev_info(hdmi->dev, "is_over_340M:%d\n", is_over_340M);
 
 	mtk_hdmi_enable_scrambling(hdmi, is_over_340M);
-
-	ret = drm_scdc_set_scrambling(&hdmi->conn, is_over_340M);
-	dev_info(hdmi->dev, "set_scrambling:%d\n", ret);
-	ret = drm_scdc_set_high_tmds_clock_ratio(&hdmi->conn, is_over_340M);
-	dev_info(hdmi->dev, "set_high_tmds_clock_ratio:%d\n", ret);
+	if (scdc->supported) {
+		if (scdc->scrambling.supported) {
+			ret = drm_scdc_set_scrambling(&hdmi->conn, is_over_340M);
+			dev_info(hdmi->dev, "set_scrambling:%d\n", ret);
+		}
+		ret = drm_scdc_set_high_tmds_clock_ratio(&hdmi->conn, is_over_340M);
+		dev_info(hdmi->dev, "set_high_tmds_clock_ratio:%d\n", ret);
+	}
 
 	if (hdmi->csp == HDMI_COLORSPACE_YUV420)
 		mtk_hdmi_yuv420_downsample(hdmi, true);

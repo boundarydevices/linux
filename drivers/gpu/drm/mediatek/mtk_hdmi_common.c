@@ -153,6 +153,8 @@ struct edid *mtk_hdmi_bridge_get_edid(struct drm_bridge *bridge,
 	mtk_hdmi_show_EDID_raw_data(hdmi, edid);
 
 	memcpy(hdmi->conn.eld, connector->eld, drm_eld_size(connector->eld));
+	memcpy(&hdmi->conn.display_info.hdmi, &connector->display_info.hdmi,
+		sizeof(connector->display_info.hdmi));
 
 	return edid;
 }
