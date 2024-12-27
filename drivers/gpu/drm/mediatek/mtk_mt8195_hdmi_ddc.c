@@ -18,6 +18,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/semaphore.h>
+#include <drm/drm_edid.h>
 
 #include "mtk_mt8195_hdmi_ddc.h"
 #include "mtk_mt8195_hdmi_regs.h"
@@ -26,6 +27,8 @@
 #define EDID_ID 0x50
 #define DDC2_CLOK 572 /* BIM=208M/(v*4) = 90Khz */
 #define DDC2_CLOK_EDID 832 /* BIM=208M/(v*4) = 62.5Khz */
+
+#define SCDC_I2C_SLAVE_ADDRESS 0x54
 
 enum sif_bit_t_hdmi {
 	SIF_8_BIT_HDMI, /* /< [8 bits data address.] */
@@ -259,7 +262,8 @@ ddcm_read_hdmi(struct mtk_hdmi_ddc *ddc,
 			    u4_count % 16)
 				temp_length = u4_count % 16;
 
-			if (uc_dev > EDID_ID) {
+			/* EDID_ID(0x50) - 0x53 are special flow-control values */
+			if ((uc_dev > EDID_ID) && (uc_dev <= 0x53)) {
 				mtk_ddc_mask(ddc, SCDC_CTRL,
 					     (uc_dev - EDID_ID)
 						     << DDC_SEGMENT_SHIFT,
@@ -453,10 +457,11 @@ static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter, struct i2c_msg *msgs,
 			ret = fg_ddc_data_write(ddc, msg->addr, msg->buf[0],
 					     (msg->len - 1), &msg->buf[1]);
 
-			/* we store the offset value requested by drm_edid framework
+			/* we store the offset value requested by drm_edid and scdc framework
 			 * to use in subsequent read requests.
 			 */
-			if (DDC_ADDR == msg->addr && 1 == msg->len)
+			if (((msg->addr == DDC_ADDR) || (msg->addr == SCDC_I2C_SLAVE_ADDRESS))
+				&& 1 == msg->len)
 				offset = msg->buf[0];
 		}
 
