@@ -1683,6 +1683,8 @@ static int ap1302_init_cfg(struct v4l2_subdev *sd,
 	for (pad = 0; pad < ARRAY_SIZE(ap1302->formats); ++pad) {
 		struct v4l2_mbus_framefmt *format =
 			ap1302_get_pad_format(ap1302, sd_state, pad, which);
+		if (!format)
+			return -EINVAL;
 
 		format->width = info->resolution.width;
 		format->height = info->resolution.height;
@@ -1783,6 +1785,8 @@ static int ap1302_get_fmt(struct v4l2_subdev *sd,
 	const struct v4l2_mbus_framefmt *format;
 
 	format = ap1302_get_pad_format(ap1302, sd_state, fmt->pad, fmt->which);
+	if (!format)
+		return -EINVAL;
 
 	mutex_lock(&ap1302->lock);
 	fmt->format = *format;
@@ -1805,6 +1809,8 @@ static int ap1302_set_fmt(struct v4l2_subdev *sd,
 		return ap1302_get_fmt(sd, sd_state, fmt);
 
 	format = ap1302_get_pad_format(ap1302, sd_state, fmt->pad, fmt->which);
+	if (!format)
+		return -EINVAL;
 
 	/* Validate the media bus code, default to the first supported value. */
 	for (i = 0; i < ARRAY_SIZE(supported_video_formats); i++) {
