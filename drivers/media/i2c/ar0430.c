@@ -793,6 +793,8 @@ static int ar0430_init_cfg(struct v4l2_subdev *subdev,
 	struct v4l2_rect *crop;
 
 	crop = __ar0430_get_pad_crop(ar0430, sd_state, 0, which);
+	if (!crop)
+		return -EINVAL;
 	crop->left = (AR0430_WINDOW_WIDTH_MAX - AR0430_WINDOW_WIDTH_DEF) / 2 +
 		     AR0430_WINDOW_LEFT_BORDER;
 	crop->top = (AR0430_WINDOW_HEIGHT_MAX - AR0430_WINDOW_HEIGHT_DEF) / 2 +
@@ -801,6 +803,8 @@ static int ar0430_init_cfg(struct v4l2_subdev *subdev,
 	crop->height = AR0430_WINDOW_HEIGHT_DEF;
 
 	format = __ar0430_get_pad_format(ar0430, sd_state, 0, which);
+	if (!format)
+		return -EINVAL;
 	format->code = MEDIA_BUS_FMT_SGRBG10_1X10;
 	format->width = AR0430_WINDOW_WIDTH_DEF;
 	format->height = AR0430_WINDOW_HEIGHT_DEF;
@@ -845,9 +849,13 @@ static int ar0430_get_format(struct v4l2_subdev *subdev,
 			     struct v4l2_subdev_format *fmt)
 {
 	struct ar0430 *ar0430 = to_ar0430(subdev);
+	struct v4l2_mbus_framefmt *__format;
 
-	fmt->format = *__ar0430_get_pad_format(ar0430, sd_state, fmt->pad,
-					       fmt->which);
+	__format = __ar0430_get_pad_format(ar0430, sd_state, fmt->pad,
+					   fmt->which);
+	if (!__format)
+		return -EINVAL;
+	fmt->format = *__format;
 	return 0;
 }
 
@@ -865,6 +873,8 @@ static int ar0430_set_format(struct v4l2_subdev *subdev,
 
 	__crop = __ar0430_get_pad_crop(ar0430, sd_state, format->pad,
 				       format->which);
+	if (!__crop)
+		return -EINVAL;
 
 	/* Clamp the width and height to avoid dividing by zero. */
 	width = clamp_t(unsigned int, ALIGN(format->format.width, 2),
@@ -879,6 +889,8 @@ static int ar0430_set_format(struct v4l2_subdev *subdev,
 
 	__format = __ar0430_get_pad_format(ar0430, sd_state, format->pad,
 					   format->which);
+	if (!__format)
+		return -EINVAL;
 	__format->width = __crop->width / hratio;
 	__format->height = __crop->height / vratio;
 
@@ -892,11 +904,15 @@ static int ar0430_get_selection(struct v4l2_subdev *subdev,
 				struct v4l2_subdev_selection *sel)
 {
 	struct ar0430 *ar0430 = to_ar0430(subdev);
+	struct v4l2_rect *__crop;
 
 	switch (sel->target) {
 	case V4L2_SEL_TGT_CROP:
-		sel->r = *__ar0430_get_pad_crop(ar0430, sd_state, sel->pad,
-						sel->which);
+		__crop = __ar0430_get_pad_crop(ar0430, sd_state, sel->pad,
+					       sel->which);
+		if (!__crop)
+			return -EINVAL;
+		sel->r = *__crop;
 		break;
 
 	case V4L2_SEL_TGT_CROP_DEFAULT:
@@ -958,6 +974,8 @@ static int ar0430_set_selection(struct v4l2_subdev *subdev,
 				 AR0430_WINDOW_TOP_BORDER - rect.top);
 
 	__crop = __ar0430_get_pad_crop(ar0430, sd_state, sel->pad, sel->which);
+	if (!__crop)
+		return -EINVAL;
 
 	if (rect.width != __crop->width || rect.height != __crop->height) {
 		/*
@@ -966,6 +984,8 @@ static int ar0430_set_selection(struct v4l2_subdev *subdev,
 		 */
 		__format = __ar0430_get_pad_format(ar0430, sd_state, sel->pad,
 						   sel->which);
+		if (!__format)
+			return -EINVAL;
 		__format->width = rect.width;
 		__format->height = rect.height;
 	}
