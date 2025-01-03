@@ -429,7 +429,7 @@ static int mt7921_pci_suspend(struct device *device)
 	if (err < 0)
 		goto restore_suspend;
 
-	err = mt76_connac_mcu_set_hif_suspend(mdev, true);
+	err = mt76_connac_mcu_set_hif_suspend(mdev, true, true);
 	if (err)
 		goto restore_suspend;
 
@@ -475,7 +475,7 @@ restore_napi:
 	if (!pm->ds_enable)
 		mt76_connac_mcu_set_deep_sleep(&dev->mt76, false);
 
-	mt76_connac_mcu_set_hif_suspend(mdev, false);
+	mt76_connac_mcu_set_hif_suspend(mdev, false, true);
 
 restore_suspend:
 	pm->suspended = false;
@@ -526,7 +526,7 @@ static int mt7921_pci_resume(struct device *device)
 	if (!pm->ds_enable)
 		mt76_connac_mcu_set_deep_sleep(&dev->mt76, false);
 
-	err = mt76_connac_mcu_set_hif_suspend(mdev, false);
+	err = mt76_connac_mcu_set_hif_suspend(mdev, false, true);
 	if (err < 0)
 		goto failed;
 
