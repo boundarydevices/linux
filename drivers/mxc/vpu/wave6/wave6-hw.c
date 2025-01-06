@@ -501,7 +501,7 @@ int wave6_vpu_dec_register_frame_buffer(struct vpu_instance *inst,
 	u32 endian;
 	int ret;
 
-	mv_count = p_dec_info->initial_info.req_mv_buffer_count;
+	mv_count = inst->mv_num;
 
 	if (inst->std == W_AV1_DEC) {
 		if (!p_dec_info->vb_def_cdf.daddr)
