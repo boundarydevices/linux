@@ -2044,7 +2044,7 @@ static int kvm_init_vector_slots(void)
 	return 0;
 }
 
-static void __init cpu_prepare_hyp_mode(int cpu, u32 hyp_va_bits)
+static void __init cpu_prepare_hyp_mode(int cpu)
 {
 	struct kvm_nvhe_init_params *params = per_cpu_ptr_nvhe_sym(kvm_init_params, cpu);
 	u64 mmfr0 = read_sanitised_ftr_reg(SYS_ID_AA64MMFR0_EL1);
@@ -2415,7 +2415,7 @@ static void __init teardown_hyp_mode(void)
 	}
 }
 
-static int __init do_pkvm_init(u32 hyp_va_bits)
+static int __init do_pkvm_init(void)
 {
 	void *per_cpu_base = kvm_ksym_ref(kvm_nvhe_sym(kvm_arm_hyp_percpu_base));
 	int ret;
@@ -2492,7 +2492,7 @@ static unsigned long kvm_hyp_shrinker_scan(struct shrinker *shrinker,
 	return __pkvm_reclaim_hyp_alloc_mgt(sc->nr_to_scan);
 }
 
-static int __init kvm_hyp_init_protection(u32 hyp_va_bits)
+static int __init kvm_hyp_init_protection(void)
 {
 	void *addr = phys_to_virt(hyp_mem_base);
 	struct shrinker *shrinker;
@@ -2502,7 +2502,7 @@ static int __init kvm_hyp_init_protection(u32 hyp_va_bits)
 	if (ret)
 		return ret;
 
-	ret = do_pkvm_init(hyp_va_bits);
+	ret = do_pkvm_init();
 	if (ret)
 		return ret;
 
@@ -2597,7 +2597,6 @@ static void pkvm_hyp_init_ptrauth(void)
 /* Inits Hyp-mode on all online CPUs */
 static int __init init_hyp_mode(void)
 {
-	u32 hyp_va_bits;
 	int cpu;
 	int err = -ENOMEM;
 
@@ -2611,7 +2610,7 @@ static int __init init_hyp_mode(void)
 	/*
 	 * Allocate Hyp PGD and setup Hyp identity mapping
 	 */
-	err = kvm_mmu_init(&hyp_va_bits);
+	err = kvm_mmu_init();
 	if (err)
 		goto out_err;
 
@@ -2732,7 +2731,7 @@ static int __init init_hyp_mode(void)
 		}
 
 		/* Prepare the CPU initialization parameters */
-		cpu_prepare_hyp_mode(cpu, hyp_va_bits);
+		cpu_prepare_hyp_mode(cpu);
 	}
 
 	kvm_hyp_init_symbols();
@@ -2755,7 +2754,7 @@ static int __init init_hyp_mode(void)
 		if (err)
 			goto out_err;
 
-		err = kvm_hyp_init_protection(hyp_va_bits);
+		err = kvm_hyp_init_protection();
 		if (err) {
 			kvm_err("Failed to init hyp memory protection\n");
 			goto out_err;
