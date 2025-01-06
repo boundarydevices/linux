@@ -7,6 +7,7 @@
  */
 
 #include <linux/bits.h>
+#include <linux/bitfield.h>
 #include <linux/clk.h>
 #include <linux/compiler.h>
 #include <linux/dma-mapping.h>
@@ -17,6 +18,7 @@
 #include <linux/module.h>
 #include <linux/netdevice.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
 #include <linux/platform_device.h>
@@ -27,12 +29,14 @@
 
 #define MTK_STAR_DRVNAME			"mtk_star_emac"
 
+#define MII_ADDR_C45		(1<<30)
+
 #define MTK_STAR_WAIT_TIMEOUT			300
 #define MTK_STAR_MAX_FRAME_SIZE			1514
 #define MTK_STAR_SKB_ALIGNMENT			16
+#define MTK_STAR_NAPI_WEIGHT			64
 #define MTK_STAR_HASHTABLE_MC_LIMIT		256
 #define MTK_STAR_HASHTABLE_SIZE_MAX		512
-#define MTK_STAR_DESC_NEEDED			(MAX_SKB_FRAGS + 4)
 
 /* Normally we'd use NET_IP_ALIGN but on arm64 its value is 0 and it doesn't
  * work for this controller.
@@ -130,10 +134,10 @@ static const char *const mtk_star_clk_names[] = { "core", "reg", "trans" };
 #define MTK_STAR_REG_INT_MASK			0x0054
 #define MTK_STAR_BIT_INT_MASK_FNRC		BIT(6)
 
-/* Delay-Macro Register */
+/* Mac Delay Register */
 #define MTK_STAR_REG_TEST0			0x0058
-#define MTK_STAR_BIT_INV_RX_CLK			BIT(30)
 #define MTK_STAR_BIT_INV_TX_CLK			BIT(31)
+#define MTK_STAR_BIT_INV_RX_CLK			BIT(30)
 
 /* Misc. Config Register */
 #define MTK_STAR_REG_TEST1			0x005c
@@ -190,12 +194,12 @@ static const char *const mtk_star_clk_names[] = { "core", "reg", "trans" };
 /* Ethernet CFG Control */
 #define MTK_PERICFG_REG_NIC_CFG0_CON		0x03c4
 #define MTK_PERICFG_REG_NIC_CFG1_CON		0x03c8
-#define MTK_PERICFG_REG_NIC_CFG_CON_V2		0x0c10
-#define MTK_PERICFG_REG_NIC_CFG_CON_CFG_INTF	GENMASK(3, 0)
+#define MT8365_MTK_PERICFG_REG_NIC_CFG_CON	0x0c10
+#define MTK_PERICFG_MSK_NIC_CFG_CON_CFG_MII	GENMASK(3, 0)
 #define MTK_PERICFG_BIT_NIC_CFG_CON_MII		0
 #define MTK_PERICFG_BIT_NIC_CFG_CON_RMII	1
 #define MTK_PERICFG_BIT_NIC_CFG_CON_CLK		BIT(0)
-#define MTK_PERICFG_BIT_NIC_CFG_CON_CLK_V2	BIT(8)
+#define MTK8365_PERICFG_BIT_NIC_CFG_CON_CLK	BIT(8)
 
 /* Represents the actual structure of descriptors used by the MAC. We can
  * reuse the same structure for both TX and RX - the layout is the same, only
@@ -229,7 +233,6 @@ struct mtk_star_ring_desc_data {
 };
 
 #define MTK_STAR_RING_NUM_DESCS			512
-#define MTK_STAR_TX_THRESH			(MTK_STAR_RING_NUM_DESCS / 4)
 #define MTK_STAR_NUM_TX_DESCS			MTK_STAR_RING_NUM_DESCS
 #define MTK_STAR_NUM_RX_DESCS			MTK_STAR_RING_NUM_DESCS
 #define MTK_STAR_NUM_DESCS_TOTAL		(MTK_STAR_RING_NUM_DESCS * 2)
@@ -249,6 +252,11 @@ struct mtk_star_compat {
 	unsigned char bit_clk_div;
 };
 
+struct mac_delay_struct {
+	bool tx_inv;
+	bool rx_inv;
+};
+
 struct mtk_star_priv {
 	struct net_device *ndev;
 
@@ -262,6 +270,7 @@ struct mtk_star_priv {
 	dma_addr_t dma_addr;
 	struct mtk_star_ring tx_ring;
 	struct mtk_star_ring rx_ring;
+	struct mac_delay_struct mac_delay;
 
 	struct mii_bus *mii;
 	struct napi_struct tx_napi;
@@ -274,9 +283,8 @@ struct mtk_star_priv {
 	int speed;
 	int duplex;
 	int pause;
+
 	bool rmii_rxc;
-	bool rx_inv;
-	bool tx_inv;
 
 	const struct mtk_star_compat *compat_data;
 
@@ -363,14 +371,14 @@ static void mtk_star_ring_push_head(struct mtk_star_ring *ring,
 	ring->head = (ring->head + 1) % MTK_STAR_RING_NUM_DESCS;
 }
 
-static void
+static inline void
 mtk_star_ring_push_head_rx(struct mtk_star_ring *ring,
 			   struct mtk_star_ring_desc_data *desc_data)
 {
 	mtk_star_ring_push_head(ring, desc_data, 0);
 }
 
-static void
+static inline void
 mtk_star_ring_push_head_tx(struct mtk_star_ring *ring,
 			   struct mtk_star_ring_desc_data *desc_data)
 {
@@ -381,7 +389,7 @@ mtk_star_ring_push_head_tx(struct mtk_star_ring *ring,
 	mtk_star_ring_push_head(ring, desc_data, flags);
 }
 
-static unsigned int mtk_star_tx_ring_avail(struct mtk_star_ring *ring)
+static inline unsigned int mtk_star_tx_ring_avail(struct mtk_star_ring *ring)
 {
 	u32 avail;
 
@@ -393,8 +401,8 @@ static unsigned int mtk_star_tx_ring_avail(struct mtk_star_ring *ring)
 	return avail;
 }
 
-static dma_addr_t mtk_star_dma_map_rx(struct mtk_star_priv *priv,
-				      struct sk_buff *skb)
+static inline dma_addr_t mtk_star_dma_map_rx(struct mtk_star_priv *priv,
+					     struct sk_buff *skb)
 {
 	struct device *dev = mtk_star_get_dev(priv);
 
@@ -403,8 +411,9 @@ static dma_addr_t mtk_star_dma_map_rx(struct mtk_star_priv *priv,
 			      skb_tailroom(skb), DMA_FROM_DEVICE);
 }
 
-static void mtk_star_dma_unmap_rx(struct mtk_star_priv *priv,
-				  struct mtk_star_ring_desc_data *desc_data)
+static inline void
+mtk_star_dma_unmap_rx(struct mtk_star_priv *priv,
+		      struct mtk_star_ring_desc_data *desc_data)
 {
 	struct device *dev = mtk_star_get_dev(priv);
 
@@ -412,16 +421,17 @@ static void mtk_star_dma_unmap_rx(struct mtk_star_priv *priv,
 			 skb_tailroom(desc_data->skb), DMA_FROM_DEVICE);
 }
 
-static dma_addr_t mtk_star_dma_map_tx(struct mtk_star_priv *priv,
-				      struct sk_buff *skb)
+static inline dma_addr_t mtk_star_dma_map_tx(struct mtk_star_priv *priv,
+					     struct sk_buff *skb)
 {
 	struct device *dev = mtk_star_get_dev(priv);
 
 	return dma_map_single(dev, skb->data, skb_headlen(skb), DMA_TO_DEVICE);
 }
 
-static void mtk_star_dma_unmap_tx(struct mtk_star_priv *priv,
-				  struct mtk_star_ring_desc_data *desc_data)
+static inline void
+mtk_star_dma_unmap_tx(struct mtk_star_priv *priv,
+		      struct mtk_star_ring_desc_data *desc_data)
 {
 	struct device *dev = mtk_star_get_dev(priv);
 
@@ -429,16 +439,16 @@ static void mtk_star_dma_unmap_tx(struct mtk_star_priv *priv,
 				skb_headlen(desc_data->skb), DMA_TO_DEVICE);
 }
 
-static void mtk_star_nic_disable_pd(struct mtk_star_priv *priv)
+static inline void mtk_star_nic_disable_pd(struct mtk_star_priv *priv)
 {
 	regmap_clear_bits(priv->regs, MTK_STAR_REG_MAC_CFG,
 			  MTK_STAR_BIT_MAC_CFG_NIC_PD);
 }
 
-static void mtk_star_enable_dma_irq(struct mtk_star_priv *priv,
-				    bool rx, bool tx)
+static inline void
+mtk_star_enable_dma_irq(struct mtk_star_priv *priv, bool rx, bool tx)
 {
-	u32 value;
+	u32 value = 0;
 
 	regmap_read(priv->regs, MTK_STAR_REG_INT_MASK, &value);
 
@@ -450,10 +460,10 @@ static void mtk_star_enable_dma_irq(struct mtk_star_priv *priv,
 	regmap_write(priv->regs, MTK_STAR_REG_INT_MASK, value);
 }
 
-static void mtk_star_disable_dma_irq(struct mtk_star_priv *priv,
-				     bool rx, bool tx)
+static inline void
+mtk_star_disable_dma_irq(struct mtk_star_priv *priv, bool rx, bool tx)
 {
-	u32 value;
+	u32 value = 0;
 
 	regmap_read(priv->regs, MTK_STAR_REG_INT_MASK, &value);
 
@@ -466,7 +476,7 @@ static void mtk_star_disable_dma_irq(struct mtk_star_priv *priv,
 }
 
 /* Unmask the three interrupts we care about, mask all others. */
-static void mtk_star_intr_enable(struct mtk_star_priv *priv)
+static inline void mtk_star_intr_enable(struct mtk_star_priv *priv)
 {
 	unsigned int val = MTK_STAR_BIT_INT_STS_TNTC |
 			   MTK_STAR_BIT_INT_STS_FNRC |
@@ -475,12 +485,12 @@ static void mtk_star_intr_enable(struct mtk_star_priv *priv)
 	regmap_write(priv->regs, MTK_STAR_REG_INT_MASK, ~val);
 }
 
-static void mtk_star_intr_disable(struct mtk_star_priv *priv)
+static inline void mtk_star_intr_disable(struct mtk_star_priv *priv)
 {
 	regmap_write(priv->regs, MTK_STAR_REG_INT_MASK, ~0);
 }
 
-static unsigned int mtk_star_intr_ack_all(struct mtk_star_priv *priv)
+static inline unsigned int mtk_star_intr_ack_all(struct mtk_star_priv *priv)
 {
 	unsigned int val;
 
@@ -564,7 +574,7 @@ static void mtk_star_dma_resume_tx(struct mtk_star_priv *priv)
 static void mtk_star_set_mac_addr(struct net_device *ndev)
 {
 	struct mtk_star_priv *priv = netdev_priv(ndev);
-	const u8 *mac_addr = ndev->dev_addr;
+	u8 *mac_addr = ndev->dev_addr;
 	unsigned int high, low;
 
 	high = mac_addr[0] << 8 | mac_addr[1] << 0;
@@ -756,41 +766,42 @@ static void mtk_star_free_tx_skbs(struct mtk_star_priv *priv)
 	mtk_star_ring_free_skbs(priv, ring, mtk_star_dma_unmap_tx);
 }
 
-/**
- * mtk_star_handle_irq - Interrupt Handler.
+/* mtk_star_handle_irq - Interrupt Handler.
  * @irq: interrupt number.
  * @data: pointer to a network interface device structure.
  * Description : this is the driver interrupt service routine.
- * it mainly handles:
- *  1. tx complete interrupt for frame transmission.
- *  2. rx complete interrupt for frame reception.
- *  3. MAC Management Counter interrupt to avoid counter overflow.
- **/
+ * it can call:
+ *  1.manage incoming frame reception and transmission
+ *    status.
+ *  2.manage: Management Counter Interrupt.
+ */
 static irqreturn_t mtk_star_handle_irq(int irq, void *data)
 {
 	struct net_device *ndev = data;
 	struct mtk_star_priv *priv = netdev_priv(ndev);
 	unsigned int intr_status = mtk_star_intr_ack_all(priv);
-	bool rx, tx;
+	unsigned long flags = 0;
 
-	rx = (intr_status & MTK_STAR_BIT_INT_STS_FNRC) &&
-	     napi_schedule_prep(&priv->rx_napi);
-	tx = (intr_status & MTK_STAR_BIT_INT_STS_TNTC) &&
-	     napi_schedule_prep(&priv->tx_napi);
-
-	if (rx || tx) {
-		spin_lock(&priv->lock);
-		/* mask Rx and TX Complete interrupt */
-		mtk_star_disable_dma_irq(priv, rx, tx);
-		spin_unlock(&priv->lock);
-
-		if (rx)
-			__napi_schedule(&priv->rx_napi);
-		if (tx)
-			__napi_schedule(&priv->tx_napi);
+	if (intr_status & MTK_STAR_BIT_INT_STS_FNRC) {
+		if (napi_schedule_prep(&priv->rx_napi)) {
+			spin_lock_irqsave(&priv->lock, flags);
+			/* mask Rx Complete interrupt */
+			mtk_star_disable_dma_irq(priv, true, false);
+			spin_unlock_irqrestore(&priv->lock, flags);
+			__napi_schedule_irqoff(&priv->rx_napi);
+		}
 	}
 
-	/* interrupt is triggered once any counters reach 0x8000000 */
+	if (intr_status & MTK_STAR_BIT_INT_STS_TNTC) {
+		if (napi_schedule_prep(&priv->tx_napi)) {
+			spin_lock_irqsave(&priv->lock, flags);
+			/* mask Tx Complete interrupt */
+			mtk_star_disable_dma_irq(priv, false, true);
+			spin_unlock_irqrestore(&priv->lock, flags);
+			__napi_schedule_irqoff(&priv->tx_napi);
+		}
+	}
+	/* One of the counter reached 0x8000000 */
 	if (intr_status & MTK_STAR_REG_INT_STS_MIB_CNT_TH) {
 		mtk_star_update_stats(priv);
 		mtk_star_reset_counters(priv);
@@ -1025,8 +1036,6 @@ static int mtk_star_enable(struct net_device *ndev)
 	return 0;
 
 err_free_irq:
-	napi_disable(&priv->rx_napi);
-	napi_disable(&priv->tx_napi);
 	free_irq(ndev->irq, ndev);
 err_free_skbs:
 	mtk_star_free_rx_skbs(priv);
@@ -1059,7 +1068,6 @@ static int mtk_star_netdev_open(struct net_device *ndev)
 static int mtk_star_netdev_stop(struct net_device *ndev)
 {
 	mtk_star_disable(ndev);
-
 	return 0;
 }
 
@@ -1072,30 +1080,8 @@ static int mtk_star_netdev_ioctl(struct net_device *ndev,
 	return phy_mii_ioctl(ndev->phydev, req, cmd);
 }
 
-static int __mtk_star_maybe_stop_tx(struct mtk_star_priv *priv, u16 size)
-{
-	netif_stop_queue(priv->ndev);
-
-	/* Might race with mtk_star_tx_poll, check again */
-	smp_mb();
-	if (likely(mtk_star_tx_ring_avail(&priv->tx_ring) < size))
-		return -EBUSY;
-
-	netif_start_queue(priv->ndev);
-
-	return 0;
-}
-
-static inline int mtk_star_maybe_stop_tx(struct mtk_star_priv *priv, u16 size)
-{
-	if (likely(mtk_star_tx_ring_avail(&priv->tx_ring) >= size))
-		return 0;
-
-	return __mtk_star_maybe_stop_tx(priv, size);
-}
-
-static netdev_tx_t mtk_star_netdev_start_xmit(struct sk_buff *skb,
-					      struct net_device *ndev)
+static int mtk_star_netdev_start_xmit(struct sk_buff *skb,
+				      struct net_device *ndev)
 {
 	struct mtk_star_priv *priv = netdev_priv(ndev);
 	struct mtk_star_ring *ring = &priv->tx_ring;
@@ -1107,7 +1093,8 @@ static netdev_tx_t mtk_star_netdev_start_xmit(struct sk_buff *skb,
 		if (!netif_queue_stopped(ndev)) {
 			netif_stop_queue(ndev);
 			/* This is a hard error, log it. */
-			pr_err_ratelimited("Tx ring full when queue awake\n");
+			netdev_err(priv->ndev, "%s: Tx Ring full when queue awake\n",
+				   __func__);
 		}
 		return NETDEV_TX_BUSY;
 	}
@@ -1121,8 +1108,6 @@ static netdev_tx_t mtk_star_netdev_start_xmit(struct sk_buff *skb,
 	mtk_star_ring_push_head_tx(ring, &desc_data);
 
 	netdev_sent_queue(ndev, skb->len);
-
-	mtk_star_maybe_stop_tx(priv, MTK_STAR_DESC_NEEDED);
 
 	mtk_star_dma_resume_tx(priv);
 
@@ -1156,38 +1141,46 @@ static int mtk_star_tx_complete_one(struct mtk_star_priv *priv)
 
 static int mtk_star_tx_poll(struct napi_struct *napi, int budget)
 {
-	struct mtk_star_priv *priv = container_of(napi, struct mtk_star_priv,
-						  tx_napi);
-	int ret = 0, pkts_compl = 0, bytes_compl = 0, count = 0;
-	struct mtk_star_ring *ring = &priv->tx_ring;
-	struct net_device *ndev = priv->ndev;
-	unsigned int head = ring->head;
-	unsigned int entry = ring->tail;
+	int ret, pkts_compl = 0, bytes_compl = 0, count = 0;
+	struct mtk_star_priv *priv;
+	struct mtk_star_ring *ring;
+	struct net_device *ndev;
+	unsigned long flags = 0;
+	unsigned int entry;
+	bool wake = false;
 
-	while (entry != head && count < (MTK_STAR_RING_NUM_DESCS - 1)) {
+	priv = container_of(napi, struct mtk_star_priv, tx_napi);
+	ndev = priv->ndev;
+
+	__netif_tx_lock_bh(netdev_get_tx_queue(priv->ndev, 0));
+	ring = &priv->tx_ring;
+	entry = ring->tail;
+	for (pkts_compl = 0, bytes_compl = 0;
+	     (entry != ring->head) && (count < budget);
+	     pkts_compl++, bytes_compl += ret, wake = true) {
+
 		ret = mtk_star_tx_complete_one(priv);
 		if (ret < 0)
 			break;
-
 		count++;
-		pkts_compl++;
-		bytes_compl += ret;
 		entry = ring->tail;
 	}
 
 	netdev_completed_queue(ndev, pkts_compl, bytes_compl);
 
-	if (unlikely(netif_queue_stopped(ndev)) &&
-	    (mtk_star_tx_ring_avail(ring) > MTK_STAR_TX_THRESH))
+	if (wake && netif_queue_stopped(ndev))
 		netif_wake_queue(ndev);
 
-	if (napi_complete(napi)) {
-		spin_lock(&priv->lock);
+	__netif_tx_unlock_bh(netdev_get_tx_queue(priv->ndev, 0));
+
+	count = min(count, budget);
+	if (count < budget && napi_complete_done(napi, count)) {
+		spin_lock_irqsave(&priv->lock, flags);
 		mtk_star_enable_dma_irq(priv, false, true);
-		spin_unlock(&priv->lock);
+		spin_unlock_irqrestore(&priv->lock, flags);
 	}
 
-	return 0;
+	return count;
 }
 
 static void mtk_star_netdev_get_stats64(struct net_device *ndev,
@@ -1256,7 +1249,7 @@ static const struct net_device_ops mtk_star_netdev_ops = {
 static void mtk_star_get_drvinfo(struct net_device *dev,
 				 struct ethtool_drvinfo *info)
 {
-	strscpy(info->driver, MTK_STAR_DRVNAME, sizeof(info->driver));
+	strlcpy(info->driver, MTK_STAR_DRVNAME, sizeof(info->driver));
 }
 
 /* TODO Add ethtool stats. */
@@ -1291,8 +1284,8 @@ static int mtk_star_rx(struct mtk_star_priv *priv, int budget)
 			goto push_new_skb;
 		}
 
-		/* Prepare new skb before receiving the current one.
-		 * Reuse the current skb if we fail at any point.
+		/* Prepare new skb before receiving the current one. Reuse the current
+		 * skb if we fail at any point.
 		 */
 		new_skb = mtk_star_alloc_skb(ndev);
 		if (!new_skb) {
@@ -1310,9 +1303,7 @@ static int mtk_star_rx(struct mtk_star_priv *priv, int budget)
 			goto push_new_skb;
 		}
 
-		/* We can't fail anymore at this point:
-		 * it's safe to unmap the skb.
-		 */
+		/* We can't fail anymore at this point: it's safe to unmap the skb. */
 		mtk_star_dma_unmap_rx(priv, &desc_data);
 
 		skb_put(desc_data.skb, desc_data.len);
@@ -1341,6 +1332,7 @@ push_new_skb:
 static int mtk_star_rx_poll(struct napi_struct *napi, int budget)
 {
 	struct mtk_star_priv *priv;
+	unsigned long flags = 0;
 	int work_done = 0;
 
 	priv = container_of(napi, struct mtk_star_priv, rx_napi);
@@ -1348,9 +1340,9 @@ static int mtk_star_rx_poll(struct napi_struct *napi, int budget)
 	work_done = mtk_star_rx(priv, budget);
 	if (work_done < budget) {
 		napi_complete_done(napi, work_done);
-		spin_lock(&priv->lock);
+		spin_lock_irqsave(&priv->lock, flags);
 		mtk_star_enable_dma_irq(priv, true, false);
-		spin_unlock(&priv->lock);
+		spin_unlock_irqrestore(&priv->lock, flags);
 	}
 
 	return work_done;
@@ -1377,6 +1369,9 @@ static int mtk_star_mdio_read(struct mii_bus *mii, int phy_id, int regnum)
 	unsigned int val, data;
 	int ret;
 
+	if (regnum & MII_ADDR_C45)
+		return -EOPNOTSUPP;
+
 	mtk_star_mdio_rwok_clear(priv);
 
 	val = (regnum << MTK_STAR_OFF_PHY_CTRL0_PREG);
@@ -1402,6 +1397,9 @@ static int mtk_star_mdio_write(struct mii_bus *mii, int phy_id,
 {
 	struct mtk_star_priv *priv = mii->priv;
 	unsigned int val;
+
+	if (regnum & MII_ADDR_C45)
+		return -EOPNOTSUPP;
 
 	mtk_star_mdio_rwok_clear(priv);
 
@@ -1501,27 +1499,34 @@ static void mtk_star_clk_disable_unprepare(void *data)
 	clk_bulk_disable_unprepare(MTK_STAR_NCLKS, priv->clks);
 }
 
-static int mtk_star_set_timing(struct mtk_star_priv *priv)
+static int mtk_star_set_mac_delay(struct mtk_star_priv *priv)
 {
+	struct mac_delay_struct *mac_delay = &priv->mac_delay;
 	struct device *dev = mtk_star_get_dev(priv);
 	unsigned int delay_val = 0;
 
 	switch (priv->phy_intf) {
 	case PHY_INTERFACE_MODE_MII:
+		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_TX_CLK, mac_delay->tx_inv);
+		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_RX_CLK, mac_delay->rx_inv);
+		break;
 	case PHY_INTERFACE_MODE_RMII:
-		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_RX_CLK, priv->rx_inv);
-		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_TX_CLK, priv->tx_inv);
+		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_TX_CLK, mac_delay->tx_inv);
+		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_RX_CLK, mac_delay->rx_inv);
 		break;
 	default:
 		dev_err(dev, "This interface not supported\n");
 		return -EINVAL;
 	}
 
-	return regmap_write(priv->regs, MTK_STAR_REG_TEST0, delay_val);
+	regmap_write(priv->regs, MTK_STAR_REG_TEST0, delay_val);
+
+	return 0;
 }
 
 static int mtk_star_probe(struct platform_device *pdev)
 {
+	struct mac_delay_struct *mac_delay;
 	struct device_node *of_node;
 	struct mtk_star_priv *priv;
 	struct net_device *ndev;
@@ -1541,6 +1546,8 @@ static int mtk_star_probe(struct platform_device *pdev)
 	priv->compat_data = of_device_get_match_data(&pdev->dev);
 	SET_NETDEV_DEV(ndev, dev);
 	platform_set_drvdata(pdev, ndev);
+
+	mac_delay = &priv->mac_delay;
 
 	ndev->min_mtu = ETH_ZLEN;
 	ndev->max_mtu = MTK_STAR_MAX_FRAME_SIZE;
@@ -1603,20 +1610,18 @@ static int mtk_star_probe(struct platform_device *pdev)
 	}
 
 	priv->rmii_rxc = of_property_read_bool(of_node, "mediatek,rmii-rxc");
-	priv->rx_inv = of_property_read_bool(of_node, "mediatek,rxc-inverse");
-	priv->tx_inv = of_property_read_bool(of_node, "mediatek,txc-inverse");
+	mac_delay->tx_inv = of_property_read_bool(of_node, "mediatek,txc-inverse");
+	mac_delay->rx_inv = of_property_read_bool(of_node, "mediatek,rxc-inverse");
 
-	if (priv->compat_data->set_interface_mode) {
-		ret = priv->compat_data->set_interface_mode(ndev);
-		if (ret) {
-			dev_err(dev, "Failed to set phy interface, err = %d\n", ret);
-			return -EINVAL;
-		}
+	ret = priv->compat_data->set_interface_mode(ndev);
+	if (ret) {
+		dev_err(dev, "Failed to set ethernet interface.\n");
+		return -EINVAL;
 	}
 
-	ret = mtk_star_set_timing(priv);
+	ret = mtk_star_set_mac_delay(priv);
 	if (ret) {
-		dev_err(dev, "Failed to set timing, err = %d\n", ret);
+		dev_err(dev, "Failed to set delay val.\n");
 		return -EINVAL;
 	}
 
@@ -1639,7 +1644,7 @@ static int mtk_star_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = platform_get_ethdev_address(dev, ndev);
+	ret = eth_platform_get_mac_address(dev, ndev->dev_addr);
 	if (ret || !is_valid_ether_addr(ndev->dev_addr))
 		eth_hw_addr_random(ndev);
 
@@ -1652,17 +1657,15 @@ static int mtk_star_probe(struct platform_device *pdev)
 	return devm_register_netdev(dev, ndev);
 }
 
-#ifdef CONFIG_OF
 static int mt8516_set_interface_mode(struct net_device *ndev)
 {
 	struct mtk_star_priv *priv = netdev_priv(ndev);
 	struct device *dev = mtk_star_get_dev(priv);
-	unsigned int intf_val, ret, rmii_rxc;
+	unsigned int intf_val = 0, rmii_rxc = 0;
 
 	switch (priv->phy_intf) {
 	case PHY_INTERFACE_MODE_MII:
 		intf_val = MTK_PERICFG_BIT_NIC_CFG_CON_MII;
-		rmii_rxc = 0;
 		break;
 	case PHY_INTERFACE_MODE_RMII:
 		intf_val = MTK_PERICFG_BIT_NIC_CFG_CON_RMII;
@@ -1673,24 +1676,20 @@ static int mt8516_set_interface_mode(struct net_device *ndev)
 		return -EINVAL;
 	}
 
-	ret = regmap_update_bits(priv->pericfg,
-				 MTK_PERICFG_REG_NIC_CFG1_CON,
-				 MTK_PERICFG_BIT_NIC_CFG_CON_CLK,
-				 rmii_rxc);
-	if (ret)
-		return ret;
-
-	return regmap_update_bits(priv->pericfg,
-				  MTK_PERICFG_REG_NIC_CFG0_CON,
-				  MTK_PERICFG_REG_NIC_CFG_CON_CFG_INTF,
-				  intf_val);
+	regmap_update_bits(priv->pericfg, MTK_PERICFG_REG_NIC_CFG1_CON,
+			   MTK_PERICFG_BIT_NIC_CFG_CON_CLK,
+			   rmii_rxc);
+	regmap_update_bits(priv->pericfg, MTK_PERICFG_REG_NIC_CFG0_CON,
+			   MTK_PERICFG_MSK_NIC_CFG_CON_CFG_MII,
+			   intf_val);
+	return 0;
 }
 
 static int mt8365_set_interface_mode(struct net_device *ndev)
 {
 	struct mtk_star_priv *priv = netdev_priv(ndev);
 	struct device *dev = mtk_star_get_dev(priv);
-	unsigned int intf_val;
+	unsigned int intf_val = 0;
 
 	switch (priv->phy_intf) {
 	case PHY_INTERFACE_MODE_MII:
@@ -1698,43 +1697,38 @@ static int mt8365_set_interface_mode(struct net_device *ndev)
 		break;
 	case PHY_INTERFACE_MODE_RMII:
 		intf_val = MTK_PERICFG_BIT_NIC_CFG_CON_RMII;
-		intf_val |= priv->rmii_rxc ? 0 : MTK_PERICFG_BIT_NIC_CFG_CON_CLK_V2;
+		intf_val |= priv->rmii_rxc ? 0 : MTK8365_PERICFG_BIT_NIC_CFG_CON_CLK;
 		break;
 	default:
 		dev_err(dev, "This interface not supported\n");
 		return -EINVAL;
 	}
 
-	return regmap_update_bits(priv->pericfg,
-				  MTK_PERICFG_REG_NIC_CFG_CON_V2,
-				  MTK_PERICFG_REG_NIC_CFG_CON_CFG_INTF |
-				  MTK_PERICFG_BIT_NIC_CFG_CON_CLK_V2,
-				  intf_val);
+	regmap_update_bits(priv->pericfg, MT8365_MTK_PERICFG_REG_NIC_CFG_CON,
+			   MTK_PERICFG_MSK_NIC_CFG_CON_CFG_MII |
+			   MTK8365_PERICFG_BIT_NIC_CFG_CON_CLK,
+			   intf_val);
+	return 0;
 }
 
-static const struct mtk_star_compat mtk_star_mt8516_compat = {
+static struct mtk_star_compat mtk_star_mt8516_compat = {
 	.set_interface_mode = mt8516_set_interface_mode,
 	.bit_clk_div = MTK_STAR_BIT_CLK_DIV_10,
 };
 
-static const struct mtk_star_compat mtk_star_mt8365_compat = {
+static struct mtk_star_compat mtk_star_mt8365_compat = {
 	.set_interface_mode = mt8365_set_interface_mode,
 	.bit_clk_div = MTK_STAR_BIT_CLK_DIV_50,
 };
 
 static const struct of_device_id mtk_star_of_match[] = {
-	{ .compatible = "mediatek,mt8516-eth",
-	  .data = &mtk_star_mt8516_compat },
-	{ .compatible = "mediatek,mt8518-eth",
-	  .data = &mtk_star_mt8516_compat },
-	{ .compatible = "mediatek,mt8175-eth",
-	  .data = &mtk_star_mt8516_compat },
-	{ .compatible = "mediatek,mt8365-eth",
-	  .data = &mtk_star_mt8365_compat },
+	{ .compatible = "mediatek,mt8516-eth", .data = &mtk_star_mt8516_compat },
+	{ .compatible = "mediatek,mt8518-eth", .data = &mtk_star_mt8516_compat },
+	{ .compatible = "mediatek,mt8175-eth", .data = &mtk_star_mt8516_compat },
+	{ .compatible = "mediatek,mt8365-eth", .data = &mtk_star_mt8365_compat },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, mtk_star_of_match);
-#endif
 
 static SIMPLE_DEV_PM_OPS(mtk_star_pm_ops,
 			 mtk_star_suspend, mtk_star_resume);

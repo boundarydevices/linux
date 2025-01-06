@@ -23,6 +23,7 @@
 		mmc0 = &mmc0;
 		mmc1 = &mmc1;
 		mmc2 = &mmc2;
+		ethernet0 = &ethernet;
 		serial0 = &uart0;
 	};
 
@@ -189,7 +190,7 @@
 &dsi0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "disabled";
+	status = "okay";
 
 	panel@0 {
 		compatible = "startek,kd070fhfid015";
@@ -198,6 +199,7 @@
 		reset-gpios = <&pio 20 GPIO_ACTIVE_HIGH>;
 		iovcc-supply = <&mt6357_vsim1_reg>;
 		power-supply = <&vsys_lcm_reg>;
+		status = "disabled";
 
 		port {
 			panel_in: endpoint {
@@ -207,6 +209,8 @@
 	};
 
 	port {
+		status = "disabled";
+
 		dsi_out: endpoint {
 			remote-endpoint = <&panel_in>;
 		};
@@ -250,6 +254,7 @@
 	clock-frequency = <100000>;
 	pinctrl-0 = <&i2c1_pins>;
 	pinctrl-names = "default";
+	vbus-supply = <&mt6357_vsim2_reg>;
 	status = "okay";
 
 	it66121_hdmi: hdmi@4c {
@@ -261,10 +266,9 @@
 		pinctrl-names = "default";
 		reg = <0x4c>;
 		reset-gpios = <&pio 69 GPIO_ACTIVE_LOW>;
-		vcn18-supply = <&mt6357_vsim2_reg>;
 		vcn33-supply = <&mt6357_vibr_reg>;
 		vrf12-supply = <&mt6357_vrf12_reg>;
-		status = "disabled";
+		status = "okay";
 
 		ports {
 			#address-cells = <1>;
@@ -296,6 +300,8 @@
 		interrupts = <78 IRQ_TYPE_EDGE_FALLING>;
 		irq-gpios = <&pio 78 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&pio 79 GPIO_ACTIVE_HIGH>;
+		VDDIO-supply = <&mt6357_vrf12_reg>;
+		status = "disabled";
 	};
 };
 
@@ -586,6 +592,18 @@
 		};
 	};
 
+	lvds_panel_default_pins: lvds-panel-default-pins {
+		panel-dcdc {
+			pinmux = <MT8365_PIN_129_TDM_TX_BCK__FUNC_GPIO129>;
+			output-low;
+		};
+
+		panel-rst {
+			pinmux = <MT8365_PIN_67_CMPCLK__FUNC_GPIO67>;
+			output-low;
+		};
+	};
+
 	mmc0_default_pins: mmc0-default-pins {
 		clk-pins {
 			pinmux = <MT8365_PIN_99_MSDC0_CLK__FUNC_MSDC0_CLK>;
@@ -742,6 +760,16 @@
 		};
 	};
 
+	spi_pins: spi-pins {
+		pins {
+			pinmux = <MT8365_PIN_26_SPI_CS__FUNC_SPI_CSB>,
+				 <MT8365_PIN_27_SPI_CK__FUNC_SPI_CLK>,
+				 <MT8365_PIN_28_SPI_MI__FUNC_SPI_MI>,
+				 <MT8365_PIN_29_SPI_MO__FUNC_SPI_MO>;
+			bias-disable;
+		};
+	};
+
 	ts_pins: ts-pins {
 		ctp-int1-pins {
 			pinmux = <MT8365_PIN_78_CMHSYNC__FUNC_GPIO78>;
@@ -808,6 +836,13 @@
 	status = "okay";
 };
 
+&spi {
+	pinctrl-0 = <&spi_pins>;
+	pinctrl-names = "default";
+	mediatek,pad-select = <0>;
+	status = "okay";
+};
+
 &ssusb {
 	dr_mode = "otg";
 	maximum-speed = "high-speed";
@@ -846,4 +881,13 @@
 	pinctrl-0 = <&uart2_pins>;
 	pinctrl-names = "default";
 	status = "okay";
+};
+
+&keys {
+	/delete-node/ key-home;
+
+	key-volume-down {
+		linux,keycodes = <KEY_VOLUMEDOWN>;
+		wakeup-source;
+	};
 };

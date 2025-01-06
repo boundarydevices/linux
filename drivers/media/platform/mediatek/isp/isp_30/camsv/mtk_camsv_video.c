@@ -382,13 +382,10 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 		goto fail_unlock;
 
 	/* Start streaming of the whole pipeline now*/
-	if (!cam->pipeline.start_count) {
-		ret = media_pipeline_start(vdev->vdev.entity.pads,
-					   &cam->pipeline);
-		if (ret) {
-			dev_err(dev, "failed to start pipeline:%d\n", ret);
-			goto fail_unlock;
-		}
+	ret = video_device_pipeline_alloc_start(&vdev->vdev);
+	if (ret) {
+		dev_err(dev, "failed to start pipeline:%d\n", ret);
+		goto fail_unlock;
 	}
 
 	/* Media links are fixed after media_pipeline_start */
@@ -437,7 +434,7 @@ fail_no_buffer:
 fail_no_stream:
 	cam->stream_count--;
 	if (cam->stream_count == 0)
-		media_pipeline_stop(vdev->vdev.entity.pads);
+		video_device_pipeline_stop(&vdev->vdev);
 fail_unlock:
 	mutex_unlock(&cam->op_lock);
 	mtk_cam_vb2_return_all_buffers(cam, VB2_BUF_STATE_QUEUED);
@@ -476,7 +473,7 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 
 	mutex_unlock(&cam->op_lock);
 
-	media_pipeline_stop(vdev->vdev.entity.pads);
+	video_device_pipeline_stop(&vdev->vdev);
 }
 
 static const struct vb2_ops mtk_cam_vb2_ops = {

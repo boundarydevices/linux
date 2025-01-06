@@ -370,6 +370,10 @@ static int mtk_pmic_keys_probe(struct platform_device *pdev)
 			return keys->keys[index].irq;
 		}
 
+		/* optional: release irq might be separate */
+		keys->keys[index].irq_r =
+			platform_get_irq_byname_optional(pdev, irqnames_r[index]);
+
 		if (of_device_is_compatible(node, "mediatek,mt6358-keys")) {
 			keys->keys[index].irq_r = platform_get_irq_byname(pdev,
 									  irqnames_r[index]);

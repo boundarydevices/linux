@@ -164,6 +164,7 @@
 
 #define DPI_DUMMY		0x50
 #define DPI_DUMMY_MASK			(0xFFFFFFFF << 0)
+#define LVDS_EN				BIT(0)
 
 #define DPI_TGEN_VWIDTH_LEVEN	0x68
 #define DPI_TGEN_VPORCH_LEVEN	0x6C

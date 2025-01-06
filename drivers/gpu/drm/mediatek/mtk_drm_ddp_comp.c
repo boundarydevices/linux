@@ -305,6 +305,7 @@ static const struct mtk_ddp_comp_funcs ddp_dpi = {
 	.start = mtk_dpi_start,
 	.stop = mtk_dpi_stop,
 	.encoder_index = mtk_dpi_encoder_index,
+	.check_output_to_lvds = mtk_dpi_check_output_to_lvds,
 };
 
 static const struct mtk_ddp_comp_funcs ddp_dsc = {

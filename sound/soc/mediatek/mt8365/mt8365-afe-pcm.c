@@ -1425,6 +1425,9 @@ static const struct snd_soc_dapm_widget mt8365_memif_widgets[] = {
 	SND_SOC_DAPM_MIXER("CM2_Mux IO", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER("CM1_IO", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER("O17O18", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("CM2_Mux_IO GASRC1", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("CM2_Mux_IO GASRC2", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("CM2_Mux_IO TDM_ASRC", SND_SOC_NOPM, 0, 0, NULL, 0),
 	/* inter-connections */
 	SND_SOC_DAPM_MIXER("HW_GAIN1_IN_CH1", SND_SOC_NOPM, 0, 0,
 			   mtk_hw_gain1_in_ch1_mix,
@@ -1487,8 +1490,8 @@ static const struct snd_soc_dapm_route mt8365_memif_routes[] = {
 	{"I03", NULL, "AIN Mux"},
 	{"I04", NULL, "AIN Mux"},
 
-	{"HW_GAIN1_IN_CH1", "CONNSYS_I2S_CH1", "Hostless FM DL"},
-	{"HW_GAIN1_IN_CH2", "CONNSYS_I2S_CH2", "Hostless FM DL"},
+	{"HW_GAIN1_IN_CH1", "CONNSYS_I2S_CH1 Switch", "Hostless FM DL"},
+	{"HW_GAIN1_IN_CH2", "CONNSYS_I2S_CH2 Switch", "Hostless FM DL"},
 
 	{"HW Gain 1 In Endpoint", NULL, "HW Gain 1 In"},
 	{"HW Gain 1 Out", NULL, "HW Gain 1 Out Endpoint"},
@@ -1553,6 +1556,10 @@ static const struct snd_soc_dapm_route mt8365_memif_routes[] = {
 
 	/* CM2_Mux*/
 	{"CM2_Mux IO", NULL, "CM2_Mux_IO Input Mux"},
+
+	{"CM2_Mux_IO Input Mux", "FROM_GASRC1_OUT", "CM2_Mux_IO GASRC1"},
+	{"CM2_Mux_IO Input Mux", "FROM_GASRC2_OUT", "CM2_Mux_IO GASRC2"},
+	{"CM2_Mux_IO Input Mux", "FROM_TDM_ASRC_OUT", "CM2_Mux_IO TDM_ASRC"},
 
 	/* VUL2 */
 	{"VUL2", NULL, "VUL2 Input Mux"},

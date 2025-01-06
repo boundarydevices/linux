@@ -148,6 +148,7 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 	.clk_driver = "clk-mt8365-mm",
 	.routes = mt8365_mmsys_routing_table,
 	.num_routes = ARRAY_SIZE(mt8365_mmsys_routing_table),
+	.has_lvds = true,
 };
 
 struct mtk_mmsys {
@@ -403,6 +404,20 @@ static const struct reset_control_ops mtk_mmsys_reset_ops = {
 	.deassert = mtk_mmsys_reset_deassert,
 	.reset = mtk_mmsys_reset,
 };
+
+void mtk_mmsys_lvds_config(struct device *dev)
+{
+	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
+
+	if (!mmsys->data->has_lvds) {
+		dev_warn(dev, "No lvds on this platform. Ignore.\n");
+		return;
+	}
+
+	mtk_mmsys_update_bits(mmsys, MMSYS_LVDS_CFG, DPI_CLK_SOURCE, 0, NULL);
+	mtk_mmsys_update_bits(mmsys, MMSYS_LVDS_CFG, LVDS_SYS_CFG_PXL_CLK, LVDS_SYS_CFG_PXL_CLK, NULL);
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_lvds_config);
 
 static int mtk_mmsys_probe(struct platform_device *pdev)
 {

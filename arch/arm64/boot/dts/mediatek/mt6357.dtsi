@@ -264,7 +264,7 @@
 			compatible = "mediatek,mt6357-rtc", "mediatek,mt6358-rtc";
 		};
 
-		keys {
+		keys: keys {
 			compatible = "mediatek,mt6357-keys";
 
 			key-power {

@@ -236,7 +236,7 @@ int mtk_clk_register_gates(struct device *dev, struct device_node *node,
 					    gate->shift, gate->ops,
 					    gate->flags);
 
-		if (IS_ERR(hw)) {
+		if (IS_ERR(hw) && (PTR_ERR(hw) != -EEXIST)) {
 			pr_err("Failed to register clk %s: %pe\n", gate->name,
 			       hw);
 			goto err;

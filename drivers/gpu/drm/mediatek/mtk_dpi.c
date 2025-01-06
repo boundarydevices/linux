@@ -20,6 +20,7 @@
 #include <video/videomode.h>
 
 #include <drm/drm_atomic_helper.h>
+#include <drm/drm_panel.h>
 #include <drm/drm_bridge.h>
 #include <drm/drm_bridge_connector.h>
 #include <drm/drm_crtc.h>
@@ -63,6 +64,7 @@ enum mtk_dpi_out_color_format {
 
 struct mtk_dpi {
 	struct drm_encoder encoder;
+	struct drm_panel *panel;
 	struct drm_bridge bridge;
 	struct drm_bridge *next_bridge;
 	struct drm_connector *connector;
@@ -72,6 +74,7 @@ struct mtk_dpi {
 	struct device *mmsys_dev;
 	struct clk *engine_clk;
 	struct clk *pixel_clk;
+	struct clk *dpi_sel_clk;
 	struct clk *tvd_clk;
 	int irq;
 	struct drm_display_mode mode;
@@ -85,6 +88,7 @@ struct mtk_dpi {
 	struct pinctrl_state *pins_dpi;
 	u32 output_fmt;
 	int refcount;
+	bool output_to_lvds;
 };
 
 static inline struct mtk_dpi *bridge_to_dpi(struct drm_bridge *b)
@@ -160,6 +164,10 @@ struct mtk_dpi_conf {
 	bool edge_cfg_in_mmsys;
 	// True if this DPI block is directly connected to SoC internal HDMI block
 	bool is_internal_hdmi;
+	// LVDS confs
+	unsigned int (*lvds_cal_factor)(int clock);
+	const u32 *lvds_output_fmts;
+	u32 lvds_num_output_fmts;
 };
 
 static void mtk_dpi_mask(struct mtk_dpi *dpi, u32 offset, u32 val, u32 mask)
@@ -423,6 +431,11 @@ static void mtk_dpi_config_disable_edge(struct mtk_dpi *dpi)
 		mtk_dpi_mask(dpi, dpi->conf->reg_h_fre_con, 0, EDGE_SEL_EN);
 }
 
+static void mtk_dpi_config_lvds_enable(struct mtk_dpi *dpi)
+{
+	mtk_dpi_mask(dpi, DPI_DUMMY, LVDS_EN, LVDS_EN);
+}
+
 static void mtk_dpi_config_color_format(struct mtk_dpi *dpi,
 					enum mtk_dpi_out_color_format format)
 {
@@ -462,6 +475,8 @@ static void mtk_dpi_dual_edge(struct mtk_dpi *dpi)
 		mtk_dpi_mask(dpi, DPI_DDR_SETTING, DDR_EN | DDR_4PHASE, 0);
 		if (dpi->conf->edge_cfg_in_mmsys)
 			mtk_mmsys_ddp_dpi_fmt_config(dpi->mmsys_dev, MTK_DPI_RGB888_SDR_CON);
+		if (dpi->output_to_lvds)
+			mtk_dpi_mask(dpi, DPI_OUTPUT_SETTING, EDGE_SEL, EDGE_SEL);
 	}
 }
 
@@ -479,6 +494,8 @@ static void mtk_dpi_power_off(struct mtk_dpi *dpi)
 
 	clk_disable_unprepare(dpi->pixel_clk);
 	clk_disable_unprepare(dpi->engine_clk);
+	clk_disable_unprepare(dpi->tvd_clk);
+	clk_disable_unprepare(dpi->dpi_sel_clk);
 }
 
 static int mtk_dpi_power_on(struct mtk_dpi *dpi)
@@ -488,16 +505,22 @@ static int mtk_dpi_power_on(struct mtk_dpi *dpi)
 	if (++dpi->refcount != 1)
 		return 0;
 
+	ret = clk_prepare_enable(dpi->dpi_sel_clk);
+	if (ret) {
+		dev_err(dpi->dev, "Failed to enable sel clock: %d\n", ret);
+		goto err_refcount;
+	}
+
 	ret = clk_prepare_enable(dpi->tvd_clk);
 	if (ret) {
 		dev_err(dpi->dev, "Failed to enable tvd pll: %d\n", ret);
-		goto err_refcount;
+		goto err_tvd;
 	}
 
 	ret = clk_prepare_enable(dpi->engine_clk);
 	if (ret) {
 		dev_err(dpi->dev, "Failed to enable engine clock: %d\n", ret);
-		goto err_refcount;
+		goto err_engine;
 	}
 
 	ret = clk_prepare_enable(dpi->pixel_clk);
@@ -512,6 +535,10 @@ static int mtk_dpi_power_on(struct mtk_dpi *dpi)
 
 err_pixel:
 	clk_disable_unprepare(dpi->engine_clk);
+err_engine:
+	clk_disable_unprepare(dpi->tvd_clk);
+err_tvd:
+	clk_disable_unprepare(dpi->dpi_sel_clk);
 err_refcount:
 	dpi->refcount--;
 	return ret;
@@ -529,9 +556,12 @@ static int mtk_dpi_set_display_mode(struct mtk_dpi *dpi,
 	struct videomode vm = { 0 };
 	unsigned long pll_rate;
 	unsigned int factor;
-
 	/* let pll_rate can fix the valid range of tvdpll (1G~2GHz) */
-	factor = dpi->conf->cal_factor(mode->clock);
+	if (!dpi->output_to_lvds)
+		factor = dpi->conf->cal_factor(mode->clock);
+	else
+		factor = dpi->conf->lvds_cal_factor(mode->clock);
+
 	drm_display_mode_to_videomode(mode, &vm);
 	pll_rate = vm.pixelclock * factor;
 
@@ -554,7 +584,6 @@ static int mtk_dpi_set_display_mode(struct mtk_dpi *dpi,
 		clk_set_rate(dpi->pixel_clk, vm.pixelclock * 2);
 	else
 		clk_set_rate(dpi->pixel_clk, vm.pixelclock);
-
 
 	vm.pixelclock = clk_get_rate(dpi->pixel_clk);
 
@@ -599,6 +628,10 @@ static int mtk_dpi_set_display_mode(struct mtk_dpi *dpi,
 		vsync_rodd = vsync_lodd;
 	}
 	mtk_dpi_sw_reset(dpi, true);
+
+	if (dpi->output_to_lvds)
+		mtk_dpi_config_lvds_enable(dpi);
+
 	mtk_dpi_config_pol(dpi, &dpi_pol);
 
 	mtk_dpi_config_hsync(dpi, &hsync);
@@ -704,9 +737,15 @@ static int mtk_dpi_bridge_atomic_check(struct drm_bridge *bridge,
 
 	out_bus_format = bridge_state->output_bus_cfg.format;
 
-	if (out_bus_format == MEDIA_BUS_FMT_FIXED)
-		if (dpi->conf->num_output_fmts)
-			out_bus_format = dpi->conf->output_fmts[0];
+	if (out_bus_format == MEDIA_BUS_FMT_FIXED) {
+		if (!dpi->output_to_lvds) {
+			if (dpi->conf->num_output_fmts)
+				out_bus_format = dpi->conf->output_fmts[0];
+		} else {
+			if (dpi->conf->lvds_num_output_fmts)
+				out_bus_format = dpi->conf->lvds_output_fmts[0];
+		}
+	}
 
 	dev_dbg(dpi->dev, "input format 0x%04x, output format 0x%04x\n",
 		bridge_state->input_bus_cfg.format,
@@ -822,6 +861,13 @@ int mtk_dpi_encoder_index(struct device *dev)
 	return encoder_index;
 }
 
+bool mtk_dpi_check_output_to_lvds(struct device *dev)
+{
+	struct mtk_dpi *dpi = dev_get_drvdata(dev);
+
+	return dpi->output_to_lvds;
+}
+
 static int mtk_dpi_bind(struct device *dev, struct device *master, void *data)
 {
 	struct mtk_dpi *dpi = dev_get_drvdata(dev);
@@ -907,6 +953,28 @@ static unsigned int mt8183_calculate_factor(int clock)
 static unsigned int mt8195_calculate_factor(int clock)
 {
 	return 1;
+}
+
+static unsigned int mt8365_calculate_factor(int clock)
+{
+	if (clock <= 27000)
+		return 8;
+	else if (clock <= 167000)
+		return 4;
+	else
+		return 2;
+}
+
+static unsigned int mt8365_lvds_calculate_factor(int clock)
+{
+	if (clock <= 64000)
+		return 16;
+	else if (clock <= 128000)
+		return 8;
+	else if (clock <= 256000)
+		return 4;
+	else
+		return 2;
 }
 
 static unsigned int mt8195_dpintf_calculate_factor(int clock)
@@ -1001,6 +1069,9 @@ static const struct mtk_dpi_conf mt8186_conf = {
 	.channel_swap_shift = CH_SWAP,
 	.yuv422_en_bit = YUV422_EN,
 	.csc_enable_bit = CSC_ENABLE,
+	.lvds_cal_factor = mt8365_lvds_calculate_factor,
+	.lvds_output_fmts = mt8173_output_fmts,
+	.lvds_num_output_fmts = ARRAY_SIZE(mt8173_output_fmts),
 };
 
 static const struct mtk_dpi_conf mt8192_conf = {
@@ -1049,6 +1120,26 @@ static const struct mtk_dpi_conf mt8195_dpintf_conf = {
 	.channel_swap_shift = DPINTF_CH_SWAP,
 	.yuv422_en_bit = DPINTF_YUV422_EN,
 	.csc_enable_bit = DPINTF_CSC_ENABLE,
+};
+
+static const struct mtk_dpi_conf mt8365_conf = {
+	.cal_factor = mt8365_calculate_factor,
+	.reg_h_fre_con = 0xe0,
+	.max_clock_khz = 150000,
+	.output_fmts = mt8183_output_fmts,
+	.num_output_fmts = ARRAY_SIZE(mt8183_output_fmts),
+	.pixels_per_iter = 1,
+	.is_ck_de_pol = true,
+	.swap_input_support = true,
+	.support_direct_pin = true,
+	.dimension_mask = HPW_MASK,
+	.hvsize_mask = HSIZE_MASK,
+	.channel_swap_shift = CH_SWAP,
+	.yuv422_en_bit = YUV422_EN,
+	.csc_enable_bit = CSC_ENABLE,
+	.lvds_cal_factor = mt8365_lvds_calculate_factor,
+	.lvds_output_fmts = mt8173_output_fmts,
+	.lvds_num_output_fmts = ARRAY_SIZE(mt8173_output_fmts),
 };
 
 static int mtk_dpi_probe(struct platform_device *pdev)
@@ -1111,9 +1202,17 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(dpi->tvd_clk),
 				     "Failed to get tvdpll clock\n");
 
+	dpi->dpi_sel_clk = devm_clk_get(dev, "dpi_sel");
+	if (IS_ERR(dpi->dpi_sel_clk)) {
+		return dev_err_probe(dev, PTR_ERR(dpi->dpi_sel_clk),
+				     "Failed to get dpi_sel_clk clock\n");
+	}
+
 	dpi->irq = platform_get_irq(pdev, 0);
 	if (dpi->irq < 0)
 		return dpi->irq;
+
+	dpi->output_to_lvds = of_property_read_bool(dev->of_node, "mediatek,output-to-lvds");
 
 	dpi->next_bridge = devm_drm_of_get_bridge(dev, dev->of_node, 0, 0);
 	if (IS_ERR(dpi->next_bridge))
@@ -1153,6 +1252,7 @@ static const struct of_device_id mtk_dpi_of_ids[] = {
 	{ .compatible = "mediatek,mt8195-dpi", .data = &mt8195_conf },
 	{ .compatible = "mediatek,mt8192-dpi", .data = &mt8192_conf },
 	{ .compatible = "mediatek,mt8195-dp-intf", .data = &mt8195_dpintf_conf },
+	{ .compatible = "mediatek,mt8365-dpi", .data = &mt8365_conf },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, mtk_dpi_of_ids);

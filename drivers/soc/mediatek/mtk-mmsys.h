@@ -78,6 +78,10 @@
 #define DSI_SEL_IN_RDMA				0x1
 #define DSI_SEL_IN_MASK				0x1
 
+#define MMSYS_LVDS_CFG				0xfdc
+#define DPI_CLK_SOURCE				BIT(0)
+#define LVDS_SYS_CFG_PXL_CLK			(0x3 << 16)
+
 struct mtk_mmsys_routes {
 	u32 from_comp;
 	u32 to_comp;
@@ -123,6 +127,7 @@ struct mtk_mmsys_driver_data {
 	const bool is_vppsys;
 	const u8 vsync_len;
 	const bool need_gce;
+	const bool has_lvds;
 };
 
 /*

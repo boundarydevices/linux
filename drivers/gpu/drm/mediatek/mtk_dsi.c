@@ -885,6 +885,8 @@ static int mtk_dsi_bind(struct device *dev, struct device *master, void *data)
 	int ret;
 	struct drm_device *drm = data;
 	struct mtk_dsi *dsi = dev_get_drvdata(dev);
+	if (!dsi->next_bridge)
+		return 0;
 
 	ret = mtk_dsi_encoder_init(drm, dsi);
 	if (ret)
@@ -897,6 +899,8 @@ static void mtk_dsi_unbind(struct device *dev, struct device *master,
 			   void *data)
 {
 	struct mtk_dsi *dsi = dev_get_drvdata(dev);
+	if (!dsi->next_bridge)
+		return;
 
 	drm_encoder_cleanup(&dsi->encoder);
 }
@@ -1185,6 +1189,26 @@ static int mtk_dsi_probe(struct platform_device *pdev)
 	dsi->bridge.funcs = &mtk_dsi_bridge_funcs;
 	dsi->bridge.of_node = dev->of_node;
 	dsi->bridge.type = DRM_MODE_CONNECTOR_DSI;
+
+
+	dsi->next_bridge = devm_drm_of_get_bridge(dev, dev->of_node, 0, 0);
+	if (IS_ERR(dsi->next_bridge) && PTR_ERR(dsi->next_bridge) == -ENODEV) {
+		/* if no panel has been connected in the device tree on purpose,
+		 * add the component directly here with empty ops as the
+		 * unction doing this will never be called. But first warn
+		 * about this.
+		 */
+		dev_warn(dev, "No panel connected in the devicetree, continuing without any panel...\n");
+		dsi->next_bridge = NULL;
+		drm_bridge_add(&dsi->bridge);
+
+		ret = component_add(&pdev->dev, &mtk_dsi_component_ops);
+		if (ret) {
+			DRM_ERROR("failed to add dsi_host component: %d\n", ret);
+			drm_bridge_remove(&dsi->bridge);
+			return ret;
+		}
+	}
 
 	return 0;
 
