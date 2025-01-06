@@ -760,13 +760,6 @@ int mdp_m2m_device_register(struct mdp_dev *mdp)
 	media_device_init(&mdp->mdev);
 	mdp->v4l2_dev.mdev = &mdp->mdev;
 
-	ret = v4l2_m2m_register_media_controller(mdp->m2m_dev, mdp->m2m_vdev,
-						MEDIA_ENT_F_PROC_VIDEO_PIXEL_FORMATTER);
-	if (ret) {
-		dev_err(dev, "Failed to initialize media device\n");
-		goto err_mc_register;
-	}
-
 	ret = media_device_register(&mdp->mdev);
 	if (ret) {
 		dev_err(dev, "Failed to register media device\n");
@@ -779,15 +772,22 @@ int mdp_m2m_device_register(struct mdp_dev *mdp)
 		goto err_video_register;
 	}
 
+	ret = v4l2_m2m_register_media_controller(mdp->m2m_dev, mdp->m2m_vdev,
+						MEDIA_ENT_F_PROC_VIDEO_PIXEL_FORMATTER);
+	if (ret) {
+		dev_err(dev, "Failed to register media controller\n");
+		goto err_mc_register;
+	}
+
 	v4l2_info(&mdp->v4l2_dev, "Driver registered as /dev/video%d",
 		  mdp->m2m_vdev->num);
 	return 0;
 
+err_mc_register:
+	video_unregister_device(mdp->m2m_vdev);
 err_video_register:
 	media_device_unregister(&mdp->mdev);
 err_media_register:
-	v4l2_m2m_unregister_media_controller(mdp->m2m_dev);
-err_mc_register:
 	media_device_cleanup(&mdp->mdev);
 err_bus_info:
 	v4l2_m2m_release(mdp->m2m_dev);
