@@ -509,20 +509,6 @@ bool addr_is_memory(phys_addr_t phys)
 	return !!find_mem_range(phys, &range);
 }
 
-static bool is_range_refcounted(phys_addr_t addr, u64 nr_pages)
-{
-	struct hyp_page *p;
-	int i;
-
-	for (i = 0 ; i < nr_pages ; ++i) {
-		p = hyp_phys_to_page(addr + i * PAGE_SIZE);
-		if (hyp_refcount_get(p->refcount))
-			return true;
-	}
-
-	return false;
-}
-
 static bool addr_is_allowed_memory(phys_addr_t phys)
 {
 	struct memblock_region *reg;
@@ -970,13 +956,15 @@ static enum pkvm_page_state host_get_mmio_page_state(kvm_pte_t pte, u64 addr)
 
 static int ___host_check_page_state_range(u64 addr, u64 size,
 					  enum pkvm_page_state state,
-					  struct memblock_region *reg)
+					  struct memblock_region *reg,
+					  bool check_null_refcount)
 {
 	struct check_walk_data d = {
 		.desired	= state,
 		.get_page_state	= host_get_mmio_page_state,
 	};
 	u64 end = addr + size;
+	struct hyp_page *p;
 
 	hyp_assert_lock_held(&host_mmu.lock);
 
@@ -988,8 +976,11 @@ static int ___host_check_page_state_range(u64 addr, u64 size,
 		return -EPERM;
 
 	for (; addr < end; addr += PAGE_SIZE) {
-		if (hyp_phys_to_page(addr)->host_state != state)
+		p = hyp_phys_to_page(addr);
+		if (p->host_state != state)
 			return -EPERM;
+		if (check_null_refcount && hyp_refcount_get(p->refcount))
+			return -EINVAL;
 	}
 
 	/*
@@ -1013,7 +1004,8 @@ static int __host_check_page_state_range(u64 addr, u64 size,
 	if (!is_in_mem_range(end - 1, &range))
 		return -EINVAL;
 
-	return ___host_check_page_state_range(addr, size, state, reg);
+	/* Check the refcount of PAGE_OWNED pages as those may be used for DMA. */
+	return ___host_check_page_state_range(addr, size, state, reg, state == PKVM_PAGE_OWNED);
 }
 
 static int __host_set_page_state_range(u64 addr, u64 size,
@@ -1036,9 +1028,6 @@ static int host_request_owned_transition(u64 *completer_addr,
 {
 	u64 size = tx->nr_pages * PAGE_SIZE;
 	u64 addr = tx->initiator.addr;
-
-	if (range_is_memory(addr, addr + size) && is_range_refcounted(addr, tx->nr_pages))
-		return -EINVAL;
 
 	*completer_addr = tx->initiator.host.completer_addr;
 	return __host_check_page_state_range(addr, size, PKVM_PAGE_OWNED);
@@ -1645,7 +1634,7 @@ int module_change_host_page_prot(u64 pfn, enum kvm_pgtable_prot prot, u64 nr_pag
 	} else {
 		/* The entire range must be pristine. */
 		ret = ___host_check_page_state_range(
-				addr, nr_pages << PAGE_SHIFT, PKVM_PAGE_OWNED, reg);
+				addr, nr_pages << PAGE_SHIFT, PKVM_PAGE_OWNED, reg, true);
 		if (ret)
 			goto unlock;
 	}
@@ -1780,7 +1769,7 @@ static void __pkvm_host_unuse_dma_page(phys_addr_t phys_addr)
  * - Host can only map pages that are OWNED
  * - Any page that is mapped is refcounted
  * - Donation/Sharing is prevented from refcount check in
- *   host_request_owned_transition()
+ *   ___host_check_page_state_range()
  * - No MMIO transtion is allowed beyond IOMMU MMIO which
  *   happens during de-privilege.
  * In case in the future shared pages are allowed to be mapped,
@@ -1791,17 +1780,16 @@ int __pkvm_host_use_dma(phys_addr_t phys_addr, size_t size)
 {
 	int i;
 	int ret = 0;
+	struct kvm_mem_range r;
 	size_t nr_pages = size >> PAGE_SHIFT;
+	struct memblock_region *reg = find_mem_range(phys_addr, &r);
 
-	if (WARN_ON(!PAGE_ALIGNED(phys_addr | size)))
+	if (WARN_ON(!PAGE_ALIGNED(phys_addr | size)) || !is_in_mem_range(phys_addr + size - 1, &r))
 		return -EINVAL;
 
 	host_lock_component();
-	ret = __host_check_page_state_range(phys_addr, size, PKVM_PAGE_OWNED);
-	if (ret)
-		goto out_ret;
-
-	if (!range_is_memory(phys_addr, phys_addr + size))
+	ret = ___host_check_page_state_range(phys_addr, size, PKVM_PAGE_OWNED, reg, false);
+	if (ret || !reg)
 		goto out_ret;
 
 	for (i = 0; i < nr_pages; i++)
@@ -1819,10 +1807,10 @@ int __pkvm_host_unuse_dma(phys_addr_t phys_addr, size_t size)
 
 	if (WARN_ON(!PAGE_ALIGNED(phys_addr | size)))
 		return -EINVAL;
+	if (!range_is_memory(phys_addr, phys_addr + size))
+		return 0;
 
 	host_lock_component();
-	if (!range_is_memory(phys_addr, phys_addr + size))
-		goto out_ret;
 	/*
 	 * We end up here after the caller successfully unmapped the page from
 	 * the IOMMU table. Which means that a ref is held, the page is shared
@@ -1831,7 +1819,6 @@ int __pkvm_host_unuse_dma(phys_addr_t phys_addr, size_t size)
 	for (i = 0; i < nr_pages; i++)
 		__pkvm_host_unuse_dma_page(phys_addr + i * PAGE_SIZE);
 
-out_ret:
 	host_unlock_component();
 	return 0;
 }
