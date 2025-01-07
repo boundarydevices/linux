@@ -7,6 +7,7 @@
 #include <linux/jiffies.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
+#include <linux/platform_device.h>
 #include <linux/soc/mediatek/infracfg.h>
 #include <asm/processor.h>
 
@@ -74,7 +75,7 @@ int mtk_infracfg_clear_bus_protection(struct regmap *infracfg, u32 mask,
 	return ret;
 }
 
-static int __init mtk_infracfg_init(void)
+static int mtk_infracfg_probe(struct platform_device *pdev)
 {
 	struct regmap *infracfg;
 
@@ -90,4 +91,16 @@ static int __init mtk_infracfg_init(void)
 				MT8192_INFRA_CTRL_DISABLE_MFG2ACP);
 	return 0;
 }
-postcore_initcall(mtk_infracfg_init);
+
+static struct platform_driver mtk_infracfg_drv = {
+	.probe = mtk_infracfg_probe,
+	.driver = {
+		.name = "mtk-infracfg",
+	},
+};
+
+module_platform_driver(mtk_infracfg_drv);
+
+MODULE_DESCRIPTION("MediaTek INFRACFG controller");
+MODULE_AUTHOR("Sascha Hauer <kernel@pengutronix.de>");
+MODULE_LICENSE("GPL");
