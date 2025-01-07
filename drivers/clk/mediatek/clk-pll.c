@@ -36,6 +36,7 @@ int mtk_pll_is_prepared(struct clk_hw *hw)
 
 	return (readl(pll->en_addr) & BIT(pll->data->pll_en_bit)) != 0;
 }
+EXPORT_SYMBOL_GPL(mtk_pll_is_prepared);
 
 static unsigned long __mtk_pll_recalc_rate(struct mtk_clk_pll *pll, u32 fin,
 		u32 pcw, int postdiv)
@@ -171,6 +172,7 @@ void mtk_pll_calc_values(struct mtk_clk_pll *pll, u32 *pcw, u32 *postdiv,
 
 	*pcw = (u32)_pcw;
 }
+EXPORT_SYMBOL_GPL(mtk_pll_calc_values);
 
 int mtk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		     unsigned long parent_rate)
@@ -199,6 +201,7 @@ unsigned long mtk_pll_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
 
 	return __mtk_pll_recalc_rate(pll, parent_rate, pcw, postdiv);
 }
+EXPORT_SYMBOL_GPL(mtk_pll_recalc_rate);
 
 long mtk_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 			unsigned long *prate)
@@ -211,6 +214,7 @@ long mtk_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 
 	return __mtk_pll_recalc_rate(pll, *prate, pcw, postdiv);
 }
+EXPORT_SYMBOL_GPL(mtk_pll_round_rate);
 
 int mtk_pll_prepare(struct clk_hw *hw)
 {
@@ -245,6 +249,7 @@ int mtk_pll_prepare(struct clk_hw *hw)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(mtk_pll_prepare);
 
 void mtk_pll_unprepare(struct clk_hw *hw)
 {
@@ -273,6 +278,7 @@ void mtk_pll_unprepare(struct clk_hw *hw)
 	r = readl(pll->pwr_addr) & ~CON0_PWR_ON;
 	writel(r, pll->pwr_addr);
 }
+EXPORT_SYMBOL_GPL(mtk_pll_unprepare);
 
 const struct clk_ops mtk_pll_ops = {
 	.is_prepared	= mtk_pll_is_prepared,
@@ -327,6 +333,7 @@ struct clk_hw *mtk_clk_register_pll_ops(struct mtk_clk_pll *pll,
 
 	return &pll->hw;
 }
+EXPORT_SYMBOL_GPL(mtk_clk_register_pll_ops);
 
 struct clk_hw *mtk_clk_register_pll(const struct mtk_pll_data *data,
 				    void __iomem *base)
@@ -344,6 +351,7 @@ struct clk_hw *mtk_clk_register_pll(const struct mtk_pll_data *data,
 
 	return hw;
 }
+EXPORT_SYMBOL_GPL(mtk_clk_register_pll);
 
 void mtk_clk_unregister_pll(struct clk_hw *hw)
 {
@@ -357,6 +365,7 @@ void mtk_clk_unregister_pll(struct clk_hw *hw)
 	clk_hw_unregister(hw);
 	kfree(pll);
 }
+EXPORT_SYMBOL_GPL(mtk_clk_unregister_pll);
 
 int mtk_clk_register_plls(struct device_node *node,
 			  const struct mtk_pll_data *plls, int num_plls,
@@ -415,6 +424,7 @@ __iomem void *mtk_clk_pll_get_base(struct clk_hw *hw,
 
 	return pll->base_addr - data->reg;
 }
+EXPORT_SYMBOL_GPL(mtk_clk_pll_get_base);
 
 void mtk_clk_unregister_plls(const struct mtk_pll_data *plls, int num_plls,
 			     struct clk_hw_onecell_data *clk_data)
