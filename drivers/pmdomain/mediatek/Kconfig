@@ -15,7 +15,7 @@ config MTK_SCPSYS
 	  driver.
 
 config MTK_SCPSYS_PM_DOMAINS
-	bool "MediaTek SCPSYS generic power domain"
+	tristate "MediaTek SCPSYS generic power domain"
 	default ARCH_MEDIATEK
 	depends on PM
 	select PM_GENERIC_DOMAINS

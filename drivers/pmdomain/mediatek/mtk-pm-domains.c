@@ -739,4 +739,8 @@ static struct platform_driver scpsys_pm_domain_driver = {
 		.of_match_table = scpsys_of_match,
 	},
 };
-builtin_platform_driver(scpsys_pm_domain_driver);
+
+module_platform_driver(scpsys_pm_domain_driver);
+
+MODULE_DESCRIPTION("MediaTek SCPSYS generic power domain driver");
+MODULE_LICENSE("GPL");
