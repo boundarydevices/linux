@@ -44,6 +44,7 @@ int mtk_infracfg_set_bus_protection(struct regmap *infracfg, u32 mask,
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(mtk_infracfg_set_bus_protection);
 
 /**
  * mtk_infracfg_clear_bus_protection - disable bus protection
@@ -74,6 +75,7 @@ int mtk_infracfg_clear_bus_protection(struct regmap *infracfg, u32 mask,
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(mtk_infracfg_clear_bus_protection);
 
 static int mtk_infracfg_probe(struct platform_device *pdev)
 {
