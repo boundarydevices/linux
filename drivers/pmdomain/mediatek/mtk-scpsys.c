@@ -1141,4 +1141,9 @@ static struct platform_driver scpsys_drv = {
 		.of_match_table = of_scpsys_match_tbl,
 	},
 };
-builtin_platform_driver(scpsys_drv);
+
+module_platform_driver(scpsys_drv);
+
+MODULE_DESCRIPTION("MediaTek SCPSYS support driver");
+MODULE_AUTHOR("Sascha Hauer <kernel@pengutronix.de>");
+MODULE_LICENSE("GPL");

@@ -4,7 +4,7 @@ menu "MediaTek PM Domains"
 	depends on ARCH_MEDIATEK || COMPILE_TEST
 
 config MTK_SCPSYS
-	bool "MediaTek SCPSYS Support"
+	tristate "MediaTek SCPSYS Support"
 	default ARCH_MEDIATEK
 	depends on OF
 	select REGMAP
