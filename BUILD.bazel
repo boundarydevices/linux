@@ -1322,6 +1322,105 @@ pkg_install(
     destdir = "out/fips140/dist",
 )
 
+_MTK_MODULE_OUTS = [
+    # keep sorted
+    "block/bfq.ko",
+    "drivers/char/hw_random/mtk-rng.ko",
+    "drivers/char/hw_random/optee-rng.ko",
+    "drivers/clk/mediatek/clk-apmixed.ko",
+    "drivers/clk/mediatek/clk-cpumux.ko",
+    "drivers/clk/mediatek/clk-fhctl.ko",
+    "drivers/clk/mediatek/clk-gate.ko",
+    "drivers/clk/mediatek/clk-mt8188-adsp_audio26m.ko",
+    "drivers/clk/mediatek/clk-mt8188-apmixedsys.ko",
+    "drivers/clk/mediatek/clk-mt8188-cam.ko",
+    "drivers/clk/mediatek/clk-mt8188-ccu.ko",
+    "drivers/clk/mediatek/clk-mt8188-img.ko",
+    "drivers/clk/mediatek/clk-mt8188-imp_iic_wrap.ko",
+    "drivers/clk/mediatek/clk-mt8188-infra_ao.ko",
+    "drivers/clk/mediatek/clk-mt8188-ipe.ko",
+    "drivers/clk/mediatek/clk-mt8188-mfg.ko",
+    "drivers/clk/mediatek/clk-mt8188-peri_ao.ko",
+    "drivers/clk/mediatek/clk-mt8188-topckgen.ko",
+    "drivers/clk/mediatek/clk-mt8188-vdec.ko",
+    "drivers/clk/mediatek/clk-mt8188-vdo0.ko",
+    "drivers/clk/mediatek/clk-mt8188-vdo1.ko",
+    "drivers/clk/mediatek/clk-mt8188-venc.ko",
+    "drivers/clk/mediatek/clk-mt8188-vpp0.ko",
+    "drivers/clk/mediatek/clk-mt8188-vpp1.ko",
+    "drivers/clk/mediatek/clk-mt8188-wpe.ko",
+    "drivers/clk/mediatek/clk-mtk.ko",
+    "drivers/clk/mediatek/clk-mux.ko",
+    "drivers/clk/mediatek/clk-pll.ko",
+    "drivers/clk/mediatek/clk-pllfh.ko",
+    "drivers/clk/mediatek/reset.ko",
+    "drivers/cpufreq/mediatek-cpufreq-hw.ko",
+    "drivers/dma-buf/heaps/system_heap.ko",
+    "drivers/firmware/arm_scmi/transports/scmi_transport_optee.ko",
+    "drivers/gpu/drm/vkms/vkms.ko",
+    "drivers/i2c/busses/i2c-mt65xx.ko",
+    "drivers/iio/adc/mt6359-auxadc.ko",
+    "drivers/mailbox/mtk-cmdq-mailbox.ko",
+    "drivers/mfd/mt6397.ko",
+    "drivers/misc/rpmb-core.ko",
+    "drivers/mmc/core/mmc_block.ko",
+    "drivers/mmc/host/cqhci.ko",
+    "drivers/mmc/host/mtk-sd.ko",
+    "drivers/phy/mediatek/phy-mtk-tphy.ko",
+    "drivers/pinctrl/mediatek/mtk-eint.ko",
+    "drivers/pinctrl/mediatek/pinctrl-mt8188.ko",
+    "drivers/tee/tee.ko",
+    "drivers/tty/serial/8250/8250_mtk.ko",
+    "drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.ko",
+    "drivers/pinctrl/mediatek/pinctrl-paris.ko",
+    "drivers/pmdomain/mediatek/mtk-pm-domains.ko",
+    "drivers/pmdomain/mediatek/mtk-scpsys.ko",
+    "drivers/regulator/mt6359-regulator.ko",
+    "drivers/rtc/rtc-mt6397.ko",
+    "drivers/soc/mediatek/mtk-cmdq-helper.ko",
+    "drivers/soc/mediatek/mtk-infracfg.ko",
+    "drivers/soc/mediatek/mtk-mmsys.ko",
+    "drivers/soc/mediatek/mtk-mutex.ko",
+    "drivers/soc/mediatek/mtk-pmic-wrap.ko",
+    "drivers/tee/optee/optee.ko",
+    "drivers/usb/host/xhci-mtk-hcd.ko",
+    "drivers/usb/mtu3/mtu3.ko",
+    "drivers/watchdog/mtk_wdt.ko",
+]
+
+kernel_build(
+    name = "mtk",
+    arch = "arm64",
+    srcs = [":kernel_aarch64_sources"],
+    makefile = ":Makefile",
+    build_config = "build.config.common",
+    defconfig = "arch/arm64/configs/gki_defconfig",
+    pre_defconfig_fragments = ["arch/arm64/configs/mtk_gki.fragment"],
+    make_goals = [
+        "modules",
+        "mediatek/mt8390-genio-700-evk.dtb",
+    ],
+    outs = [
+        "arch/arm64/boot/dts/mediatek/mt8390-genio-700-evk.dtb",
+        "modules.builtin",
+        "modules.builtin.modinfo",
+    ],
+    module_outs = get_gki_modules_list("arm64") + get_kunit_modules_list("arm64") + _MTK_MODULE_OUTS,
+)
+
+pkg_files(
+    name = "mtk_dist_files",
+    srcs = [":mtk"],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
+    name = "mtk_dist",
+    srcs = ["mtk_dist_files"],
+    destdir = "out/mtk/dist",
+)
+
 # allmodconfig build tests.
 # These are build tests only, so:
 # - outs are intentionally set to empty to not copy anything to DIST_DIR
