@@ -52,6 +52,7 @@ const struct fhctl_offset *fhctl_get_offset_table(enum fhctl_variant v)
 		return ERR_PTR(-EINVAL);
 	};
 }
+EXPORT_SYMBOL_GPL(fhctl_get_offset_table);
 
 static void dump_hw(struct mtk_clk_pll *pll, struct fh_pll_regs *regs,
 		    const struct fh_pll_data *data)
@@ -238,6 +239,7 @@ const struct fh_operation *fhctl_get_ops(void)
 {
 	return &fhctl_ops;
 }
+EXPORT_SYMBOL_GPL(fhctl_get_ops);
 
 void fhctl_hw_init(struct mtk_fh *fh)
 {
@@ -263,6 +265,7 @@ void fhctl_hw_init(struct mtk_fh *fh)
 	if (state.ssc_rate)
 		fh->ops->ssc_enable(fh, state.ssc_rate);
 }
+EXPORT_SYMBOL_GPL(fhctl_hw_init);
 
 MODULE_AUTHOR("Edward-JW Yang <edward-jw.yang@mediatek.com>");
 MODULE_DESCRIPTION("Clock driver for MediaTek FHCTL hardware control");
