@@ -7,6 +7,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/io.h>
+#include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/clkdev.h>
 #include <linux/delay.h>
@@ -296,3 +297,7 @@ void mtk_clk_unregister_pllfhs(const struct mtk_pll_data *plls, int num_plls,
 	iounmap(base);
 }
 EXPORT_SYMBOL_GPL(mtk_clk_unregister_pllfhs);
+
+MODULE_AUTHOR("Edward-JW Yang <edward-jw.yang@mediatek.com>");
+MODULE_DESCRIPTION("Clock driver for MediaTek FHCTL hardware control");
+MODULE_LICENSE("GPL");

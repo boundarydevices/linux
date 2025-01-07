@@ -12,7 +12,7 @@ config COMMON_CLK_MEDIATEK
 	  MediaTek SoCs' clock support.
 
 config COMMON_CLK_MEDIATEK_FHCTL
-	bool "clock driver for MediaTek FHCTL hardware control"
+	tristate "clock driver for MediaTek FHCTL hardware control"
 	select COMMON_CLK_MEDIATEK
 	help
 	  This driver supports MediaTek frequency hopping and

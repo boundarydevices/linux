@@ -6,6 +6,7 @@
 
 #include <linux/io.h>
 #include <linux/iopoll.h>
+#include <linux/module.h>
 
 #include "clk-mtk.h"
 #include "clk-pllfh.h"
@@ -262,3 +263,7 @@ void fhctl_hw_init(struct mtk_fh *fh)
 	if (state.ssc_rate)
 		fh->ops->ssc_enable(fh, state.ssc_rate);
 }
+
+MODULE_AUTHOR("Edward-JW Yang <edward-jw.yang@mediatek.com>");
+MODULE_DESCRIPTION("Clock driver for MediaTek FHCTL hardware control");
+MODULE_LICENSE("GPL");
