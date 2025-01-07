@@ -863,18 +863,29 @@
 	status = "okay";
 };
 
+&ssusb0 {
+	pinctrl-0 = <&usb_default_pins>;
+	pinctrl-names = "default";
+	maximum-speed = "high-speed";
+	usb-role-switch;
+	dr_mode = "peripheral";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	status = "okay";
+	wakeup-source;
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		id-gpios = <&pio 83 GPIO_ACTIVE_HIGH>;
+		vbus-supply = <&usb_p0_vbus>;
+	};
+};
+
+&u2port0 {
+	status = "okay";
+};
+
 &xhci0 {
-	status = "okay";
-	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-};
-
-&xhci1 {
-	status = "okay";
-	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	vbus-supply = <&usb_hub_reset_1v8>;
-};
-
-&xhci2 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 };
