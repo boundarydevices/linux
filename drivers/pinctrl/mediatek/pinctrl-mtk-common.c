@@ -1145,3 +1145,6 @@ int mtk_pctrl_common_probe(struct platform_device *pdev)
 
 	return mtk_pctrl_init(pdev, data, NULL);
 }
+
+MODULE_LICENSE("GPL v2");
+MODULE_AUTHOR("Hongzhou.Yang <hongzhou.yang@mediatek.com>");

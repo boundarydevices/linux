@@ -11,7 +11,7 @@ config EINT_MTK
 	default PINCTRL_MTK_PARIS
 
 config PINCTRL_MTK
-	bool
+	tristate
 	depends on OF
 	select PINMUX
 	select GENERIC_PINCONF
