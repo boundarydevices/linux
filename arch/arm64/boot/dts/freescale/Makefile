@@ -784,6 +784,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-rpmsg.dtb \
 			  imx8mp-nitrogen8mp_r20.dtb imx8mp-nitrogen8mp_r20-rpmsg.dtb \
 			  imx8mp-nitrogen8mp-enc.dtb imx8mp-nitrogen8mp-enc-rpmsg.dtb \
 			  imx8mp-nitrogen8mp_r20-enc.dtb imx8mp-nitrogen8mp_r20-enc-rpmsg.dtb \
+			  imx8mp-nitrogen8mp_vm.dtb \
 			  imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-rpmsg.dtb \
 			  imx8mp-nitrogen_smarc-nx611.dtb \
 			  imx8mp-nitrogen_smarc-ov5640.dtb \
