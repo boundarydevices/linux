@@ -1202,7 +1202,7 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(dpi->tvd_clk),
 				     "Failed to get tvdpll clock\n");
 
-	dpi->dpi_sel_clk = devm_clk_get(dev, "dpi_sel");
+	dpi->dpi_sel_clk = devm_clk_get_optional(dev, "dpi_sel");
 	if (IS_ERR(dpi->dpi_sel_clk)) {
 		return dev_err_probe(dev, PTR_ERR(dpi->dpi_sel_clk),
 				     "Failed to get dpi_sel_clk clock\n");
