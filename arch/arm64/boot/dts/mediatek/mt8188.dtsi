@@ -1068,73 +1068,6 @@
 							#power-domain-cells = <0>;
 						};
 
-						power-domain@MT8188_POWER_DOMAIN_VDEC1 {
-							reg = <MT8188_POWER_DOMAIN_VDEC1>;
-							clocks = <&vdecsys CLK_VDEC2_LARB1>;
-							clock-names = "ss-vdec";
-							mediatek,infracfg = <&infracfg_ao>;
-							#power-domain-cells = <0>;
-						};
-
-						power-domain@MT8188_POWER_DOMAIN_VDEC0 {
-							reg = <MT8188_POWER_DOMAIN_VDEC0>;
-							clocks = <&vdecsys_soc CLK_VDEC1_SOC_LARB1>;
-							clock-names = "ss-vdec";
-							mediatek,infracfg = <&infracfg_ao>;
-							#power-domain-cells = <0>;
-						};
-
-						cam_vcore: power-domain@MT8188_POWER_DOMAIN_CAM_VCORE {
-							reg = <MT8188_POWER_DOMAIN_CAM_VCORE>;
-							clocks = <&topckgen CLK_TOP_CAM>,
-								 <&topckgen CLK_TOP_CCU>,
-								 <&topckgen CLK_TOP_CCU_AHB>,
-								 <&topckgen CLK_TOP_CFGREG_CLOCK_ISP_AXI_GALS>;
-							clock-names = "cam", "ccu", "bus", "cfgck";
-							mediatek,infracfg = <&infracfg_ao>;
-							#address-cells = <1>;
-							#size-cells = <0>;
-							#power-domain-cells = <1>;
-
-							power-domain@MT8188_POWER_DOMAIN_CAM_MAIN {
-								reg = <MT8188_POWER_DOMAIN_CAM_MAIN>;
-								clocks = <&camsys CLK_CAM_MAIN_LARB13>,
-									 <&camsys CLK_CAM_MAIN_LARB14>,
-									 <&camsys CLK_CAM_MAIN_CAM2MM0_GALS>,
-									 <&camsys CLK_CAM_MAIN_CAM2MM1_GALS>,
-									 <&camsys CLK_CAM_MAIN_CAM2SYS_GALS>;
-								clock-names= "ss-cam-l13", "ss-cam-l14",
-									     "ss-cam-mm0", "ss-cam-mm1",
-									     "ss-camsys";
-								mediatek,infracfg = <&infracfg_ao>;
-								#address-cells = <1>;
-								#size-cells = <0>;
-								#power-domain-cells = <1>;
-
-								power-domain@MT8188_POWER_DOMAIN_CAM_SUBB {
-									reg = <MT8188_POWER_DOMAIN_CAM_SUBB>;
-									clocks = <&camsys CLK_CAM_MAIN_CAM_SUBB>,
-										 <&camsys_rawb CLK_CAM_RAWB_LARBX>,
-										 <&camsys_yuvb CLK_CAM_YUVB_LARBX>;
-									clock-names = "ss-camb-sub",
-										      "ss-camb-raw",
-										      "ss-camb-yuv";
-									#power-domain-cells = <0>;
-								};
-
-								power-domain@MT8188_POWER_DOMAIN_CAM_SUBA {
-									reg =<MT8188_POWER_DOMAIN_CAM_SUBA>;
-									clocks = <&camsys CLK_CAM_MAIN_CAM_SUBA>,
-										 <&camsys_rawa CLK_CAM_RAWA_LARBX>,
-										 <&camsys_yuva CLK_CAM_YUVA_LARBX>;
-									clock-names = "ss-cama-sub",
-										      "ss-cama-raw",
-										      "ss-cama-yuv";
-									#power-domain-cells = <0>;
-								};
-							};
-						};
-
 						power-domain@MT8188_POWER_DOMAIN_VDOSYS1 {
 							reg = <MT8188_POWER_DOMAIN_VDOSYS1>;
 							clocks = <&topckgen CLK_TOP_CFGREG_CLOCK_EN_VDO1>,
@@ -1148,48 +1081,6 @@
 							#address-cells = <1>;
 							#size-cells = <0>;
 							#power-domain-cells = <1>;
-
-							power-domain@MT8188_POWER_DOMAIN_HDMI_TX {
-								reg = <MT8188_POWER_DOMAIN_HDMI_TX>;
-								clocks = <&topckgen CLK_TOP_HDMI_APB>,
-									 <&topckgen CLK_TOP_HDCP_24M>;
-								clock-names = "bus", "hdcp";
-								mediatek,infracfg = <&infracfg_ao>;
-								#power-domain-cells = <0>;
-							};
-
-							power-domain@MT8188_POWER_DOMAIN_DP_TX {
-								reg = <MT8188_POWER_DOMAIN_DP_TX>;
-								mediatek,infracfg = <&infracfg_ao>;
-								#power-domain-cells = <0>;
-							};
-
-							power-domain@MT8188_POWER_DOMAIN_EDP_TX {
-								reg = <MT8188_POWER_DOMAIN_EDP_TX>;
-								mediatek,infracfg = <&infracfg_ao>;
-								#power-domain-cells = <0>;
-							};
-						};
-
-						power-domain@MT8188_POWER_DOMAIN_VENC {
-							reg = <MT8188_POWER_DOMAIN_VENC>;
-							clocks = <&vencsys CLK_VENC1_LARB>,
-								 <&vencsys CLK_VENC1_VENC>,
-								 <&vencsys CLK_VENC1_GALS>,
-								 <&vencsys CLK_VENC1_GALS_SRAM>;
-							clock-names = "ss-ve1-larb", "ss-ve1-core",
-								      "ss-ve1-gals", "ss-ve1-sram";
-							mediatek,infracfg = <&infracfg_ao>;
-							#power-domain-cells = <0>;
-						};
-
-						power-domain@MT8188_POWER_DOMAIN_WPE {
-							reg = <MT8188_POWER_DOMAIN_WPE>;
-							clocks = <&wpesys CLK_WPE_TOP_SMI_LARB7>,
-								 <&wpesys CLK_WPE_TOP_SMI_LARB7_PCLK_EN>;
-							clock-names = "ss-wpe-l7", "ss-wpe-l7pce";
-							mediatek,infracfg = <&infracfg_ao>;
-							#power-domain-cells = <0>;
 						};
 					};
 				};
@@ -1215,56 +1106,6 @@
 					#power-domain-cells = <0>;
 				};
 
-				power-domain@MT8188_POWER_DOMAIN_ADSP_AO {
-					reg = <MT8188_POWER_DOMAIN_ADSP_AO>;
-					clocks = <&topckgen CLK_TOP_AUDIO_LOCAL_BUS>,
-						 <&topckgen CLK_TOP_ADSP>;
-					clock-names = "bus", "main";
-					mediatek,infracfg = <&infracfg_ao>;
-					#address-cells = <1>;
-					#size-cells = <0>;
-					#power-domain-cells = <1>;
-
-					power-domain@MT8188_POWER_DOMAIN_ADSP_INFRA {
-						reg = <MT8188_POWER_DOMAIN_ADSP_INFRA>;
-						mediatek,infracfg = <&infracfg_ao>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-						#power-domain-cells = <1>;
-
-						power-domain@MT8188_POWER_DOMAIN_AUDIO_ASRC {
-							reg = <MT8188_POWER_DOMAIN_AUDIO_ASRC>;
-							clocks = <&topckgen CLK_TOP_ASM_H>;
-							clock-names = "asm";
-							mediatek,infracfg = <&infracfg_ao>;
-							#power-domain-cells = <0>;
-						};
-
-						power-domain@MT8188_POWER_DOMAIN_AUDIO {
-							reg = <MT8188_POWER_DOMAIN_AUDIO>;
-							clocks = <&topckgen CLK_TOP_A1SYS_HP>,
-								 <&topckgen CLK_TOP_AUD_INTBUS>,
-								 <&adsp_audio26m CLK_AUDIODSP_AUDIO26M>;
-							clock-names = "a1sys", "intbus", "adspck";
-							mediatek,infracfg = <&infracfg_ao>;
-							#power-domain-cells = <0>;
-						};
-
-						power-domain@MT8188_POWER_DOMAIN_ADSP {
-							reg = <MT8188_POWER_DOMAIN_ADSP>;
-							mediatek,infracfg = <&infracfg_ao>;
-							#power-domain-cells = <0>;
-						};
-					};
-				};
-
-				power-domain@MT8188_POWER_DOMAIN_ETHER {
-					reg = <MT8188_POWER_DOMAIN_ETHER>;
-					clocks = <&pericfg_ao CLK_PERI_AO_ETHERNET_MAC>;
-					clock-names = "ethermac";
-					mediatek,infracfg = <&infracfg_ao>;
-					#power-domain-cells = <0>;
-				};
 			};
 		};
 
@@ -1913,7 +1754,7 @@
 			interrupts = <GIC_SPI 594 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VPPSYS0>;
 			#iommu-cells = <1>;
-			mediatek,larbs = <&larb1 &larb3 &larb4 &larb6 &larb7 &larb23>;
+			mediatek,larbs = <&larb1 &larb3 &larb4 &larb6>;
 		};
 
 		wpesys: clock-controller@14e00000 {
@@ -2259,7 +2100,7 @@
 			interrupts = <GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			#iommu-cells = <1>;
-			mediatek,larbs = <&larb0 &larb2 &larb5 &larb19 &larb21>;
+			mediatek,larbs = <&larb0 &larb2 &larb5>;
 		};
 
 		vdosys1: syscon@1c100000 {
