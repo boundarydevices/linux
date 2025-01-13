@@ -2266,7 +2266,7 @@ int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 		dev_err(dev, "Unable to get configuration clock: %d\n", ret);
 		return ret;
 	}
-	dsim->clk_pixel = devm_clk_get(dev, "pixel_clock");
+	dsim->clk_pixel = devm_clk_get(dev, "pixel");
 	if (IS_ERR(dsim->clk_pixel)) {
 		dev_warn(dev, "Unable to get pixel clock: %ld\n", PTR_ERR(dsim->clk_pixel));
 		dsim->clk_pixel = NULL;
