@@ -54,6 +54,9 @@
 		merge5 = &merge5;
 		ethdr0 = &ethdr0;
 		dp-intf1 = &dp_intf1;
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
+		mmc2 = &mmc2;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
