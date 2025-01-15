@@ -1538,12 +1538,6 @@ static int mt8195_mt6359_dev_probe(struct platform_device *pdev)
 	card_data = (struct mt8195_card_data *)of_device_get_match_data(&pdev->dev);
 	card->dev = &pdev->dev;
 
-	ret = parse_dai_link_info(card);
-	if (ret) {
-		return dev_err_probe(&pdev->dev, ret, "%s parse_dai_link_info failed\n",
-				     __func__);
-	}
-
 	ret = snd_soc_of_parse_card_name(card, "model");
 	if (ret) {
 		dev_err(&pdev->dev, "%s new card name parsing error %d\n",
@@ -1628,6 +1622,12 @@ static int mt8195_mt6359_dev_probe(struct platform_device *pdev)
 	dp_node = of_parse_phandle(pdev->dev.of_node, "mediatek,dptx-codec", 0);
 	hdmi_node = of_parse_phandle(pdev->dev.of_node,
 				     "mediatek,hdmi-codec", 0);
+
+	ret = parse_dai_link_info(card);
+	if (ret) {
+		return dev_err_probe(&pdev->dev, ret, "%s parse_dai_link_info failed\n",
+				     __func__);
+	}
 
 	for_each_card_prelinks(card, i, dai_link) {
 		if (!dai_link->platforms->name) {
