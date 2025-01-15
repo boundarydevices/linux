@@ -1189,6 +1189,8 @@ static int smmu_detach_dev(struct kvm_hyp_iommu *iommu, struct kvm_hyp_iommu_dom
 					goto out_unlock;
 				}
 			}
+
+			smmu_free_cd(cd_table, pasid_bits);
 		} else {
 			cd = smmu_get_cd_ptr(cd_table, pasid);
 			cd[0] = 0;
@@ -1209,8 +1211,6 @@ static int smmu_detach_dev(struct kvm_hyp_iommu *iommu, struct kvm_hyp_iommu_dom
 		dst->data[i] = 0;
 
 	ret = smmu_sync_ste(smmu, sid);
-
-	smmu_free_cd(cd_table, pasid_bits);
 
 out_unlock:
 	kvm_iommu_unlock(iommu);
