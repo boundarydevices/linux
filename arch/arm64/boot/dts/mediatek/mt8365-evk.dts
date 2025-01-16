@@ -111,6 +111,35 @@
 			no-map;
 			reg = <0 0x43200000 0 0x00c00000>;
 		};
+
+		/* 16.25 MiB reserved for ADSP
+		 * +----------------------------+ 0x61000000
+		 * |        | ADSP_DMA   2.5MiB |
+		 * |        |-------------------+ 0x60d80000
+		 * |        | ADSP      13.5MiB |
+		 * |  ADSP  |-------------------+ 0x60000000
+		 * |        |                   |
+		 * |        |-------------------+ 0x40060000
+		 * |        | ADSP_SRAM 0.25MiB |
+		 * +----------------------------+ 0x40020000
+		 */
+		adsp_sram: adsp-sram {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0 0x40020000 0 0x40000>;
+		};
+
+		adsp_reserved: adsp-reserved-memory {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0 0x60000000 0 0xd80000>;
+		};
+
+		adsp_reserved_dma: adsp-reserved-memory-dma {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0 0x60d80000 0 0x0280000>;
+		};
 	};
 
 	sound: sound {
@@ -152,6 +181,10 @@
 &afe {
 	mediatek,dmic-mode = <1>;
 	status = "okay";
+};
+
+&adsp {
+	memory-region = <&adsp_reserved_dma>, <&adsp_reserved>, <&adsp_sram>;
 };
 
 &cpu0 {
