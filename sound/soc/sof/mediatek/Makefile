@@ -2,3 +2,4 @@
 obj-$(CONFIG_SND_SOC_SOF_MTK_COMMON) += mtk-adsp-common.o
 obj-$(CONFIG_SND_SOC_SOF_MT8195) += mt8195/
 obj-$(CONFIG_SND_SOC_SOF_MT8186) += mt8186/
+obj-$(CONFIG_SND_SOC_SOF_MT8365) += mt8365/

@@ -42,4 +42,13 @@ config SND_SOC_SOF_MT8195
 	  Say Y if you have such a device.
 	  If unsure select "N".
 
+config SND_SOC_SOF_MT8365
+	tristate "SOF support for MT8365 audio DSP"
+	select SND_SOC_SOF_MTK_COMMON
+	help
+	  This adds support for Sound Open Firmware for MediaTek platforms
+	  using the mt8365 processors.
+	  Say Y if you have such a device.
+	  If unsure select "N".
+
 endif ## SND_SOC_SOF_MTK_TOPLEVEL
