@@ -1284,6 +1284,36 @@
 			power-domains = <&spm MT8365_POWER_DOMAIN_AUDIO>;
 			status = "disabled";
 		};
+
+		adsp: adsp@1d062000 {
+			compatible = "mediatek,mt8365-dsp";
+			reg = <0 0x1d062000 0 0x01000>; /* DSPCFG reg */
+			reg-names = "cfg"; /* config shared-dram size from reserve-mem */
+			interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>, /* ADSP IPI NOTIFY IRQ */
+				     <GIC_SPI 53 IRQ_TYPE_LEVEL_LOW>; /* dsp_wdt IRQ */
+			power-domains = <&spm MT8365_POWER_DOMAIN_DSP>;
+			clocks =
+				<&topckgen CLK_TOP_DSP_SEL>,
+				<&topckgen CLK_TOP_CLK26M_D52>,
+				<&topckgen CLK_TOP_SYS_26M_D2>,
+				<&topckgen CLK_TOP_DSPPLL>,
+				<&topckgen CLK_TOP_DSPPLL_D2>,
+				<&topckgen CLK_TOP_DSPPLL_D4>,
+				<&topckgen CLK_TOP_DSPPLL_D8>,
+				<&topckgen CLK_TOP_DSP_26M>,
+				<&topckgen CLK_TOP_DSP_32K>;
+			clock-names =
+				"CLK_DSP_SEL",
+				"CLK26M_CK",
+				"AD_SYS_26M_D2",
+				"DSPPLL_CK",
+				"DSPPLL_D2",
+				"DSPPLL_D4",
+				"DSPPLL_D8",
+				"PDN_DSP_26M",
+				"PDN_DSP_32K";
+			status = "disabled";
+		};
 	};
 
 	timer {
