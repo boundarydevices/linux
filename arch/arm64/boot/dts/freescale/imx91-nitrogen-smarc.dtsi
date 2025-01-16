@@ -11,8 +11,10 @@
 
 / {
 	aliases {
-		ethernet0 = &eqos;
-		ethernet1 = &fec;
+		eth0 = &eqos;
+		eth1 = &fec;
+		spi0 = &lpspi3;
+		spi1 = &lpspi1;
 	};
 
 	chosen {
@@ -354,10 +356,11 @@
 };
 
 &lpspi1 { /* SPI1 */
-	fsl,spi-num-chipselects = <1>;
+	fsl,spi-num-chipselects = <2>;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_lpspi1>;
 	pinctrl-1 = <&pinctrl_lpspi1>;
+	cs-gpios = <0>, <&pcal6534 7 GPIO_ACTIVE_HIGH>;
 	status = "disabled";
 };
 

@@ -269,6 +269,38 @@
 	};
 };
 
+&lpspi1 {
+	status = "okay";
+
+	spi1dev0: spi1@0 {
+		reg = <0>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+
+	spi1dev1: spi1@1 {
+		reg = <1>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+};
+
+&lpspi3 {
+	status = "okay";
+
+	spi0dev0: spi0@0 {
+		reg = <0>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+
+	spi0dev1: spi0@1 {
+		reg = <1>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+};
+
 &mu1 {
 	status = "okay";
 };
