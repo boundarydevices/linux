@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/dsp/mediatek,mt8365-dsp.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek mt8365 DSP core
+
+maintainers:
+  - Aary Patil <aary.patil@mediatek.com>
+
+description: |
+  MediaTek mt8365 SoC contains a DSP core used for
+  advanced pre- and post- audio processing.
+
+properties:
+  compatible:
+    const: mediatek,mt8365-dsp
+
+  reg:
+    items:
+      - description: Address and size of the DSP config registers
+
+  reg-names:
+    items:
+      - const: cfg
+
+  clocks:
+    items:
+      - description: mux for audio dsp clock
+      - description: 26M clock
+      - description: mux for audio dsp local bus
+      - description: default audio dsp local bus clock source
+      - description: default audio dsp local bus clock D2
+      - description: default audio dsp local bus clock D4
+      - description: default audio dsp local bus clock D8
+      - description: power domain audio dsp clock 26M
+      - description: power domain audio dsp clock 32K
+
+  clock-names:
+    items:
+      - const: CLK_DSP_SEL
+      - const: CLK26M_CK
+      - const: AD_SYS_26M_D2
+      - const: DSPPLL_CK
+      - const: DSPPLL_D2
+      - const: DSPPLL_D4
+      - const: DSPPLL_D8
+      - const: PDN_DSP_26M
+      - const: PDN_DSP_32K
+
+  interrupts:
+    description: Interrupts for the DSP
+
+  power-domains:
+    maxItems: 1
+
+  memory-region:
+    items:
+      - description: dma buffer between host and DSP.
+      - description: DSP system memory.
+      - description: SRAM memory.
+
+required:
+  - compatible
+  - reg
+  - reg-names
+  - interrupts
+  - power-domains
+  - clocks
+  - clock-names
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/mediatek,mt8365-clk.h>
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+    #include <dt-bindings/power/mediatek,mt8365-power.h>
+    adsp@1d062000 {
+        compatible = "mediatek,mt8365-dsp";
+        reg = <0x1d062000 0x01000>; /* DSPCFG reg */
+        reg-names = "cfg"; /* config shared-dram size from reserve-mem */
+        interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>, /* ADSP IPI NOTIFY IRQ */
+                     <GIC_SPI 53 IRQ_TYPE_LEVEL_LOW>; /* dsp_wdt IRQ */
+        power-domains = <&spm MT8365_POWER_DOMAIN_DSP>;
+        clocks =
+            <&topckgen CLK_TOP_DSP_SEL>,
+            <&topckgen CLK_TOP_CLK26M_D52>,
+            <&topckgen CLK_TOP_SYS_26M_D2>,
+            <&topckgen CLK_TOP_DSPPLL>,
+            <&topckgen CLK_TOP_DSPPLL_D2>,
+            <&topckgen CLK_TOP_DSPPLL_D4>,
+            <&topckgen CLK_TOP_DSPPLL_D8>,
+            <&topckgen CLK_TOP_DSP_26M>,
+            <&topckgen CLK_TOP_DSP_32K>;
+        clock-names =
+            "CLK_DSP_SEL",
+            "CLK26M_CK",
+            "AD_SYS_26M_D2",
+            "DSPPLL_CK",
+            "DSPPLL_D2",
+            "DSPPLL_D4",
+            "DSPPLL_D8",
+            "PDN_DSP_26M",
+            "PDN_DSP_32K";
+    };
