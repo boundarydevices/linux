@@ -151,7 +151,15 @@ enum pkvm_psci_notification {
  * @iommu_init_device:		Initialize common IOMMU fields.
  * @udelay:			Delay in us.
  * @hyp_alloc_missing_donations:
-				Missing donations if allocator returns NULL
+ *				Missing donations if allocator returns NULL
+ * @iommu_iotlb_gather_add_page:
+ *				Add an IOVA range to an iommu_iotlb_gather.
+ * @pkvm_host_unuse_dma:	Decrement the refcount for pages used for DMA,
+ * 				this is typically called from the module after a
+ * 				successful unmap() operation, so the hypervisor
+ * 				can track the page state.
+ * @iommu_snapshot_host_stage2: Snapshot the host stage-2 CPU page table in to an
+ * 				IOMMU domain.
  * @__list_add_valid_or_report: Needed if the code uses linked lists.
  * @__list_del_entry_valid_or_report:
 				Needed if the code uses linked lists.
