@@ -377,7 +377,7 @@ static int ts3a227e_i2c_probe(struct i2c_client *i2c)
 	}
 
 	ret = devm_request_threaded_irq(dev, i2c->irq, NULL, ts3a227e_interrupt,
-					IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+					IRQF_ONESHOT,
 					"TS3A227E", ts3a227e);
 	if (ret) {
 		dev_err(dev, "Cannot request irq %d (%d)\n", i2c->irq, ret);
