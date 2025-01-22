@@ -15,6 +15,7 @@
 #include <sound/simple_card.h>
 #include <sound/soc-dai.h>
 #include <sound/soc.h>
+#include <sound/jack.h>
 
 #define DPCM_SELECTABLE 1
 
@@ -517,6 +518,35 @@ static int simple_populate_aux(struct asoc_simple_priv *priv)
 	return devm_add_action_or_reset(dev, simple_depopulate_aux, priv);
 }
 
+static int jack_ts3a227_init(struct snd_soc_component *component)
+{
+	struct asoc_simple_priv *priv = snd_soc_card_get_drvdata(component->card);
+	int ret;
+
+	priv->hp_jack.pin.pin = "Headphone Jack";
+	priv->hp_jack.pin.mask = SND_JACK_HEADSET;
+
+	ret = snd_soc_card_jack_new_pins(component->card, priv->hp_jack.pin.pin,
+		SND_JACK_HEADSET |
+		SND_JACK_BTN_0 | SND_JACK_BTN_1 |
+		SND_JACK_BTN_2 | SND_JACK_BTN_3,
+		&priv->hp_jack.jack, &priv->hp_jack.pin, 1);
+	if (ret) {
+		dev_warn(component->card->dev, "hs jack init failed (%d)\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_component_force_enable_pin(component, "Mic Bias");
+	if (ret) {
+		dev_err(component->dev, "Failed to enable Mic Bias: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_component_set_jack(component, &priv->hp_jack.jack, NULL);
+
+	return ret;
+}
+
 static int simple_parse_of(struct asoc_simple_priv *priv, struct link_info *li)
 {
 	struct snd_soc_card *card = simple_priv_to_card(priv);
@@ -551,6 +581,17 @@ static int simple_parse_of(struct asoc_simple_priv *priv, struct link_info *li)
 		return ret;
 
 	ret = snd_soc_of_parse_aux_devs(card, PREFIX "aux-devs");
+	if (ret < 0)
+		return ret;
+
+	struct snd_soc_aux_dev *aux;
+	int i;
+	for_each_card_pre_auxs(card, i, aux) {
+		if (of_device_is_compatible(aux->dlc.of_node, "ti,ts3a227e")) {
+			aux->init = jack_ts3a227_init;
+			break;
+		}
+	}
 
 	return ret;
 }
