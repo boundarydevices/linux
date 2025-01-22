@@ -101,6 +101,7 @@ struct fsl_asoc_card_priv {
 	struct codec_priv codec_priv;
 	struct cpu_priv cpu_priv;
 	struct snd_soc_card card;
+	struct snd_soc_aux_dev headset_dev;
 	u8 streams;
 	u32 sample_rate;
 	snd_pcm_format_t sample_format;
@@ -539,6 +540,29 @@ static int fsl_asoc_card_late_probe(struct snd_soc_card *card)
 	return 0;
 }
 
+static int fsl_jack_ts3a227_init(struct snd_soc_component *component)
+{
+	struct fsl_asoc_card_priv *priv = snd_soc_card_get_drvdata(component->card);
+	int ret;
+
+	priv->hp_jack.pin.pin = "Headphone Jack";
+	priv->hp_jack.pin.mask = SND_JACK_HEADSET;
+
+	ret = snd_soc_card_jack_new_pins(&priv->card, priv->hp_jack.pin.pin,
+		SND_JACK_HEADSET |
+		SND_JACK_BTN_0 | SND_JACK_BTN_1 |
+		SND_JACK_BTN_2 | SND_JACK_BTN_3,
+		&priv->hp_jack.jack, &priv->hp_jack.pin, 1);
+	if (ret) {
+		dev_warn(priv->card.dev, "hs jack init failed (%d)\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_component_set_jack(component, &priv->hp_jack.jack, NULL);
+
+	return ret;
+}
+
 static int fsl_asoc_card_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *codec_np, *asrc_np;
@@ -877,6 +901,14 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 		}
 	}
 
+	priv->headset_dev.dlc.of_node = of_parse_phandle(pdev->dev.of_node,
+		"audio-headset", 0);
+	if (priv->headset_dev.dlc.of_node) {
+		priv->headset_dev.init = fsl_jack_ts3a227_init;
+		priv->card.aux_dev = &priv->headset_dev;
+		priv->card.num_aux_devs = 1;
+	}
+
 	/* Finish card registering */
 	platform_set_drvdata(pdev, priv);
 	snd_soc_card_set_drvdata(&priv->card, priv);
@@ -884,6 +916,13 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 	ret = devm_snd_soc_register_card(&pdev->dev, &priv->card);
 	if (ret) {
 		dev_err_probe(&pdev->dev, ret, "snd_soc_register_card failed\n");
+		goto asrc_fail;
+	}
+
+	if (priv->headset_dev.dlc.of_node) {
+		snd_soc_dapm_force_enable_pin(&priv->card.dapm, "MICB");
+		snd_soc_jack_notifier_register(&priv->hp_jack.jack, &hp_jack_nb);
+		of_node_put(priv->headset_dev.dlc.of_node);
 		goto asrc_fail;
 	}
 
