@@ -244,7 +244,19 @@ static irqreturn_t ts3a227e_interrupt(int irq, void *data)
 int ts3a227e_enable_jack_detect(struct snd_soc_component *component,
 				struct snd_soc_jack *jack)
 {
+	return snd_soc_component_set_jack(component, jack, NULL);
+}
+EXPORT_SYMBOL_GPL(ts3a227e_enable_jack_detect);
+
+static int ts3a227e_set_jack(struct snd_soc_component *component,
+			     struct snd_soc_jack *jack, void *data)
+{
 	struct ts3a227e *ts3a227e = snd_soc_component_get_drvdata(component);
+
+	if (jack == NULL) {
+		ts3a227e->jack = NULL;
+		return 0;
+	}
 
 	snd_jack_set_key(jack->jack, SND_JACK_BTN_0, KEY_PLAYPAUSE);
 	snd_jack_set_key(jack->jack, SND_JACK_BTN_1, KEY_VOICECOMMAND);
@@ -255,16 +267,6 @@ int ts3a227e_enable_jack_detect(struct snd_soc_component *component,
 	ts3a227e_jack_report(ts3a227e);
 
 	return 0;
-}
-EXPORT_SYMBOL_GPL(ts3a227e_enable_jack_detect);
-
-static int ts3a227e_set_jack(struct snd_soc_component *component,
-			     struct snd_soc_jack *jack, void *data)
-{
-	if (jack == NULL)
-		return -EINVAL;
-
-	return ts3a227e_enable_jack_detect(component, jack);
 }
 
 static int ts3a227e_get_jack_type(struct snd_soc_component *component)
