@@ -17,6 +17,8 @@ struct wm8960_data {
 
 	bool shared_lrclk;  /* DAC and ADC LRCLKs are wired together */
 
+	bool mic_bias_0_6;  /* MIC BIAS 0.6 * AVDD */
+
 	/*
 	 * Setup for headphone detection
 	 *

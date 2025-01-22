@@ -1416,6 +1416,9 @@ static void wm8960_set_pdata_from_of(struct i2c_client *i2c,
 	if (of_property_read_bool(np, "wlf,shared-lrclk"))
 		pdata->shared_lrclk = true;
 
+	if (of_property_read_bool(np, "wlf,mic-bias-0.6"))
+		pdata->mic_bias_0_6 = true;
+
 	of_property_read_u32_array(np, "wlf,gpio-cfg", pdata->gpio_cfg,
 				   ARRAY_SIZE(pdata->gpio_cfg));
 
@@ -1526,6 +1529,10 @@ static int wm8960_i2c_probe(struct i2c_client *i2c)
 			   wm8960->pdata.hp_cfg[1] << 5);
 	regmap_update_bits(wm8960->regmap, WM8960_ADDCTL1, 3,
 			   wm8960->pdata.hp_cfg[2]);
+
+	/* Set Mic BIAS to 2.145 V */
+	regmap_update_bits(wm8960->regmap, WM8960_ADDCTL4, 1,
+			   wm8960->pdata.mic_bias_0_6);
 
 	i2c_set_clientdata(i2c, wm8960);
 
