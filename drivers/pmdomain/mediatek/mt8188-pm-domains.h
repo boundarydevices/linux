@@ -701,7 +701,7 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8188[] = {
 		.sram_pdn_ack_bits = BIT(12),
 		.bp_cfg = {
 			BUS_PROT_WR(SMI,
-				    MT8188_SMI_COMMON_SMI_CLAMP_IPE_TO_VPP1,
+				    MT8188_SMI_COMMON_SMI_CLAMP_CAM_SUBA_TO_VPP0,
 				    MT8188_SMI_COMMON_CLAMP_EN_SET,
 				    MT8188_SMI_COMMON_CLAMP_EN_CLR,
 				    MT8188_SMI_COMMON_CLAMP_EN_STA),
