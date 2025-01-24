@@ -1051,6 +1051,37 @@ static void pkvm_unmap_module_struct(void *addr)
 	free_page((unsigned long)addr);
 }
 
+static void pkvm_module_kmemleak(struct module *this,
+				 struct pkvm_mod_sec_mapping *sec_map,
+				 int nr_sections)
+{
+	void *start, *end;
+	int i;
+
+	if (!this)
+		return;
+
+	/*
+	 * The module loader already removes read-only sections from kmemleak
+	 * scanned objects. However, few hyp sections are installed into
+	 * MOD_DATA. Skip those sections before they are made inaccessible from
+	 * the host.
+	 */
+
+	start = this->mem[MOD_DATA].base;
+	end = start + this->mem[MOD_DATA].size;
+
+	for (i = 0; i < nr_sections; i++, sec_map++) {
+		if (sec_map->sec->start < start || sec_map->sec->start >= end)
+			continue;
+
+		kmemleak_scan_area(start, sec_map->sec->start - start, GFP_KERNEL);
+		start = sec_map->sec->end;
+	}
+
+	kmemleak_scan_area(start, end - start, GFP_KERNEL);
+}
+
 int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 {
 	struct pkvm_el2_module *mod = &this->arch.hyp;
@@ -1124,16 +1155,7 @@ int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 	if (ret)
 		return ret;
 
-	/*
-	 * Sadly we have also to disable kmemleak for EL1 sections: we can't
-	 * reset created scan area and therefore we can't create a finer grain
-	 * scan excluding only EL2 sections.
-	 */
-	if (this) {
-		kmemleak_no_scan(this->mem[MOD_TEXT].base);
-		kmemleak_no_scan(this->mem[MOD_DATA].base);
-		kmemleak_no_scan(this->mem[MOD_RODATA].base);
-	}
+	pkvm_module_kmemleak(this, secs_map, ARRAY_SIZE(secs_map));
 
 	ret = hyp_trace_init_mod_events(mod->hyp_events,
 					mod->event_ids.start,
