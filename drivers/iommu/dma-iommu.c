@@ -713,6 +713,9 @@ static int iommu_dma_init_domain(struct iommu_domain *domain, struct device *dev
 	}
 
 	init_iova_domain(iovad, 1UL << order, base_pfn);
+
+	trace_android_rvh_iommu_iovad_init_alloc_algo(dev, iovad);
+
 	ret = iova_domain_init_rcaches(iovad);
 	if (ret)
 		goto done_unlock;
@@ -747,6 +750,8 @@ static int dma_info_to_prot(enum dma_data_direction dir, bool coherent,
 
 	if (attrs & DMA_ATTR_PRIVILEGED)
 		prot |= IOMMU_PRIV;
+
+	trace_android_rvh_iommu_dma_info_to_prot(attrs, &prot);
 
 	switch (dir) {
 	case DMA_BIDIRECTIONAL:
@@ -921,6 +926,7 @@ static struct page **__iommu_dma_alloc_pages(struct device *dev,
 			order_size = 1U << order;
 			if (order_mask > order_size)
 				alloc_flags |= __GFP_NORETRY;
+			trace_android_vh_adjust_alloc_flags(order, &alloc_flags);
 			page = alloc_pages_node(nid, alloc_flags, order);
 			if (!page)
 				continue;

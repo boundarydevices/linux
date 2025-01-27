@@ -211,6 +211,8 @@ config USB_F_MIDI
 
 config USB_F_MIDI2
 	tristate
+	select SND_UMP
+	select SND_UMP_LEGACY_RAWMIDI
 
 config USB_F_HID
 	tristate
@@ -220,6 +222,10 @@ config USB_F_PRINTER
 
 config USB_F_TCM
 	tristate
+
+# due to coupling with composite driver, can not be built as a module.
+config ANDROID_USB_F_ACC
+	bool
 
 # this first set of drivers all depend on bulk-capable hardware.
 
@@ -456,8 +462,6 @@ config USB_CONFIGFS_F_MIDI2
 	depends on USB_CONFIGFS
 	depends on SND
 	select USB_LIBCOMPOSITE
-	select SND_UMP
-	select SND_UMP_LEGACY_RAWMIDI
 	select USB_F_MIDI2
 	help
 	  The MIDI 2.0 function driver provides the generic emulated
@@ -516,6 +520,18 @@ config USB_CONFIGFS_F_TCM
 	  interface 0 (primary) and UAS is on alternative interface 1.
 	  Both protocols can work on USB2.0 and USB3.0.
 	  UAS utilizes the USB 3.0 feature called streams support.
+
+config ANDROID_USB_CONFIGFS_F_ACC
+	bool "Accessory Gadget"
+	depends on USB_CONFIGFS
+	depends on HID=y
+	select ANDROID_USB_F_ACC
+	help
+	  This Accessory function adds support for the Android Open Accessory
+	  (AOA) protocol v2. Devices which support this protocol send vendor
+	  specific control_requests to describe what they are and what
+	  userspace application should handle their traffic. This function
+	  enables the data exchange with usersapce.
 
 source "drivers/usb/gadget/legacy/Kconfig"
 
