@@ -293,8 +293,7 @@ static const struct of_device_id mtk_cirq_of_match[] = {
 	{ /* sentinel */ }
 };
 
-static int __init mtk_cirq_of_init(struct device_node *node,
-				   struct device_node *parent)
+static int mtk_cirq_of_init(struct device_node *node, struct device_node *parent)
 {
 	struct irq_domain *domain, *domain_parent;
 	const struct of_device_id *match;
@@ -356,4 +355,10 @@ out_free:
 	return ret;
 }
 
-IRQCHIP_DECLARE(mtk_cirq, "mediatek,mtk-cirq", mtk_cirq_of_init);
+IRQCHIP_PLATFORM_DRIVER_BEGIN(mtk_cirq)
+IRQCHIP_MATCH("mediatek,mtk-cirq", mtk_cirq_of_init)
+IRQCHIP_PLATFORM_DRIVER_END(mtk_cirq)
+
+MODULE_AUTHOR("Youlin.Pei <youlin.pei@mediatek.com>");
+MODULE_DESCRIPTION("Mediatek CIRQ interrupt controller");
+MODULE_LICENSE("GPL v2");

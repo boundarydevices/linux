@@ -342,6 +342,22 @@ config MIPS_GIC
 	select IRQ_DOMAIN_HIERARCHY
 	select MIPS_CM
 
+config MTK_SYSIRQ
+       tristate "Mediatek System interrupt controller"
+       depends on ARCH_MEDIATEK || COMPILE_TEST
+       default ARCH_MEDIATEK
+       select IRQ_DOMAIN_HIERARCHY
+       help
+         Support Mediatek System interrupt controller
+
+config MTK_CIRQ
+       tristate "Mediatek CIRQ interrupt controller"
+       depends on ARCH_MEDIATEK || COMPILE_TEST
+       default ARCH_MEDIATEK
+       select IRQ_DOMAIN_HIERARCHY
+       help
+         Support Mediatek CIRQ low power interrupt controller
+
 config INGENIC_IRQ
 	bool
 	depends on MACH_INGENIC

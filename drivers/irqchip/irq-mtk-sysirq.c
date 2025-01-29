@@ -120,8 +120,7 @@ static const struct irq_domain_ops sysirq_domain_ops = {
 	.free		= irq_domain_free_irqs_common,
 };
 
-static int __init mtk_sysirq_of_init(struct device_node *node,
-				     struct device_node *parent)
+static int mtk_sysirq_of_init(struct device_node *node, struct device_node *parent)
 {
 	struct irq_domain *domain, *domain_parent;
 	struct mtk_sysirq_chip_data *chip_data;
@@ -232,4 +231,12 @@ out_free_chip:
 	kfree(chip_data);
 	return ret;
 }
-IRQCHIP_DECLARE(mtk_sysirq, "mediatek,mt6577-sysirq", mtk_sysirq_of_init);
+
+
+IRQCHIP_PLATFORM_DRIVER_BEGIN(mtk_sysirq)
+IRQCHIP_MATCH("mediatek,mt6577-sysirq", mtk_sysirq_of_init)
+IRQCHIP_PLATFORM_DRIVER_END(mtk_sysirq)
+
+MODULE_AUTHOR("Joe.C <yingjoe.chen@mediatek.com>");
+MODULE_DESCRIPTION("Support Mediatek System interrupt controller");
+MODULE_LICENSE("GPL v2");
