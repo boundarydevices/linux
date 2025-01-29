@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2025 BayLibre, SAS.
+ * Author: Vitor Sato Eschholz <vsatoes@baylibre.com>
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
+
+#include "mt8390-genio-700-evk-android.dtsi"
+
+&{/} {
+	backlight_lcd1: backlight-lcd1 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm1 0 500000>;
+		enable-gpios = <&pio 30 GPIO_ACTIVE_HIGH>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+	};
+
+	dsi0_en: dsi0-en {
+		compatible = "regulator-fixed";
+		regulator-name = "lcm1_en";
+		enable-active-high;
+		gpio = <&pio 111 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&pio {
+	disp_pwm1_default_pins: disp-pwm1-default-pins {
+		pins1 {
+			pinmux = <PINMUX_GPIO30__FUNC_O_DISP_PWM1>;
+		};
+	};
+};
+
+&disp_pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&disp_pwm1_default_pins>;
+	status = "okay";
+};
+
+&mipi_tx_config0 {
+	status = "okay";
+};
+
+&disp_dsi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&panel_default_pins>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	poweron-in-hs-mode = <0>;
+	status = "okay";
+
+	panel@0 {
+		compatible = "startek,kd070fhfid078";
+		reg = <0>;
+		reset-gpios = <&pio 25 GPIO_ACTIVE_HIGH>;
+		dcdc-gpios = <&pio 45 GPIO_ACTIVE_HIGH>;
+		backlight = <&backlight_lcd1>;
+		iovcc-supply = <&dsi0_en>;
+		status = "okay";
+		port {
+			panel0_in: endpoint {
+				remote-endpoint = <&disp_dsi0_out>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			disp_dsi0_out: endpoint {
+				remote-endpoint = <&panel0_in>;
+			};
+		};
+	};
+};
