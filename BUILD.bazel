@@ -1403,7 +1403,7 @@ kernel_build(
     arch = "arm64",
     srcs = [":kernel_aarch64_sources"],
     makefile = ":Makefile",
-    build_config = "build.config.common",
+    build_config = "build.config.mtk",
     defconfig = "arch/arm64/configs/gki_defconfig",
     pre_defconfig_fragments = ["arch/arm64/configs/mtk_gki.fragment"],
     make_goals = [
