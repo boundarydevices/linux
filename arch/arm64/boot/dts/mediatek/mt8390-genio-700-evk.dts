@@ -366,6 +366,7 @@
 	regulator-max-microvolt = <800000>;
 	regulator-coupled-with = <&mt6359_vsram_others_ldo_reg>;
 	regulator-coupled-max-spread = <6250>;
+	regulator-always-on;
 };
 
 &mt6359_vpu_buck_reg {
@@ -387,6 +388,7 @@
 	regulator-max-microvolt = <800000>;
 	regulator-coupled-with = <&mt6359_vproc2_buck_reg>;
 	regulator-coupled-max-spread = <6250>;
+	regulator-always-on;
 };
 
 &mt6359_vufs_ldo_reg {
