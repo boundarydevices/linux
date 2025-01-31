@@ -1369,6 +1369,7 @@ _MTK_MODULE_OUTS = [
     "drivers/mmc/core/mmc_block.ko",
     "drivers/mmc/host/cqhci.ko",
     "drivers/mmc/host/mtk-sd.ko",
+    "drivers/nvmem/nvmem_mtk-efuse.ko",
     "drivers/phy/mediatek/phy-mtk-mipi-dsi-drv.ko",
     "drivers/phy/mediatek/phy-mtk-tphy.ko",
     "drivers/pinctrl/mediatek/mtk-eint.ko",
