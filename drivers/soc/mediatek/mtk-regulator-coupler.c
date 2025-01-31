@@ -11,6 +11,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/of.h>
+#include <linux/platform_device.h>
 #include <linux/regulator/coupler.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
@@ -19,6 +20,7 @@
 #define to_mediatek_coupler(x)	container_of(x, struct mediatek_regulator_coupler, coupler)
 
 struct mediatek_regulator_coupler {
+	struct device *dev;
 	struct regulator_coupler coupler;
 	struct regulator_dev *vsram_rdev;
 };
@@ -143,17 +145,39 @@ static struct mediatek_regulator_coupler mediatek_coupler = {
 	},
 };
 
-static int mediatek_regulator_coupler_init(void)
-{
-	if (!of_machine_is_compatible("mediatek,mt8183") &&
-	    !of_machine_is_compatible("mediatek,mt8186") &&
-	    !of_machine_is_compatible("mediatek,mt8188") &&
-	    !of_machine_is_compatible("mediatek,mt8192"))
-		return 0;
+static const struct of_device_id of_match_mtk_reg_coupler[] = {
+	{ .compatible = "mediatek,mt8183" },
+	{ .compatible = "mediatek,mt8186" },
+	{ .compatible = "mediatek,mt8188" },
+	{ .compatible = "mediatek,mt8192" },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, of_match_mtk_reg_coupler);
 
-	return regulator_coupler_register(&mediatek_coupler.coupler);
+static int mediatek_regulator_coupler_probe(struct platform_device *pdev)
+{
+	struct mediatek_regulator_coupler *mtk_reg_coup;
+	int ret;
+
+	mtk_reg_coup = devm_kzalloc(&pdev->dev, sizeof(*mtk_reg_coup), GFP_KERNEL);
+	if (!mtk_reg_coup)
+		return -ENOMEM;
+
+	mtk_reg_coup->dev = &pdev->dev;
+
+	ret = regulator_coupler_register(&mediatek_coupler.coupler);
+	return ret;
 }
-arch_initcall(mediatek_regulator_coupler_init);
+
+static struct platform_driver mediatek_regulator_coupler_drv = {
+	.probe = mediatek_regulator_coupler_probe,
+	.driver = {
+		.name = "mtk-regulator-coupler",
+		.of_match_table = of_match_mtk_reg_coupler,
+	},
+};
+
+module_platform_driver(mediatek_regulator_coupler_drv);
 
 MODULE_AUTHOR("AngeloGioacchino Del Regno <angelogioacchino.delregno@collabora.com>");
 MODULE_DESCRIPTION("MediaTek Regulator Coupler driver");
