@@ -1389,6 +1389,7 @@ _MTK_MODULE_OUTS = [
     "drivers/soc/mediatek/mtk-mmsys.ko",
     "drivers/soc/mediatek/mtk-mutex.ko",
     "drivers/soc/mediatek/mtk-pmic-wrap.ko",
+    "drivers/soc/mediatek/mtk-regulator-coupler.ko",
     "drivers/spmi/spmi-mtk-pmif.ko",
     "drivers/tee/optee/optee.ko",
     "drivers/tee/tee.ko",
