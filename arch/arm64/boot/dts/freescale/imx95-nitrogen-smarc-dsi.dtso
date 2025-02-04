@@ -13,6 +13,13 @@
 #include "imx95-pinfunc.h"
 
 &{/} {
+	dsi_backlight: dsi-backlight {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		pwms = <&tpm4 2 30000 0>;
+	};
+
 	dsi-panel {
 		compatible = "infovision,ivo-m101nwwb";
 
@@ -79,10 +86,8 @@
 	ts_dsi_goodix: touchscreen@5d {
 		compatible = "goodix,gt9271";
 		reg = <0x5d>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_dsi_goodix>;
-		interrupts-extended = <&gpio5 2 IRQ_TYPE_LEVEL_HIGH>;
-		irq-gpios = <&gpio5 2 GPIO_ACTIVE_HIGH>;
+		interrupts-extended = <&pcal6524 20 IRQ_TYPE_EDGE_RISING>;
+		irq-gpios = <&pcal6524 20 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio2 31 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
@@ -118,11 +123,6 @@
 	};
 };
 
-&scmi_iomuxc {
-	pinctrl_dsi_goodix: dsi-goodixgrp {
-		fsl,pins = <
-			IMX95_PAD_XSPI1_DATA2__GPIO5_IO_BIT2	0x37e
-			IMX95_PAD_GPIO_IO31__GPIO2_IO_BIT31	0x37e
-		>;
-	};
+&tpm4 {
+	status = "okay";
 };

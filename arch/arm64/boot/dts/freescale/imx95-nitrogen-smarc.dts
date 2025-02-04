@@ -14,16 +14,14 @@
 	aliases {
 		can0 = &flexcan1;
 		can1 = &flexcan2;
-		ethernet0 = &enetc_port0;
-		ethernet1 = &enetc_port1;
+		eth0 = &enetc_port0;
+		eth1 = &enetc_port1;
 		rtc0 = &rv3028;
 		rtc1 = &scmi_bbm;
 	};
 
 	reg_can1_stby: regulator-can1-stby {
 		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_reg_can1_stby>;
 		regulator-name = "can1-stby";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
@@ -33,12 +31,10 @@
 
 	reg_can2_stby: regulator-can2-stby {
 		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_reg_can2_stby>;
 		regulator-name = "can2-stby";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio2 28 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio5 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 
@@ -82,8 +78,6 @@
 	mux9546-gp@73 {
 		compatible = "nxp,pca9546";
 		reg = <0x73>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_mux9546_gp>;
 		reset-gpios = <&gpio2 30 GPIO_ACTIVE_LOW>;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -120,13 +114,11 @@
 
 &i2c_gp_a {
 	rv3028: rtc@52 {
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_rv3028>;
 		backup-switchover-dsm;
 		#clock-cells = <0>;
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
-		interrupts-extended = <&gpio2 9 IRQ_TYPE_LEVEL_LOW>;
+		interrupts-extended = <&gpio4 14 IRQ_TYPE_LEVEL_LOW>;
 		wakeup-source;
 	};
 };
@@ -134,9 +126,7 @@
 &i2c_gp_b {
 	usb_mux: hd3ss3220@60 {
 		compatible = "ti,hd3ss3220";
-		interrupts-extended = <&gpio2 3 IRQ_TYPE_LEVEL_LOW>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_hd3ss3220>;
+		interrupts-extended = <&gpio5 11 IRQ_TYPE_LEVEL_LOW>;
 		reg = <0x60>;
 
 		ports {
@@ -188,7 +178,7 @@
 		compatible = "nxp,pca9546";
 		reg = <0x73>;
 		vdd-supply = <&reg_1p8v>;
-		reset-gpios = <&gpio2 8 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio4 15 GPIO_ACTIVE_LOW>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -219,6 +209,22 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
+	};
+};
+
+&lpspi6 {
+	status = "okay";
+
+	spidev0: spi@0 {
+		reg = <0>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+
+	spidev1: spi@1 {
+		reg = <1>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
 	};
 };
 
@@ -278,37 +284,5 @@
 				};
 			};
 		};
-	};
-};
-
-&scmi_iomuxc {
-	pinctrl_mux9546_gp: mux9546gpgrp {
-		fsl,pins = <
-			IMX95_PAD_GPIO_IO30__GPIO2_IO_BIT30		0x31e
-		>;
-	};
-
-	pinctrl_hd3ss3220: hd3ss3220grp {
-		fsl,pins = <
-			IMX95_PAD_GPIO_IO03__GPIO2_IO_BIT3		0x31e
-		>;
-	};
-
-	pinctrl_reg_can1_stby: regcan1stbygrp {
-		fsl,pins = <
-			IMX95_PAD_GPIO_IO22__GPIO2_IO_BIT22		0x31e
-		>;
-	};
-
-	pinctrl_reg_can2_stby: regcan2stbygrp {
-		fsl,pins = <
-			IMX95_PAD_GPIO_IO28__GPIO2_IO_BIT28		0x31e
-		>;
-	};
-
-	pinctrl_rv3028: rv3028grp {
-		fsl,pins = <
-			IMX95_PAD_GPIO_IO09__GPIO2_IO_BIT9		0x31e
-		>;
 	};
 };
