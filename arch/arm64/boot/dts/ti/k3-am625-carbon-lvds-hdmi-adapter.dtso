@@ -116,7 +116,7 @@
 	#size-cells = <0>;
 
 	port@0 {
-		reg = <0>; 
+		reg = <0>;
 		oldi_0_in: endpoint {
 			remote-endpoint = <&dpi0_out0>;
 		};

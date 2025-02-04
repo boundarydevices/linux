@@ -118,7 +118,7 @@
 		#clock-cells = <0>;
 		clock-frequency = <24000000>;
 		clock-output-names = "cam_mck";
-                pwms = <&ecap2 0 42 0>; /* 1 / 42 ns = 24 MHz */
+		pwms = <&ecap2 0 42 0>; /* 1 / 42 ns = 24 MHz */
 	};
 
 	vsys_5v: regulator-vcc-in-5v {
@@ -238,9 +238,9 @@
 
 &main_gpio0 {
 	bootph-all;
-	gpio-line-names = "","GPIO_A_2","GPIO_A_1","","", 	/* 0 - 4 */
+	gpio-line-names = "","GPIO_A_2","GPIO_A_1","","",	/* 0 - 4 */
 		"","","","","",
-		"","","","","",					/* 10 - 14 */
+		"","","","GPIO_A_0","",				/* 10 - 14 */
 		"","","GPIO_B_7","SDIO_A_PWR_EN","GPIO_C_2",
 		"W_DISABLE#","","W_DISABLE2#","","",		/* 20 - 24 */
 		"GPIO_C_3","GPIO_C_6","","","GPIO_C_7",
@@ -285,14 +285,13 @@
 	clock-frequency = <400000>;
 
 	rv3028: rtc@52 {
-		backup-switchover-dsm;
 		#clock-cells = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&mcu_rtc_pins_default>;
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
-		// interrupts-extended = <&mcu_gpio0 23 GPIO_ACTIVE_LOW>;
-		// wakeup-source;
+		interrupts-extended = <&mcu_gpio0 23 IRQ_TYPE_EDGE_FALLING>;
+		wakeup-source;
 	};
 
 	tps65219: pmic@30 {
@@ -410,15 +409,9 @@
 };
 
 &main_pmx0 {
-	mypruicssm0ecap1_pins_default: mypruicssm0ecap1-default-pins {
-		pinctrl-single,pins = <
-			AM62X_IOPAD(0x00a4, PIN_INPUT, 1) /* PWM_0 (M22) GPMC0_DIR.PR0_ECAP0_IN_APWM_OUT */
-		>;
-	};
-
 	main_bt_gpio_pins_default: main-bt-gpio-default-pins {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x0084, PIN_INPUT, 7) /* BT_HOST_WAKE (L23) GPMC0_ADVn_ALE.GPIO0_32 */
+			AM62X_IOPAD(0x00ac, PIN_INPUT, 7) /* BT_HOST_WAKE (L21) GPMC0_CSn1.GPIO0_42 */
 			AM62X_IOPAD(0x0058, PIN_OUTPUT, 7) /* W_DISABLE2# (R23) GPMC0_AD7.GPIO0_22 */
 		>;
 	};
@@ -691,8 +684,8 @@
 
 &main_spi0 { /* SPI_B */
 	status = "disabled";
-        pinctrl-names = "default";
-        pinctrl-0 = <&main_spi0_pins_default>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_spi0_pins_default>;
 };
 
 &main_uart0 {
@@ -713,7 +706,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_uart1_pins_default>, <&main_bt_gpio_pins_default>;
 	uart-has-rtscts;
-	// TODO interrupt <&main_gpio0 32 IRQ_TYPE_LEVEL_LOW>; /* BT_HOST_WAKE */
+	// interrupts-extended = <&main_gpio0 42 IRQ_TYPE_EDGE_FALLING>; /* BT_HOST_WAKE */
 
 	bluetooth {
 		compatible = "ti,cc33xx-bt";
@@ -757,18 +750,18 @@
 	rx-num-evt = <0>;
 };
 
-/* mcu_gpio0 and mcu_gpio_intr are reserved for mcu firmware usage */
+/* mcu_gpio0 and mcu_gpio_intr are normally reserved for mcu firmware usage */
 &mcu_gpio0 {
-	status = "reserved";
+	status = "okay";
 	gpio-line-names = "","","","","",                       /* 0 - 4 */
 		"","","","","",
 		"","GPIO_B_1","GPIO_B_0","","",			/* 10 - 14 */
-		"","","GPIO_A_4","GPIO_A_5","GPIO_B_4",
+		"","USB_A_ID","GPIO_A_4","GPIO_A_5","GPIO_B_4",
 		"GPIO_B_5","","","rv3028_int";			/* 20 - 23 */
 };
 
 &mcu_gpio_intr {
-	status = "reserved";
+	status = "okay";
 };
 
 &mcu_m4fss {
@@ -785,7 +778,6 @@
 };
 
 &mcu_pmx0 {
-
 	wkup_uart0_pins_default: wkup-uart0-default-pins {
 		bootph-pre-ram;
 		pinctrl-single,pins = <
@@ -805,7 +797,7 @@
 
 	mcu_rtc_pins_default: mcu-rtc-default-pins {
 		pinctrl-single,pins = <
-			AM62X_MCU_IOPAD(0x0084, PIN_INPUT, 7) /* RTC_INT (A12) WKUP_CLKOUT0.MCU_GPIO0_23 */
+			AM62X_MCU_IOPAD(0x0084, PIN_INPUT_PULLUP, 7) /* RTC_INT (A12) WKUP_CLKOUT0.MCU_GPIO0_23 */
 		>;
 	};
 
@@ -815,6 +807,12 @@
 			AM62X_MCU_IOPAD(0x0020, PIN_OUTPUT, 0) /* (B6) MCU_UART0_RTSn */
 			AM62X_MCU_IOPAD(0x0014, PIN_INPUT, 0) /* (B5) MCU_UART0_RXD */
 			AM62X_MCU_IOPAD(0x0018, PIN_OUTPUT, 0) /* (A5) MCU_UART0_TXD */
+		>;
+	};
+
+	pinctrl_mcu_usb0: mcu-usb0-default-pins {
+		pinctrl-single,pins = <
+			AM62X_MCU_IOPAD(0x0040, PIN_INPUT, 7) /* USB_A_ID (D4) MCU_MCAN1_RX.MCU_GPIO0_16 */
 		>;
 	};
 };
@@ -865,6 +863,9 @@
 	wlcore: wlcore@2 {
 		compatible = "ti,cc33xx";
 		reg = <2>;
+
+		/* To use in-band SDIO interrupts remove the following line */
+		interrupts-extended = <&main_gpio0 16 IRQ_TYPE_EDGE_RISING>; /* SDIO_WAKE# */
 	};
 };
 
@@ -895,13 +896,20 @@
 	ti,vbus-divider;
 };
 
-&usb0 {
+&usb0 { /* USB_A */
 	bootph-all;
 	#address-cells = <1>;
 	#size-cells = <0>;
-	dr_mode = "device";
+	dr_mode = "otg";
 	pinctrl-names = "default";
-	pinctrl-0 = <&main_usb0_pins_default>;
+	pinctrl-0 = <&main_usb0_pins_default>,<&pinctrl_mcu_usb0>;
+	usb-role-switch;
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		id-gpios = <&mcu_gpio0 16 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &usb1 {

@@ -37,7 +37,7 @@
 	 * in an overlay. So we change the GPIO to
 	 * ACTIVE_LOW, to set it high, instead.
 	*/
-	gpios = <8 GPIO_ACTIVE_LOW>;
+	gpios = <&exp1 14 GPIO_ACTIVE_LOW>;
 };
 
 &sdhci1 { /* SDIO_A uSD / M.2_SDIO */
@@ -50,6 +50,8 @@
 	ti,fails-without-test-cd;
 	cap-power-off-card;
 	keep-power-in-suspend;
+	#address-cells = <1>;
+	#size-cells = <0>;
 
 	/* 32 KHz SUSCLK is on carrier */
 

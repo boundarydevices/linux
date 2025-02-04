@@ -47,8 +47,7 @@
 		clocks = <&clk_imx219_fixed>; /* On Camera module */
 		clock-names = "xclk";
 
-		/* Should be GPIO_C_7 / CAM_A_RST# &main_gpio0 29 */
-		reset-gpios = <&exp3 0 GPIO_ACTIVE_HIGH>; /* CSI_A_GPIO0 */
+		reset-gpios = <&main_gpio0 29 GPIO_ACTIVE_HIGH>; /* GPIO_C_7 / CAM_A_RST#  */
 
 		port {
 			csi2_cam0: endpoint {
