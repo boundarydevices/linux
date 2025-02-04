@@ -5,6 +5,7 @@
  * Copyright (C) 2021 CHIPS&MEDIA INC
  */
 #include <linux/pm_runtime.h>
+#include <linux/swiotlb.h>
 #include "wave6-vpu.h"
 #include "wave6-vpu-dbg.h"
 
@@ -706,6 +707,15 @@ static int wave6_vpu_enc_start_encode(struct vpu_instance *inst)
 			frame_buf.buf_cb = wave6_get_dma_addr(src_buf, 1);
 			frame_buf.buf_cr = wave6_get_dma_addr(src_buf, 2);
 		}
+		for (int i = 0; i < inst->src_fmt.num_planes; i++) {
+			dma_addr_t daddr = vb2_dma_contig_plane_dma_addr(&src_buf->vb2_buf, i);
+
+			if (is_swiotlb_buffer(inst->dev->dev, daddr)) {
+				dma_sync_single_for_device(inst->dev->dev, daddr,
+							   inst->src_fmt.plane_fmt[i].sizeimage,
+							   DMA_BIDIRECTIONAL);
+			}
+		}
 		wave6_update_frame_buf_addr(inst, &frame_buf);
 		frame_buf.stride = stride;
 		pic_param.src_idx = src_buf->vb2_buf.index;
@@ -812,6 +822,9 @@ static void wave6_handle_encoded_frame(struct vpu_instance *inst,
 		inst->error_recovery = true;
 		inst->error_buf_num++;
 	}
+	if (is_swiotlb_buffer(inst->dev->dev, info->bitstream_buffer))
+		dma_sync_single_for_cpu(inst->dev->dev, info->bitstream_buffer,
+					info->bitstream_size, DMA_BIDIRECTIONAL);
 	v4l2_m2m_buf_done(dst_buf, state);
 	inst->processed_buf_num++;
 
@@ -1939,13 +1952,14 @@ static int wave6_vpu_enc_create_instance(struct vpu_instance *inst)
 
 	memset(&open_param, 0, sizeof(struct enc_open_param));
 
+	wave6_vpu_activate(inst->dev);
 	ret = pm_runtime_resume_and_get(inst->dev->dev);
 	if (ret) {
 		dev_err(inst->dev->dev, "runtime_resume failed %d\n", ret);
 		return ret;
 	}
 
-	wave6_vpu_wait_active(inst);
+	wave6_vpu_wait_activated(inst->dev);
 
 	inst->std = wave6_to_vpu_wavestd(inst->dst_fmt.pixelformat);
 	if (inst->std == STD_UNKNOWN) {
@@ -2630,12 +2644,12 @@ int wave6_vpu_enc_register_device(struct vpu_device *dev)
 	vdev_enc->vfl_dir = VFL_DIR_M2M;
 	vdev_enc->device_caps = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_STREAMING;
 	vdev_enc->lock = &dev->dev_lock;
+	video_set_drvdata(vdev_enc, dev);
 
 	ret = video_register_device(vdev_enc, VFL_TYPE_VIDEO, -1);
 	if (ret)
 		return ret;
 
-	video_set_drvdata(vdev_enc, dev);
 
 	return 0;
 }

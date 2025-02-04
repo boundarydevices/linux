@@ -311,7 +311,7 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_spdif>;
 	pinctrl-1 = <&pinctrl_spdif_sleep>;
-	clocks = <&clk IMX93_CLK_BUS_WAKEUP>,
+	clocks = <&clk IMX93_CLK_SPDIF_IPG>,
 		<&clk IMX93_CLK_SPDIF_GATE>,
 		<&clk IMX93_CLK_DUMMY>,
 		<&clk IMX93_CLK_AUD_XCVR_GATE>,
@@ -1181,8 +1181,8 @@
 
 	pinctrl_spdif: spdifgrp {
 		fsl,pins = <
-			MX93_PAD_GPIO_IO22__SPDIF_IN		0x31e
-			MX93_PAD_GPIO_IO23__SPDIF_OUT		0x31e
+			MX93_PAD_GPIO_IO22__SPDIF_IN		0x3fe
+			MX93_PAD_GPIO_IO23__SPDIF_OUT		0x3fe
 		>;
 	};
 

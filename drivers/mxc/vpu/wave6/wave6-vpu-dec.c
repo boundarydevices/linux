@@ -7,6 +7,7 @@
 
 #include <linux/pm_runtime.h>
 #include <linux/delay.h>
+#include <linux/swiotlb.h>
 #include "wave6-vpu.h"
 #include "wave6-vpu-dbg.h"
 
@@ -184,6 +185,9 @@ static void wave6_handle_bitstream_buffer(struct vpu_instance *inst)
 		wave6_vpu_dec_set_rd_ptr(inst, rd_ptr, true);
 
 		src_size = vb2_get_plane_payload(&src_buf->vb2_buf, 0);
+		if (is_swiotlb_buffer(inst->dev->dev, rd_ptr))
+			dma_sync_single_for_device(inst->dev->dev, rd_ptr,
+						   src_size, DMA_BIDIRECTIONAL);
 	}
 
 	if (!src_size) {
@@ -611,6 +615,15 @@ static void wave6_handle_display_frame(struct vpu_instance *inst,
 		dprintk(inst->dev->dev, "[%d] recycle display buffer\n", inst->id);
 		vpu_buf->consumed = false;
 		return;
+	}
+	for (int i = 0; i < inst->dst_fmt.num_planes; i++) {
+		dma_addr_t daddr = vb2_dma_contig_plane_dma_addr(&dst_buf->vb2_buf, i);
+
+		if (is_swiotlb_buffer(inst->dev->dev, daddr)) {
+			dma_sync_single_for_cpu(inst->dev->dev, daddr,
+						inst->dst_fmt.plane_fmt[i].sizeimage,
+						DMA_BIDIRECTIONAL);
+		}
 	}
 
 	if (inst->dst_fmt.num_planes == 1) {
@@ -1320,13 +1333,14 @@ static int wave6_vpu_dec_create_instance(struct vpu_instance *inst)
 
 	memset(&open_param, 0, sizeof(struct dec_open_param));
 
+	wave6_vpu_activate(inst->dev);
 	ret = pm_runtime_resume_and_get(inst->dev->dev);
 	if (ret) {
 		dev_err(inst->dev->dev, "runtime_resume failed %d\n", ret);
 		return ret;
 	}
 
-	wave6_vpu_wait_active(inst);
+	wave6_vpu_wait_activated(inst->dev);
 
 	inst->std = wave6_to_vpu_codstd(inst->src_fmt.pixelformat);
 	if (inst->std == STD_UNKNOWN) {
@@ -1890,12 +1904,12 @@ int wave6_vpu_dec_register_device(struct vpu_device *dev)
 	vdev_dec->vfl_dir = VFL_DIR_M2M;
 	vdev_dec->device_caps = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_STREAMING;
 	vdev_dec->lock = &dev->dev_lock;
+	video_set_drvdata(vdev_dec, dev);
 
 	ret = video_register_device(vdev_dec, VFL_TYPE_VIDEO, -1);
 	if (ret)
 		return ret;
 
-	video_set_drvdata(vdev_dec, dev);
 
 	return 0;
 }

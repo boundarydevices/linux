@@ -5,6 +5,8 @@
 /****************************************************************************/
 
 #include <linux/dma-mapping.h>
+#include <linux/dma-map-ops.h>
+#include <linux/dma-direct.h>
 #include <linux/bitmap.h>
 #include <linux/interrupt.h>
 #include <linux/mutex.h>
@@ -18,6 +20,8 @@
 #include <linux/remoteproc.h>
 #include <linux/delay.h>
 #include <linux/pm_runtime.h>
+#include <linux/firmware.h>
+#include <linux/elf.h>
 
 #include "uapi/neutron.h"
 #include "neutron_buffer.h"
@@ -91,6 +95,160 @@ struct rproc *neutron_get_rproc(struct neutron_device *ndev)
 		return rproc;
 	}
 	return ndev->rproc;
+}
+
+int neutron_rproc_elf_load(struct rproc *rproc, const struct firmware *fw,
+			   void *data_ddr, u8 skip_flag)
+{
+	struct device *dev = &rproc->dev;
+	int i, ret = 0;
+	struct elf32_hdr *ehdr;
+	struct elf32_phdr *phdr;
+
+	const u8 *elf_data = fw->data;
+
+	ehdr = (struct elf32_hdr *)elf_data;
+	phdr = (struct elf32_phdr *)(elf_data + ehdr->e_phoff);
+
+	/* go through the available ELF segments */
+	for (i = 0; i < ehdr->e_phnum; i++, phdr++) {
+		u64 da = phdr->p_paddr;
+		u64 memsz = phdr->p_memsz;
+		u64 filesz = phdr->p_filesz;
+		u64 offset = phdr->p_offset;
+		u32 type = phdr->p_type;
+		bool is_iomem = false;
+		void *ptr;
+
+		dev_dbg(dev, "da: %llx memsz: %llx filesz %llx offset %llx type %x\n",
+			da, memsz, filesz, offset, type);
+
+		if (type != PT_LOAD || !memsz)
+			continue;
+
+		if (filesz > memsz) {
+			dev_err(dev, "bad phdr filesz 0x%llx memsz 0x%llx\n",
+				filesz, memsz);
+			ret = -EINVAL;
+			break;
+		}
+
+		if (offset + filesz > fw->size) {
+			dev_err(dev, "truncated fw: need 0x%llx avail 0x%zx\n",
+				offset + filesz, fw->size);
+			ret = -EINVAL;
+			break;
+		}
+
+		if (da == 0x50000) {
+			if ((skip_flag & 0x1) || !data_ddr)
+				continue;
+			ptr = data_ddr;
+			neu_dbg("copy ddr_data to %pS size 0x%llx\n", data_ddr, memsz);
+			is_iomem = true;
+		} else {
+			/* grab the kernel address for this device address */
+			if (skip_flag & 0x2)
+				continue;
+			ptr = rproc_da_to_va(rproc, da, memsz, &is_iomem);
+			if (!ptr) {
+				dev_err(dev, "neutron bad phdr da 0x%llx mem 0x%llx\n", da,
+					memsz);
+				ret = -EINVAL;
+				break;
+			}
+		}
+
+		/* put the segment where the remote processor expects it */
+		if (filesz) {
+			if (is_iomem)
+				memcpy_toio((void __iomem *)ptr, elf_data + offset, filesz);
+			else
+				memcpy(ptr, elf_data + offset, filesz);
+		}
+
+		if (memsz > filesz) {
+			if (is_iomem)
+				memset_io((void __iomem *)(ptr + filesz), 0, memsz - filesz);
+			else
+				memset(ptr + filesz, 0, memsz - filesz);
+		}
+	}
+
+	return ret;
+}
+
+static int neutron_firmw_request(struct neutron_device *ndev, struct neutron_buffer *buf,
+				 void *data_ddr, const char *fw_name)
+{
+	int ret = 0;
+	struct device *dev;
+	struct rproc *rproc = ndev->rproc;
+	phys_addr_t paddr;
+
+	if (!buf) {
+		dev_err(dev, "%s: invalid neutron bufffer\n", __func__);
+		return PTR_ERR(buf);
+	}
+
+	dev = ndev->dev;
+
+	/* firmware exists */
+	if (buf->firmware_p)
+		return ret;
+
+	/* request firmware */
+	ret = request_firmware(&buf->firmware_p, fw_name, dev);
+	if (ret < 0) {
+		dev_err(dev, "request_firmware failed: %d\n", ret);
+		return ret;
+	}
+
+	// remap ddr data address to kernel virt.
+	neu_dbg("data_ddr: 0x%lx,  sz: 0x%x\n", data_ddr, buf->firmware_p->size);
+
+	/* Only the ddr data needs to be loaded on prepartion, other data
+	 * will be loaded on demand at runtime.
+	 */
+	ret = neutron_rproc_elf_load(rproc, buf->firmware_p, data_ddr, 2);
+	if (ret) {
+		dev_err(dev, "neutron_elf_load failed\n");
+		return ret;
+	}
+
+	/* Sync the data for device */
+	paddr = dma_to_phys(ndev->dev, buf->dma_addr);
+	arch_sync_dma_for_device(paddr, buf->size, DMA_TO_DEVICE);
+
+	/* Firmware is changed, it should be reloaded on next job */
+	ndev->firmw_id = 0;
+
+	return ret;
+}
+
+int neutron_firmw_reload(struct neutron_device *ndev, struct neutron_buffer *buf)
+{
+	int ret = -1;
+	void *data_ddr = NULL;
+	struct device *dev = ndev->dev;
+	struct rproc *rproc = ndev->rproc;
+
+	if (!buf->firmware_p) {
+		dev_err(dev, "firmware is not ready\n");
+		return ret;
+	}
+
+	ret = rproc->ops->stop(rproc);
+	if (ret)
+		dev_err(dev, "could not stop neutron\n");
+
+	ret = neutron_rproc_elf_load(rproc, buf->firmware_p, data_ddr, 0x1);
+	if (ret)
+		dev_err(dev, "neutron_rproc_elf_load failed\n");
+
+	rproc->ops->start(rproc);
+
+	return ret;
 }
 
 int neutron_rproc_boot(struct neutron_device *ndev, const char *fw_name)
@@ -342,6 +500,72 @@ static long neutron_ioctl(struct file *file,
 
 		break;
 	}
+	case NEUTRON_IOCTL_CACHE_SYNC: {
+		struct neutron_uapi_cache_sync uapi;
+		struct neutron_buffer *buf;
+		phys_addr_t paddr;
+
+		ret = copy_from_user(&uapi, udata, sizeof(uapi));
+		if (ret)
+			break;
+
+		dev_dbg(ndev->dev,
+			"Ioctl: Sync cache offset:0x%x, size:0x%x, direction %d\n",
+			uapi.offset, uapi.size, uapi.direction);
+
+		buf = neutron_buffer_get_from_fd(uapi.fd);
+		if (!buf || IS_ERR(buf)) {
+			dev_err(ndev->dev, "IOCTL_CACHE_SYNC: Invalid buf. fd: %d\n", uapi.fd);
+			ret = -EINVAL;
+			break;
+		}
+
+		if (uapi.offset + uapi.size > buf->size) {
+			dev_err(ndev->dev,
+				"CACHE_SYNC: Out of range: fd %d, 0x%x + 0x%x > 0x%lx\n",
+				uapi.fd, uapi.offset, uapi.size, buf->size);
+			ret = -EINVAL;
+		}
+
+		paddr = dma_to_phys(ndev->dev, buf->dma_addr + uapi.offset);
+		if (uapi.direction)
+			arch_sync_dma_for_cpu(paddr, uapi.size, DMA_FROM_DEVICE);
+		else
+			arch_sync_dma_for_device(paddr, uapi.size, DMA_TO_DEVICE);
+
+		break;
+	}
+	case NEUTRON_IOCTL_FIRMWARE_LOAD: {
+		struct neutron_uapi_firmware_load uapi;
+		struct neutron_buffer *buf;
+		char *fw_name;
+		int buf_fd;
+		u64 data_offset;
+
+		if (copy_from_user(&uapi, udata, sizeof(uapi)))
+			break;
+
+		fw_name = uapi.fw_name;
+		buf_fd = uapi.buf_fd;
+		data_offset = uapi.data_offset;
+
+		if (*fw_name == '\0')
+			strcpy(fw_name, NEUTRON_FIRMW_NAME);
+		neu_dbg("fw_name: %s\n", fw_name);
+
+		buf = neutron_buffer_get_from_fd(buf_fd);
+		if (!buf || IS_ERR(buf)) {
+			dev_err(ndev->dev, "IOCTL_FIRMWARE_LOAD: Invalid buf. fd: %d\n", buf_fd);
+			break;
+		}
+
+		neu_dbg("buffer cpu addr 0x%pS, offset 0x%x\n", buf->cpu_addr, data_offset);
+		mutex_lock(&ndev->mutex);
+		ret = neutron_firmw_request(ndev, buf, buf->cpu_addr + data_offset, fw_name);
+		mutex_unlock(&ndev->mutex);
+
+		break;
+	}
 
 	default: {
 		dev_err(ndev->dev, "Invalid ioctl. cmd=%u, arg=%lu",
@@ -430,6 +654,7 @@ int neutron_dev_init(struct neutron_device *ndev,
 	}
 
 	dma_set_mask_and_coherent(ndev->dev, DMA_BIT_MASK(32));
+	arch_setup_dma_ops(ndev->dev, 0, 0, NULL, true);
 
 	/* Init power state */
 	ndev->power_state = NEUTRON_POWER_OFF;
