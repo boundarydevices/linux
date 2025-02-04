@@ -321,7 +321,7 @@ static int xpcs_soft_reset(struct dw_xpcs *xpcs,
 		dev = MDIO_MMD_VEND2;
 		break;
 	default:
-		return -1;
+		return -EINVAL;
 	}
 
 	ret = xpcs_write(xpcs, dev, MDIO_CTRL1, MDIO_CTRL1_RESET);
@@ -919,7 +919,7 @@ int xpcs_do_config(struct dw_xpcs *xpcs, phy_interface_t interface,
 			return ret;
 		break;
 	default:
-		return -1;
+		return -EINVAL;
 	}
 
 	if (compat->pma_config) {
@@ -1514,16 +1514,23 @@ struct phylink_pcs *xpcs_create_mdiodev_with_phy(struct mii_bus *bus,
 {
 	struct mdio_device *mdiodev, *phydev;
 	struct dw_xpcs *xpcs;
+	void *err_ptr;
 
 	mdiodev = mdio_device_create(bus, mdioaddr);
 	if (IS_ERR(mdiodev))
 		return ERR_CAST(mdiodev);
 
 	phydev = mdio_device_create(bus, phyaddr);
-	if (IS_ERR(phydev))
-		return ERR_CAST(phydev);
+	if (IS_ERR(phydev)) {
+		err_ptr = ERR_CAST(phydev);
+		goto err_phydev;
+	}
 
 	xpcs = xpcs_create(mdiodev, phydev, interface);
+	if (IS_ERR(xpcs)) {
+		err_ptr = ERR_CAST(xpcs);
+		goto err_xpcs;
+	}
 
 	/* xpcs_create() has taken a refcount on the mdiodev if it was
 	 * successful. If xpcs_create() fails, this will free the mdio
@@ -1535,6 +1542,13 @@ struct phylink_pcs *xpcs_create_mdiodev_with_phy(struct mii_bus *bus,
 	mdio_device_put(phydev);
 
 	return &xpcs->pcs;
+
+err_xpcs:
+	mdio_device_free(phydev);
+err_phydev:
+	mdio_device_free(mdiodev);
+
+	return err_ptr;
 }
 EXPORT_SYMBOL_GPL(xpcs_create_mdiodev_with_phy);
 

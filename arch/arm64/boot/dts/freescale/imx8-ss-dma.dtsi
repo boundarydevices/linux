@@ -564,7 +564,8 @@ dma_subsys: bus@5a000000 {
 			     <GIC_SPI 438 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 440 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI 441 IRQ_TYPE_LEVEL_HIGH>;
+			     <GIC_SPI 441 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma2-chan0-rx", "edma2-chan1-tx",
 				  "edma2-chan2-rx", "edma2-chan3-tx",
 				  "edma2-chan4-rx", "edma2-chan5-tx",
@@ -572,7 +573,8 @@ dma_subsys: bus@5a000000 {
 				  "edma2-chan8-rx", "edma2-chan9-tx",
 				  "edma2-chan10-rx", "edma2-chan11-tx",
 				  "edma2-chan12-rx", "edma2-chan13-tx",
-				  "edma2-chan14-rx", "edma2-chan15-tx";
+				  "edma2-chan14-rx", "edma2-chan15-tx",
+				  "edma2-err";
 		power-domains = <&pd IMX_SC_R_DMA_2_CH0>,
 				<&pd IMX_SC_R_DMA_2_CH1>,
 				<&pd IMX_SC_R_DMA_2_CH2>,
@@ -620,11 +622,13 @@ dma_subsys: bus@5a000000 {
 			     <GIC_SPI 428 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 429 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 430 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI 431 IRQ_TYPE_LEVEL_HIGH>;
+			     <GIC_SPI 431 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma3-chan0-rx", "edma3-chan1-tx",
 				  "edma3-chan2-rx", "edma3-chan3-tx",
 				  "edma3-chan4-rx", "edma3-chan5-tx",
-				  "edma3-chan6-rx", "edma3-chan7-tx";
+				  "edma3-chan6-rx", "edma3-chan7-tx",
+				  "edma3-err";
 		power-domains = <&pd IMX_SC_R_DMA_3_CH0>,
 				<&pd IMX_SC_R_DMA_3_CH1>,
 				<&pd IMX_SC_R_DMA_3_CH2>,
