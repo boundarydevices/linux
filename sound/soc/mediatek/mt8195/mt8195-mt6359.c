@@ -1726,6 +1726,20 @@ static int mt8195_mt6359_dev_probe(struct platform_device *pdev)
 			default:
 				break;
 			}
+		} else if (strcmp(dai_link->name, "UL2_FE") == 0 ||
+			   strcmp(dai_link->name, "UL3_FE") == 0 ||
+			   strcmp(dai_link->name, "UL4_FE") == 0 ||
+			   strcmp(dai_link->name, "UL5_FE") == 0 ||
+			   strcmp(dai_link->name, "UL8_FE") == 0 ||
+			   strcmp(dai_link->name, "UL9_FE") == 0 ||
+			   strcmp(dai_link->name, "UL10_FE") == 0) {
+			switch (card_data->quirk) {
+			case MT6359_SPEAKER_AMP_PRESENT:
+				dai_link->ops = NULL;
+				break;
+			default:
+				break;
+			}
 		}
 	}
 
