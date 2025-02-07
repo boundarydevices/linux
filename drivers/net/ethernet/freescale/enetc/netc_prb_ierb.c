@@ -449,7 +449,7 @@ static int netc_prb_parse_if(struct netc_prb_ierb *pi, struct device *dev)
 	int ret, count;
 
 	count = of_property_count_u32_elems(node, "netc-interfaces");
-	if (count < 1)
+	if (count != 3)
 		return -EINVAL;
 	pi->ifmode = devm_kcalloc(dev, count, sizeof(pi->ifmode), GFP_KERNEL);
 
@@ -535,7 +535,10 @@ static int netc_prb_ierb_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pi);
 
-	netc_prb_parse_if(pi, &pdev->dev);
+	err = netc_prb_parse_if(pi, &pdev->dev);
+	if (err)
+		goto disable_ipg_clk;
+
 	netc_netcmix_init(pdev);
 
 	err = netc_ierb_init(pdev);
