@@ -30,6 +30,7 @@
 #define RT1011_SPEAKER_AMP_PRESENT		BIT(0)
 #define RT1019_SPEAKER_AMP_PRESENT		BIT(1)
 #define MAX98390_SPEAKER_AMP_PRESENT		BIT(2)
+#define MT6359_SPEAKER_AMP_PRESENT		BIT(3)
 
 #define RT1011_CODEC_DAI	"rt1011-aif"
 #define RT1011_DEV0_NAME	"rt1011.2-0038"
@@ -1759,6 +1760,7 @@ static struct mt8195_card_data mt8195_mt6359_max98390_rt5682_card = {
 
 static struct mt8195_card_data mt8195_mt6359_card = {
 	.name = "mt8195_mt6359",
+	.quirk = MT6359_SPEAKER_AMP_PRESENT,
 };
 
 static const struct of_device_id mt8195_mt6359_dt_match[] = {
