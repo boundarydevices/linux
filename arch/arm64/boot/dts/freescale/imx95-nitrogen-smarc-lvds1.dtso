@@ -17,9 +17,7 @@
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
-		enable-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_lvds_backlight>;
+		enable-gpios = <&pcal6524 20 GPIO_ACTIVE_HIGH>;
 		pwms = <&tpm3 2 30000 0>;
 	};
 };
@@ -105,12 +103,6 @@
 };
 
 &scmi_iomuxc {
-	pinctrl_lvds_backlight: lvds-backlightgrp {
-		fsl,pins = <
-			IMX95_PAD_XSPI1_DATA4__GPIO5_IO_BIT4	0x37e
-		>;
-	};
-
 	pinctrl_lvds_goodix: lvds-goodixgrp {
 		fsl,pins = <
 			IMX95_PAD_XSPI1_DATA6__GPIO5_IO_BIT6	0x37e
