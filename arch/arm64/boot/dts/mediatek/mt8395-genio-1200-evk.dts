@@ -1375,6 +1375,10 @@
 	status = "okay";
 };
 
+&watchdog {
+	/delete-property/ mediatek,disable-extrst;
+};
+
 &xhci0 {
 	status = "okay";
 };
