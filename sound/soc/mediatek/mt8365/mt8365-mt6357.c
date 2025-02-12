@@ -4,6 +4,7 @@
  *
  * Copyright (c) 2024 MediaTek Inc.
  * Authors: Nicolas Belin <nbelin@baylibre.com>
+ *          Aary Patil <aary.patil@mediatek.com>
  */
 
 #include <linux/module.h>
@@ -11,8 +12,11 @@
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 #include "mt8365-afe-common.h"
+#include <linux/pm_runtime.h>
+#include <linux/of_device.h>
 #include <linux/pinctrl/consumer.h>
 #include "../common/mtk-soc-card.h"
+#include "../common/mtk-afe-platform-driver.h"
 #include "../common/mtk-soundcard-driver.h"
 
 enum pinctrl_pin_state {
@@ -39,6 +43,11 @@ struct mt8365_mt6357_priv {
 	struct pinctrl_state *pin_states[PIN_STATE_MAX];
 };
 
+struct mt8365_card_data {
+	const char *name;
+	unsigned long quirk;
+};
+
 enum {
 	/* FE */
 	DAI_LINK_DL1_PLAYBACK = 0,
@@ -49,8 +58,11 @@ enum {
 	DAI_LINK_2ND_I2S_INTF,
 	DAI_LINK_DMIC,
 	DAI_LINK_INT_ADDA,
-	DAI_LINK_NUM
+	DAI_LINK_NUM,
+	DAI_LINK_REGULAR_LAST = DAI_LINK_NUM - 1,
 };
+
+#define	DAI_LINK_REGULAR_NUM	(DAI_LINK_REGULAR_LAST + 1)
 
 static const struct snd_soc_dapm_widget mt8365_mt6357_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("HDMI Out"),
@@ -64,7 +76,8 @@ static const struct snd_soc_dapm_route mt8365_mt6357_routes[] = {
 static int mt8365_mt6357_int_adda_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mt8365_mt6357_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct mtk_soc_card_data *soc_card_data = snd_soc_card_get_drvdata(rtd->card);
+	struct mt8365_mt6357_priv *priv = soc_card_data->mach_priv;
 	int ret = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
@@ -95,7 +108,8 @@ static int mt8365_mt6357_int_adda_startup(struct snd_pcm_substream *substream)
 static void mt8365_mt6357_int_adda_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mt8365_mt6357_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct mtk_soc_card_data *soc_card_data = snd_soc_card_get_drvdata(rtd->card);
+	struct mt8365_mt6357_priv *priv = soc_card_data->mach_priv;
 	int ret = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
@@ -243,7 +257,8 @@ static struct snd_soc_dai_link mt8365_mt6357_dais[] = {
 
 static int mt8365_mt6357_gpio_probe(struct snd_soc_card *card)
 {
-	struct mt8365_mt6357_priv *priv = snd_soc_card_get_drvdata(card);
+	struct mtk_soc_card_data *soc_card_data = snd_soc_card_get_drvdata(card);
+	struct mt8365_mt6357_priv *priv = soc_card_data->mach_priv;
 	int ret, i;
 
 	priv->pinctrl = devm_pinctrl_get(card->dev);
@@ -275,7 +290,6 @@ static int mt8365_mt6357_gpio_probe(struct snd_soc_card *card)
 }
 
 static struct snd_soc_card mt8365_mt6357_soc_card = {
-	.name = "mt8365-evk",
 	.owner = THIS_MODULE,
 	.dai_link = mt8365_mt6357_dais,
 	.num_links = ARRAY_SIZE(mt8365_mt6357_dais),
@@ -285,44 +299,77 @@ static struct snd_soc_card mt8365_mt6357_soc_card = {
 	.num_dapm_routes = ARRAY_SIZE(mt8365_mt6357_routes),
 };
 
-static int mt8365_mt6357_dev_probe(struct mtk_soc_card_data *soc_card_data, bool legacy)
+static int mt8365_mt6357_dev_probe(struct platform_device *pdev)
 {
-	struct mtk_platform_card_data *card_data = soc_card_data->card_data;
-	struct snd_soc_card *card = card_data->card;
-	struct device *dev = card->dev;
-	struct device_node *platform_node;
+	struct snd_soc_card *card = &mt8365_mt6357_soc_card;
+	struct snd_soc_dai_link *dai_link;
+	struct mtk_soc_card_data *soc_card_data;
 	struct mt8365_mt6357_priv *mach_priv;
-	int i, ret;
+	struct device_node *platform_node;
+	struct mt8365_card_data *card_data;
+	int ret, i;
 
-	card->dev = dev;
+	card_data = (struct mt8365_card_data *)of_device_get_match_data(&pdev->dev);
+	card->dev = &pdev->dev;
+
 	ret = parse_dai_link_info(card);
-	if (ret)
-		goto err;
+	if (ret) {
+		return dev_err_probe(&pdev->dev, ret, "%s parse_dai_link_info failed\n",
+				     __func__);
+	}
 
-	mach_priv = devm_kzalloc(dev, sizeof(*mach_priv),
-				 GFP_KERNEL);
+	ret = snd_soc_of_parse_card_name(card, "model");
+	if (ret) {
+		dev_err(&pdev->dev, "%s new card name parsing error %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	if (!card->name)
+		card->name = card_data->name;
+
+	soc_card_data = devm_kzalloc(&pdev->dev, sizeof(*soc_card_data), GFP_KERNEL);
+	if (!soc_card_data)
+		return -ENOMEM;
+
+	mach_priv = devm_kzalloc(&pdev->dev, sizeof(*mach_priv), GFP_KERNEL);
 	if (!mach_priv)
 		return -ENOMEM;
-	soc_card_data->mach_priv = mach_priv;
-	snd_soc_card_set_drvdata(card, soc_card_data);
-	mt8365_mt6357_gpio_probe(card);
-	return 0;
 
-err:
-	clean_card_reference(card);
+	soc_card_data->mach_priv = mach_priv;
+
+	card->num_links = DAI_LINK_REGULAR_NUM;
+
+	platform_node = of_parse_phandle(pdev->dev.of_node, "mediatek,platform", 0);
+	if (!platform_node) {
+		dev_err(&pdev->dev, "Property 'platform' missing or invalid\n");
+		return -EINVAL;
+	}
+
+	for_each_card_prelinks(card, i, dai_link) {
+		dai_link->platforms->of_node = platform_node;
+	}
+
+	snd_soc_card_set_drvdata(card, soc_card_data);
+
+	mt8365_mt6357_gpio_probe(card);
+
+	ret = devm_snd_soc_register_card(&pdev->dev, card);
+
+	of_node_put(platform_node);
+
 	return ret;
 }
 
-static const struct mtk_soundcard_pdata mt8365_mt6357_card = {
-	.card_name = "mt8365-mt6357",
-	.card_data = &(struct mtk_platform_card_data) {
-		.card = &mt8365_mt6357_soc_card,
-	},
-	.soc_probe = mt8365_mt6357_dev_probe
+static struct mt8365_card_data mt8365_mt6357_card = {
+	.name = "mt8365_mt6357",
 };
 
 static const struct of_device_id mt8365_mt6357_dt_match[] = {
-	{ .compatible = "mediatek,mt8365-mt6357", .data = &mt8365_mt6357_card },
+	{
+		.compatible = "mediatek,mt8365-mt6357",
+		.data = &mt8365_mt6357_card,
+	},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, mt8365_mt6357_dt_match);
@@ -333,7 +380,7 @@ static struct platform_driver mt8365_mt6357_driver = {
 		   .of_match_table = mt8365_mt6357_dt_match,
 		   .pm = &snd_soc_pm_ops,
 	},
-	.probe = mtk_soundcard_common_probe,
+	.probe = mt8365_mt6357_dev_probe,
 };
 
 module_platform_driver(mt8365_mt6357_driver);
@@ -341,5 +388,6 @@ module_platform_driver(mt8365_mt6357_driver);
 /* Module information */
 MODULE_DESCRIPTION("MT8365 EVK SoC machine driver");
 MODULE_AUTHOR("Nicolas Belin <nbelin@baylibre.com>");
+MODULE_AUTHOR("Aary Patil <aary.patil@mediatek.com>");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform: mt8365_mt6357");
