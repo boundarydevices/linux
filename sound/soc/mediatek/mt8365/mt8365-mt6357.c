@@ -18,6 +18,12 @@
 #include "../common/mtk-soc-card.h"
 #include "../common/mtk-afe-platform-driver.h"
 #include "../common/mtk-soundcard-driver.h"
+#include "../common/mtk-dsp-sof-common.h"
+
+#define SOF_DMA_DL1 "SOF_DMA_DL1"
+#define SOF_DMA_DL2 "SOF_DMA_DL2"
+#define SOF_DMA_AWB "SOF_DMA_AWB"
+#define SOF_DMA_VUL "SOF_DMA_VUL"
 
 enum pinctrl_pin_state {
 	PIN_STATE_DEFAULT,
@@ -60,17 +66,35 @@ enum {
 	DAI_LINK_INT_ADDA,
 	DAI_LINK_NUM,
 	DAI_LINK_REGULAR_LAST = DAI_LINK_NUM - 1,
+	DAI_LINK_SOF_START,
+	DAI_LINK_SOF_DL1_BE = DAI_LINK_SOF_START,
+	DAI_LINK_SOF_DL2_BE,
+	DAI_LINK_SOF_AWB_BE,
+	DAI_LINK_SOF_VUL_BE,
+	DAI_LINK_SOF_END = DAI_LINK_SOF_VUL_BE,
 };
 
 #define	DAI_LINK_REGULAR_NUM	(DAI_LINK_REGULAR_LAST + 1)
 
 static const struct snd_soc_dapm_widget mt8365_mt6357_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("HDMI Out"),
+	SND_SOC_DAPM_MIXER(SOF_DMA_DL1, SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER(SOF_DMA_DL2, SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER(SOF_DMA_AWB, SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER(SOF_DMA_VUL, SND_SOC_NOPM, 0, 0, NULL, 0),
 };
 
 static const struct snd_soc_dapm_route mt8365_mt6357_routes[] = {
 	{"HDMI Out", NULL, "2ND I2S Playback"},
 	{"DMIC In", NULL, "MICBIAS0"},
+	{SOF_DMA_AWB, NULL, "O05"},
+	{SOF_DMA_AWB, NULL, "O06"},
+	{SOF_DMA_VUL, NULL, "O09"},
+	{SOF_DMA_VUL, NULL, "O10"},
+	{"I05", NULL, SOF_DMA_DL1},
+	{"I06", NULL, SOF_DMA_DL1},
+	{"I07", NULL, SOF_DMA_DL2},
+	{"I08", NULL, SOF_DMA_DL2},
 };
 
 static int mt8365_mt6357_int_adda_startup(struct snd_pcm_substream *substream)
@@ -140,6 +164,32 @@ static const struct snd_soc_ops mt8365_mt6357_int_adda_ops = {
 	.shutdown = mt8365_mt6357_int_adda_shutdown,
 };
 
+static int mt8365_sof_be_hw_params(struct snd_pcm_substream *substream,
+				   struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
+	struct snd_soc_component *cmpnt_afe = NULL;
+	struct snd_soc_pcm_runtime *runtime;
+
+	/* find afe component */
+	for_each_card_rtds(rtd->card, runtime) {
+		cmpnt_afe = snd_soc_rtdcom_lookup(runtime, AFE_PCM_NAME);
+		if (cmpnt_afe)
+			break;
+	}
+
+	if (cmpnt_afe && !pm_runtime_active(cmpnt_afe->dev)) {
+		dev_err(rtd->dev, "afe pm runtime is not active!!\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static const struct snd_soc_ops mt8365_sof_be_ops = {
+	.hw_params = mt8365_sof_be_hw_params,
+};
+
 SND_SOC_DAILINK_DEFS(playback1,
 		     DAILINK_COMP_ARRAY(COMP_CPU("DL1")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
@@ -168,6 +218,24 @@ SND_SOC_DAILINK_DEFS(dmic,
 SND_SOC_DAILINK_DEFS(primary_codec,
 		     DAILINK_COMP_ARRAY(COMP_CPU("INT ADDA")),
 		     DAILINK_COMP_ARRAY(COMP_CODEC("mt6357-sound", "mt6357-snd-codec-aif1")),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+/* SOF */
+SND_SOC_DAILINK_DEFS(AFE_SOF_DL1,
+		     DAILINK_COMP_ARRAY(COMP_CPU("SOF_DL1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+SND_SOC_DAILINK_DEFS(AFE_SOF_DL2,
+		     DAILINK_COMP_ARRAY(COMP_CPU("SOF_DL2")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+SND_SOC_DAILINK_DEFS(AFE_SOF_AWB,
+		     DAILINK_COMP_ARRAY(COMP_CPU("SOF_AWB")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+SND_SOC_DAILINK_DEFS(AFE_SOF_VUL,
+		     DAILINK_COMP_ARRAY(COMP_CPU("SOF_VUL")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 /* Digital audio interface glue - connects codec <---> CPU */
@@ -253,6 +321,58 @@ static struct snd_soc_dai_link mt8365_mt6357_dais[] = {
 		.ops = &mt8365_mt6357_int_adda_ops,
 		SND_SOC_DAILINK_REG(primary_codec),
 	},
+	/* SOF DAI links */
+	[DAI_LINK_SOF_DL1_BE] = {
+		.name = "AFE_SOF_DL1",
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.ops = &mt8365_sof_be_ops,
+		SND_SOC_DAILINK_REG(AFE_SOF_DL1),
+	},
+	[DAI_LINK_SOF_DL2_BE] = {
+		.name = "AFE_SOF_DL2",
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.ops = &mt8365_sof_be_ops,
+		SND_SOC_DAILINK_REG(AFE_SOF_DL2),
+	},
+	[DAI_LINK_SOF_AWB_BE] = {
+		.name = "AFE_SOF_AWB",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.ops = &mt8365_sof_be_ops,
+		SND_SOC_DAILINK_REG(AFE_SOF_AWB),
+	},
+	[DAI_LINK_SOF_VUL_BE] = {
+		.name = "AFE_SOF_VUL",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.ops = &mt8365_sof_be_ops,
+		SND_SOC_DAILINK_REG(AFE_SOF_VUL),
+	},
+};
+
+static const struct sof_conn_stream g_sof_conn_streams[] = {
+	{
+		.sof_link = "AFE_SOF_DL1",
+		.sof_dma = SOF_DMA_DL1,
+		.stream_dir = SNDRV_PCM_STREAM_PLAYBACK
+	},
+	{
+		.sof_link = "AFE_SOF_DL2",
+		.sof_dma = SOF_DMA_DL2,
+		.stream_dir = SNDRV_PCM_STREAM_PLAYBACK
+	},
+	{
+		.sof_link = "AFE_SOF_AWB",
+		.sof_dma = SOF_DMA_AWB,
+		.stream_dir = SNDRV_PCM_STREAM_CAPTURE
+	},
+	{
+		.sof_link = "AFE_SOF_VUL",
+		.sof_dma = SOF_DMA_VUL,
+		.stream_dir = SNDRV_PCM_STREAM_CAPTURE
+	},
 };
 
 static int mt8365_mt6357_gpio_probe(struct snd_soc_card *card)
@@ -305,8 +425,9 @@ static int mt8365_mt6357_dev_probe(struct platform_device *pdev)
 	struct snd_soc_dai_link *dai_link;
 	struct mtk_soc_card_data *soc_card_data;
 	struct mt8365_mt6357_priv *mach_priv;
-	struct device_node *platform_node;
+	struct device_node *platform_node, *adsp_node;
 	struct mt8365_card_data *card_data;
+	int sof_on = 0;
 	int ret, i;
 
 	card_data = (struct mt8365_card_data *)of_device_get_match_data(&pdev->dev);
@@ -338,16 +459,56 @@ static int mt8365_mt6357_dev_probe(struct platform_device *pdev)
 
 	soc_card_data->mach_priv = mach_priv;
 
-	card->num_links = DAI_LINK_REGULAR_NUM;
+	adsp_node = of_parse_phandle(pdev->dev.of_node, "mediatek,adsp", 0);
+	if (adsp_node) {
+		struct mtk_sof_priv *sof_priv;
+
+		sof_priv = devm_kzalloc(&pdev->dev, sizeof(*sof_priv), GFP_KERNEL);
+		if (!sof_priv) {
+			ret = -ENOMEM;
+			goto err_kzalloc;
+		}
+		sof_priv->conn_streams = g_sof_conn_streams;
+		sof_priv->num_streams = ARRAY_SIZE(g_sof_conn_streams);
+		soc_card_data->sof_priv = sof_priv;
+		card->probe = mtk_sof_card_probe;
+		card->late_probe = mtk_sof_card_late_probe;
+		if (!card->topology_shortname_created) {
+			snprintf(card->topology_shortname, 32, "sof-%s", card->name);
+			card->topology_shortname_created = true;
+		}
+		card->name = card->topology_shortname;
+		sof_on = 1;
+	}
+
+	if (of_property_read_bool(pdev->dev.of_node, "mediatek,dai-link")) {
+		ret = mtk_sof_dailink_parse_of(card, pdev->dev.of_node,
+					       "mediatek,dai-link",
+					       mt8365_mt6357_dais,
+					       ARRAY_SIZE(mt8365_mt6357_dais));
+		if (ret) {
+			dev_dbg(&pdev->dev, "Parse dai-link fail\n");
+			goto err_parse_of;
+		}
+	} else {
+		if (!sof_on)
+			card->num_links = DAI_LINK_REGULAR_NUM;
+	}
 
 	platform_node = of_parse_phandle(pdev->dev.of_node, "mediatek,platform", 0);
 	if (!platform_node) {
 		dev_err(&pdev->dev, "Property 'platform' missing or invalid\n");
 		return -EINVAL;
+		goto err_platform_node;
 	}
 
 	for_each_card_prelinks(card, i, dai_link) {
-		dai_link->platforms->of_node = platform_node;
+		if (!dai_link->platforms->name) {
+			if (!strncmp(dai_link->name, "AFE_SOF", strlen("AFE_SOF")) && sof_on)
+				dai_link->platforms->of_node = adsp_node;
+			else
+				dai_link->platforms->of_node = platform_node;
+		}
 	}
 
 	snd_soc_card_set_drvdata(card, soc_card_data);
@@ -358,6 +519,10 @@ static int mt8365_mt6357_dev_probe(struct platform_device *pdev)
 
 	of_node_put(platform_node);
 
+err_kzalloc:
+err_parse_of:
+err_platform_node:
+	of_node_put(adsp_node);
 	return ret;
 }
 
