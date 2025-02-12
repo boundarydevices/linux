@@ -24,6 +24,7 @@
 		     "mediatek,mt8188";
 
 	aliases {
+		ethernet0 = &eth;
 		serial0 = &uart0;
 		dsi0 = &dsi0;
 	};
