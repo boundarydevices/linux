@@ -182,6 +182,11 @@ static void kernel_unmap_user_io_pages(struct kbase_context *kctx, struct kbase_
 	kbase_gpu_vm_lock(kctx);
 
 	vunmap(queue->user_io_addr);
+	if (kctx->csf.user_io.vma != NULL) {
+		zap_vma_ptes(kctx->csf.user_io.vma, kctx->csf.user_io.vma->vm_start,
+			     KBASEP_NUM_CS_USER_IO_PAGES * PAGE_SIZE);
+		kctx->csf.user_io.vma = NULL;
+	}
 
 	WARN_ON(atomic_read(&kctx->permanent_mapped_pages) < KBASEP_NUM_CS_USER_IO_PAGES);
 	atomic_sub(KBASEP_NUM_CS_USER_IO_PAGES, &kctx->permanent_mapped_pages);
