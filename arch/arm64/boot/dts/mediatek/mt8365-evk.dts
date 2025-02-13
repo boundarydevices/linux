@@ -144,6 +144,7 @@
 
 	sound: sound {
 		compatible = "mediatek,mt8365-mt6357";
+		model = "mt8365-evk";
 		pinctrl-names = "default",
 				"dmic",
 				"miso_off",
