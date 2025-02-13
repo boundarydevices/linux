@@ -27,8 +27,8 @@ int dp_bridge_init(struct msm_dp *dp_display, struct drm_device *dev,
 void msm_dp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
 				 struct drm_atomic_state *state);
 void msm_dp_bridge_atomic_disable(struct drm_bridge *drm_bridge,
-			      struct drm_bridge_state *old_bridge_state);
-void dp_bridge_atomic_post_disable(struct drm_bridge *drm_bridge,
+				  struct drm_atomic_state *state);
+void msm_dp_bridge_atomic_post_disable(struct drm_bridge *drm_bridge,
 				   struct drm_bridge_state *old_bridge_state);
 enum drm_mode_status dp_bridge_mode_valid(struct drm_bridge *bridge,
 					  const struct drm_display_info *info,

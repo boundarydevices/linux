@@ -1547,8 +1547,8 @@ void msm_dp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
 	mutex_unlock(&dp_display->event_mutex);
 }
 
-void dp_bridge_atomic_disable(struct drm_bridge *drm_bridge,
-			      struct drm_bridge_state *old_bridge_state)
+void msm_dp_bridge_atomic_disable(struct drm_bridge *drm_bridge,
+				  struct drm_atomic_state *state)
 {
 	struct msm_dp_bridge *dp_bridge = to_dp_bridge(drm_bridge);
 	struct msm_dp *dp = dp_bridge->dp_display;

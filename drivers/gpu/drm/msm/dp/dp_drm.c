@@ -165,10 +165,9 @@ static void msm_edp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
 	msm_dp_bridge_atomic_enable(drm_bridge, state);
 }
 
-static void edp_bridge_atomic_disable(struct drm_bridge *drm_bridge,
-				      struct drm_bridge_state *old_bridge_state)
+static void msm_edp_bridge_atomic_disable(struct drm_bridge *drm_bridge,
+					  struct drm_atomic_state *atomic_state)
 {
-	struct drm_atomic_state *atomic_state = old_bridge_state->base.state;
 	struct drm_crtc *crtc;
 	struct drm_crtc_state *new_crtc_state = NULL, *old_crtc_state = NULL;
 	struct msm_dp_bridge *dp_bridge = to_dp_bridge(drm_bridge);
@@ -207,7 +206,7 @@ static void edp_bridge_atomic_disable(struct drm_bridge *drm_bridge,
 	}
 
 out:
-	dp_bridge_atomic_disable(drm_bridge, old_bridge_state);
+	msm_dp_bridge_atomic_disable(drm_bridge, atomic_state);
 }
 
 static void edp_bridge_atomic_post_disable(struct drm_bridge *drm_bridge,
