@@ -266,6 +266,7 @@ void kbase_csf_free_command_stream_user_pages(struct kbase_context *kctx, struct
 	kbase_mem_pool_free_pages(&kctx->mem_pools.small[KBASE_MEM_GROUP_CSF_IO],
 				  KBASEP_NUM_CS_USER_IO_PAGES, queue->phys, true, false);
 	kbase_process_page_usage_dec(kctx, KBASEP_NUM_CS_USER_IO_PAGES);
+	queue->user_io_addr = NULL;
 
 	/* The user_io_gpu_va should have been unmapped inside the scheduler */
 	WARN_ONCE(queue->user_io_gpu_va, "Userio pages appears still have mapping");
@@ -717,6 +718,12 @@ int kbase_csf_queue_bind(struct kbase_context *kctx, union kbase_ioctl_cs_queue_
 
 	if (bind->in.csi_index >= max_streams)
 		goto out;
+
+	if (queue->user_io_addr != NULL) {
+		dev_err(kctx->kbdev->dev, "Queue with stale user_io address: %pK",
+			(void *)queue->user_io_addr);
+		goto out;
+	}
 
 	if (group->run_state == KBASE_CSF_GROUP_TERMINATED)
 		goto out;
