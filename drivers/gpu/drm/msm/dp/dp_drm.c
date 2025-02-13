@@ -209,10 +209,9 @@ out:
 	msm_dp_bridge_atomic_disable(drm_bridge, atomic_state);
 }
 
-static void edp_bridge_atomic_post_disable(struct drm_bridge *drm_bridge,
-				struct drm_bridge_state *old_bridge_state)
+static void msm_edp_bridge_atomic_post_disable(struct drm_bridge *drm_bridge,
+					       struct drm_atomic_state *atomic_state)
 {
-	struct drm_atomic_state *atomic_state = old_bridge_state->base.state;
 	struct drm_crtc *crtc;
 	struct drm_crtc_state *new_crtc_state = NULL;
 
@@ -231,7 +230,7 @@ static void edp_bridge_atomic_post_disable(struct drm_bridge *drm_bridge,
 	if (new_crtc_state->self_refresh_active)
 		return;
 
-	dp_bridge_atomic_post_disable(drm_bridge, old_bridge_state);
+	msm_dp_bridge_atomic_post_disable(drm_bridge, atomic_state);
 }
 
 /**
