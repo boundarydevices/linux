@@ -87,7 +87,7 @@ static int wave6_wait_vpu_busy(struct vpu_device *vpu_dev, unsigned int addr)
 	u32 data;
 
 	return read_poll_timeout(wave6_vdi_readl, data, data == 0,
-				 0, W6_VPU_POLL_TIMEOUT, false, vpu_dev, addr);
+				 W6_VPU_POLL_DELAY_US, W6_VPU_POLL_TIMEOUT, false, vpu_dev, addr);
 }
 
 void wave6_enable_interrupt(struct vpu_device *vpu_dev)
@@ -126,7 +126,7 @@ void wave6_vpu_check_state(struct vpu_device *vpu_dev)
 		u32 val;
 		int ret;
 
-		ret = read_poll_timeout(vpu_read_reg, val, val != 0, 0,
+		ret = read_poll_timeout(vpu_read_reg, val, val != 0, W6_VPU_POLL_DELAY_US,
 					W6_VPU_POLL_TIMEOUT, false,
 					vpu_dev, W6_VCPU_CUR_PC);
 		if (!ret)
