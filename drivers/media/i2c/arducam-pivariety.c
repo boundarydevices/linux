@@ -1210,6 +1210,8 @@ static int pivariety_enum_controls(struct pivariety *pivariety)
 	if (ret)
 		return ret;
 
+	mutex_init(&pivariety->mutex);
+
 	index = 0;
 	while (1) {
 		ret = pivariety_write(pivariety, CTRL_INDEX_REG, index);
@@ -1297,6 +1299,7 @@ static int pivariety_enum_controls(struct pivariety *pivariety)
 	v4l2_ctrl_handler_setup(ctrl_hdlr);
 	return 0;
 err:
+	mutex_destroy(&pivariety->mutex);
 	return -ENODEV;
 }
 
