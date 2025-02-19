@@ -306,6 +306,8 @@ struct mtk_jpeg_ctx {
 	spinlock_t done_queue_lock;
 	u32 last_done_frame_num;
 	atomic_t buf_list_cnt;
+
+	bool early_eos;
 };
 
 #endif /* _MTK_JPEG_CORE_H */

@@ -586,6 +586,7 @@ static irqreturn_t mtk_jpegdec_hw_irq_handler(int irq, void *priv)
 	if (v4l2_m2m_is_last_draining_src_buf(ctx->fh.m2m_ctx, src_buf)) {
 		dst_buf->flags |= V4L2_BUF_FLAG_LAST;
 		v4l2_m2m_mark_stopped(ctx->fh.m2m_ctx);
+		ctx->early_eos = true;
 	}
 
 	buf_state = VB2_BUF_STATE_DONE;

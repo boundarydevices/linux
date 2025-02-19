@@ -227,6 +227,9 @@ static int mtk_jpeg_enum_fmt_vid_out(struct file *file, void *priv,
 	struct mtk_jpeg_ctx *ctx = mtk_jpeg_fh_to_ctx(priv);
 	struct mtk_jpeg_dev *jpeg = ctx->jpeg;
 
+	if (strcmp((const char *)jpeg->variant->dev_name, "mtk-jpeg-dec") == 0)
+		f->flags = V4L2_FMT_FLAG_DYN_RESOLUTION;
+
 	return mtk_jpeg_enum_fmt(jpeg->variant->formats,
 				 jpeg->variant->num_formats, f,
 				 MTK_JPEG_FMT_FLAG_OUTPUT);
@@ -808,10 +811,11 @@ static int mtk_jpeg_buf_prepare(struct vb2_buffer *vb)
 static void mtk_jpeg_buf_finish(struct vb2_buffer *vb)
 {
 	struct mtk_jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+	struct v4l2_m2m_ctx *m2m_ctx = ctx->fh.m2m_ctx;
 
 	if (vb->vb2_queue->memory == VB2_MEMORY_DMABUF &&
 	    vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE &&
-	    vb->planes[0].bytesused > 0) {
+	    vb->planes[0].bytesused > 0 && !m2m_ctx->has_stopped) {
 		struct dma_buf_attachment *buf_att;
 		struct sg_table *sgt;
 
@@ -905,9 +909,7 @@ static void mtk_jpeg_enc_buf_queue(struct vb2_buffer *vb)
 	if (V4L2_TYPE_IS_CAPTURE(vb->vb2_queue->type) &&
 		vb2_is_streaming(vb->vb2_queue) &&
 		v4l2_m2m_dst_buf_is_last(ctx->fh.m2m_ctx)) {
-		struct mtk_jpeg_q_data *q_data;
 
-		q_data = mtk_jpeg_get_q_data(ctx, vb->vb2_queue->type);
 		vbuf->field = V4L2_FIELD_NONE;
 		v4l2_m2m_last_buffer_done(ctx->fh.m2m_ctx, vbuf);
 		v4l2_dbg(0, debug, &jpeg->v4l2_dev, "last cap buf done\n");
@@ -931,10 +933,9 @@ static void mtk_jpeg_dec_buf_queue(struct vb2_buffer *vb)
 
 	if (V4L2_TYPE_IS_CAPTURE(vb->vb2_queue->type) &&
 		vb2_is_streaming(vb->vb2_queue) &&
-		v4l2_m2m_dst_buf_is_last(ctx->fh.m2m_ctx)) {
-		struct mtk_jpeg_q_data *q_data;
+		(v4l2_m2m_dst_buf_is_last(ctx->fh.m2m_ctx)
+		|| (ctx->fh.m2m_ctx->is_draining && ctx->early_eos))) {
 
-		q_data = mtk_jpeg_get_q_data(ctx, vb->vb2_queue->type);
 		vbuf->field = V4L2_FIELD_NONE;
 		v4l2_m2m_last_buffer_done(ctx->fh.m2m_ctx, vbuf);
 		v4l2_dbg(0, debug, &jpeg->v4l2_dev, "last cap buf done\n");
@@ -2034,9 +2035,9 @@ static irqreturn_t mtk_jpeg_dec_irq(int irq, void *priv)
 dec_end:
 
 	if (v4l2_m2m_is_last_draining_src_buf(ctx->fh.m2m_ctx, src_buf)) {
-		v4l2_dbg(0, debug, &jpeg->v4l2_dev, "mark stopped\n");
 		dst_buf->flags |= V4L2_BUF_FLAG_LAST;
 		v4l2_m2m_mark_stopped(ctx->fh.m2m_ctx);
+		ctx->early_eos = true;
 	}
 
 	v4l2_m2m_buf_done(src_buf, buf_state);
