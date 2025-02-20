@@ -1405,6 +1405,10 @@ _MTK_MODULE_OUTS = [
     "drivers/watchdog/mtk_wdt.ko",
 ]
 
+_MTK_EXT_MODULES = [
+  "//common-modules/mali/drivers/gpu/arm:gpu",
+]
+
 kernel_build(
     name = "mtk",
     arch = "arm64",
@@ -1431,9 +1435,19 @@ kernel_build(
     module_outs = get_gki_modules_list("arm64") + get_kunit_modules_list("arm64") + _MTK_MODULE_OUTS,
 )
 
+kernel_modules_install(
+    name = "mtk_ext_modules",
+    kernel_build = ":kernel_aarch64",
+    kernel_modules = _MTK_EXT_MODULES,
+    visibility = ["//visibility:private"],
+)
+
 pkg_files(
     name = "mtk_dist_files",
-    srcs = [":mtk"],
+    srcs = [
+        ":mtk",
+        ":mtk_ext_modules",
+    ],
     strip_prefix = strip_prefix.files_only(),
     visibility = ["//visibility:private"],
 )
