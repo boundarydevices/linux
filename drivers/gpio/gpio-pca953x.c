@@ -1115,16 +1115,20 @@ static int pca953x_probe(struct i2c_client *client)
 	if (!chip->driver_data)
 		return -ENODEV;
 
-	reg = devm_regulator_get(&client->dev, "vcc");
-	if (IS_ERR(reg))
-		return dev_err_probe(&client->dev, PTR_ERR(reg), "reg get err\n");
-
-	ret = regulator_enable(reg);
-	if (ret) {
-		dev_err(&client->dev, "reg en err: %d\n", ret);
-		return ret;
+	reg = devm_regulator_get_optional(&client->dev, "vcc");
+	if (IS_ERR(reg)) {
+		if (PTR_ERR(reg) == -ENODEV)
+			chip->regulator = NULL;
+		else
+			return dev_err_probe(&client->dev, PTR_ERR(reg), "reg get err\n");
+	} else {
+		ret = regulator_enable(reg);
+		if (ret) {
+			dev_err(&client->dev, "reg en err: %d\n", ret);
+			return ret;
+		}
+		chip->regulator = reg;
 	}
-	chip->regulator = reg;
 
 	i2c_set_clientdata(client, chip);
 
@@ -1213,7 +1217,8 @@ static int pca953x_probe(struct i2c_client *client)
 	return 0;
 
 err_exit:
-	regulator_disable(chip->regulator);
+	if (chip->regulator)
+		regulator_disable(chip->regulator);
 	return ret;
 }
 
@@ -1227,7 +1232,8 @@ static void pca953x_remove(struct i2c_client *client)
 				chip->gpio_chip.ngpio, pdata->context);
 	}
 
-	regulator_disable(chip->regulator);
+	if (chip->regulator)
+		regulator_disable(chip->regulator);
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -1284,13 +1290,23 @@ static int pca953x_suspend(struct device *dev)
 {
 	struct pca953x_chip *chip = dev_get_drvdata(dev);
 
-	mutex_lock(&chip->i2c_lock);
-	regcache_cache_only(chip->regmap, true);
-	mutex_unlock(&chip->i2c_lock);
+	/*
+	 * Only enable cache when regulator exist, if no
+	 * regulator, power keeps on, can also handle
+	 * gpio related operation.
+	 * e.g. PCIe RC needs to toggle the RST pin in
+	 * NOIRQ resume stage, so can't open regmap
+	 * cache if there is no regulator.
+	 */
+	if (chip->regulator) {
+		mutex_lock(&chip->i2c_lock);
+		regcache_cache_only(chip->regmap, true);
+		mutex_unlock(&chip->i2c_lock);
+	}
 
 	if (atomic_read(&chip->wakeup_path))
 		device_set_wakeup_path(dev);
-	else
+	else if (chip->regulator)
 		regulator_disable(chip->regulator);
 
 	return 0;
@@ -1301,7 +1317,7 @@ static int pca953x_resume(struct device *dev)
 	struct pca953x_chip *chip = dev_get_drvdata(dev);
 	int ret;
 
-	if (!atomic_read(&chip->wakeup_path)) {
+	if (!atomic_read(&chip->wakeup_path) && chip->regulator) {
 		ret = regulator_enable(chip->regulator);
 		if (ret) {
 			dev_err(dev, "Failed to enable regulator: %d\n", ret);
@@ -1309,20 +1325,22 @@ static int pca953x_resume(struct device *dev)
 		}
 	}
 
-	mutex_lock(&chip->i2c_lock);
-	regcache_cache_only(chip->regmap, false);
-	regcache_mark_dirty(chip->regmap);
-	ret = pca953x_regcache_sync(dev);
-	if (ret) {
-		mutex_unlock(&chip->i2c_lock);
-		return ret;
-	}
+	if (chip->regulator) {
+		mutex_lock(&chip->i2c_lock);
+		regcache_cache_only(chip->regmap, false);
+		regcache_mark_dirty(chip->regmap);
+		ret = pca953x_regcache_sync(dev);
+		if (ret) {
+			mutex_unlock(&chip->i2c_lock);
+			return ret;
+		}
 
-	ret = regcache_sync(chip->regmap);
-	mutex_unlock(&chip->i2c_lock);
-	if (ret) {
-		dev_err(dev, "Failed to restore register map: %d\n", ret);
-		return ret;
+		ret = regcache_sync(chip->regmap);
+		mutex_unlock(&chip->i2c_lock);
+		if (ret) {
+			dev_err(dev, "Failed to restore register map: %d\n", ret);
+			return ret;
+		}
 	}
 
 	return 0;
