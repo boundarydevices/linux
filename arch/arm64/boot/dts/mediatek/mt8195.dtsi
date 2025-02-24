@@ -2425,9 +2425,14 @@
 			compatible = "mediatek,mt8195-mdp3-split";
 			reg = <0 0x14f06000 0 0x1000>;
 			mediatek,gce-client-reg = <&gce1 SUBSYS_14f0XXXX 0x6000 0x1000>;
+			mediatek,gce-events = <CMDQ_EVENT_VPP1_STREAM_DONE_0>;
 			clocks = <&vppsys1 CLK_VPP1_VPP_SPLIT>,
 				 <&vppsys1 CLK_VPP1_HDMI_META>,
-				 <&vppsys1 CLK_VPP1_VPP_SPLIT_HDMI>;
+				 <&vppsys1 CLK_VPP1_VPP_SPLIT_HDMI>,
+				 <&vppsys1 CLK_VPP1_DGI_IN>,
+				 <&vppsys1 CLK_VPP1_DGI_OUT>,
+				 <&vppsys1 CLK_VPP1_VPP_SPLIT_DGI>,
+				 <&vppsys1 CLK_VPP1_VPP_SPLIT_26M>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VPPSYS1>;
 		};
 
