@@ -13,6 +13,7 @@
 #include <linux/remoteproc/mtk_scp.h>
 #include <media/videobuf2-dma-contig.h>
 
+#include "mtk-mdp3-capture.h"
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-cfg.h"
 #include "mtk-mdp3-m2m.h"
@@ -337,6 +338,10 @@ static int mdp_probe(struct platform_device *pdev)
 		goto err_unregister_device;
 	}
 
+#if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
+	mdp_cap_init(mdp);
+#endif
+
 success_return:
 	dev_dbg(dev, "mdp-%d registered successfully\n", pdev->id);
 	return 0;
@@ -384,6 +389,10 @@ static void mdp_remove(struct platform_device *pdev)
 		video_unregister_device(mdp->m2m_vdev);
 
 	dev_dbg(&pdev->dev, "%s driver unloaded\n", pdev->name);
+
+#if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
+	mdp_cap_deinit();
+#endif
 }
 
 static int __maybe_unused mdp_suspend(struct device *dev)
@@ -393,14 +402,14 @@ static int __maybe_unused mdp_suspend(struct device *dev)
 
 	atomic_set(&mdp->suspended, 1);
 
-	if (refcount_read(&mdp->job_count)) {
+	if (atomic_read(&mdp->job_count[MDP_CMDQ_USER_M2M])) {
 		ret = wait_event_timeout(mdp->callback_wq,
-					 !refcount_read(&mdp->job_count),
+					 !atomic_read(&mdp->job_count[MDP_CMDQ_USER_M2M]),
 					 2 * HZ);
 		if (ret == 0) {
 			dev_err(dev,
-				"%s:flushed cmdq task incomplete, count=%d\n",
-				__func__, refcount_read(&mdp->job_count));
+				"flushed cmdq task incomplete, count=%d\n",
+				atomic_read(&mdp->job_count[MDP_CMDQ_USER_M2M]));
 			return -EBUSY;
 		}
 	}

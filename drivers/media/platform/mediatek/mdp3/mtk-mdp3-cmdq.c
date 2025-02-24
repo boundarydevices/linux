@@ -6,6 +6,7 @@
 
 #include <linux/mailbox_controller.h>
 #include <linux/platform_device.h>
+#include "mtk-mdp3-capture.h"
 #include "mtk-mdp3-cfg.h"
 #include "mtk-mdp3-cmdq.h"
 #include "mtk-mdp3-comp.h"
@@ -23,6 +24,11 @@ struct mdp_path {
 	const struct img_ipi_frameparam *param;
 	const struct v4l2_rect	*composes[IMG_MAX_HW_OUTPUTS];
 	struct v4l2_rect	bounds[IMG_MAX_HW_OUTPUTS];
+};
+
+struct mtk_mutex {
+	u8 id;
+	bool claimed;
 };
 
 #define has_op(ctx, op) \
@@ -91,6 +97,12 @@ static enum mdp_pipe_id __get_pipe(const struct mdp_dev *mdp_dev,
 		break;
 	case MDP_COMP_RDMA3:
 		pipe_id = MDP_PIPE_RDMA3;
+		break;
+	case MDP_COMP_SPLIT:
+		pipe_id = MDP_PIPE_SPLIT;
+		break;
+	case MDP_COMP_SPLIT2:
+		pipe_id = MDP_PIPE_SPLIT2;
 		break;
 	default:
 		/* Avoid exceptions when operating MUTEX */
@@ -188,7 +200,12 @@ static int mdp_path_subfrm_require(const struct mdp_path *path,
 			mtk_mutex_write_mod(mutex, mutex_idx[b->b_id], false);
 	}
 
-	mtk_mutex_write_sof(mutex, MUTEX_SOF_IDX_SINGLE_MODE);
+	index = __get_pipe(path->mdp_dev, path->comps[0].comp->public_id);
+
+	if (index == MDP_PIPE_SPLIT || index == MDP_PIPE_SPLIT2)
+		mtk_mutex_write_sof(mutex, MUTEX_SOF_IDX_HDMI_VSYNC_MODE);
+	else
+		mtk_mutex_write_sof(mutex, MUTEX_SOF_IDX_SINGLE_MODE);
 
 	return 0;
 }
@@ -250,6 +267,12 @@ static int mdp_path_subfrm_run(const struct mdp_path *path,
 		ctx = &path->comps[index];
 		if (is_output_disabled(p_id, ctx->param, count))
 			continue;
+
+		/* stream_done event need wait at initial position */
+		if (mdp_cfg_get_id_public(path->mdp_dev, inner_id) == MDP_COMP_SPLIT ||
+		    mdp_cfg_get_id_public(path->mdp_dev, inner_id) == MDP_COMP_SPLIT2)
+			continue;
+
 		event = ctx->comp->gce_event[MDP_GCE_EVENT_SOF];
 		if (event != MDP_GCE_NO_EVENT)
 			MM_REG_WAIT(cmd, event);
@@ -508,6 +531,12 @@ static void mdp_cmdq_pkt_destroy(struct cmdq_pkt *pkt)
 	pkt->va_base = NULL;
 }
 
+static bool __atomic_dec_and_mod(atomic_t *c, u8 mod)
+{
+	atomic_dec(c);
+	return (!(atomic_read(c) % mod));
+}
+
 static void mdp_auto_release_work(struct work_struct *work)
 {
 	struct mdp_cmdq_cmd *cmd;
@@ -524,19 +553,26 @@ static void mdp_auto_release_work(struct work_struct *work)
 	mdp_comp_clocks_off(&mdp->pdev->dev, cmd->comps,
 			    cmd->num_comps);
 
-	if (refcount_dec_and_test(&mdp->job_count)) {
-		if (cmd->mdp_ctx)
+	if (cmd->user != MDP_CMDQ_USER_CAP) {
+		if (atomic_dec_and_test(&mdp->job_count[cmd->user]))
 			mdp_m2m_job_finish(cmd->mdp_ctx);
-
-		if (cmd->user_cmdq_cb) {
-			struct cmdq_cb_data user_cb_data;
-
-			user_cb_data.sta = cmd->data->sta;
-			user_cb_data.pkt = cmd->data->pkt;
-			cmd->user_cmdq_cb(user_cb_data);
-		}
-		wake_up(&mdp->callback_wq);
+	} else {
+#if IS_REACHABLE(CONFIG_VIDEO_MEDIATEK_MDP3_CAP)
+		if (atomic_read(&mdp->cap_discard))
+			return;
+		else if (__atomic_dec_and_mod(&mdp->job_count[cmd->user], cmd->pp_used))
+			mdp_cap_job_finish(cmd->mdp_ctx);
+#endif
 	}
+
+	if (cmd->user_cmdq_cb) {
+		struct cmdq_cb_data user_cb_data = {0};
+
+		user_cb_data.sta = cmd->data->sta;
+		user_cb_data.pkt = cmd->data->pkt;
+		cmd->user_cmdq_cb(user_cb_data);
+	}
+	wake_up(&mdp->callback_wq);
 
 	mdp_cmdq_pkt_destroy(&cmd->pkt);
 	kfree(cmd->comps);
@@ -575,7 +611,7 @@ static void mdp_handle_cmdq_callback(struct mbox_client *cl, void *mssg)
 		mdp_comp_clocks_off(&mdp->pdev->dev, cmd->comps,
 				    cmd->num_comps);
 
-		if (refcount_dec_and_test(&mdp->job_count))
+		if (atomic_dec_and_test(&mdp->job_count[cmd->user]))
 			wake_up(&mdp->callback_wq);
 
 		mdp_cmdq_pkt_destroy(&cmd->pkt);
@@ -594,12 +630,16 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	struct mdp_cmdq_cmd *cmd = NULL;
 	struct mdp_comp *comps = NULL;
 	struct device *dev = &mdp->pdev->dev;
+	const struct mdp_comp_ctx *ctx;
 	const int p_id = mdp->mdp_data->mdp_plat_id;
 	struct img_config *config;
 	struct mtk_mutex *mutex = NULL;
 	enum mdp_pipe_id pipe_id;
 	int i, ret = -ECANCELED;
+	int index;
 	u32 num_comp;
+	s32 event;
+	s32 inner_id = MDP_COMP_NONE;
 
 	config = __get_config_offset(mdp, param, pp_idx);
 	if (IS_ERR(config)) {
@@ -619,6 +659,12 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 		ret = -ENOMEM;
 		goto err_uninit;
 	}
+	cmd->mdp = mdp;
+	cmd->user_cmdq_cb = param->cmdq_cb;
+	cmd->user_cb_data = param->cb_data;
+	cmd->mdp_ctx = param->mdp_ctx;
+	cmd->user = param->user;
+	cmd->pp_used = __get_pp_num(param->param->type);
 
 	ret = mdp_cmdq_pkt_create(mdp->cmdq_clt[pp_idx], &cmd->pkt, SZ_16K);
 	if (ret)
@@ -671,6 +717,28 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 		goto err_free_path;
 	}
 
+	for (index = 0; index < num_comp; index++) {
+		if (CFG_CHECK(MT8183, p_id))
+			inner_id = CFG_GET(MT8183, path->config, components[index].type);
+		else if (CFG_CHECK(MT8195, p_id))
+			inner_id = CFG_GET(MT8195, path->config, components[index].type);
+		else if (CFG_CHECK(MT8188, p_id))
+			inner_id = CFG_GET(MT8188, path->config, components[index].type);
+
+		if (mdp_cfg_comp_is_dummy(path->mdp_dev, inner_id))
+			continue;
+		ctx = &path->comps[index];
+		if (mdp_cfg_get_id_public(path->mdp_dev, inner_id) == MDP_COMP_SPLIT ||
+		    mdp_cfg_get_id_public(path->mdp_dev, inner_id) == MDP_COMP_SPLIT2) {
+			event = ctx->comp->gce_event[MDP_GCE_EVENT_SOF] + mutex->id;
+			if (!(((struct mdp_cap_ctx *)param->mdp_ctx)->bfirstframedone))
+				MM_REG_SET_EVENT(cmd, event);
+
+			/* Capture case: split0 need wait stream_done event */
+			MM_REG_WAIT(cmd, event);
+		}
+	}
+
 	ret = mdp_path_config(mdp, cmd, path);
 	if (ret) {
 		dev_err(dev, "mdp_path_config error %d\n", pp_idx);
@@ -693,12 +761,8 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	}
 
 	mdp->cmdq_clt[pp_idx]->client.rx_callback = mdp_handle_cmdq_callback;
-	cmd->mdp = mdp;
-	cmd->user_cmdq_cb = param->cmdq_cb;
-	cmd->user_cb_data = param->cb_data;
 	cmd->comps = comps;
 	cmd->num_comps = num_comp;
-	cmd->mdp_ctx = param->mdp_ctx;
 
 	kfree(path);
 	return cmd;
@@ -721,14 +785,23 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 {
 	struct mdp_cmdq_cmd *cmd[MDP_PP_MAX] = {NULL};
 	struct device *dev = &mdp->pdev->dev;
-	int i, ret;
+	enum mdp_cmdq_user u_id = param->user;
+	int i, ret = -ECANCELED;
 	u8 pp_used = __get_pp_num(param->param->type);
 
-	refcount_set(&mdp->job_count, pp_used);
-	if (atomic_read(&mdp->suspended)) {
-		refcount_set(&mdp->job_count, 0);
-		return -ECANCELED;
-	}
+	/* do not send hdmirx jobs if already disconnected */
+	if (u_id == MDP_CMDQ_USER_CAP)
+		if (atomic_read(&mdp->cap_discard))
+			if (atomic_read(&mdp->job_count[u_id]))
+				goto err_cancel_job;
+
+	if (u_id == MDP_CMDQ_USER_CAP)
+		atomic_add(pp_used, &mdp->job_count[u_id]);
+	else
+		atomic_set(&mdp->job_count[u_id], pp_used);
+
+	if (atomic_read(&mdp->suspended))
+		goto err_cancel_job;
 
 	for (i = 0; i < pp_used; i++) {
 		cmd[i] = mdp_cmdq_prepare(mdp, param, i);
@@ -764,7 +837,7 @@ err_clock_off:
 		mdp_comp_clocks_off(&mdp->pdev->dev, cmd[i]->comps,
 				    cmd[i]->num_comps);
 err_cancel_job:
-	refcount_set(&mdp->job_count, 0);
+	atomic_set(&mdp->job_count[u_id], 0);
 
 	return ret;
 }

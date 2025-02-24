@@ -385,7 +385,8 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 		b->format.plane_fmt[i].size =
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i);
-		b->iova[i] = vb2_dma_contig_plane_dma_addr(vb, i);
+		if (vb)
+			b->iova[i] = vb2_dma_contig_plane_dma_addr(vb, i);
 	}
 	for (; i < MDP_COLOR_GET_PLANE_COUNT(b->format.colorformat); ++i) {
 		u32 stride = mdp_fmt_get_stride_contig(frame->mdp_fmt,
@@ -395,7 +396,8 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 		b->format.plane_fmt[i].size =
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i);
-		b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
+		if (vb)
+			b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
 	}
 	b->usage = frame->usage;
 }

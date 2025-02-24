@@ -17,3 +17,12 @@ config VIDEO_MEDIATEK_MDP3
 
 	    To compile this driver as a module, choose M here: the
 	    module will be called mtk-mdp3.
+
+config VIDEO_MEDIATEK_MDP3_CAP
+	bool "MediaTek MDP v3 capture driver"
+	depends on VIDEO_MEDIATEK_MDP3
+	depends on MTK_HDMI_RX
+	default n
+	help
+	    It is a v4l2 capture device driver for hdmirx and build
+	    in mtk-mdp3.

@@ -99,6 +99,25 @@ struct mdp_hdr_subfrm_8195 {
 struct mdp_hdr_data_8195 {
 	u32 top;
 	u32 relay;
+	u32 coef3x3_0;
+	u32 b_channel_nr;
+	u32 a_luma;
+	u32 lbox_det_1;
+	u32 cursor_ctrl;
+	u32 y2r_09;
+	u32 tone_map_top;
+	u32 hlg_sg;
+	u32 l_mix_0;
+	u32 r2y_00;
+	u32 r2y_01;
+	u32 r2y_02;
+	u32 r2y_03;
+	u32 r2y_04;
+	u32 r2y_05;
+	u32 r2y_06;
+	u32 r2y_07;
+	u32 r2y_08;
+	u32 r2y_09;
 	struct mdp_hdr_subfrm_8195   subfrms[IMG_MAX_SUBFRAMES_8195];
 } __packed;
 
@@ -239,6 +258,29 @@ struct mdp_wdma_data_8195 {
 	struct mdp_wdma_subfrm_8195 subfrms[IMG_MAX_SUBFRAMES_8195];
 } __packed;
 
+struct mdp_split_subfrm_8195 {
+	u32 split_enable;
+	u32 split_cfg_2;
+	u32 split_cfg_3;
+	u32 split_cfg_6;
+	u32 split_cfg_7;
+	u32 split_cfg_8;
+	u32 split_cfg_9;
+	u32 split_cfg_16;
+	u32 split_cfg_17;
+	u32 split_cfg_37;
+	u32 split_cfg_38;
+} __packed;
+
+struct mdp_split_data_8195 {
+	u32 split_cfg_0;
+	u32 split_cfg_4;
+	u32 split_cfg_12;
+	u32 split_cfg_36;
+	u32 split_cfg_40;
+	struct mdp_split_subfrm_8195 subfrms[IMG_MAX_SUBFRAMES_8195];
+} __packed;
+
 struct isp_data_8195 {
 	u64 dl_flags; /* 1 << (enum mdp_comp_type) */
 	u32 smxi_iova[4];
@@ -269,6 +311,7 @@ struct img_compparam_8195 {
 		struct mdp_tcc_data_8195 tcc;
 		struct mdp_wrot_data_8195 wrot;
 		struct mdp_wdma_data_8195 wdma;
+		struct mdp_split_data_8195 split;
 		struct isp_data_8195 isp;
 	};
 } __packed;

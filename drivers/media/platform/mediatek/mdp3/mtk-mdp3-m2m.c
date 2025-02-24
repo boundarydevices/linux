@@ -75,6 +75,7 @@ static void mdp_m2m_device_run(void *priv)
 	struct img_ipi_frameparam param = {};
 	struct mdp_cmdq_param task = {};
 	enum vb2_buffer_state vb_state = VB2_BUF_STATE_ERROR;
+	enum mdp_cmdq_user u_id = MDP_CMDQ_USER_M2M;
 	int ret;
 
 	if (mdp_m2m_ctx_is_state_set(ctx, MDP_M2M_CTX_ERROR)) {
@@ -112,15 +113,16 @@ static void mdp_m2m_device_run(void *priv)
 	task.cmdq_cb = NULL;
 	task.cb_data = NULL;
 	task.mdp_ctx = ctx;
+	task.user = u_id;
 
-	if (refcount_read(&ctx->mdp_dev->job_count)) {
+	if (atomic_read(&ctx->mdp_dev->job_count[u_id])) {
 		ret = wait_event_timeout(ctx->mdp_dev->callback_wq,
-					 !refcount_read(&ctx->mdp_dev->job_count),
+					 !atomic_read(&ctx->mdp_dev->job_count[u_id]),
 					 2 * HZ);
 		if (ret == 0) {
 			dev_err(&ctx->mdp_dev->pdev->dev,
-				"%d jobs not yet done\n",
-				refcount_read(&ctx->mdp_dev->job_count));
+				"%d M2M jobs not yet done\n",
+				atomic_read(&ctx->mdp_dev->job_count[u_id]));
 			goto worker_end;
 		}
 	}

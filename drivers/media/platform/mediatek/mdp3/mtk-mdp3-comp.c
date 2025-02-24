@@ -8,6 +8,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/pm_runtime.h>
+#include "mtk-mdp3-capture.h"
 #include "mtk-mdp3-cfg.h"
 #include "mtk-mdp3-comp.h"
 #include "mtk-mdp3-core.h"
@@ -23,6 +24,7 @@
 #include "mdp_reg_pad.h"
 #include "mdp_reg_rdma.h"
 #include "mdp_reg_rsz.h"
+#include "mdp_reg_split.h"
 #include "mdp_reg_tdshp.h"
 #include "mdp_reg_wdma.h"
 #include "mdp_reg_wrot.h"
@@ -1225,6 +1227,145 @@ static const struct mdp_comp_ops ccorr_ops = {
 	.config_subfrm = config_ccorr_subfrm,
 };
 
+static int init_split(struct mdp_comp_ctx *ctx, struct mdp_cmdq_cmd *cmd)
+{
+	struct mdp_dev *mdp_dev = ctx->comp->mdp_dev;
+	phys_addr_t base = ctx->comp->reg_base;
+	u8 subsys_id = ctx->comp->subsys_id;
+
+	/* Reset engine */
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_RESET, 0x1, VPP_SPLIT_RESET_MASK);
+	MM_REG_POLL(cmd, subsys_id, base, VPP_SPLIT_MON_16, 0x0, 0xFFFF);
+	MM_REG_POLL(cmd, subsys_id, base, VPP_SPLIT_MON_17, 0x0, 0xFFFF);
+	MM_REG_POLL(cmd, subsys_id, base, VPP_SPLIT_MON_18, 0x0, 0xFFFF);
+	MM_REG_POLL(cmd, subsys_id, base, VPP_SPLIT_MON_19, 0x0, 0xFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_RESET, 0x0, VPP_SPLIT_RESET_MASK);
+
+	mtk_mmsys_vpp_split_out_config(mdp_dev->mm_subsys[MDP_MM_SUBSYS_1].mmsys,
+				       &cmd->pkt);
+
+	return 0;
+}
+
+static int config_split_frame(struct mdp_comp_ctx *ctx,
+			      struct mdp_cmdq_cmd *cmd,
+			      const struct v4l2_rect *compose)
+{
+	struct mdp_cap_ctx *cap = cmd->mdp_ctx;
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+	u32 reg = 0;
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.split_cfg_0);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_0, reg, VPP_SPLIT_CFG_0_MASK);
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.split_cfg_4);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_4, reg, VPP_SPLIT_CFG_4_MASK);
+
+	if (cap->pp_enable) {
+		if (CFG_CHECK(MT8195, p_id))
+			reg = CFG_COMP(MT8195, ctx->param, split.split_cfg_36);
+		MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_36, reg, VPP_SPLIT_CFG_36_MASK);
+	}
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.split_cfg_12);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_12, reg, VPP_SPLIT_CFG_12_MASK);
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.split_cfg_40);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_40, reg, VPP_SPLIT_CFG_40_MASK);
+
+	return 0;
+}
+
+static int config_split_subfrm(struct mdp_comp_ctx *ctx,
+			       struct mdp_cmdq_cmd *cmd, u32 index)
+{
+	struct mdp_cap_ctx *cap = cmd->mdp_ctx;
+	phys_addr_t base = ctx->comp->reg_base;
+	u8 subsys_id = ctx->comp->subsys_id;
+	u32 reg = 0;
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.subfrms[index].split_cfg_6);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_6, reg, VPP_SPLIT_CFG_6_MASK);
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.subfrms[index].split_cfg_7);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_7, reg, VPP_SPLIT_CFG_7_MASK);
+
+	if (ctx->comp->public_id == MDP_COMP_SPLIT) {
+		/* enOut0 */
+		if (CFG_CHECK(MT8195, p_id))
+			reg = CFG_COMP(MT8195, ctx->param,
+				       split.subfrms[index].split_cfg_2);
+		MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_2,
+			     reg, VPP_SPLIT_CFG_2_MASK);
+
+		/* enSram0 */
+		if (CFG_CHECK(MT8195, p_id))
+			reg = CFG_COMP(MT8195, ctx->param,
+				       split.subfrms[index].split_cfg_8);
+		MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_8,
+			     reg, VPP_SPLIT_CFG_8_MASK);
+
+		if (cap->pp_enable) {
+			if (CFG_CHECK(MT8195, p_id))
+				reg = CFG_COMP(MT8195, ctx->param,
+					       split.subfrms[index].split_cfg_37);
+			MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_37,
+				     reg, VPP_SPLIT_CFG_37_MASK);
+		}
+	}
+	if (ctx->comp->public_id == MDP_COMP_SPLIT2) {
+		/* enOut1 */
+		if (CFG_CHECK(MT8195, p_id))
+			reg = CFG_COMP(MT8195, ctx->param,
+				       split.subfrms[index].split_cfg_3);
+		MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_3,
+			     reg, VPP_SPLIT_CFG_3_MASK);
+
+		/* enSram1 */
+		if (CFG_CHECK(MT8195, p_id))
+			reg = CFG_COMP(MT8195, ctx->param,
+				       split.subfrms[index].split_cfg_9);
+		MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_9,
+			     reg, VPP_SPLIT_CFG_9_MASK);
+
+		if (cap->pp_enable) {
+			if (CFG_CHECK(MT8195, p_id))
+				reg = CFG_COMP(MT8195, ctx->param,
+					       split.subfrms[index].split_cfg_38);
+			MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_38,
+				     reg, VPP_SPLIT_CFG_38_MASK);
+		}
+	}
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.subfrms[index].split_cfg_16);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_16, reg, VPP_SPLIT_CFG_16_MASK);
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.subfrms[index].split_cfg_17);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_CFG_17, reg, VPP_SPLIT_CFG_17_MASK);
+
+	if (CFG_CHECK(MT8195, p_id))
+		reg = CFG_COMP(MT8195, ctx->param, split.subfrms[index].split_enable);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_SPLIT_ENABLE, reg, VPP_SPLIT_ENABLE_MASK);
+
+	return 0;
+}
+
+static const struct mdp_comp_ops split_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_split,
+	.config_frame = config_split_frame,
+	.config_subfrm = config_split_subfrm,
+};
+
 static int init_aal(struct mdp_comp_ctx *ctx, struct mdp_cmdq_cmd *cmd)
 {
 	phys_addr_t base = ctx->comp->reg_base;
@@ -1526,6 +1667,7 @@ static const struct mdp_comp_ops pad_ops = {
 
 static const struct mdp_comp_ops *mdp_comp_ops[MDP_COMP_TYPE_COUNT] = {
 	[MDP_COMP_TYPE_RDMA] =		&rdma_ops,
+	[MDP_COMP_TYPE_SPLIT] =		&split_ops,
 	[MDP_COMP_TYPE_RSZ] =		&rsz_ops,
 	[MDP_COMP_TYPE_WROT] =		&wrot_ops,
 	[MDP_COMP_TYPE_WDMA] =		&wdma_ops,
