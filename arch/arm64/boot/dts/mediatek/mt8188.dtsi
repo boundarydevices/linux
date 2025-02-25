@@ -1137,7 +1137,29 @@
 							#address-cells = <1>;
 							#size-cells = <0>;
 							#power-domain-cells = <1>;
+
+							power-domain@MT8188_POWER_DOMAIN_HDMI_TX {
+								reg = <MT8188_POWER_DOMAIN_HDMI_TX>;
+								clocks = <&topckgen CLK_TOP_HDMI_APB>,
+									 <&topckgen CLK_TOP_HDCP_24M>;
+								clock-names = "bus", "hdcp";
+								mediatek,infracfg = <&infracfg_ao>;
+								#power-domain-cells = <0>;
+							};
+
+							power-domain@MT8188_POWER_DOMAIN_DP_TX {
+								reg = <MT8188_POWER_DOMAIN_DP_TX>;
+								mediatek,infracfg = <&infracfg_ao>;
+								#power-domain-cells = <0>;
+							};
+
+							power-domain@MT8188_POWER_DOMAIN_EDP_TX {
+								reg = <MT8188_POWER_DOMAIN_EDP_TX>;
+								mediatek,infracfg = <&infracfg_ao>;
+								#power-domain-cells = <0>;
+							};
 						};
+
 					};
 				};
 
