@@ -23,6 +23,13 @@
 		stdout-path = "serial0:921600n8";
 	};
 
+	dmic_codec: dmic-codec {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		num-channels = <2>;
+		wakeup-delay-ms = <30>;
+	};
+
 	firmware {
 		optee {
 			compatible = "linaro,optee-tz";
@@ -971,7 +978,7 @@
 	mediatek,dai-link =
 		"DL2_FE", "DL3_FE", "DL6_FE", "DL7_FE", "DL8_FE", "DL10_FE", "DL11_FE",
 		"UL1_FE", "UL2_FE", "UL3_FE", "UL4_FE", "UL5_FE", "UL6_FE", "UL8_FE",
-		"UL9_FE", "UL10_FE", "DL_SRC_BE";
+		"UL9_FE", "UL10_FE", "DL_SRC_BE", "DMIC_BE";
 	model = "mt8390-evk";
 	pinctrl-names = "default";
 	pinctrl-0 = <&audio_default_pins>;
@@ -990,6 +997,14 @@
 
 		codec {
 			sound-dai = <&pmic 0>;
+		};
+	};
+
+	dai-link-1 {
+		link-name = "DMIC_BE";
+
+		codec {
+			sound-dai = <&dmic_codec>;
 		};
 	};
 };
