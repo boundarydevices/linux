@@ -26,6 +26,48 @@
 #define mmu_write(dev, reg, data) writel(data, dev->iomem + reg)
 #define mmu_read(dev, reg) readl(dev->iomem + reg)
 
+static u64 mair_to_memattr(u64 mair, bool coherent)
+{
+	u64 memattr = 0;
+	u32 i;
+
+	for (i = 0; i < 8; i++) {
+		u8 in_attr = mair >> (8 * i), out_attr;
+		u8 outer = in_attr >> 4, inner = in_attr & 0xf;
+
+		/* For caching to be enabled, inner and outer caching policy
+		 * have to be both write-back, if one of them is write-through
+		 * or non-cacheable, we just choose non-cacheable. Device
+		 * memory is also translated to non-cacheable.
+		 */
+		if (!(outer & 3) || !(outer & 4) || !(inner & 4)) {
+			out_attr = AS_MEMATTR_AARCH64_INNER_OUTER_NC |
+				   AS_MEMATTR_AARCH64_SH_MIDGARD_INNER |
+				   AS_MEMATTR_AARCH64_INNER_ALLOC_EXPL(false, false);
+		} else {
+			out_attr = AS_MEMATTR_AARCH64_INNER_OUTER_WB |
+				   AS_MEMATTR_AARCH64_INNER_ALLOC_EXPL(inner & 1, inner & 2);
+			/* Use SH_MIDGARD_INNER mode when device isn't coherent,
+			 * so SH_IS, which is used when IOMMU_CACHE is set, maps
+			 * to Mali's internal-shareable mode. As per the Mali
+			 * Spec, inner and outer-shareable modes aren't allowed
+			 * for WB memory when coherency is disabled.
+			 * Use SH_CPU_INNER mode when coherency is enabled, so
+			 * that SH_IS actually maps to the standard definition of
+			 * inner-shareable.
+			 */
+			if (!coherent)
+				out_attr |= AS_MEMATTR_AARCH64_SH_MIDGARD_INNER;
+			else
+				out_attr |= AS_MEMATTR_AARCH64_SH_CPU_INNER;
+		}
+
+		memattr |= (u64)out_attr << (8 * i);
+	}
+
+	return memattr;
+}
+
 static int wait_ready(struct panfrost_device *pfdev, u32 as_nr)
 {
 	int ret;
@@ -121,38 +163,66 @@ static int mmu_hw_do_operation(struct panfrost_device *pfdev,
 	return ret;
 }
 
-static void panfrost_mmu_enable(struct panfrost_device *pfdev, struct panfrost_mmu *mmu)
+static void
+_panfrost_mmu_as_control_write(struct panfrost_device *pfdev, u32 as_nr,
+			       u64 transtab, u64 memattr, u64 transcfg)
 {
-	int as_nr = mmu->as;
-	struct io_pgtable_cfg *cfg = &mmu->pgtbl_cfg;
-	u64 transtab = cfg->arm_mali_lpae_cfg.transtab;
-	u64 memattr = cfg->arm_mali_lpae_cfg.memattr;
-
 	mmu_hw_do_operation_locked(pfdev, as_nr, 0, ~0ULL, AS_COMMAND_FLUSH_MEM);
 
 	mmu_write(pfdev, AS_TRANSTAB_LO(as_nr), lower_32_bits(transtab));
 	mmu_write(pfdev, AS_TRANSTAB_HI(as_nr), upper_32_bits(transtab));
 
-	/* Need to revisit mem attrs.
-	 * NC is the default, Mali driver is inner WT.
-	 */
 	mmu_write(pfdev, AS_MEMATTR_LO(as_nr), lower_32_bits(memattr));
 	mmu_write(pfdev, AS_MEMATTR_HI(as_nr), upper_32_bits(memattr));
 
+	mmu_write(pfdev, AS_TRANSCFG_LO(as_nr), lower_32_bits(transcfg));
+	mmu_write(pfdev, AS_TRANSCFG_HI(as_nr), upper_32_bits(transcfg));
+
 	write_cmd(pfdev, as_nr, AS_COMMAND_UPDATE);
+
+	dev_dbg(pfdev->dev, "mmu_as_control: as=%d, transtab=0x%016llx, memattr=0x%016llx, transcfg=0x%016llx",
+		as_nr, transtab, memattr, transcfg);
+}
+
+static void mmu_lpae_s1_enable(struct panfrost_device *pfdev,
+			       struct panfrost_mmu *mmu)
+{
+	struct io_pgtable_cfg *cfg = &mmu->pgtbl_cfg;
+	int as_nr = mmu->as;
+
+	u64 transtab =
+		cfg->arm_lpae_s1_cfg.ttbr & AS_TRANSTAB_LPAE_ADDR_SPACE_MASK;
+	u64 memattr =
+		mair_to_memattr(cfg->arm_lpae_s1_cfg.mair, pfdev->coherent);
+	u32 va_bits = GPU_MMU_FEATURES_VA_BITS(pfdev->features.mmu_features);
+	u64 transcfg = AS_TRANSCFG_PTW_MEMATTR_WB |
+		       AS_TRANSCFG_PTW_RA |
+		       AS_TRANSCFG_ADRMODE_AARCH64_4K |
+		       AS_TRANSCFG_INA_BITS(55 - va_bits);
+
+	if (pfdev->coherent)
+		transcfg |= AS_TRANSCFG_PTW_SH_OS;
+
+	_panfrost_mmu_as_control_write(pfdev, as_nr, transtab, memattr,
+				       transcfg);
+}
+
+static void mmu_mali_lpae_enable(struct panfrost_device *pfdev,
+				 struct panfrost_mmu *mmu)
+{
+	struct io_pgtable_cfg *cfg = &mmu->pgtbl_cfg;
+	int as_nr = mmu->as;
+
+	_panfrost_mmu_as_control_write(pfdev, as_nr,
+				       cfg->arm_mali_lpae_cfg.transtab,
+				       cfg->arm_mali_lpae_cfg.memattr,
+				       AS_TRANSCFG_ADRMODE_LEGACY);
 }
 
 static void panfrost_mmu_disable(struct panfrost_device *pfdev, u32 as_nr)
 {
-	mmu_hw_do_operation_locked(pfdev, as_nr, 0, ~0ULL, AS_COMMAND_FLUSH_MEM);
-
-	mmu_write(pfdev, AS_TRANSTAB_LO(as_nr), 0);
-	mmu_write(pfdev, AS_TRANSTAB_HI(as_nr), 0);
-
-	mmu_write(pfdev, AS_MEMATTR_LO(as_nr), 0);
-	mmu_write(pfdev, AS_MEMATTR_HI(as_nr), 0);
-
-	write_cmd(pfdev, as_nr, AS_COMMAND_UPDATE);
+	_panfrost_mmu_as_control_write(pfdev, as_nr, 0, 0,
+				       AS_TRANSCFG_ADRMODE_UNMAPPED);
 }
 
 u32 panfrost_mmu_as_get(struct panfrost_device *pfdev, struct panfrost_mmu *mmu)
@@ -182,7 +252,7 @@ u32 panfrost_mmu_as_get(struct panfrost_device *pfdev, struct panfrost_mmu *mmu)
 			mmu_write(pfdev, MMU_INT_CLEAR, mask);
 			mmu_write(pfdev, MMU_INT_MASK, ~pfdev->as_faulty_mask);
 			pfdev->as_faulty_mask &= ~mask;
-			panfrost_mmu_enable(pfdev, mmu);
+			mmu->enable(pfdev, mmu);
 		}
 
 		goto out;
@@ -214,7 +284,7 @@ u32 panfrost_mmu_as_get(struct panfrost_device *pfdev, struct panfrost_mmu *mmu)
 
 	dev_dbg(pfdev->dev, "Assigned AS%d to mmu %p, alloc_mask=%lx", as, mmu, pfdev->as_alloc_mask);
 
-	panfrost_mmu_enable(pfdev, mmu);
+	mmu->enable(pfdev, mmu);
 
 out:
 	spin_unlock(&pfdev->as_lock);
@@ -618,6 +688,7 @@ struct panfrost_mmu *panfrost_mmu_ctx_create(struct panfrost_device *pfdev)
 	u32 va_bits = GPU_MMU_FEATURES_VA_BITS(pfdev->features.mmu_features);
 	u32 pa_bits = GPU_MMU_FEATURES_PA_BITS(pfdev->features.mmu_features);
 	struct panfrost_mmu *mmu;
+	enum io_pgtable_fmt fmt;
 
 	mmu = kzalloc(sizeof(*mmu), GFP_KERNEL);
 	if (!mmu)
@@ -642,8 +713,15 @@ struct panfrost_mmu *panfrost_mmu_ctx_create(struct panfrost_device *pfdev)
 		.iommu_dev	= pfdev->dev,
 	};
 
-	mmu->pgtbl_ops = alloc_io_pgtable_ops(ARM_MALI_LPAE, &mmu->pgtbl_cfg,
-					      mmu);
+	if (panfrost_has_hw_feature(pfdev, HW_FEATURE_AARCH64_MMU)) {
+		fmt = ARM_64_LPAE_S1;
+		mmu->enable = mmu_lpae_s1_enable;
+	} else {
+		fmt = ARM_MALI_LPAE;
+		mmu->enable = mmu_mali_lpae_enable;
+	}
+	mmu->pgtbl_ops = alloc_io_pgtable_ops(fmt, &mmu->pgtbl_cfg, mmu);
+
 	if (!mmu->pgtbl_ops) {
 		kfree(mmu);
 		return ERR_PTR(-EINVAL);

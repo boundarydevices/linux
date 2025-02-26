@@ -153,6 +153,7 @@ struct panfrost_device {
 };
 
 struct panfrost_mmu {
+	void (*enable)(struct panfrost_device *pfdev, struct panfrost_mmu *mmu);
 	struct panfrost_device *pfdev;
 	struct kref refcount;
 	struct io_pgtable_cfg pgtbl_cfg;
