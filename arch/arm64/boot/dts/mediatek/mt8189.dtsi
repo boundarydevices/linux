@@ -10,6 +10,7 @@
 #include <dt-bindings/phy/phy.h>
 #include <dt-bindings/clock/mediatek,mt8189-clk.h>
 #include <dt-bindings/spmi/spmi.h>
+#include <dt-bindings/power/mediatek,mt8189-power.h>
 
 / {
 	compatible = "mediatek,mt8189";
@@ -428,6 +429,93 @@
 			compatible = "mediatek,mt8189-vlp_ao_ckgen", "syscon";
 			reg = <0 0x1c000000 0 0x1000>;
 			#clock-cells = <1>;
+		};
+
+		scpsys: power-controller@1c001000 {
+			compatible = "mediatek,mt8189-scpsys", "syscon";
+			reg = <0 0x1c001000 0 0x1000>;
+			#power-domain-cells = <1>;
+			infra-infracfg-ao-reg-bus = <&infracfg_ao_clk>;
+			emicfg-ao-mem = <&emicfg_ao_mem_clk>;
+			vlpcfg-reg-bus = <&vlpcfg_reg_bus_clk>;
+			clocks = /* MFG */
+				<&topckgen_clk CLK_TOP_MFG_REF_SEL>,
+				/* AUDIO */
+				<&topckgen_clk CLK_TOP_AUD_INTBUS_SEL>,
+				/* VEN */
+				<&topckgen_clk CLK_TOP_VENC_SEL>,
+				/* VDEC */
+				<&topckgen_clk CLK_TOP_VDEC_SEL>,
+				/* IPE */
+				<&topckgen_clk CLK_TOP_IPE_SEL>,
+				/* CAM_MAIN */
+				<&topckgen_clk CLK_TOP_CAM_SEL>,
+				/* IMG1 */
+				<&topckgen_clk CLK_TOP_IMG1_SEL>,
+				/* DISP */
+				<&topckgen_clk CLK_TOP_DISP0_SEL>,
+				/* MDP0 */
+				<&topckgen_clk CLK_TOP_MDP0_SEL>,
+				/* MM_INFRA */
+				<&topckgen_clk CLK_TOP_MMINFRA_SEL>,
+				/* VADSP */
+				<&vlp_cksys_clk CLK_VLP_CK_VADSP_SEL>,
+				/* IPE */
+				<&ipesys_clk CLK_IPE_LARB19>,
+				<&ipesys_clk CLK_IPE_LARB20>,
+				<&ipesys_clk CLK_IPE_SMI_SUBCOM>,
+				<&ipesys_clk CLK_IPESYS_GALS>,
+				/* CAMSYS */
+				/* cam_main*/
+				<&camsys_main_clk CLK_CAM_M_LARB13>,
+				<&camsys_main_clk CLK_CAM_M_LARB14>,
+				<&camsys_main_clk CLK_CAM_M_CAM2MM_GALS>,
+				/* cam_suba */
+				<&camsys_rawa_clk CLK_CAM_RA_CAMSYS_RAWA_LARBX>,
+				/* cam_subb */
+				<&camsys_rawb_clk CLK_CAM_RB_CAMSYS_RAWB_LARBX>,
+				/* IMG1 */
+				<&imgsys1_clk CLK_IMGSYS1_LARB9>,
+				<&imgsys1_clk CLK_IMGSYS1_LARB11>,
+				<&imgsys1_clk CLK_IMGSYS1_GALS>,
+				/* IMG2 */
+				<&imgsys2_clk CLK_IMGSYS2_LARB9>,
+				<&imgsys2_clk CLK_IMGSYS2_LARB11>,
+				<&imgsys2_clk CLK_IMGSYS2_GALS>,
+				/* MMINFRA */
+				<&mminfra_config_clk CLK_MMINFRA_SMI>,
+				/* DISP */
+				<&dispsys_config_clk CLK_MM_SMI_LARB>,
+				/* VDEC */
+				<&vdec_core_clk CLK_VDEC_CORE_LARB_CKEN>,
+				/* VENC */
+				<&venc_gcon_clk CLK_VEN1_CKE0_LARB>,
+				/* MDP0 */
+				<&mdpsys_config_clk CLK_MDP_SMI0>,
+				/*VADSP_TOP */
+				<&vlp_cksys_clk CLK_VLP_CK_VADSYS_VLP_26M_EN>,
+				/* VADSP */
+				<&vadsys_clk CLK_VAD_CORE0_EN>,
+				<&vadsys_clk CLK_VAD_BUSEMI_EN>,
+				<&vadsys_clk CLK_VAD_TIMER_EN>,
+				<&vadsys_clk CLK_VAD_DMA0_EN>,
+				<&vadsys_clk CLK_VAD_UART_EN>,
+				<&vadsys_clk CLK_VAD_VOWPLL_EN>;
+			clock-names = "mfg1", "audio", "venc", "vdec", "ipe", "cam",
+				"img1", "disp",
+				"mdp", "mm_infra", "vadsp",
+				"ipe-0", "ipe-1", "ipe-2", "ipe-3",
+				"cam_main-0", "cam_main-1", "cam_main-2",
+				"cam_suba-0", "cam-subb-0",
+				"img1-0", "img1-1", "img1-2",
+				"img2-0", "img2-1", "img2-2",
+				"mm_infra-0",
+				"disp-0",
+				"vdec-0", "venc-0",
+				"mdp0-0",
+				"vadsp-top-0",
+				"vadsp-0", "vadsp-1", "vadsp-2", "vadsp-3",
+				"vadsp-4", "vadsp-5";
 		};
 
 		vlpcfg_reg_bus_clk: syscon@1c00c000 {
