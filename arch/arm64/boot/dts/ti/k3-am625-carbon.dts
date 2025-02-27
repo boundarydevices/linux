@@ -183,8 +183,8 @@
 &cpsw3g_mdio {
 	status = "okay";
 
-	cpsw3g_phy0: ethernet-phy@0 {
-		reg = <0>;
+	cpsw3g_phy0: ethernet-phy@3 {
+		reg = <3>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&main_rgmii_phy0_gpio>;
 		interrupt-parent = <&main_gpio0>;
