@@ -17,6 +17,18 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	aliases {
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		i2c4 = &i2c4;
+		i2c5 = &i2c5;
+		i2c6 = &i2c6;
+		i2c7 = &i2c7;
+		i2c8 = &i2c8;
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -556,6 +568,132 @@
 			reg = <0 0x1cc10000 0 0x1000>;
 			interrupts = <GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&clk13m>;
+		};
+
+		i2c0: i2c@11c20000 {
+			compatible = "mediatek,mt8188-i2c";
+			reg = <0 0x11c20000 0 0x1000>,
+				<0 0x11300200 0 0x80>;
+			interrupts = <GIC_SPI 274 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_e_clk CLK_IMPE_I2C0>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c1: i2c@11c21000 {
+			compatible = "mediatek,mt8188-i2c";
+			reg = <0 0x11c21000 0 0x1000>,
+				<0 0x11300300 0 0x80>;
+			interrupts = <GIC_SPI 275 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_e_clk CLK_IMPE_I2C1>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c2: i2c@11b20000 {
+			compatible = "mediatek,mt8188-i2c";
+			reg = <0 0x11b20000 0 0x1000>,
+				<0 0x11300400 0 0x80>;
+			interrupts = <GIC_SPI 276 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_ws_clk CLK_IMPWS_I2C2>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c3: i2c@11d70000 {
+			compatible = "mediatek,mt8188-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0 0x11d70000 0 0x1000>,
+				<0 0x11300500 0 0x80>;
+			interrupts = <GIC_SPI 277 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_s_clk CLK_IMPS_I2C3>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			status = "disabled";
+		};
+
+		i2c4: i2c@11d71000 {
+			compatible = "mediatek,mt8188-i2c";
+			reg = <0 0x11d71000 0 0x1000>,
+				<0 0x11300600 0 0x80>;
+			interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_s_clk CLK_IMPS_I2C4>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c5: i2c@11d72000 {
+			compatible = "mediatek,mt8188-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0 0x11d72000 0 0x1000>,
+				<0 0x11300700 0 0x80>;
+			interrupts = <GIC_SPI 209 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_s_clk CLK_IMPS_I2C5>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			status = "disabled";
+		};
+
+		i2c6: i2c@11d73000 {
+			compatible = "mediatek,mt8188-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0 0x11d73000 0 0x1000>,
+				<0 0x11300800 0 0x80>;
+			interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_s_clk CLK_IMPS_I2C6>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			status = "disabled";
+		};
+
+		i2c7: i2c@11f30000 {
+			compatible = "mediatek,mt8188-i2c";
+			reg = <0 0x11f30000 0 0x1000>,
+				<0 0x11300900 0 0x80>;
+			interrupts = <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_en_clk CLK_IMPEN_I2C7>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c8: i2c@11f31000 {
+			compatible = "mediatek,mt8188-i2c";
+			reg = <0 0x11f31000 0 0x1000>,
+				<0 0x11300a00 0 0x80>;
+			interrupts = <GIC_SPI 212 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_en_clk CLK_IMPEN_I2C8>,
+				<&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "main", "dma";
+			clock-div = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
 		};
 
 		pwrap: pwrap@1cc04000 {

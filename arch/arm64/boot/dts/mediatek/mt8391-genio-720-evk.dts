@@ -161,6 +161,77 @@
 			bias-pull-up = <MTK_PUPD_SET_R1R0_00>;
 		};
 	};
+
+	i2c0_pins:i2c0{
+		pins-bus{
+			pinmux = <PINMUX_GPIO52__FUNC_SDA0>,
+					<PINMUX_GPIO51__FUNC_SCL0>;
+			bias-disable;
+		};
+	};
+
+	i2c1_pins:i2c1{
+		pins-bus{
+			pinmux = <PINMUX_GPIO54__FUNC_SDA1>,
+					<PINMUX_GPIO53__FUNC_SCL1>;
+			bias-disable;
+		};
+	};
+
+	i2c2_pins:i2c2{
+		pins-bus{
+			pinmux = <PINMUX_GPIO56__FUNC_SDA2>,
+					<PINMUX_GPIO55__FUNC_SCL2>;
+			bias-disable;
+		};
+	};
+
+	i2c3_pins:i2c3{
+		pins-bus{
+			pinmux = <PINMUX_GPIO58__FUNC_SDA3>,
+					<PINMUX_GPIO57__FUNC_SCL3>;
+			bias-disable;
+		};
+	};
+
+	i2c4_pins:i2c4{
+		pins-bus{
+			pinmux = <PINMUX_GPIO60__FUNC_SDA4>,
+					<PINMUX_GPIO59__FUNC_SCL4>;
+			bias-disable;
+		};
+	};
+	i2c5_pins:i2c5{
+		pins-bus{
+			pinmux = <PINMUX_GPIO62__FUNC_SDA5>,
+					<PINMUX_GPIO61__FUNC_SCL5>;
+			bias-disable;
+		};
+	};
+
+	i2c6_pins:i2c6{
+		pins-bus{
+			pinmux = <PINMUX_GPIO64__FUNC_SDA6>,
+					<PINMUX_GPIO63__FUNC_SCL6>;
+			bias-disable;
+		};
+	};
+
+	i2c7_pins:i2c7{
+		pins-bus{
+			pinmux = <PINMUX_GPIO66__FUNC_SDA7>,
+					<PINMUX_GPIO65__FUNC_SCL7>;
+			bias-disable;
+		};
+	};
+
+	i2c8_pins:i2c8{
+		pins-bus{
+			pinmux = <PINMUX_GPIO68__FUNC_SDA8>,
+					<PINMUX_GPIO67__FUNC_SCL8>;
+			bias-disable;
+		};
+	};
 };
 
 &mmc0 {
@@ -186,5 +257,59 @@
 };
 
 &uart0 {
+	status = "okay";
+};
+
+&i2c0{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	status = "okay";
+};
+
+&i2c1{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+	status = "okay";
+};
+
+&i2c2{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+	status = "okay";
+};
+
+&i2c3{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pins>;
+	status = "okay";
+};
+
+&i2c4{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4_pins>;
+	status = "okay";
+};
+
+&i2c5{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c5_pins>;
+	status = "okay";
+};
+
+&i2c6{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c6_pins>;
+	status = "okay";
+};
+
+&i2c7{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c7_pins>;
+	status = "okay";
+};
+
+&i2c8{
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c8_pins>;
 	status = "okay";
 };
