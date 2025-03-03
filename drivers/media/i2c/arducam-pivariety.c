@@ -390,6 +390,14 @@ static int pivariety_power_off(struct device *dev)
 	return 0;
 }
 
+static int pivariety_power(struct v4l2_subdev *sub_dev, int on)
+{
+	if (on)
+		return pivariety_power_on(sub_dev->dev);
+	else
+		return pivariety_power_off(sub_dev->dev);
+}
+
 static int pivariety_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct pivariety *pivariety = to_pivariety(sd);
@@ -958,6 +966,7 @@ static int pivariety_get_mbus_config(struct v4l2_subdev *sd, unsigned int pad,
 }
 
 static const struct v4l2_subdev_core_ops pivariety_core_ops = {
+	.s_power = pivariety_power,
 	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
 	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
 };
@@ -983,6 +992,18 @@ static const struct v4l2_subdev_ops pivariety_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops pivariety_internal_ops = {
 	.open = pivariety_open,
+};
+
+static int pivariety_media_link_setup(struct media_entity *entity,
+				      const struct media_pad *local,
+				      const struct media_pad *remote, u32 flags)
+{
+	return 0;
+}
+
+static const struct media_entity_operations pivariety_media_entity_ops = {
+	.link_setup = pivariety_media_link_setup,
+	.link_validate = v4l2_subdev_link_validate
 };
 
 static void pivariety_free_controls(struct pivariety *pivariety)
@@ -1402,6 +1423,7 @@ static int pivariety_probe(struct i2c_client *client)
 	}
 
 	/* Initialize subdev */
+	pivariety->sd.entity.ops = &pivariety_media_entity_ops;
 	pivariety->sd.internal_ops = &pivariety_internal_ops;
 	pivariety->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	pivariety->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
