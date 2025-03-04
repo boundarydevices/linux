@@ -1066,7 +1066,7 @@ int mtk_drm_crtc_create(struct drm_device *drm_dev,
 	}
 	max_route_comp_num = mtk_drm_crtc_max_num_route_comp(mtk_crtc);
 	mtk_crtc->max_ddp_comp_nr  = mtk_crtc->ddp_comp_nr + max_route_comp_num;
-	mtk_crtc->ddp_comp = devm_kmalloc_array(dev, mtk_crtc->ddp_comp_nr,
+	mtk_crtc->ddp_comp = devm_kmalloc_array(dev, mtk_crtc->max_ddp_comp_nr,
 						sizeof(*mtk_crtc->ddp_comp),
 						GFP_KERNEL);
 	if (!mtk_crtc->ddp_comp)
