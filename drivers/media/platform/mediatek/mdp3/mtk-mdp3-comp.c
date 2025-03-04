@@ -1436,7 +1436,7 @@ static int config_hdr_frame(struct mdp_comp_ctx *ctx,
 	phys_addr_t base = ctx->comp->reg_base;
 	u16 subsys_id = ctx->comp->subsys_id;
 	u32 reg = 0;
-	u32 hdr_top_mask = 0x2F0F0001;
+	u32 hdr_top_mask = BIT(29) | BIT(28);
 	bool relay = TRUE;
 
 	if (CFG_CHECK(MT8195, p_id))
