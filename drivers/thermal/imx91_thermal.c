@@ -269,11 +269,10 @@ static int imx91_tmu_probe(struct platform_device *pdev)
 	/*
 	 * Set measure mode
 	 * 00b - Single oneshot measurement
-	 * 01b - Continuous measurement
 	 * 10b - Periodic oneshot measurement
 	 */
 	writel_relaxed(FIELD_PREP(CTRL1_MEAS_MODE_MASK, 0x3), tmu->base + CTRL1_CLR);
-	writel_relaxed(FIELD_PREP(CTRL1_MEAS_MODE_MASK, 0x1), tmu->base + CTRL1_SET);
+	writel_relaxed(FIELD_PREP(CTRL1_MEAS_MODE_MASK, 0x2), tmu->base + CTRL1_SET);
 
 	/*
 	 * Set Periodic Measurement Frequency to 25Hz:
