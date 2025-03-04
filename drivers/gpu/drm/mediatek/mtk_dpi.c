@@ -73,9 +73,11 @@ struct mtk_dpi {
 	struct device *dev;
 	struct device *mmsys_dev;
 	struct clk *engine_clk;
+	struct clk *dpi_ck_cg;
 	struct clk *pixel_clk;
 	struct clk *dpi_sel_clk;
 	struct clk *tvd_clk;
+	struct clk *pclk_src[5];
 	int irq;
 	struct drm_display_mode mode;
 	const struct mtk_dpi_conf *conf;
@@ -152,6 +154,7 @@ struct mtk_dpi_conf {
 	const u32 *output_fmts;
 	u32 num_output_fmts;
 	bool is_ck_de_pol;
+	bool is_dpintf;
 	bool swap_input_support;
 	bool support_direct_pin;
 	bool input_2pixel;
@@ -524,6 +527,12 @@ static int mtk_dpi_power_on(struct mtk_dpi *dpi)
 		goto err_engine;
 	}
 
+	ret = clk_prepare_enable(dpi->dpi_ck_cg);
+	if (ret) {
+		dev_err(dpi->dev, "Failed to enable dpi_ck_cg clock: %d\n", ret);
+		goto err_ck_cg;
+	}
+
 	ret = clk_prepare_enable(dpi->pixel_clk);
 	if (ret) {
 		dev_err(dpi->dev, "Failed to enable pixel clock: %d\n", ret);
@@ -535,6 +544,8 @@ static int mtk_dpi_power_on(struct mtk_dpi *dpi)
 	return 0;
 
 err_pixel:
+	clk_disable_unprepare(dpi->dpi_ck_cg);
+err_ck_cg:
 	clk_disable_unprepare(dpi->engine_clk);
 err_engine:
 	clk_disable_unprepare(dpi->tvd_clk);
@@ -580,8 +591,17 @@ static int mtk_dpi_set_display_mode(struct mtk_dpi *dpi,
 	vm.pixelclock = pll_rate / factor;
 	vm.pixelclock /= dpi->conf->pixels_per_iter;
 
-	if ((dpi->output_fmt == MEDIA_BUS_FMT_RGB888_2X12_LE) ||
-	    (dpi->output_fmt == MEDIA_BUS_FMT_RGB888_2X12_BE))
+	if (dpi->conf->is_dpintf) {
+		if (factor == 1)
+			clk_set_parent(dpi->pixel_clk, dpi->pclk_src[2]);
+		else if (factor == 2)
+			clk_set_parent(dpi->pixel_clk, dpi->pclk_src[3]);
+		else if (factor == 4)
+			clk_set_parent(dpi->pixel_clk, dpi->pclk_src[4]);
+		else
+			clk_set_parent(dpi->pixel_clk, dpi->pclk_src[2]);
+	} else if ((dpi->output_fmt == MEDIA_BUS_FMT_RGB888_2X12_LE) ||
+		   (dpi->output_fmt == MEDIA_BUS_FMT_RGB888_2X12_BE))
 		clk_set_rate(dpi->pixel_clk, vm.pixelclock * 2);
 	else
 		clk_set_rate(dpi->pixel_clk, vm.pixelclock);
@@ -1114,6 +1134,7 @@ static const struct mtk_dpi_conf mt8195_dpintf_conf = {
 	.max_clock_khz = 600000,
 	.output_fmts = mt8195_output_fmts,
 	.num_output_fmts = ARRAY_SIZE(mt8195_output_fmts),
+	.is_dpintf = true,
 	.pixels_per_iter = 4,
 	.input_2pixel = true,
 	.dimension_mask = DPINTF_HPW_MASK,
@@ -1193,6 +1214,16 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(dpi->engine_clk),
 				     "Failed to get engine clock\n");
 
+	dpi->dpi_ck_cg = devm_clk_get_optional(dev, "ck_cg");
+	if (IS_ERR(dpi->dpi_ck_cg)) {
+		ret = PTR_ERR(dpi->dpi_ck_cg);
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "Failed to get dpi ck cg clock: %d\n",
+				ret);
+
+		return ret;
+	}
+
 	dpi->pixel_clk = devm_clk_get(dev, "pixel");
 	if (IS_ERR(dpi->pixel_clk))
 		return dev_err_probe(dev, PTR_ERR(dpi->pixel_clk),
@@ -1208,6 +1239,13 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(dpi->dpi_sel_clk),
 				     "Failed to get dpi_sel_clk clock\n");
 	}
+
+	//TODO: TVDPLL_D* are parent clock divisors which needs to be
+	//set dynamically in the clock framework and not acquired/changed here
+	dpi->pclk_src[1] = devm_clk_get_optional(dev, "TVDPLL_D2");
+	dpi->pclk_src[2] = devm_clk_get_optional(dev, "TVDPLL_D4");
+	dpi->pclk_src[3] = devm_clk_get_optional(dev, "TVDPLL_D8");
+	dpi->pclk_src[4] = devm_clk_get_optional(dev, "TVDPLL_D16");
 
 	dpi->irq = platform_get_irq(pdev, 0);
 	if (dpi->irq < 0)
