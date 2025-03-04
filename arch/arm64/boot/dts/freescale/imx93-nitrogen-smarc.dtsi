@@ -467,7 +467,9 @@
 	non-removable;
 	wakeup-source;
 	pm-ignore-notify;
-	fsl,sdio-async-interrupt-enabled;
+	voltage-ranges = <1800 1800>;
+	fsl,tuning-start-tap = <20>;
+	fsl,tuning-step= <2>;
 	vmmc-supply = <&reg_wlan_vmmc>;
 	vqmmc-1-8-v;
 	vqmmc-supply = <&reg_vref_1v8>;
