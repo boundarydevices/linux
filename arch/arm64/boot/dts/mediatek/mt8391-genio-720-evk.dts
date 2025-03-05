@@ -313,3 +313,7 @@
 	pinctrl-0 = <&i2c8_pins>;
 	status = "okay";
 };
+
+&auxadc {
+	status = "okay";
+};

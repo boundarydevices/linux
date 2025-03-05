@@ -720,6 +720,15 @@
 			#address-cells = <2>;
 			#size-cells = <0>;
 		};
+
+		auxadc: adc@11019000 {
+			compatible = "mediatek,mt8173-auxadc";
+			reg = <0 0x11019000 0 0x1000>;
+			clocks = <&pericfg_ao_clk CLK_PERAO_AUXADC_26M>;
+			clock-names = "main";
+			#io-channel-cells = <1>;
+			status = "disabled";
+		};
 	};
 };
 
