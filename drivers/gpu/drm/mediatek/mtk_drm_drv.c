@@ -193,6 +193,8 @@ static const unsigned int mt8188_mtk_ddp_main_routes_0[] = {
 };
 
 static const unsigned int mt8188_mtk_ddp_main_routes_1[] = {
+	DDP_COMPONENT_DSC0,
+	DDP_COMPONENT_MERGE0,
 	DDP_COMPONENT_DP_INTF0,
 };
 
