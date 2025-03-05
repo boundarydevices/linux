@@ -29,6 +29,16 @@
 		dsi0 = &dsi0;
 	};
 
+	backlight_lcd0: backlight-lcd0 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm0 0 500000>;
+		enable-gpios = <&pio 8 GPIO_ACTIVE_HIGH>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+		status = "disabled";
+	};
+
 	backlight_lcd1: backlight-lcd1 {
 		compatible = "pwm-backlight";
 		pwms = <&disp_pwm1 0 500000>;
