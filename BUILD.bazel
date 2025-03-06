@@ -1371,6 +1371,11 @@ _MTK_MODULE_OUTS = [
     "drivers/mmc/core/mmc_block.ko",
     "drivers/mmc/host/cqhci.ko",
     "drivers/mmc/host/mtk-sd.ko",
+    "drivers/net/wireless/mediatek/mt76/mt76-connac-lib.ko",
+    "drivers/net/wireless/mediatek/mt76/mt76.ko",
+    "drivers/net/wireless/mediatek/mt76/mt7921/mt7921-common.ko",
+    "drivers/net/wireless/mediatek/mt76/mt7921/mt7921e.ko",
+    "drivers/net/wireless/mediatek/mt76/mt792x-lib.ko",
     "drivers/nvmem/nvmem_mtk-efuse.ko",
     "drivers/pci/controller/pcie-mediatek-gen3.ko",
     "drivers/phy/mediatek/phy-mtk-mipi-dsi-drv.ko",
@@ -1404,6 +1409,8 @@ _MTK_MODULE_OUTS = [
     "drivers/usb/mtu3/mtu3.ko",
     "drivers/video/backlight/pwm_bl.ko",
     "drivers/watchdog/mtk_wdt.ko",
+    "net/mac80211/mac80211.ko",
+    "net/wireless/cfg80211.ko",
 ]
 
 _MTK_EXT_MODULES = [
