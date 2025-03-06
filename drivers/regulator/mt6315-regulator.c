@@ -218,8 +218,10 @@ static int mt6315_regulator_probe(struct spmi_device *pdev)
 	struct regmap *regmap;
 	struct mt6315_chip *chip;
 	struct mt_regulator_init_data *init_data;
+	struct device_node *node = pdev->dev.of_node;
 	struct regulator_config config = {};
 	struct regulator_dev *rdev;
+	unsigned int val = 0;
 	int i;
 
 	regmap = devm_regmap_init_spmi_ext(pdev, &mt6315_regmap_config);
@@ -247,6 +249,10 @@ static int mt6315_regulator_probe(struct spmi_device *pdev)
 		init_data->modeset_mask[MT6315_VBUCK1] = BIT(MT6315_VBUCK1);
 		break;
 	}
+
+	if (!of_property_read_u32(node, "buck1-modeset-mask", &val))
+		init_data->modeset_mask[MT6315_VBUCK1] = val;
+
 	for (i = MT6315_VBUCK2; i < MT6315_VBUCK_MAX; i++)
 		init_data->modeset_mask[i] = BIT(i);
 
