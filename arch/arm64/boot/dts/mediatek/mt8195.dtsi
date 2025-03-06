@@ -3403,8 +3403,17 @@
 			interrupts = <GIC_SPI 657 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&vdosys0  CLK_VDO0_DP_INTF0>,
 				 <&vdosys0 CLK_VDO0_DP_INTF0_DP_INTF>,
-				 <&apmixedsys CLK_APMIXED_TVDPLL1>;
-			clock-names = "engine", "pixel", "pll";
+				 <&topckgen CLK_TOP_EDP>,
+				 <&apmixedsys CLK_APMIXED_TVDPLL1>,
+				 <&topckgen CLK_TOP_TVDPLL1_D2>,
+				 <&topckgen CLK_TOP_TVDPLL1_D4>,
+				 <&topckgen CLK_TOP_TVDPLL1_D8>,
+				 <&topckgen CLK_TOP_TVDPLL1_D16>;
+			clock-names = "engine", "ck_cg", "pixel", "pll",
+				      "TVDPLL_D2",
+				      "TVDPLL_D4",
+				      "TVDPLL_D8",
+				      "TVDPLL_D16";
 			status = "disabled";
 		};
 
@@ -3671,8 +3680,17 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			clocks = <&vdosys1 CLK_VDO1_DP_INTF0_MM>,
 				 <&vdosys1 CLK_VDO1_DPINTF>,
-				 <&apmixedsys CLK_APMIXED_TVDPLL2>;
-			clock-names = "engine", "pixel", "pll";
+				 <&topckgen CLK_TOP_DP>,
+				 <&apmixedsys CLK_APMIXED_TVDPLL2>,
+				 <&topckgen CLK_TOP_TVDPLL2_D2>,
+				 <&topckgen CLK_TOP_TVDPLL2_D4>,
+				 <&topckgen CLK_TOP_TVDPLL2_D8>,
+				 <&topckgen CLK_TOP_TVDPLL2_D16>;
+			clock-names = "engine", "ck_cg", "pixel", "pll",
+				      "TVDPLL_D2",
+				      "TVDPLL_D4",
+				      "TVDPLL_D8",
+				      "TVDPLL_D16";
 			status = "disabled";
 		};
 
@@ -3814,6 +3832,8 @@
 		edp_tx: edp-tx@1c500000 {
 			compatible = "mediatek,mt8195-edp-tx";
 			reg = <0 0x1c500000 0 0x8000>;
+			clocks = <&topckgen CLK_TOP_EDP>;
+			clock-names = "faxi";
 			nvmem-cells = <&dp_calibration>;
 			nvmem-cell-names = "dp_calibration_data";
 			power-domains = <&spm MT8195_POWER_DOMAIN_EPD_TX>;
@@ -3826,6 +3846,8 @@
 			compatible = "mediatek,mt8195-dp-tx";
 			#sound-dai-cells = <0>;
 			reg = <0 0x1c600000 0 0x8000>;
+			clocks = <&topckgen CLK_TOP_DPTX_MCK>;
+			clock-names = "faxi";
 			nvmem-cells = <&dp_calibration>;
 			nvmem-cell-names = "dp_calibration_data";
 			power-domains = <&spm MT8195_POWER_DOMAIN_DP_TX>;
