@@ -259,6 +259,11 @@ properties:
           - const: mediatek,mt8188
       - items:
           - enum:
+              - mediatek,mt8391-evk
+          - const: mediatek,mt8391
+          - const: mediatek,mt8189
+      - items:
+          - enum:
               - mediatek,mt8395-evk
           - const: mediatek,mt8395
           - const: mediatek,mt8195
