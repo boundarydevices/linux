@@ -303,11 +303,15 @@
 			reg = <0 0x11230000 0 0x10000>,
 			      <0 0x11e70000 0 0x1000>;
 			interrupts = <GIC_SPI 387 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&clk26m>,
-				 <&clk26m>,
-				 <&clk26m>,
-				 <&clk26m>;
-			clock-names = "source", "hclk", "source_cg", "crypto_clk";
+			clocks = <&topckgen_clk CLK_TOP_MSDC50_0_SEL>,
+				<&topckgen_clk CLK_TOP_MSDC50_0_HCLK_SEL>,
+				<&pericfg_ao_clk CLK_PERAO_MSDC0>,
+				<&pericfg_ao_clk CLK_PERAO_MSDC0_H>,
+				<&topckgen_clk CLK_TOP_MSDC50_0_SEL>,
+				<&pericfg_ao_clk CLK_PERAO_MSDC0_SLV_H>,
+				<&pericfg_ao_clk CLK_PERAO_MSDC0_MST_F>;
+			clock-names = "source", "bus_clk", "source_cg", "hclk",
+					"crypto", "pclk_cg", "axi_cg";
 			status = "disabled";
 		};
 
