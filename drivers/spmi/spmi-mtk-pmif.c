@@ -533,6 +533,9 @@ static const struct of_device_id mtk_spmi_match_table[] = {
 		.compatible = "mediatek,mt6873-spmi",
 		.data = &mt6873_pmif_arb,
 	}, {
+		.compatible = "mediatek,mt8189-spmi",
+		.data = &mt8195_pmif_arb,
+	}, {
 		.compatible = "mediatek,mt8195-spmi",
 		.data = &mt8195_pmif_arb,
 	}, {
