@@ -103,8 +103,71 @@
 	};
 };
 
+&pio {
+	mmc0_pins_default: mmc0default {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO156__FUNC_MSDC0_DAT7>,
+				<PINMUX_GPIO157__FUNC_MSDC0_DAT6>,
+				<PINMUX_GPIO158__FUNC_MSDC0_DAT5>,
+				<PINMUX_GPIO159__FUNC_MSDC0_DAT4>,
+				<PINMUX_GPIO161__FUNC_MSDC0_CMD>,
+				<PINMUX_GPIO163__FUNC_MSDC0_DAT3>,
+				<PINMUX_GPIO164__FUNC_MSDC0_DAT2>,
+				<PINMUX_GPIO165__FUNC_MSDC0_DAT1>,
+				<PINMUX_GPIO166__FUNC_MSDC0_DAT0>;
+			input-enable;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+		pins-clk {
+			pinmux = <PINMUX_GPIO162__FUNC_MSDC0_CLK>;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+		pins-rst {
+			pinmux = <PINMUX_GPIO160__FUNC_MSDC0_RSTB>;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_00>;
+		};
+	};
+
+	mmc0_pins_uhs: mmc0@0{
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO156__FUNC_MSDC0_DAT7>,
+				<PINMUX_GPIO157__FUNC_MSDC0_DAT6>,
+				<PINMUX_GPIO158__FUNC_MSDC0_DAT5>,
+				<PINMUX_GPIO159__FUNC_MSDC0_DAT4>,
+				<PINMUX_GPIO161__FUNC_MSDC0_CMD>,
+				<PINMUX_GPIO163__FUNC_MSDC0_DAT3>,
+				<PINMUX_GPIO164__FUNC_MSDC0_DAT2>,
+				<PINMUX_GPIO165__FUNC_MSDC0_DAT1>,
+				<PINMUX_GPIO166__FUNC_MSDC0_DAT0>;
+			input-enable;
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+		pins-clk {
+			pinmux = <PINMUX_GPIO162__FUNC_MSDC0_CLK>;
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+		pins-ds {
+			pinmux = <PINMUX_GPIO167__FUNC_MSDC0_DSL>;
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+		pins-rst {
+			pinmux = <PINMUX_GPIO160__FUNC_MSDC0_RSTB>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_00>;
+		};
+	};
+};
+
 &mmc0 {
 	status = "okay";
+	pinctrl-names = "default", "state_uhs";
+	pinctrl-0 = <&mmc0_pins_default>;
+	pinctrl-1 = <&mmc0_pins_uhs>;
 	bus-width = <8>;
 	max-frequency = <200000000>;
 	cap-mmc-highspeed;
@@ -118,6 +181,8 @@
 	non-removable;
 	hs400-ds-delay = <0x1481b>;
 	mediatek,hs400-ds-dly3 = <0x14>;
+	vmmc-supply = <&sdio_fixed_3v3>;
+	vqmmc-supply = <&sdio_fixed_1v8>;
 };
 
 &uart0 {
