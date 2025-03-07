@@ -34,6 +34,7 @@ properties:
               - mediatek,mt8188-mmc
               - mediatek,mt8192-mmc
               - mediatek,mt8195-mmc
+              - mediatek,mt8196-mmc
               - mediatek,mt8365-mmc
           - const: mediatek,mt8183-mmc
 
@@ -181,6 +182,7 @@ allOf:
             - mediatek,mt8186-mmc
             - mediatek,mt8188-mmc
             - mediatek,mt8195-mmc
+            - mediatek,mt8196-mmc
             - mediatek,mt8516-mmc
     then:
       properties:
@@ -261,6 +263,7 @@ allOf:
             - mediatek,mt8186-mmc
             - mediatek,mt8188-mmc
             - mediatek,mt8195-mmc
+            - mediatek,mt8196-mmc
     then:
       properties:
         clocks:
