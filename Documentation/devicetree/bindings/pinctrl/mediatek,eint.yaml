@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pinctrl/mediatek,eint.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek External Interrupt Controller (EINT)
+
+maintainers:
+  - Shu-yun Wu <shu-yun.wu@mediatek.com>
+
+properties:
+  compatible:
+    const: mediatek,mtk-eint
+
+  reg:
+    description:
+      Physical address base for EINT base registers.
+
+  reg-names:
+    description:
+      EINT base regiater names.
+
+  interrupts:
+    description:
+      The interrupt specifier for the EINT block
+
+  mediatek,instance-num:
+    description: The number of instances for the EINT controller
+    $ref: /schemas/types.yaml#/definitions/uint32
+
+  mediatek,total-pin-number:
+    description: Total number of pins managed by EINT controller
+    $ref: /schemas/types.yaml#/definitions/uint32
+
+  mediatek,pins:
+    description:
+      Sequence of pins information. Each pin is defined by a tuple-
+      < gpio index, offset in group, eint number, use debounce >
+    $ref: /schemas/types.yaml#/definitions/uint8-matrix
+    items:
+      items:
+        - description:
+            The gpio index
+        - description:
+            The offset in the group
+        - description:
+            The eint number
+        - description:
+            Use debounce or not
+
+required:
+  - compatible
+  - reg
+  - reg-names
+  - interrupts
+  - mediatek,instance-num
+  - mediatek,total-pin-number
+  - mediatek,pins
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+
+    soc {
+      #address-cells = <2>;
+      #size-cells = <2>;
+
+      eint: apirq@11ce0000 {
+        compatible = "mediatek,mtk-eint";
+        reg = <0 0x11ce0000 0 0x1000>,
+              <0 0x11de0000 0 0x1000>,
+              <0 0x11e60000 0 0x1000>,
+              <0 0x1c01e000 0 0x1000>,
+              <0 0x11f00000 0 0x1000>;
+        reg-names = "eint-e", "eint-s", "eint-w", "eint-c", "eint-n";
+        interrupts = <GIC_SPI 239 IRQ_TYPE_LEVEL_HIGH 0>;
+        mediatek,instance-num = <5>;
+        mediatek,total-pin-number = <210>;
+        mediatek,pins = <0 0 0 1>,<1 0 1 1>,<2 0 2 1>,<3 0 3 1>,
+          <4 0 4 1>,<5 0 5 1>,<6 0 6 1>,<7 0 7 1>,
+          <8 0 8 1>,<9 0 9 1>,<10 0 10 1>,<11 0 11 1>;
+      };
+    };
