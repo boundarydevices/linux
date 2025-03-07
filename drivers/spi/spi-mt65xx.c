@@ -216,6 +216,13 @@ static const struct mtk_spi_compatible mt6893_compat = {
 	.no_need_unprepare = true,
 };
 
+static const struct mtk_spi_compatible mt8189_compat = {
+	.need_pad_sel = true,
+	.enhance_timing = true,
+	.dma_ext = true,
+	.ipm_design = true,
+};
+
 /*
  * A piece of default chip info unless the platform
  * supplies it.
@@ -261,6 +268,9 @@ static const struct of_device_id mtk_spi_of_match[] = {
 	},
 	{ .compatible = "mediatek,mt6893-spi",
 		.data = (void *)&mt6893_compat,
+	},
+	{ .compatible = "mediatek,mt8189-spi",
+		.data = (void *)&mt8189_compat,
 	},
 	{}
 };
