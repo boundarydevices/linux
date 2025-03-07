@@ -784,6 +784,90 @@
 			status = "disabled";
 		};
 
+		spi0: spi@11010800 {
+			compatible = "mediatek,mt8189-spi";
+			mediatek,pad-select = <0>;
+			reg = <0 0x11010800 0 0x100>;
+			interrupts = <GIC_SPI 459 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&topckgen_clk CLK_TOP_UNIVPLL_D6_D2>,
+				 <&topckgen_clk CLK_TOP_SPI0_SEL>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI0_B>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI0_H>;
+			clock-names = "parent-clk", "sel-clk", "spi-clk", "hclk";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		spi1: spi@11011800 {
+			compatible = "mediatek,mt8189-spi";
+			mediatek,pad-select = <0>;
+			reg = <0 0x11011800 0 0x100>;
+			interrupts = <GIC_SPI 460 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&topckgen_clk CLK_TOP_UNIVPLL_D6_D2>,
+				 <&topckgen_clk CLK_TOP_SPI1_SEL>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI1_B>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI1_H>;
+			clock-names = "parent-clk", "sel-clk", "spi-clk", "hclk";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		spi2: spi@11012800 {
+			compatible = "mediatek,mt8189-spi";
+			mediatek,pad-select = <0>;
+			reg = <0 0x11012800 0 0x100>;
+			interrupts = <GIC_SPI 461 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&topckgen_clk CLK_TOP_UNIVPLL_D6_D2>,
+				 <&topckgen_clk CLK_TOP_SPI2_SEL>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI2_B>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI2_H>;
+			clock-names = "parent-clk", "sel-clk", "spi-clk", "hclk";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		spi3: spi@11013800 {
+			compatible = "mediatek,mt8189-spi";
+			mediatek,pad-select = <0>;
+			reg = <0 0x11013800 0 0x100>;
+			interrupts = <GIC_SPI 462 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&topckgen_clk CLK_TOP_UNIVPLL_D6_D2>,
+				 <&topckgen_clk CLK_TOP_SPI3_SEL>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI3_B>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI3_H>;
+			clock-names = "parent-clk", "sel-clk", "spi-clk", "hclk";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		spi4: spi@11014800 {
+			compatible = "mediatek,mt8189-spi";
+			mediatek,pad-select = <0>;
+			reg = <0 0x11014800 0 0x100>;
+			interrupts = <GIC_SPI 463 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&topckgen_clk CLK_TOP_UNIVPLL_D6_D2>,
+				 <&topckgen_clk CLK_TOP_SPI4_SEL>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI4_B>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI4_H>;
+			clock-names = "parent-clk", "sel-clk", "spi-clk", "hclk";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		spi5: spi@11015800 {
+			compatible = "mediatek,mt8189-spi";
+			mediatek,pad-select = <0>;
+			reg = <0 0x11015800 0 0x100>;
+			interrupts = <GIC_SPI 464 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&topckgen_clk CLK_TOP_UNIVPLL_D6_D2>,
+				 <&topckgen_clk CLK_TOP_SPI5_SEL>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI5_B>,
+				 <&pericfg_ao_clk CLK_PERAO_SPI5_H>;
+			clock-names = "parent-clk", "sel-clk", "spi-clk", "hclk";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
 		pwrap: pwrap@1cc04000 {
 			compatible = "mediatek,mt8189-pwrap";
 			reg = <0 0x1cc04000 0 0x1000>;
