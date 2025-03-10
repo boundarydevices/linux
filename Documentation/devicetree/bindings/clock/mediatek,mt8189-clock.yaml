@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/clock/mediatek,mt8189-clock.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek Functional Clock Controller for MT8189
+
+maintainers:
+  - Chris Chen <chris-qj.chen@mediatek.com>
+
+description: |
+  The clock architecture in MediaTek like below
+  PLLs -->
+          dividers -->
+                      muxes
+                           -->
+                              clock gate
+
+  The devices provide clock gate control in different IP blocks.
+
+properties:
+  compatible:
+    items:
+      - enum:
+          - mediatek,mt8189-dbg_ao
+          - mediatek,mt8189-dem
+          - mediatek,mt8189-emicfg_ao_mem
+          - mediatek,mt8189-audiosys
+          - mediatek,mt8189-ufscfg_ao
+          - mediatek,mt8189-ufscfg_pdn
+          - mediatek,mt8189-iic_wrap_ws
+          - mediatek,mt8189-iic_wrap_e
+          - mediatek,mt8189-iic_wrap_s
+          - mediatek,mt8189-iic_wrap_en
+          - mediatek,mt8189-mfgsys
+          - mediatek,mt8189-dispsys
+          - mediatek,mt8189-imgsys1
+          - mediatek,mt8189-imgsys2
+          - mediatek,mt8189-vdec_core
+          - mediatek,mt8189-venc
+          - mediatek,mt8189-camsys_main
+          - mediatek,mt8189-camsys_rawa
+          - mediatek,mt8189-camsys_rawb
+          - mediatek,mt8189-ipesys
+          - mediatek,mt8189-vlp_ao_ckgen
+          - mediatek,mt8189-vlpcfg_reg_bus
+          - mediatek,mt8189-dvfsrc_top
+          - mediatek,mt8189-vlp_ckgen
+          - mediatek,mt8189-scp_i2c
+          - mediatek,mt8189-scp
+          - mediatek,mt8189-vadsys
+          - mediatek,mt8189-mm_infra
+          - mediatek,mt8189-gce_d
+          - mediatek,mt8189-gce_m
+          - mediatek,mt8189-mdpsys
+      - const: syscon
+
+
+  reg:
+    maxItems: 1
+
+  '#clock-cells':
+    const: 1
+
+required:
+  - compatible
+  - reg
+  - '#clock-cells'
+
+additionalProperties: false
+
+examples:
+  - |
+    soc {
+      #address-cells = <2>;
+      #size-cells = <2>;
+
+      imp_iic_wrap_ws_clk: syscon@11b21000 {
+        compatible = "mediatek,mt8189-iic_wrap_ws", "syscon";
+        reg = <0 0x11b21000 0 0x1000>;
+        #clock-cells = <1>;
+      };
+    };

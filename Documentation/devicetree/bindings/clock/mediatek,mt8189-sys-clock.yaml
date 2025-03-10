@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/clock/mediatek,mt8189-sys-clock.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek System Clock Controller for MT8189
+
+maintainers:
+  - Chris Chen <chris-qj.chen@mediatek.com>
+
+description: |
+  The clock architecture in MediaTek like below
+  PLLs -->
+          dividers -->
+                      muxes
+                           -->
+                              clock gate
+
+  The apmixedsys provides most of PLLs which generated from SoC 26m.
+  The topckgen provides dividers and muxes which provide the clock source to other IP blocks.
+  The infra_ao provides clock gate in infrastructure IP blocks.
+  The peri_ao provides clock gate in peripheral IP blocks.
+  The device nodes also provide the system control capacity for configuration.
+
+properties:
+  compatible:
+    items:
+      - enum:
+          - mediatek,mt8189-apmixedsys
+          - mediatek,mt8189-infra_ao
+          - mediatek,mt8189-peri_ao
+          - mediatek,mt8189-topckgen
+      - const: syscon
+
+  reg:
+    maxItems: 1
+
+  '#clock-cells':
+    const: 1
+
+required:
+  - compatible
+  - reg
+  - '#clock-cells'
+
+additionalProperties: false
+
+examples:
+  - |
+    soc {
+      #address-cells = <2>;
+      #size-cells = <2>;
+
+      topckgen_clk: syscon@10000000 {
+        compatible = "mediatek,mt8189-topckgen", "syscon";
+        reg = <0 0x10000000 0 0x1000>;
+        #clock-cells = <1>;
+      };
+    };
