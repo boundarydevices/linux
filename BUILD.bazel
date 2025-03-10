@@ -1356,6 +1356,8 @@ _MTK_MODULE_OUTS = [
     "drivers/gpu/drm/display/drm_display_helper.ko",
     "drivers/gpu/drm/mediatek/mediatek-drm.ko",
     "drivers/gpu/drm/panel/panel-startek-kd070fhfid078.ko",
+    "drivers/gpu/drm/panfrost/panfrost.ko",
+    "drivers/gpu/drm/scheduler/gpu-sched.ko",
     "drivers/gpu/drm/vkms/vkms.ko",
     "drivers/i2c/busses/i2c-mt65xx.ko",
     "drivers/iio/adc/mt6359-auxadc.ko",
