@@ -287,7 +287,7 @@
 			compatible = "mediatek,mt6577-uart";
 			reg = <0 0x11001000 0 0x1000>;
 			interrupts = <GIC_SPI 397 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&clk26m>, <&clk26m>;
+			clocks = <&clk26m>, <&pericfg_ao_clk CLK_PERAO_UART0>;
 			clock-names = "baud", "bus";
 			status = "disabled";
 		};
