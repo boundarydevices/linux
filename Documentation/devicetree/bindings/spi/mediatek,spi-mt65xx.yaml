@@ -47,6 +47,7 @@ properties:
               - mediatek,mt8135-spi
               - mediatek,mt8173-spi
               - mediatek,mt8183-spi
+              - mediatek,mt8189-spi
 
   reg:
     maxItems: 1
