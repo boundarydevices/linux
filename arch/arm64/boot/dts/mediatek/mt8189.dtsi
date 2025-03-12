@@ -901,5 +901,19 @@
 			#io-channel-cells = <1>;
 			status = "disabled";
 		};
+
+		pwm: pwm@11008000 {
+			compatible = "mediatek,mt8189-pwm";
+			reg = <0 0x11008000 0 0x1000>;
+			#pwm-cells = <2>;
+
+			clocks = <&pericfg_ao_clk CLK_PERAO_PWM_H>,
+				 <&pericfg_ao_clk CLK_PERAO_PWM_B>,
+				 <&pericfg_ao_clk CLK_PERAO_PWM_FB1>,
+				 <&pericfg_ao_clk CLK_PERAO_PWM_FB2>,
+				 <&pericfg_ao_clk CLK_PERAO_PWM_FB3>;
+
+			clock-names = "top", "main", "pwm1", "pwm2", "pwm3";
+		};
 	};
 };
