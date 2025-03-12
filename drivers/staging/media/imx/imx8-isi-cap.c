@@ -120,6 +120,7 @@ static int mxc_isi_pipeline_enable(struct mxc_isi_cap_dev *isi_cap, bool enable)
 	struct media_device *mdev = entity->graph_obj.mdev;
 	struct media_graph graph;
 	struct v4l2_subdev *subdev;
+	struct v4l2_subdev *late_subdev = NULL;
 	int ret = 0;
 
 	mutex_lock(&mdev->graph_mutex);
@@ -148,12 +149,24 @@ static int mxc_isi_pipeline_enable(struct mxc_isi_cap_dev *isi_cap, bool enable)
 			continue;
 		}
 
+		if (strstr(entity->name, "pivariety")) {
+			late_subdev = subdev;
+			continue;
+		}
+
 		ret = v4l2_subdev_call(subdev, video, s_stream, enable);
 		if (ret < 0 && ret != -ENOIOCTLCMD) {
 			dev_err(dev, "subdev %s s_stream failed\n", subdev->name);
 			break;
 		}
 	}
+
+	if (late_subdev) {
+		ret = v4l2_subdev_call(late_subdev, video, s_stream, enable);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			dev_err(dev, "subdev %s s_stream failed\n", subdev->name);
+	}
+
 	mutex_unlock(&mdev->graph_mutex);
 	media_graph_walk_cleanup(&graph);
 
