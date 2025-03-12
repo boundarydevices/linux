@@ -26,6 +26,10 @@
 static int debug;
 module_param(debug, int, 0644);
 
+static s64 pivariety_link_freqs[] = {
+	493500000,
+};
+
 /* regulator supplies */
 static const char * const pivariety_supply_name[] = {
 	/* Supplies can be enabled in any order */
@@ -86,6 +90,7 @@ struct pivariety {
 	/* V4L2 Controls */
 	struct v4l2_ctrl *vflip;
 	struct v4l2_ctrl *hflip;
+	struct v4l2_ctrl *link_freq;
 
 	struct v4l2_rect crop;
 	/*
@@ -1303,6 +1308,11 @@ static int pivariety_enum_controls(struct pivariety *pivariety)
 	}
 
 	pivariety_write(pivariety, CTRL_INDEX_REG, 0);
+
+	pivariety->link_freq = v4l2_ctrl_new_int_menu(
+		ctrl_hdlr, &pivariety_ctrl_ops, V4L2_CID_LINK_FREQ,
+		ARRAY_SIZE(pivariety_link_freqs) - 1, 0, pivariety_link_freqs);
+	pivariety->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 
 	ret = v4l2_fwnode_device_parse(&client->dev, &props);
 	if (ret)
