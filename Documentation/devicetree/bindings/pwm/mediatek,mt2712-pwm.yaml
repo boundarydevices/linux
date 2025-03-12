@@ -28,6 +28,7 @@ properties:
           - mediatek,mt8188-pwm
           - mediatek,mt8365-pwm
           - mediatek,mt8516-pwm
+          - mediatek,mt8189-pwm
       - items:
           - enum:
               - mediatek,mt8195-pwm
