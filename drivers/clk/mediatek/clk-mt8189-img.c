@@ -31,6 +31,7 @@ static const struct mtk_gate_regs imgsys1_cg_regs = {
 		.regs = &imgsys1_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_IMGSYS1_V(_id, _name, _parent) {    \
@@ -68,6 +69,7 @@ static const struct mtk_gate_regs imgsys2_cg_regs = {
 		.regs = &imgsys2_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_IMGSYS2_V(_id, _name, _parent) {    \
@@ -109,6 +111,7 @@ static const struct mtk_gate_regs ipe_cg_regs = {
 		.regs = &ipe_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_IPE_V(_id, _name, _parent) {    \

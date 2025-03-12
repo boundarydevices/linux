@@ -37,6 +37,7 @@ static const struct mtk_gate_regs mdp1_cg_regs = {
 		.regs = &mdp0_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_MDP0_V(_id, _name, _parent) {    \
@@ -52,6 +53,7 @@ static const struct mtk_gate_regs mdp1_cg_regs = {
 		.regs = &mdp1_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_MDP1_V(_id, _name, _parent) {    \

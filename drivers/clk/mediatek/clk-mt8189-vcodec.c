@@ -37,6 +37,7 @@ static const struct mtk_gate_regs vdec_core1_cg_regs = {
 		.regs = &vdec_core0_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr_inv,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_VDEC_CORE0_V(_id, _name, _parent) {    \
@@ -52,6 +53,7 @@ static const struct mtk_gate_regs vdec_core1_cg_regs = {
 		.regs = &vdec_core1_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr_inv,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_VDEC_CORE1_V(_id, _name, _parent) {    \
@@ -89,6 +91,7 @@ static const struct mtk_gate_regs ven1_cg_regs = {
 		.regs = &ven1_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr_inv,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_VEN1_V(_id, _name, _parent) {    \

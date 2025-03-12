@@ -31,6 +31,7 @@ static const struct mtk_gate_regs cam_m_cg_regs = {
 		.regs = &cam_m_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_CAM_M_V(_id, _name, _parent) {    \
@@ -84,6 +85,7 @@ static const struct mtk_gate_regs cam_ra_cg_regs = {
 		.regs = &cam_ra_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_CAM_RA_V(_id, _name, _parent) {    \
@@ -119,6 +121,7 @@ static const struct mtk_gate_regs cam_rb_cg_regs = {
 		.regs = &cam_rb_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_CAM_RB_V(_id, _name, _parent) {    \

@@ -37,6 +37,7 @@ static const struct mtk_gate_regs mm1_cg_regs = {
 		.regs = &mm0_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_MM0_V(_id, _name, _parent) {    \
@@ -52,6 +53,7 @@ static const struct mtk_gate_regs mm1_cg_regs = {
 		.regs = &mm1_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_MM1_V(_id, _name, _parent) {    \
@@ -161,6 +163,7 @@ static const struct mtk_gate_regs gce_d_cg_regs = {
 		.regs = &gce_d_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_no_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_GCE_D_V(_id, _name, _parent) {    \
@@ -192,6 +195,7 @@ static const struct mtk_gate_regs gce_m_cg_regs = {
 		.regs = &gce_m_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_no_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_GCE_M_V(_id, _name, _parent) {    \
@@ -229,6 +233,7 @@ static const struct mtk_gate_regs mminfra_config1_cg_regs = {
 		.regs = &mminfra_config0_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_MMINFRA_CONFIG0_V(_id, _name, _parent) {    \
@@ -244,6 +249,7 @@ static const struct mtk_gate_regs mminfra_config1_cg_regs = {
 		.regs = &mminfra_config1_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_MMINFRA_CONFIG1_V(_id, _name, _parent) {    \
