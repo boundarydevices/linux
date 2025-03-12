@@ -1,0 +1,123 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+#include "imx95-pinfunc.h"
+
+&{/} {
+	csi0_mclk: csi0-mclk {
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		compatible = "fixed-clock";
+	};
+};
+
+&csi_pixel_formatter_0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			formatter_0_in: endpoint {
+				remote-endpoint = <&mipi_csi0_out>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+
+			formatter_0_out: endpoint {
+				remote-endpoint = <&isi_in_2>;
+			};
+		};
+	};
+};
+
+&dphy_rx {
+	status = "okay";
+};
+
+&i2c_csi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	pivariety_0: camera@c {
+		compatible = "arducam,arducam-pivariety";
+		reg = <0x0c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi0_camera>;
+		clocks = <&csi0_mclk>;
+		clock-names = "xclk";
+		reset-gpios = <&gpio2 19 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+
+		port {
+			pivariety_0_ep: endpoint {
+				remote-endpoint = <&mipi_csi0_ep>;
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
+
+&isi {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@2 {
+			reg = <2>;
+
+			isi_in_2: endpoint {
+				remote-endpoint = <&formatter_0_out>;
+			};
+		};
+	};
+};
+
+&mipi_csi0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			mipi_csi0_ep: endpoint {
+				remote-endpoint = <&pivariety_0_ep>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+				mipi_csi0_out: endpoint {
+				remote-endpoint = <&formatter_0_in>;
+			};
+		};
+	};
+};
+
+&scmi_iomuxc {
+	pinctrl_csi0_camera: csi0-cameragrp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO19__GPIO2_IO_BIT19	0x31e
+		>;
+	};
+};

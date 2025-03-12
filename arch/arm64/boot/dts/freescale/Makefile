@@ -754,6 +754,12 @@ dtb-$(CONFIG_ARCH_MXC) += imx91-nitrogen-smarc.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx95-nitrogen-smarc.dtb \
 
+imx95-nitrogen-smarc-csi0-pivariety-dtbs := imx95-nitrogen-smarc.dtb imx95-nitrogen-smarc-csi0-pivariety.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-nitrogen-smarc-csi0-pivariety.dtb
+
+imx95-nitrogen-smarc-csi1-pivariety-dtbs := imx95-nitrogen-smarc.dtb imx95-nitrogen-smarc-csi1-pivariety.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx95-nitrogen-smarc-csi1-pivariety.dtb
+
 imx95-nitrogen-smarc-csi0-tevs-dtbs := imx95-nitrogen-smarc.dtb imx95-nitrogen-smarc-csi0-tevs.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx95-nitrogen-smarc-csi0-tevs.dtb
 
