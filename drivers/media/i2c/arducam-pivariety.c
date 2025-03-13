@@ -496,18 +496,16 @@ static int pivariety_enum_framesizes(struct v4l2_subdev *sd,
 
 	for (i = 0; i < num_supported_formats; i++) {
 		format = &supported_formats[i];
-		if (fse->code == format->mbus_code) {
-			if (fse->index >= format->num_resolution_set)
-				return -EINVAL;
+		if (fse->index >= format->num_resolution_set)
+			return -EINVAL;
 
-			resolution = &format->resolution_set[fse->index];
-			fse->min_width = resolution->width;
-			fse->max_width = resolution->width;
-			fse->min_height = resolution->height;
-			fse->max_height = resolution->height;
+		resolution = &format->resolution_set[fse->index];
+		fse->min_width = resolution->width;
+		fse->max_width = resolution->width;
+		fse->min_height = resolution->height;
+		fse->max_height = resolution->height;
 
-			return 0;
-		}
+		return 0;
 	}
 
 	return -EINVAL;
