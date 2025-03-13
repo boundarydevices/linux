@@ -1367,7 +1367,7 @@ static int pivariety_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct pivariety *pivariety;
-	u32 device_id, firmware_version;
+	u32 device_id, firmware_version, sensor_id;
 	int ret;
 
 	pivariety = devm_kzalloc(&client->dev, sizeof(*pivariety), GFP_KERNEL);
@@ -1413,6 +1413,12 @@ static int pivariety_probe(struct i2c_client *client)
 		ret = -ENODEV;
 		goto error_power_off;
 	}
+
+	ret = pivariety_read(pivariety, SENSOR_ID_REG, &sensor_id);
+	if (ret)
+		dev_err(dev, "read sensor ID failed\n");
+	else
+		dev_info(dev, "sensor id: 0x%04X\n", sensor_id);
 
 	ret = pivariety_read(pivariety, DEVICE_VERSION_REG, &firmware_version);
 	if (ret)
