@@ -746,7 +746,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-rpmsg.dtb \
 			  imx8mp-nitrogen_smarc-tevs.dtb \
 			  imx8mp-tag.dtb \
 
-dtb-$(CONFIG_ARCH_MXC) += imx93-nitrogen-smarc.dtb \
+dtb-$(CONFIG_ARCH_MXC) += imx93-bdx.dtb \
+			  imx93-nitrogen-smarc.dtb \
 			  imx93-nitrogen-smarc-ethosu.dtb \
 			  imx93-nitrogen-smarc-rpmsg.dtb \
 			  imx93-nitrogen-smarc-lvds.dtb \
