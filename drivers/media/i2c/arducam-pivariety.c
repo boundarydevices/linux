@@ -66,7 +66,7 @@ struct pivariety {
 	struct v4l2_subdev sd;
 	struct media_pad pad;
 
-	struct v4l2_mbus_config_mipi_csi2 bus;
+	struct v4l2_fwnode_bus_mipi_csi2 bus;
 	struct clk *xclk;
 	u32 xclk_freq;
 
@@ -954,13 +954,13 @@ static int pivariety_get_mbus_config(struct v4l2_subdev *sd, unsigned int pad,
 				     struct v4l2_mbus_config *cfg)
 {
 	struct pivariety *pivariety = to_pivariety(sd);
+	const u32 mask = (0xf << 10);
 
 	if (pivariety->lanes > pivariety->bus.num_data_lanes)
 		return -EINVAL;
 
 	cfg->type = V4L2_MBUS_CSI2_DPHY;
-	cfg->bus.mipi_csi2.flags = pivariety->bus.flags;
-	cfg->bus.mipi_csi2.num_data_lanes = pivariety->lanes;
+	cfg->flags = (pivariety->lanes << __ffs(mask)) & mask;
 
 	return 0;
 }
@@ -1353,7 +1353,7 @@ error_out:
 	return ret;
 }
 
-static int pivariety_probe(struct i2c_client *client)
+static int pivariety_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct device *dev = &client->dev;
 	struct pivariety *pivariety;
@@ -1456,7 +1456,7 @@ error_power_off:
 	return ret;
 }
 
-static void pivariety_remove(struct i2c_client *client)
+static int pivariety_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct pivariety *pivariety = to_pivariety(sd);
@@ -1467,6 +1467,8 @@ static void pivariety_remove(struct i2c_client *client)
 
 	pm_runtime_disable(&client->dev);
 	pm_runtime_set_suspended(&client->dev);
+
+	return 0;
 }
 
 static const struct dev_pm_ops pivariety_pm_ops = {
