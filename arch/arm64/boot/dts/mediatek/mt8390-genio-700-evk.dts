@@ -457,6 +457,15 @@
 			op-sink-microwatt = <10000000>;
 			orientation-switch = <&it5205fn>;
 			mode-switch = <&it5205fn>;
+			displayport = <&dp_intf1>;
+
+			altmodes {
+				dp {
+					svid = <0x0ff01>;
+					vdo = <0x1c1c47>;
+				};
+			};
+
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -664,6 +673,42 @@
 		ethernet_phy0: ethernet-phy@1 {
 			compatible = "ethernet-phy-id001c.c916";
 			reg = <0x1>;
+		};
+	};
+};
+
+&dp_intf1 {
+	status = "disabled";
+	mediatek,oob-hpd;
+	ports {
+		port {
+			dp_intf1_out: endpoint {
+				remote-endpoint = <&dptx_in>;
+			};
+		};
+	};
+};
+
+&dp_tx {
+	pinctrl-names = "default";
+	pinctrl-0 = <&dptx_pins>;
+	status = "disabled";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			dptx_in: endpoint {
+				remote-endpoint = <&dp_intf1_out>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			dptx_out: endpoint {
+				data-lanes = <0 1 2 3>;
+			};
 		};
 	};
 };
