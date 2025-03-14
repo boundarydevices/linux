@@ -1350,6 +1350,7 @@ _MTK_MODULE_OUTS = [
     "drivers/clk/mediatek/clk-pll.ko",
     "drivers/clk/mediatek/clk-pllfh.ko",
     "drivers/clk/mediatek/reset.ko",
+    "drivers/cpufreq/mediatek-cpufreq.ko",
     "drivers/cpufreq/mediatek-cpufreq-hw.ko",
     "drivers/dma-buf/heaps/system_heap.ko",
     "drivers/firmware/arm_scmi/transports/scmi_transport_optee.ko",
