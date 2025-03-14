@@ -90,6 +90,7 @@ struct mtk_dpi {
 	struct pinctrl_state *pins_dpi;
 	u32 output_fmt;
 	int refcount;
+	bool oob_hpd;
 	bool output_to_lvds;
 };
 
@@ -919,6 +920,9 @@ static int mtk_dpi_bind(struct device *dev, struct device *master, void *data)
 	}
 	drm_connector_attach_encoder(dpi->connector, &dpi->encoder);
 
+	if (dpi->oob_hpd)
+		dpi->connector->fwnode = dev_fwnode(dev);
+
 	return 0;
 
 err_cleanup:
@@ -1247,6 +1251,7 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 	dpi->pclk_src[3] = devm_clk_get_optional(dev, "TVDPLL_D8");
 	dpi->pclk_src[4] = devm_clk_get_optional(dev, "TVDPLL_D16");
 
+	dpi->oob_hpd = of_property_read_bool(dev->of_node, "mediatek,oob-hpd");
 	dpi->irq = platform_get_irq(pdev, 0);
 	if (dpi->irq < 0)
 		return dpi->irq;
