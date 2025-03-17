@@ -1014,3 +1014,26 @@
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 };
+
+&ssusb2 {
+	maximum-speed = "high-speed";
+	usb-role-switch;
+	dr_mode = "host";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	status = "okay";
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		vbus-supply = <&usb_p2_vbus>;
+	};
+};
+
+&u2port2 {
+	status = "okay";
+};
+
+&xhci2 {
+	status = "okay";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+};
