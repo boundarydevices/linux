@@ -1313,6 +1313,10 @@ pkg_install(
 _MTK_MODULE_OUTS = [
     # keep sorted
     "block/bfq.ko",
+    "drivers/bluetooth/btintel.ko",
+    "drivers/bluetooth/btmtk.ko",
+    "drivers/bluetooth/btrtl.ko",
+    "drivers/bluetooth/btusb.ko",
     "drivers/char/hw_random/mtk-rng.ko",
     "drivers/char/hw_random/optee-rng.ko",
     "drivers/clk/mediatek/clk-apmixed.ko",
