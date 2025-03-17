@@ -481,6 +481,7 @@
 };
 
 &lpspi3 { /* SPI0_PKB */
+	#address-cells = <0>;
 	fsl,spi-num-chipselects = <1>;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_lpspi3>;
@@ -488,8 +489,7 @@
 	spi-slave;
 	status = "okay";
 
-	spi3dev0: spi3@0 {
-		reg = <0>;
+	slave {
 		compatible = "lwn,bk4";
 		spi-max-frequency = <1000000>;
 	};
