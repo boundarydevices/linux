@@ -745,3 +745,7 @@
 	pinctrl-names = "default";
 	status = "okay";
 };
+
+&gpu {
+	mali-supply = <&mt6357_vcore_reg>;
+};
