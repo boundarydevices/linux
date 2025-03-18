@@ -1430,6 +1430,7 @@ kernel_build(
     make_goals = [
         "modules",
         "mediatek/mt8365-evk.dtb",
+        "mediatek/mt8365-evk-android.dtb",
         "mediatek/mt8390-genio-700-evk.dtb",
         "mediatek/mt8390-genio-700-evk-android.dtb",
         "mediatek/mt8390-genio-700-evk-android-dsi.dtb",
