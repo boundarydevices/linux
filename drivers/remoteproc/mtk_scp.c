@@ -1388,7 +1388,7 @@ static const struct mtk_scp_sizes_data default_scp_sizes = {
 };
 
 static const struct mtk_scp_sizes_data mt8188_scp_sizes = {
-	.max_dram_size = 0x800000,
+	.max_dram_size = 0x900000,
 	.ipi_share_buffer_size = 600,
 };
 
