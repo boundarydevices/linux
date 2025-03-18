@@ -820,7 +820,7 @@ static int cmdq_probe(struct platform_device *pdev)
 
 		cmdq->clocks[gce_timer_idx].id = timer_clk_name;
 		cmdq->clocks[gce_timer_idx].clk = devm_clk_get(&pdev->dev, timer_clk_name);
-		if (IS_ERR(cmdq->clocks[cmdq->pdata->gce_num].clk)) {
+		if (IS_ERR(cmdq->clocks[gce_timer_idx].clk)) {
 			return dev_err_probe(dev, PTR_ERR(cmdq->clocks[gce_timer_idx].clk),
 					     "failed to get gce timer clk\n");
 		}
