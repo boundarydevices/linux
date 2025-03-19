@@ -125,10 +125,12 @@ int mtk_hdmi_get_all_clk(struct mtk_hdmi *hdmi, struct device_node *np,
 
 	for (i = 0; i < num_clocks; i++) {
 		hdmi->clk[i] = of_clk_get_by_name(np, mtk_hdmi_clk_names[i]);
-		dev_err(hdmi->dev, "Getting clk name: %s\n", mtk_hdmi_clk_names[i]);
+		dev_dbg(hdmi->dev, "Getting clk name: %s\n", mtk_hdmi_clk_names[i]);
 
-		if (IS_ERR(hdmi->clk[i]))
+		if (IS_ERR(hdmi->clk[i])) {
+			dev_err(hdmi->dev, "Failed to get clk name: %s\n", mtk_hdmi_clk_names[i]);
 			return PTR_ERR(hdmi->clk[i]);
+		}
 	}
 
 	return 0;
