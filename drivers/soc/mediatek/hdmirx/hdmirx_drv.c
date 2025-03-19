@@ -266,6 +266,16 @@ static int uevent_dev_register(struct MTK_HDMI *myhdmi,
 	return ret;
 }
 
+static void uevent_dev_unregister(struct MTK_HDMI *myhdmi,
+	struct notify_device *sdev)
+{
+	device_remove_file(sdev->dev, &dev_attr_name);
+	device_remove_file(sdev->dev, &dev_attr_notify);
+	device_remove_file(sdev->dev, &dev_attr_status);
+	device_destroy(myhdmi->switch_class, MKDEV(0, sdev->index));
+	class_destroy(myhdmi->switch_class);
+}
+
 int notify_uevent(struct notify_device *sdev, int state)
 {
 	char *envp[3];
@@ -471,6 +481,18 @@ static int aud_uevent_dev_register(struct MTK_HDMI *myhdmi,
 	sdev->aud_bit = 0;
 
 	return ret;
+}
+
+static void aud_uevent_dev_unregister(struct MTK_HDMI *myhdmi,
+	struct aud_notify_device *sdev)
+{
+	device_remove_file(sdev->dev, &dev_attr_aud_notify);
+	device_remove_file(sdev->dev, &dev_attr_aud_name);
+	device_remove_file(sdev->dev, &dev_attr_aud_fs);
+	device_remove_file(sdev->dev, &dev_attr_aud_ch);
+	device_remove_file(sdev->dev, &dev_attr_aud_bit);
+	device_destroy(myhdmi->switch_aud_class, MKDEV(0, sdev->index));
+	class_destroy(myhdmi->switch_aud_class);
 }
 
 int aud_notify_uevent(struct aud_notify_device *sdev,
@@ -2077,6 +2099,14 @@ hdmirx_remove(struct platform_device *pdev)
 		RX_DEF_LOG("[RX] %s, myhdmi is NULL\n", __func__);
 		return -EINVAL;
 	}
+
+	uevent_dev_unregister(myhdmi, &myhdmi->switch_data);
+	aud_uevent_dev_unregister(myhdmi, &myhdmi->switch_aud_data);
+
+	device_destroy(myhdmi->rx_class, myhdmi->rx_devno);
+	class_destroy(myhdmi->rx_class);
+
+	hdmi2cmd_debug_uninit(myhdmi);
 
 	RX_DEF_LOG("[RX] %s\n", __func__);
 	hdmi_rx_power_off(myhdmi);
