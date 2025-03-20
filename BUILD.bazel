@@ -1438,6 +1438,7 @@ kernel_build(
     ],
     outs = [
         "arch/arm64/boot/dts/mediatek/mt8365-evk.dtb",
+	"arch/arm64/boot/dts/mediatek/mt8365-evk-android.dtb",
         "arch/arm64/boot/dts/mediatek/mt8390-genio-700-evk.dtb",
         "arch/arm64/boot/dts/mediatek/mt8390-genio-700-evk-android.dtb",
         "arch/arm64/boot/dts/mediatek/mt8390-genio-700-evk-android-dsi.dtb",
