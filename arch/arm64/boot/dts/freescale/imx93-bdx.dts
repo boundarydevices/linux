@@ -408,6 +408,7 @@
 	pinctrl-1 = <&pinctrl_lpi2c7>;
 	status = "okay";
 
+#if 0
 	/* 0x5d or 0x14 */
 	ts_goodix_dsi: touchscreen_dsi@5d {
 		compatible = "goodix,gt9271";
@@ -422,6 +423,18 @@
 		reset-gpios = <&gpio4 22 GPIO_ACTIVE_HIGH>; /* TP_RST */
 		status = "okay";
 	};
+#else
+       ts_ft5x06_lvds: touchscreen@38 {
+               compatible = "edt,ft5x06-ts";
+               interrupts-extended = <&gpio4 17 IRQ_TYPE_EDGE_FALLING>;
+               pinctrl-names = "default";
+               pinctrl-0 = <&pinctrl_ts_dsi_gt911>;
+               reg = <0x38>;
+               status = "okay";
+               //reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
+               wakeup-gpios = <&gpio4 17 GPIO_ACTIVE_LOW>;
+       };
+#endif
 
 #if 0
 	dsi0_sn65dsi84: dsi0@2c {
