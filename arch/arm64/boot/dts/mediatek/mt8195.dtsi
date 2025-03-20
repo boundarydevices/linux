@@ -24,6 +24,20 @@
 	#size-cells = <2>;
 
 	aliases {
+		ovl0 = &ovl0;
+		ovl1 = &ovl1;
+		rdma0 = &rdma0;
+		rdma1 = &rdma1;
+		color0 = &color0;
+		color1 = &color1;
+		ccorr0 = &ccorr0;
+		ccorr1 = &ccorr1;
+		aal0 = &aal0;
+		aal1 = &aal1;
+		gamma0 = &gamma0;
+		gamma1 = &gamma1;
+		dither0 = &dither0;
+		dither1 = &dither1;
 		dpi1 = &disp_dpi1;
 		dp-intf0 = &dp_intf0;
 		dp-intf1 = &dp_intf1;
@@ -33,6 +47,7 @@
 		ethdr0 = &ethdr0;
 		mutex0 = &mutex;
 		mutex1 = &mutex1;
+		merge0 = &merge0;
 		merge1 = &merge1;
 		merge2 = &merge2;
 		merge3 = &merge3;
@@ -3398,6 +3413,71 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DSC_WRAP0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0x9000 0x1000>;
+		};
+
+		ovl1: ovl@1c00a000 {
+			compatible = "mediatek,mt8195-disp-ovl", "mediatek,mt8183-disp-ovl";
+			reg = <0 0x1c00a000 0 0x1000>;
+			interrupts = <GIC_SPI 646 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DISP_OVL1>;
+			iommus = <&iommu_vpp M4U_PORT_L1_DISP_OVL0_RDMA0>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0xa000 0x1000>;
+		};
+
+		rdma1: rdma@1c00c000 {
+			compatible = "mediatek,mt8195-disp-rdma";
+			reg = <0 0x1c00c000 0 0x1000>;
+			interrupts = <GIC_SPI 648 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DISP_RDMA1>;
+			iommus = <&iommu_vpp M4U_PORT_L1_DISP_RDMA0>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0xc000 0x1000>;
+		};
+
+		color1: color@1c00d000 {
+			compatible = "mediatek,mt8195-disp-color", "mediatek,mt8173-disp-color";
+			reg = <0 0x1c00d000 0 0x1000>;
+			interrupts = <GIC_SPI 649 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DISP_COLOR1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0xd000 0x1000>;
+		};
+
+		ccorr1: ccorr@1c00e000 {
+			compatible = "mediatek,mt8195-disp-ccorr", "mediatek,mt8192-disp-ccorr";
+			reg = <0 0x1c00e000 0 0x1000>;
+			interrupts = <GIC_SPI 650 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DISP_CCORR1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0xe000 0x1000>;
+		};
+
+		aal1: aal@1c00f000 {
+			compatible = "mediatek,mt8195-disp-aal", "mediatek,mt8183-disp-aal";
+			reg = <0 0x1c00f000 0 0x1000>;
+			interrupts = <GIC_SPI 651 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DISP_AAL1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0xf000 0x1000>;
+		};
+
+		gamma1: gamma@1c010000 {
+			compatible = "mediatek,mt8195-disp-gamma", "mediatek,mt8183-disp-gamma";
+			reg = <0 0x1c010000 0 0x1000>;
+			interrupts = <GIC_SPI 652 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DISP_GAMMA1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c01XXXX 0x0000 0x1000>;
+		};
+
+		dither1: dither@1c011000 {
+			compatible = "mediatek,mt8195-disp-dither", "mediatek,mt8183-disp-dither";
+			reg = <0 0x1c011000 0 0x1000>;
+			interrupts = <GIC_SPI 653 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DISP_DITHER1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c01XXXX 0x1000 0x1000>;
 		};
 
 		merge0: merge@1c014000 {
