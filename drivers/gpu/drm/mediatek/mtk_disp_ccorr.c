@@ -55,11 +55,13 @@ void mtk_ccorr_clk_disable(struct device *dev)
 }
 
 void mtk_ccorr_config(struct device *dev, unsigned int w,
-			     unsigned int h, unsigned int vrefresh,
+			     unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 			     unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
 	struct mtk_disp_ccorr *ccorr = dev_get_drvdata(dev);
 
+	if (is_dual_pipe)
+		w /= 2;
 	mtk_ddp_write(cmdq_pkt, w << 16 | h, &ccorr->cmdq_reg, ccorr->regs,
 		      DISP_CCORR_SIZE);
 	mtk_ddp_write(cmdq_pkt, CCORR_ENGINE_EN, &ccorr->cmdq_reg, ccorr->regs,

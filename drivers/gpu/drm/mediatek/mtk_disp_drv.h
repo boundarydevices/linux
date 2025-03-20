@@ -15,7 +15,7 @@
 int mtk_aal_clk_enable(struct device *dev);
 void mtk_aal_clk_disable(struct device *dev);
 void mtk_aal_config(struct device *dev, unsigned int w,
-		    unsigned int h, unsigned int vrefresh,
+		    unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		    unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 void mtk_aal_gamma_set(struct device *dev, struct drm_crtc_state *state);
 void mtk_aal_start(struct device *dev);
@@ -25,7 +25,7 @@ void mtk_ccorr_ctm_set(struct device *dev, struct drm_crtc_state *state);
 int mtk_ccorr_clk_enable(struct device *dev);
 void mtk_ccorr_clk_disable(struct device *dev);
 void mtk_ccorr_config(struct device *dev, unsigned int w,
-		      unsigned int h, unsigned int vrefresh,
+		      unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		      unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 void mtk_ccorr_start(struct device *dev);
 void mtk_ccorr_stop(struct device *dev);
@@ -34,7 +34,7 @@ void mtk_color_bypass_shadow(struct device *dev);
 int mtk_color_clk_enable(struct device *dev);
 void mtk_color_clk_disable(struct device *dev);
 void mtk_color_config(struct device *dev, unsigned int w,
-		      unsigned int h, unsigned int vrefresh,
+		      unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		      unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 void mtk_color_start(struct device *dev);
 
@@ -54,7 +54,7 @@ int mtk_dsi_encoder_index(struct device *dev);
 int mtk_gamma_clk_enable(struct device *dev);
 void mtk_gamma_clk_disable(struct device *dev);
 void mtk_gamma_config(struct device *dev, unsigned int w,
-		      unsigned int h, unsigned int vrefresh,
+		      unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		      unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 void mtk_gamma_set(struct device *dev, struct drm_crtc_state *state);
 void mtk_gamma_set_common(void __iomem *regs, struct drm_crtc_state *state, bool lut_diff);
@@ -64,7 +64,7 @@ void mtk_gamma_stop(struct device *dev);
 int mtk_merge_clk_enable(struct device *dev);
 void mtk_merge_clk_disable(struct device *dev);
 void mtk_merge_config(struct device *dev, unsigned int width,
-		      unsigned int height, unsigned int vrefresh,
+		      unsigned int height, unsigned int vrefresh, bool is_dual_pipe,
 		      unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 void mtk_merge_start(struct device *dev);
 void mtk_merge_stop(struct device *dev);
@@ -80,7 +80,7 @@ void mtk_ovl_bypass_shadow(struct device *dev);
 int mtk_ovl_clk_enable(struct device *dev);
 void mtk_ovl_clk_disable(struct device *dev);
 void mtk_ovl_config(struct device *dev, unsigned int w,
-		    unsigned int h, unsigned int vrefresh,
+		    unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		    unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 int mtk_ovl_layer_check(struct device *dev, unsigned int idx,
 			struct mtk_plane_state *mtk_state);
@@ -113,7 +113,7 @@ void mtk_ovl_adaptor_disconnect(struct device *dev, struct device *mmsys_dev,
 int mtk_ovl_adaptor_clk_enable(struct device *dev);
 void mtk_ovl_adaptor_clk_disable(struct device *dev);
 void mtk_ovl_adaptor_config(struct device *dev, unsigned int w,
-			    unsigned int h, unsigned int vrefresh,
+			    unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 			    unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 void mtk_ovl_adaptor_layer_config(struct device *dev, unsigned int idx,
 				  struct mtk_plane_state *state,
@@ -134,7 +134,7 @@ void mtk_rdma_bypass_shadow(struct device *dev);
 int mtk_rdma_clk_enable(struct device *dev);
 void mtk_rdma_clk_disable(struct device *dev);
 void mtk_rdma_config(struct device *dev, unsigned int width,
-		     unsigned int height, unsigned int vrefresh,
+		     unsigned int height, unsigned int vrefresh,  bool is_dual_pipe,
 		     unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 unsigned int mtk_rdma_layer_nr(struct device *dev);
 void mtk_rdma_layer_config(struct device *dev, unsigned int idx,

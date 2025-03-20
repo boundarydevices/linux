@@ -127,10 +127,13 @@ static void mtk_merge_fifo_setting(struct mtk_disp_merge *priv,
 }
 
 void mtk_merge_config(struct device *dev, unsigned int w,
-		      unsigned int h, unsigned int vrefresh,
+		      unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		      unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
-	mtk_merge_advance_config(dev, w, 0, h, vrefresh, bpc, cmdq_pkt);
+	if (is_dual_pipe)
+		mtk_merge_advance_config(dev, w/2, w/2, h, vrefresh, bpc, cmdq_pkt);
+	else
+		mtk_merge_advance_config(dev, w, 0, h, vrefresh, bpc, cmdq_pkt);
 }
 
 void mtk_merge_advance_config(struct device *dev, unsigned int l_w, unsigned int r_w,

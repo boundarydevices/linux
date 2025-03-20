@@ -19,6 +19,8 @@ void mtk_drm_crtc_commit(struct drm_crtc *crtc);
 int mtk_drm_crtc_create(struct drm_device *drm_dev,
 			const unsigned int *path,
 			unsigned int path_len,
+			const unsigned int *dualpipe_path,
+			unsigned int dualpipe_path_len,
 			int priv_data_index,
 			const struct mtk_drm_route *conn_routes,
 			unsigned int conn_routes_num);

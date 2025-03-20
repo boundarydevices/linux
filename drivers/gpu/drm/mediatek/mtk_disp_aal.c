@@ -47,11 +47,12 @@ void mtk_aal_clk_disable(struct device *dev)
 }
 
 void mtk_aal_config(struct device *dev, unsigned int w,
-			   unsigned int h, unsigned int vrefresh,
+			   unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 			   unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
 	struct mtk_disp_aal *aal = dev_get_drvdata(dev);
-
+	if (is_dual_pipe)
+		w /= 2;
 	mtk_ddp_write(cmdq_pkt, w << 16 | h, &aal->cmdq_reg, aal->regs, DISP_AAL_SIZE);
 	mtk_ddp_write(cmdq_pkt, w << 16 | h, &aal->cmdq_reg, aal->regs, DISP_AAL_OUTPUT_SIZE);
 }

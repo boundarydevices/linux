@@ -24,8 +24,10 @@ struct mtk_plane_pending_state {
 	unsigned int			hdr_pitch;
 	unsigned int			format;
 	unsigned long long		modifier;
-	unsigned int			x;
-	unsigned int			y;
+	unsigned int			src_x;
+	unsigned int			src_y;
+	unsigned int			dst_x;
+	unsigned int			dst_y;
 	unsigned int			width;
 	unsigned int			height;
 	unsigned int			rotation;

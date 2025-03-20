@@ -66,6 +66,9 @@ struct mtk_drm_crtc {
 	unsigned int			max_ddp_comp_nr;
 	unsigned int			ddp_comp_nr;
 	struct mtk_ddp_comp		**ddp_comp;
+	bool				is_dual_pipe;
+	unsigned int			ddp_dualpipe_comp_nr;
+	struct mtk_ddp_comp		**ddp_dualpipe_comp;
 	unsigned int			conn_route_nr;
 	const struct mtk_drm_route	*conn_routes;
 
@@ -232,7 +235,7 @@ static void mtk_drm_crtc_mode_set_nofb(struct drm_crtc *crtc)
 static int mtk_crtc_ddp_clk_enable(struct mtk_drm_crtc *mtk_crtc)
 {
 	int ret;
-	int i;
+	int i, j = 0;
 
 	for (i = 0; i < mtk_crtc->ddp_comp_nr; i++) {
 		ret = mtk_ddp_comp_clk_enable(mtk_crtc->ddp_comp[i]);
@@ -242,10 +245,22 @@ static int mtk_crtc_ddp_clk_enable(struct mtk_drm_crtc *mtk_crtc)
 		}
 	}
 
+	if (mtk_crtc->is_dual_pipe) {
+		for (j = 0; j < mtk_crtc->ddp_dualpipe_comp_nr; j++) {
+			ret = mtk_ddp_comp_clk_enable(mtk_crtc->ddp_dualpipe_comp[j]);
+			if (ret) {
+				DRM_ERROR("Failed to enable dualpipe clock %d: %d\n", j, ret);
+				goto err;
+			}
+		}
+	}
+
 	return 0;
 err:
 	while (--i >= 0)
 		mtk_ddp_comp_clk_disable(mtk_crtc->ddp_comp[i]);
+	while (--j >= 0)
+		mtk_ddp_comp_clk_disable(mtk_crtc->ddp_dualpipe_comp[i]);
 	return ret;
 }
 
@@ -255,6 +270,32 @@ static void mtk_crtc_ddp_clk_disable(struct mtk_drm_crtc *mtk_crtc)
 
 	for (i = 0; i < mtk_crtc->ddp_comp_nr; i++)
 		mtk_ddp_comp_clk_disable(mtk_crtc->ddp_comp[i]);
+	if (mtk_crtc->is_dual_pipe)
+		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr; i++)
+			mtk_ddp_comp_clk_disable(mtk_crtc->ddp_dualpipe_comp[i]);
+}
+
+static
+struct mtk_ddp_comp *mtk_drm_ddp_dualpipe_comp_for_plane(struct drm_crtc *crtc,
+						struct drm_plane *plane,
+						unsigned int *local_layer)
+{
+	struct mtk_drm_crtc *mtk_crtc = to_mtk_crtc(crtc);
+	struct mtk_ddp_comp *comp;
+	int i, count = 0;
+	unsigned int local_index = plane - mtk_crtc->planes;
+
+	for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr; i++) {
+		comp = mtk_crtc->ddp_dualpipe_comp[i];
+		if (local_index < (count + mtk_ddp_comp_layer_nr(comp))) {
+			*local_layer = local_index - count;
+			return comp;
+		}
+		count += mtk_ddp_comp_layer_nr(comp);
+	}
+
+	WARN(1, "Failed to find component for plane %d\n", plane->index);
+	return NULL;
 }
 
 static
@@ -278,6 +319,91 @@ struct mtk_ddp_comp *mtk_drm_ddp_comp_for_plane(struct drm_crtc *crtc,
 
 	WARN(1, "Failed to find component for plane %d\n", plane->index);
 	return NULL;
+}
+
+static void mtk_drm_layer_dispatch_to_dual_pipe(
+	struct mtk_plane_state *plane_state,
+	struct mtk_plane_state *plane_state_l,
+	struct mtk_plane_state *plane_state_r,
+	unsigned int w)
+{
+	int src_w = 0, src_h = 0, dst_w = 0, dst_h = 0;
+	int left_bg = w/2;
+	int right_bg = w/2;
+	int roi_w = w;
+
+	if ((plane_state == NULL) || (plane_state_l == NULL) || (plane_state_r == NULL)) {
+		DRM_ERROR("%s input ptr is NULL\n", __func__);
+		return;
+	}
+
+	memcpy(plane_state_l,
+		plane_state, sizeof(struct mtk_plane_state));
+	memcpy(plane_state_r,
+		plane_state, sizeof(struct mtk_plane_state));
+
+	src_w = drm_rect_width(&plane_state->base.src) >> 16;
+	src_h = drm_rect_height(&plane_state->base.src) >> 16;
+	dst_w = drm_rect_width(&plane_state->base.dst);
+	dst_h = drm_rect_height(&plane_state->base.dst);
+
+	DRM_DEBUG_DRIVER("plane_ori: src_xy(%u,%u) dst_xy(%u,%u), src_wh(%u,%u), dst_wh(%u,%u)\n",
+			plane_state->pending.src_x, plane_state->pending.src_y,
+			plane_state->pending.dst_x, plane_state->pending.dst_y,
+			src_w, src_h, dst_w, dst_h);
+	/* left path */
+	plane_state_l->pending.width  = left_bg -
+		plane_state_l->pending.dst_x;
+
+	if (plane_state_l->pending.width > plane_state->pending.width)
+		plane_state_l->pending.width = plane_state->pending.width;
+
+	if (w/2 <= plane_state->pending.dst_x) {
+		plane_state_l->pending.dst_x = 0;
+		plane_state_l->pending.width = 0;
+		plane_state_l->pending.height = 0;
+		plane_state_l->pending.enable = 0;
+	}
+
+	if (plane_state_l->pending.width == 0)
+		plane_state_l->pending.height = 0;
+
+	DRM_DEBUG_DRIVER("plane_l: src_xy(%u,%u) dst_xy(%u,%u), w/h(%u,%u)\n",
+		plane_state_l->pending.src_x, plane_state_l->pending.src_y,
+		plane_state_l->pending.dst_x, plane_state_l->pending.dst_y,
+		plane_state_l->pending.width, plane_state_l->pending.height);
+	/* right path */
+	plane_state_r->pending.width +=
+		plane_state_r->pending.dst_x - (roi_w - right_bg);
+
+	if (plane_state_r->pending.width
+		> plane_state->pending.width)
+		plane_state_r->pending.width =
+		plane_state->pending.width;
+
+	plane_state_r->pending.dst_x +=
+		plane_state->pending.width -
+		plane_state_r->pending.width - (roi_w - right_bg);
+
+	plane_state_r->pending.src_x +=
+		plane_state->pending.width -
+		plane_state_r->pending.width;
+
+	if ((roi_w - right_bg) > (plane_state->pending.width
+		+ plane_state->pending.dst_x)) {
+		plane_state_r->pending.dst_x = 0;
+		plane_state_r->pending.width = 0;
+		plane_state_r->pending.height = 0;
+		plane_state_r->pending.enable = 0;
+	}
+
+	if (plane_state_r->pending.width == 0)
+		plane_state_r->pending.height = 0;
+
+	DRM_DEBUG_DRIVER("plane_r: src_xy(%u,%u) dst_xy(%u,%u), w/h(%u,%u)\n",
+		plane_state_r->pending.src_x, plane_state_r->pending.src_y,
+		plane_state_r->pending.dst_x, plane_state_r->pending.dst_y,
+		plane_state_r->pending.width, plane_state_r->pending.height);
 }
 
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
@@ -397,6 +523,21 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 
 	if (!mtk_ddp_comp_add(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 		mtk_mutex_add_comp(mtk_crtc->mutex, mtk_crtc->ddp_comp[i]->id);
+
+	if (mtk_crtc->is_dual_pipe) {
+		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr - 1; i++) {
+			if (!mtk_ddp_comp_connect(mtk_crtc->ddp_dualpipe_comp[i],
+						mtk_crtc->mmsys_dev,
+						mtk_crtc->ddp_dualpipe_comp[i + 1]->id))
+				mtk_mmsys_ddp_connect(mtk_crtc->mmsys_dev,
+						      mtk_crtc->ddp_dualpipe_comp[i]->id,
+						      mtk_crtc->ddp_dualpipe_comp[i + 1]->id);
+			if (!mtk_ddp_comp_add(mtk_crtc->ddp_dualpipe_comp[i], mtk_crtc->mutex))
+				mtk_mutex_add_comp(mtk_crtc->mutex,
+						   mtk_crtc->ddp_dualpipe_comp[i]->id);
+		}
+	}
+
 	mtk_mutex_enable(mtk_crtc->mutex);
 
 	for (i = 0; i < mtk_crtc->ddp_comp_nr; i++) {
@@ -405,14 +546,30 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 		if (i == 1)
 			mtk_ddp_comp_bgclr_in_on(comp);
 
-		mtk_ddp_comp_config(comp, width, height, vrefresh, bpc, NULL);
+		mtk_ddp_comp_config(comp, width, height, vrefresh,
+			mtk_crtc->is_dual_pipe, bpc, NULL);
 		mtk_ddp_comp_start(comp);
+	}
+
+	if (mtk_crtc->is_dual_pipe) {
+		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr; i++) {
+			struct mtk_ddp_comp *comp = mtk_crtc->ddp_dualpipe_comp[i];
+
+			if (i == 1)
+				mtk_ddp_comp_bgclr_in_on(comp);
+
+			mtk_ddp_comp_config(comp, width, height, vrefresh,
+						  mtk_crtc->is_dual_pipe, bpc, NULL);
+			mtk_ddp_comp_start(comp);
+		}
 	}
 
 	/* Initially configure all planes */
 	for (i = 0; i < mtk_crtc->layer_nr; i++) {
 		struct drm_plane *plane = &mtk_crtc->planes[i];
 		struct mtk_plane_state *plane_state;
+		struct mtk_plane_state plane_state_l;
+		struct mtk_plane_state plane_state_r;
 		struct mtk_ddp_comp *comp;
 		unsigned int local_layer;
 
@@ -421,9 +578,24 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 		/* should not enable layer before crtc enabled */
 		plane_state->pending.enable = false;
 		comp = mtk_drm_ddp_comp_for_plane(crtc, plane, &local_layer);
-		if (comp)
+		if (mtk_crtc->is_dual_pipe) {
+			mtk_drm_layer_dispatch_to_dual_pipe(plane_state, &plane_state_l,
+							&plane_state_r,
+							crtc->state->adjusted_mode.hdisplay);
+			if (comp)
+				mtk_ddp_comp_layer_config(comp, local_layer,
+							  &plane_state_l,
+							  NULL);
+			comp = mtk_drm_ddp_dualpipe_comp_for_plane(crtc, plane,
+							&local_layer);
+			if (comp)
+				mtk_ddp_comp_layer_config(comp, local_layer,
+							  &plane_state_r,
+							  NULL);
+		} else if (comp)
 			mtk_ddp_comp_layer_config(comp, local_layer,
-						  plane_state, NULL);
+						  plane_state,
+						  NULL);
 	}
 
 	return 0;
@@ -451,6 +623,20 @@ static void mtk_crtc_ddp_hw_fini(struct mtk_drm_crtc *mtk_crtc)
 		if (!mtk_ddp_comp_remove(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 			mtk_mutex_remove_comp(mtk_crtc->mutex,
 					      mtk_crtc->ddp_comp[i]->id);
+
+	if (mtk_crtc->is_dual_pipe) {
+		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr; i++) {
+			mtk_ddp_comp_stop(mtk_crtc->ddp_dualpipe_comp[i]);
+			if (i == 1)
+				mtk_ddp_comp_bgclr_in_off(mtk_crtc->ddp_dualpipe_comp[i]);
+		}
+
+		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr; i++)
+			if (!mtk_ddp_comp_remove(mtk_crtc->ddp_dualpipe_comp[i], mtk_crtc->mutex))
+				mtk_mutex_remove_comp(mtk_crtc->mutex,
+							mtk_crtc->ddp_dualpipe_comp[i]->id);
+	}
+
 	mtk_mutex_disable(mtk_crtc->mutex);
 	for (i = 0; i < mtk_crtc->ddp_comp_nr - 1; i++) {
 		if (!mtk_ddp_comp_disconnect(mtk_crtc->ddp_comp[i], mtk_crtc->mmsys_dev,
@@ -464,6 +650,23 @@ static void mtk_crtc_ddp_hw_fini(struct mtk_drm_crtc *mtk_crtc)
 	}
 	if (!mtk_ddp_comp_remove(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 		mtk_mutex_remove_comp(mtk_crtc->mutex, mtk_crtc->ddp_comp[i]->id);
+
+	if (mtk_crtc->is_dual_pipe) {
+		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr - 1; i++) {
+			if (!mtk_ddp_comp_disconnect(mtk_crtc->ddp_dualpipe_comp[i],
+							mtk_crtc->mmsys_dev,
+							mtk_crtc->ddp_dualpipe_comp[i + 1]->id))
+				mtk_mmsys_ddp_disconnect(mtk_crtc->mmsys_dev,
+							mtk_crtc->ddp_dualpipe_comp[i]->id,
+							mtk_crtc->ddp_dualpipe_comp[i + 1]->id);
+			if (!mtk_ddp_comp_remove(mtk_crtc->ddp_dualpipe_comp[i], mtk_crtc->mutex))
+				mtk_mutex_remove_comp(mtk_crtc->mutex,
+							mtk_crtc->ddp_dualpipe_comp[i]->id);
+		}
+		if (!mtk_ddp_comp_remove(mtk_crtc->ddp_dualpipe_comp[i], mtk_crtc->mutex))
+			mtk_mutex_remove_comp(mtk_crtc->mutex, mtk_crtc->ddp_dualpipe_comp[i]->id);
+	}
+
 	mtk_crtc_ddp_clk_disable(mtk_crtc);
 	mtk_mutex_unprepare(mtk_crtc->mutex);
 
@@ -494,7 +697,7 @@ static void mtk_crtc_ddp_config(struct drm_crtc *crtc,
 	if (state->pending_config) {
 		mtk_ddp_comp_config(comp, state->pending_width,
 				    state->pending_height,
-				    state->pending_vrefresh, 0,
+				    state->pending_vrefresh, mtk_crtc->is_dual_pipe, 0,
 				    cmdq_handle);
 
 		if (!cmdq_handle)
@@ -505,6 +708,8 @@ static void mtk_crtc_ddp_config(struct drm_crtc *crtc,
 		for (i = 0; i < mtk_crtc->layer_nr; i++) {
 			struct drm_plane *plane = &mtk_crtc->planes[i];
 			struct mtk_plane_state *plane_state;
+			struct mtk_plane_state plane_state_l;
+			struct mtk_plane_state plane_state_r;
 
 			plane_state = to_mtk_plane_state(plane->state);
 
@@ -513,11 +718,24 @@ static void mtk_crtc_ddp_config(struct drm_crtc *crtc,
 
 			comp = mtk_drm_ddp_comp_for_plane(crtc, plane,
 							  &local_layer);
-
-			if (comp)
+			if (mtk_crtc->is_dual_pipe) {
+				mtk_drm_layer_dispatch_to_dual_pipe(plane_state, &plane_state_l,
+							&plane_state_r,
+							crtc->state->adjusted_mode.hdisplay);
+				if (comp)
+					mtk_ddp_comp_layer_config(comp, local_layer,
+								&plane_state_l,
+								cmdq_handle);
+				comp = mtk_drm_ddp_dualpipe_comp_for_plane(crtc, plane,
+								&local_layer);
+				if (comp)
+					mtk_ddp_comp_layer_config(comp, local_layer,
+								&plane_state_r,
+								cmdq_handle);
+			} else if (comp)
 				mtk_ddp_comp_layer_config(comp, local_layer,
-							  plane_state,
-							  cmdq_handle);
+							plane_state,
+							cmdq_handle);
 			if (!cmdq_handle)
 				plane_state->pending.config = false;
 		}
@@ -530,6 +748,8 @@ static void mtk_crtc_ddp_config(struct drm_crtc *crtc,
 		for (i = 0; i < mtk_crtc->layer_nr; i++) {
 			struct drm_plane *plane = &mtk_crtc->planes[i];
 			struct mtk_plane_state *plane_state;
+			struct mtk_plane_state plane_state_l;
+			struct mtk_plane_state plane_state_r;
 
 			plane_state = to_mtk_plane_state(plane->state);
 
@@ -538,11 +758,24 @@ static void mtk_crtc_ddp_config(struct drm_crtc *crtc,
 
 			comp = mtk_drm_ddp_comp_for_plane(crtc, plane,
 							  &local_layer);
-
-			if (comp)
+			if (mtk_crtc->is_dual_pipe) {
+				mtk_drm_layer_dispatch_to_dual_pipe(plane_state, &plane_state_l,
+							&plane_state_r,
+							crtc->state->adjusted_mode.hdisplay);
+				if (comp)
+					mtk_ddp_comp_layer_config(comp, local_layer,
+								&plane_state_l,
+								cmdq_handle);
+				comp = mtk_drm_ddp_dualpipe_comp_for_plane(crtc, plane,
+								&local_layer);
+				if (comp)
+					mtk_ddp_comp_layer_config(comp, local_layer,
+								&plane_state_r,
+								cmdq_handle);
+			} else if (comp)
 				mtk_ddp_comp_layer_config(comp, local_layer,
-							  plane_state,
-							  cmdq_handle);
+							plane_state,
+							cmdq_handle);
 			if (!cmdq_handle)
 				plane_state->pending.async_config = false;
 		}
@@ -782,9 +1015,21 @@ static void mtk_drm_crtc_atomic_enable(struct drm_crtc *crtc,
 		return;
 	}
 
+	if (mtk_crtc->is_dual_pipe) {
+		ret = pm_runtime_resume_and_get(mtk_crtc->ddp_dualpipe_comp[0]->dev);
+		if (ret < 0) {
+			DRM_DEV_ERROR(mtk_crtc->ddp_dualpipe_comp[0]->dev,
+				"Failed to enable power domain: %d\n", ret);
+			pm_runtime_put(comp->dev);
+			return;
+		}
+	}
+
 	ret = mtk_crtc_ddp_hw_init(mtk_crtc);
 	if (ret) {
 		pm_runtime_put(comp->dev);
+		if (mtk_crtc->is_dual_pipe)
+			pm_runtime_put(mtk_crtc->ddp_dualpipe_comp[0]->dev);
 		return;
 	}
 
@@ -822,10 +1067,10 @@ static void mtk_drm_crtc_atomic_disable(struct drm_crtc *crtc,
 		wait_event_timeout(mtk_crtc->cb_blocking_queue,
 				   mtk_crtc->cmdq_vblank_cnt == 0,
 				   msecs_to_jiffies(500));
-#endif
+#else
 	/* Wait for planes to be disabled */
 	drm_crtc_wait_one_vblank(crtc);
-
+#endif
 	drm_crtc_vblank_off(crtc);
 	mtk_ddp_comp_unregister_vblank_cb(comp);
 	mtk_crtc_ddp_hw_fini(mtk_crtc);
@@ -866,11 +1111,18 @@ static void mtk_drm_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct mtk_drm_crtc *mtk_crtc = to_mtk_crtc(crtc);
 	int i;
 
-	if (crtc->state->color_mgmt_changed)
+	if (crtc->state->color_mgmt_changed) {
 		for (i = 0; i < mtk_crtc->ddp_comp_nr; i++) {
 			mtk_ddp_gamma_set(mtk_crtc->ddp_comp[i], crtc->state);
 			mtk_ddp_ctm_set(mtk_crtc->ddp_comp[i], crtc->state);
 		}
+		if (mtk_crtc->is_dual_pipe) {
+			for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr; i++) {
+				mtk_ddp_gamma_set(mtk_crtc->ddp_dualpipe_comp[i], crtc->state);
+				mtk_ddp_ctm_set(mtk_crtc->ddp_dualpipe_comp[i], crtc->state);
+			}
+		}
+	}
 	mtk_drm_crtc_update_config(mtk_crtc, !!mtk_crtc->event);
 }
 
@@ -995,6 +1247,7 @@ struct device *mtk_drm_crtc_dma_dev_get(struct drm_crtc *crtc)
 
 int mtk_drm_crtc_create(struct drm_device *drm_dev,
 			const unsigned int *path, unsigned int path_len,
+			const unsigned int *dualpipe_path, unsigned int dualpipe_path_len,
 			int priv_data_index, const struct mtk_drm_route *conn_routes,
 			unsigned int conn_routes_num)
 {
@@ -1040,6 +1293,25 @@ int mtk_drm_crtc_create(struct drm_device *drm_dev,
 		if (!comp->dev) {
 			dev_err(dev, "Component %pOF not initialized\n", node);
 			return -ENODEV;
+		}
+	}
+
+	if (dualpipe_path && (dualpipe_path_len > 0)) {
+		for (i = 0; i < dualpipe_path_len; i++) {
+			unsigned int comp_id = dualpipe_path[i];
+			struct device_node *node;
+
+			node = priv->comp_node[comp_id];
+
+			/* Not all drm components have a DTS device node, such as ovl_adaptor,
+			 * which is the drm bring up sub driver
+			 */
+			if (!node) {
+				dev_err(dev,
+					"Not creating crtc %d because component %d is disabled, missing or not initialized\n",
+					crtc_i, comp_id);
+				return -ENODEV;
+			}
 		}
 	}
 
@@ -1093,6 +1365,29 @@ int mtk_drm_crtc_create(struct drm_device *drm_dev,
 			if (comp->funcs->ctm_set)
 				has_ctm = true;
 		}
+	}
+
+	if (dualpipe_path && (dualpipe_path_len > 0)) {
+		mtk_crtc->ddp_dualpipe_comp_nr = dualpipe_path_len;
+		mtk_crtc->ddp_dualpipe_comp = devm_kmalloc_array(dev,
+						mtk_crtc->ddp_dualpipe_comp_nr,
+						sizeof(*mtk_crtc->ddp_dualpipe_comp),
+						GFP_KERNEL);
+		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr; i++) {
+			unsigned int comp_id = dualpipe_path[i];
+			struct mtk_ddp_comp *comp;
+
+			comp = &priv->ddp_comp[comp_id];
+			mtk_crtc->ddp_dualpipe_comp[i] = comp;
+			if (comp->funcs) {
+				if (comp->funcs->gamma_set)
+					gamma_lut_size = MTK_LUT_SIZE;
+
+				if (comp->funcs->ctm_set)
+					has_ctm = true;
+			}
+		}
+		mtk_crtc->is_dual_pipe = true;
 	}
 
 	for (i = 0; i < mtk_crtc->ddp_comp_nr; i++)

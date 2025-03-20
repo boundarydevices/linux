@@ -151,7 +151,7 @@ void mtk_ethdr_layer_config(struct device *dev, unsigned int idx,
 	struct mtk_ethdr *priv = dev_get_drvdata(dev);
 	struct mtk_ethdr_comp *mixer = &priv->ethdr_comp[ETHDR_MIXER];
 	struct mtk_plane_pending_state *pending = &state->pending;
-	unsigned int offset = (pending->x & 1) << 31 | pending->y << 16 | pending->x;
+	unsigned int offset = (pending->dst_x & 1) << 31 | pending->dst_y << 16 | pending->dst_x;
 	unsigned int align_width = ALIGN_DOWN(pending->width, 2);
 	unsigned int alpha_con = 0;
 
@@ -170,7 +170,7 @@ void mtk_ethdr_layer_config(struct device *dev, unsigned int idx,
 
 	mtk_mmsys_mixer_in_config(priv->mmsys_dev, idx + 1, alpha_con ? false : true,
 				  DEFAULT_9BIT_ALPHA,
-				  pending->x & 1 ? MIXER_INX_MODE_EVEN_EXTEND :
+				  pending->dst_x & 1 ? MIXER_INX_MODE_EVEN_EXTEND :
 				  MIXER_INX_MODE_BYPASS, align_width / 2 - 1, cmdq_pkt);
 
 	mtk_ddp_write(cmdq_pkt, pending->height << 16 | align_width, &mixer->cmdq_base,
@@ -183,7 +183,7 @@ void mtk_ethdr_layer_config(struct device *dev, unsigned int idx,
 }
 
 void mtk_ethdr_config(struct device *dev, unsigned int w,
-		      unsigned int h, unsigned int vrefresh,
+		      unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		      unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
 	struct mtk_ethdr *priv = dev_get_drvdata(dev);

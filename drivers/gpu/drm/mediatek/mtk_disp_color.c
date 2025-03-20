@@ -58,11 +58,13 @@ void mtk_color_clk_disable(struct device *dev)
 }
 
 void mtk_color_config(struct device *dev, unsigned int w,
-		      unsigned int h, unsigned int vrefresh,
+		      unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		      unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
 	struct mtk_disp_color *color = dev_get_drvdata(dev);
 
+	if (is_dual_pipe)
+		w /= 2;
 	mtk_ddp_write(cmdq_pkt, w, &color->cmdq_reg, color->regs, DISP_COLOR_WIDTH(color));
 	mtk_ddp_write(cmdq_pkt, h, &color->cmdq_reg, color->regs, DISP_COLOR_HEIGHT(color));
 }

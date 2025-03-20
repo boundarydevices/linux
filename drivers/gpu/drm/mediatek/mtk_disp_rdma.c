@@ -182,7 +182,7 @@ void mtk_rdma_stop(struct device *dev)
 }
 
 void mtk_rdma_config(struct device *dev, unsigned int width,
-		     unsigned int height, unsigned int vrefresh,
+		     unsigned int height, unsigned int vrefresh, bool is_dual_pipe,
 		     unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
 	unsigned int threshold;
@@ -190,6 +190,8 @@ void mtk_rdma_config(struct device *dev, unsigned int width,
 	struct mtk_disp_rdma *rdma = dev_get_drvdata(dev);
 	u32 rdma_fifo_size;
 
+	if (is_dual_pipe)
+		width /= 2;
 	mtk_ddp_write_mask(cmdq_pkt, width, &rdma->cmdq_reg, rdma->regs,
 			   DISP_REG_RDMA_SIZE_CON_0, 0xfff);
 	mtk_ddp_write_mask(cmdq_pkt, height, &rdma->cmdq_reg, rdma->regs,

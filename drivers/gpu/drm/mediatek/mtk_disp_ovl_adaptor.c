@@ -124,7 +124,7 @@ void mtk_ovl_adaptor_layer_config(struct device *dev, unsigned int idx,
 		pending->enable, pending->format);
 	dev_dbg(dev, "addr 0x%pad, fb w:%d, {%d,%d,%d,%d}\n",
 		&pending->addr, (pending->pitch / fmt_info->cpp[0]),
-		pending->x, pending->y, pending->width, pending->height);
+		pending->src_x, pending->src_y, pending->width, pending->height);
 
 	rdma_l = ovl_adaptor->comp[OVL_ADAPTOR_MDP_RDMA0 + 2 * idx];
 	rdma_r = ovl_adaptor->comp[OVL_ADAPTOR_MDP_RDMA0 + 2 * idx + 1];
@@ -187,13 +187,13 @@ void mtk_ovl_adaptor_layer_config(struct device *dev, unsigned int idx,
 }
 
 void mtk_ovl_adaptor_config(struct device *dev, unsigned int w,
-			    unsigned int h, unsigned int vrefresh,
+			    unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 			    unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
 	mtk_ethdr_config(ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0], w, h,
-			 vrefresh, bpc, cmdq_pkt);
+			 vrefresh, is_dual_pipe, bpc, cmdq_pkt);
 }
 
 void mtk_ovl_adaptor_start(struct device *dev)

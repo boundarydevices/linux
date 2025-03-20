@@ -114,9 +114,9 @@ static const unsigned int mt2712_mtk_ddp_third[] = {
 static unsigned int mt8167_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL0,
 	DDP_COMPONENT_COLOR0,
-	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_CCORR0,
 	DDP_COMPONENT_AAL0,
-	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_GAMMA0,
 	DDP_COMPONENT_DITHER0,
 	DDP_COMPONENT_RDMA0,
 	DDP_COMPONENT_DSI0,
@@ -136,7 +136,7 @@ static const unsigned int mt8173_mtk_ddp_main[] = {
 static const unsigned int mt8173_mtk_ddp_ext[] = {
 	DDP_COMPONENT_OVL1,
 	DDP_COMPONENT_COLOR1,
-	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_GAMMA1,
 	DDP_COMPONENT_RDMA1,
 	DDP_COMPONENT_DPI0,
 };
@@ -146,9 +146,9 @@ static const unsigned int mt8183_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL_2L0,
 	DDP_COMPONENT_RDMA0,
 	DDP_COMPONENT_COLOR0,
-	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_CCORR0,
 	DDP_COMPONENT_AAL0,
-	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_GAMMA0,
 	DDP_COMPONENT_DITHER0,
 	DDP_COMPONENT_DSI0,
 };
@@ -163,9 +163,9 @@ static const unsigned int mt8186_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL0,
 	DDP_COMPONENT_RDMA0,
 	DDP_COMPONENT_COLOR0,
-	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_CCORR0,
 	DDP_COMPONENT_AAL0,
-	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_GAMMA0,
 	DDP_COMPONENT_POSTMASK0,
 	DDP_COMPONENT_DITHER0,
 	DDP_COMPONENT_DSI0,
@@ -181,9 +181,9 @@ static const unsigned int mt8188_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL0,
 	DDP_COMPONENT_RDMA0,
 	DDP_COMPONENT_COLOR0,
-	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_CCORR0,
 	DDP_COMPONENT_AAL0,
-	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_GAMMA0,
 	DDP_COMPONENT_POSTMASK0,
 	DDP_COMPONENT_DITHER0,
 };
@@ -226,9 +226,9 @@ static const unsigned int mt8192_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL_2L0,
 	DDP_COMPONENT_RDMA0,
 	DDP_COMPONENT_COLOR0,
-	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_CCORR0,
 	DDP_COMPONENT_AAL0,
-	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_GAMMA0,
 	DDP_COMPONENT_POSTMASK0,
 	DDP_COMPONENT_DITHER0,
 	DDP_COMPONENT_DSI0,
@@ -244,9 +244,9 @@ static const unsigned int mt8195_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL0,
 	DDP_COMPONENT_RDMA0,
 	DDP_COMPONENT_COLOR0,
-	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_CCORR0,
 	DDP_COMPONENT_AAL0,
-	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_GAMMA0,
 	DDP_COMPONENT_DITHER0,
 };
 
@@ -263,6 +263,17 @@ static const unsigned int mt8195_mtk_ddp_main_routes_1[] = {
 static const struct mtk_drm_route mt8195_mtk_ddp_main_routes[] = {
 	{0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_0), mt8195_mtk_ddp_main_routes_0},
 	{0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_1), mt8195_mtk_ddp_main_routes_1}
+};
+
+static const unsigned int mt8195_mtk_ddp_main_subpipe[] = {
+	DDP_COMPONENT_OVL1,
+	DDP_COMPONENT_RDMA1,
+	DDP_COMPONENT_COLOR1,
+	DDP_COMPONENT_CCORR1,
+	DDP_COMPONENT_AAL1,
+	DDP_COMPONENT_GAMMA1,
+	DDP_COMPONENT_DITHER1,
+	DDP_COMPONENT_MERGE0,
 };
 
 static const unsigned int mt8195_mtk_ddp_ext[] = {
@@ -287,9 +298,9 @@ static const unsigned int mt8365_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL0,
 	DDP_COMPONENT_RDMA0,
 	DDP_COMPONENT_COLOR0,
-	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_CCORR0,
 	DDP_COMPONENT_AAL0,
-	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_GAMMA0,
 	DDP_COMPONENT_DITHER0,
 	DDP_COMPONENT_DSI0,
 };
@@ -385,6 +396,8 @@ static const struct mtk_mmsys_driver_data mt8192_mmsys_driver_data = {
 static const struct mtk_mmsys_driver_data mt8195_vdosys0_driver_data = {
 	.main_path = mt8195_mtk_ddp_main,
 	.main_len = ARRAY_SIZE(mt8195_mtk_ddp_main),
+	.main_subpipe_path = mt8195_mtk_ddp_main_subpipe,
+	.main_subpipe_len = ARRAY_SIZE(mt8195_mtk_ddp_main_subpipe),
 	.conn_routes = mt8195_mtk_ddp_main_routes,
 	.conn_routes_num = ARRAY_SIZE(mt8195_mtk_ddp_main_routes),
 	.mmsys_dev_num = 2,
@@ -509,6 +522,11 @@ static bool mtk_drm_find_mmsys_comp(struct mtk_drm_private *private, int comp_id
 			if (drv_data->main_path[i] == comp_id)
 				return true;
 
+	if (drv_data->main_subpipe_path)
+		for (i = 0; i < drv_data->main_subpipe_len; i++)
+			if (drv_data->main_subpipe_path[i] == comp_id)
+				return true;
+
 	if (drv_data->ext_path)
 		for (i = 0; i < drv_data->ext_len; i++)
 			if (drv_data->ext_path[i] == comp_id)
@@ -580,29 +598,41 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 	 */
 	for (i = 0; i < MAX_CRTC; i++) {
 		for (j = 0; j < private->data->mmsys_dev_num; j++) {
+			bool is_dual_pipe = false;
 			priv_n = private->all_drm_private[j];
+
+			if ((priv_n->data->main_subpipe_path) && (priv_n->data->main_subpipe_len)) {
+				int lenp;
+				struct device_node  *node;
+
+				node = priv_n->comp_node[priv_n->data->main_subpipe_path[0]];
+				if (of_find_property(node, "mediatek,enable-dualpipe", &lenp))
+					is_dual_pipe = true;
+			}
 
 			if (i == 0 && priv_n->data->main_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->main_path,
-							  priv_n->data->main_len, j,
-							  priv_n->data->conn_routes,
-							  priv_n->data->conn_routes_num);
+					priv_n->data->main_len,
+					is_dual_pipe ? priv_n->data->main_subpipe_path : NULL,
+					is_dual_pipe ? priv_n->data->main_subpipe_len : 0,
+					j, priv_n->data->conn_routes,
+					priv_n->data->conn_routes_num);
 				if (ret)
 					goto err_component_unbind;
 
 				continue;
 			} else if (i == 1 && priv_n->data->ext_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->ext_path,
-							  priv_n->data->ext_len, j,
-							  priv_n->data->conn_routes,
-							  priv_n->data->conn_routes_num);
+					priv_n->data->ext_len, NULL, 0,  j,
+					priv_n->data->conn_routes,
+					priv_n->data->conn_routes_num);
 				if (ret)
 					goto err_component_unbind;
 
 				continue;
 			} else if (i == 2 && priv_n->data->third_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->third_path,
-							  priv_n->data->third_len, j, NULL, 0);
+					priv_n->data->third_len, NULL, 0, j, NULL, 0);
 				if (ret)
 					goto err_component_unbind;
 

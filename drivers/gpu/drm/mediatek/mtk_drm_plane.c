@@ -204,8 +204,10 @@ static void mtk_plane_update_new_state(struct drm_plane_state *new_state,
 	mtk_plane_state->pending.modifier = modifier;
 	mtk_plane_state->pending.addr = addr;
 	mtk_plane_state->pending.hdr_addr = hdr_addr;
-	mtk_plane_state->pending.x = new_state->dst.x1;
-	mtk_plane_state->pending.y = new_state->dst.y1;
+	mtk_plane_state->pending.src_x = (new_state->src.x1 >> 16);
+	mtk_plane_state->pending.src_y = (new_state->src.y1 >> 16);
+	mtk_plane_state->pending.dst_x = new_state->dst.x1;
+	mtk_plane_state->pending.dst_y = new_state->dst.y1;
 	mtk_plane_state->pending.width = drm_rect_width(&new_state->dst);
 	mtk_plane_state->pending.height = drm_rect_height(&new_state->dst);
 	mtk_plane_state->pending.rotation = new_state->rotation;

@@ -50,7 +50,7 @@ struct mtk_ddp_comp_funcs {
 	int (*clk_enable)(struct device *dev);
 	void (*clk_disable)(struct device *dev);
 	void (*config)(struct device *dev, unsigned int w,
-		       unsigned int h, unsigned int vrefresh,
+		       unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		       unsigned int bpc, struct cmdq_pkt *cmdq_pkt);
 	void (*start)(struct device *dev);
 	void (*stop)(struct device *dev);
@@ -108,12 +108,12 @@ static inline void mtk_ddp_comp_clk_disable(struct mtk_ddp_comp *comp)
 }
 
 static inline void mtk_ddp_comp_config(struct mtk_ddp_comp *comp,
-				       unsigned int w, unsigned int h,
-				       unsigned int vrefresh, unsigned int bpc,
+				       unsigned int w, unsigned int h, unsigned int vrefresh,
+				       bool is_dual_pipe, unsigned int bpc,
 				       struct cmdq_pkt *cmdq_pkt)
 {
 	if (comp->funcs && comp->funcs->config)
-		comp->funcs->config(comp->dev, w, h, vrefresh, bpc, cmdq_pkt);
+		comp->funcs->config(comp->dev, w, h, vrefresh, is_dual_pipe, bpc, cmdq_pkt);
 }
 
 static inline void mtk_ddp_comp_start(struct mtk_ddp_comp *comp)

@@ -100,11 +100,13 @@ void mtk_gamma_set(struct device *dev, struct drm_crtc_state *state)
 }
 
 void mtk_gamma_config(struct device *dev, unsigned int w,
-		      unsigned int h, unsigned int vrefresh,
+		      unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		      unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
 	struct mtk_disp_gamma *gamma = dev_get_drvdata(dev);
 
+	if (is_dual_pipe)
+		w /= 2;
 	mtk_ddp_write(cmdq_pkt, h << 16 | w, &gamma->cmdq_reg, gamma->regs,
 		      DISP_GAMMA_SIZE);
 	if (gamma->data && gamma->data->has_dither)
