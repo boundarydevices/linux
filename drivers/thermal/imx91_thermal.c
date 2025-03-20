@@ -106,6 +106,7 @@ static int imx91_tmu_get_temp(struct thermal_zone_device *tz, int *temp)
 	struct imx91_tmu *tmu = sensor->priv;
 	u32 val;
 	int ret;
+	int16_t data;
 
 	ret = readl_relaxed_poll_timeout(tmu->base + STAT0, val,
 					 val & STAT0_DRDY0_IF_MASK, 1000,
@@ -113,8 +114,8 @@ static int imx91_tmu_get_temp(struct thermal_zone_device *tz, int *temp)
 	if (ret)
 		return -EAGAIN;
 
-	val = readl_relaxed(tmu->base + DATA0) & 0xffffU;
-	*temp = (int)val * 1000LL / 64LL;
+	data = readw_relaxed(tmu->base + DATA0);
+	*temp = data * 1000 / 64;
 	if (*temp < TMU_TEMP_LOW_LIMIT || *temp > TMU_TEMP_HIGH_LIMIT)
 		return -EAGAIN;
 
