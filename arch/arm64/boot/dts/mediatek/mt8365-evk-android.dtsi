@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2025 BayLibre, SAS.
+ * Author: Esteban Blanc <eblanc@baylibre.com>
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/mt8365-pinfunc.h>
+#include "dt-bindings/interrupt-controller/irq.h"
+
+&reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	ramoops@0x4FF00000 {
+		compatible = "ramoops";
+		reg = <0x0 0x4FF00000 0x0 0x00100000>;
+		record-size = <0x00008000>;
+		console-size = <0x00008000>;
+		ftrace-size = <0x00000000>;
+		pmsg-size = <0x00008000>;
+	};
+};
+
