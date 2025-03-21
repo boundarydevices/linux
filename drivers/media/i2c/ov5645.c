@@ -29,6 +29,7 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <media/v4l2-ctrls.h>
+#include <media/v4l2-event.h>
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-subdev.h>
 
@@ -1018,6 +1019,18 @@ stream_off_rpm_put:
 	return ret;
 }
 
+static int ov5645_s_power(struct v4l2_subdev *sub_dev, int on)
+{
+       return 0;
+}
+
+static const struct v4l2_subdev_core_ops ov5645_core_ops = {
+	.s_power = ov5645_s_power,
+	.log_status = v4l2_ctrl_subdev_log_status,
+	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
+	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
+};
+
 static const struct v4l2_subdev_video_ops ov5645_video_ops = {
 	.s_stream = ov5645_s_stream,
 };
@@ -1032,8 +1045,20 @@ static const struct v4l2_subdev_pad_ops ov5645_subdev_pad_ops = {
 };
 
 static const struct v4l2_subdev_ops ov5645_subdev_ops = {
+	.core = &ov5645_core_ops,
 	.video = &ov5645_video_ops,
 	.pad = &ov5645_subdev_pad_ops,
+};
+
+static int ov5645_link_setup(struct media_entity *entity,
+			   const struct media_pad *local,
+			   const struct media_pad *remote, u32 flags)
+{
+	return 0;
+}
+
+static const struct media_entity_operations ov5645_sd_media_ops = {
+	.link_setup = ov5645_link_setup,
 };
 
 static int ov5645_probe(struct i2c_client *client)
@@ -1166,6 +1191,7 @@ static int ov5645_probe(struct i2c_client *client)
 	ov5645->pad.flags = MEDIA_PAD_FL_SOURCE;
 	ov5645->sd.dev = &client->dev;
 	ov5645->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+	ov5645->sd.entity.ops = &ov5645_sd_media_ops;
 
 	ret = media_entity_pads_init(&ov5645->sd.entity, 1, &ov5645->pad);
 	if (ret < 0) {
