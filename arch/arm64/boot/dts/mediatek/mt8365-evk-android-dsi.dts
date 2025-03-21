@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2025 BayLibre, SAS.
+ * Author: Esteban Blanc <eblanc@baylibre.com>
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/mt8365-pinfunc.h>
+#include "dt-bindings/interrupt-controller/irq.h"
+
+#include "mt8365-evk-android.dtsi"
+
+&pio {
+	touch_pins: touch_pins {
+		touch_interrupt {
+			pinmux = <MT8365_PIN_78_CMHSYNC__FUNC_GPIO78>;
+			input-enable;
+			bias-disable;
+		};
+
+		touch_rst {
+			pinmux = <MT8365_PIN_79_CMVSYNC__FUNC_GPIO79>;
+			output-low;
+		};
+	};
+};
+
+&dsi0 {
+	status = "okay";
+};
+
+&panel {
+	status = "okay";
+};
+
+&i2c1 {
+	status = "okay";
+
+	touch: gt911@5d {
+		compatible = "goodix,gt9271";
+		reg = <0x5d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_pins>;
+		interrupt-parent = <&pio>;
+		interrupts = <78 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&pio 78 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pio 79 GPIO_ACTIVE_HIGH>;
+	};
+};

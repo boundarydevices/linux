@@ -202,7 +202,7 @@
 	#size-cells = <0>;
 	status = "okay";
 
-	panel@0 {
+	panel: panel@0 {
 		compatible = "startek,kd070fhfid015";
 		reg = <0>;
 		enable-gpios = <&pio 67 GPIO_ACTIVE_HIGH>;
