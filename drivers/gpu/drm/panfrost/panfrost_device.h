@@ -25,6 +25,14 @@ struct panfrost_perfcnt;
 #define NUM_JOB_SLOTS 3
 #define MAX_PM_DOMAINS 5
 
+/**
+ * enum panfrost_gpu_quirks - GPU optional quirks
+ * @GPU_QUIRK_FORCE_AARCH64_PGTABLE: Use AARCH64_4K page table format
+ */
+enum panfrost_gpu_quirks {
+	GPU_QUIRK_FORCE_AARCH64_PGTABLE,
+};
+
 struct panfrost_features {
 	u16 id;
 	u16 revision;
@@ -75,6 +83,9 @@ struct panfrost_compatible {
 
 	/* Vendor implementation quirks callback */
 	void (*vendor_quirk)(struct panfrost_device *pfdev);
+
+	/* GPU configuration quirks */
+	u8 gpu_quirks;
 };
 
 struct panfrost_device {
@@ -133,6 +144,11 @@ struct panfrost_mmu {
 	int as;
 	atomic_t as_count;
 	struct list_head list;
+	struct {
+		u64 transtab;
+		u64 memattr;
+		u64 transcfg;
+	} cfg;
 };
 
 struct panfrost_file_priv {
