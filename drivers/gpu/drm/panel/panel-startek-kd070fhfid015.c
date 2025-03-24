@@ -279,15 +279,22 @@ static int stk_panel_add(struct stk_panel *stk)
 		return ret;
 	}
 
-	stk->backlight = drm_panel_create_dsi_backlight(stk->dsi);
-	if (IS_ERR(stk->backlight)) {
-		ret = PTR_ERR(stk->backlight);
-		dev_err(dev, "failed to register backlight %d\n", ret);
-		return ret;
-	}
-
 	drm_panel_init(&stk->base, &stk->dsi->dev, &stk_panel_funcs,
 		       DRM_MODE_CONNECTOR_DSI);
+
+	ret = drm_panel_of_backlight(&stk->base);
+	if (ret)
+		return ret;
+
+	if (!stk->base.backlight) {
+		dev_warn(dev, "cannot get backlight property: %d. falling back to drm_panel_create_dsi_backlight\n", ret);
+		stk->backlight = drm_panel_create_dsi_backlight(stk->dsi);
+		if (IS_ERR(stk->backlight)) {
+			ret = PTR_ERR(stk->backlight);
+			dev_err(dev, "failed to register backlight %d\n", ret);
+			return ret;
+		}
+	}
 
 	drm_panel_add(&stk->base);
 
