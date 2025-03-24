@@ -51,31 +51,6 @@
 &disp_dsi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&panel_default_pins>;
-	#address-cells = <1>;
-	#size-cells = <0>;
 	poweron-in-hs-mode = <0>;
 	status = "okay";
-
-	panel@0 {
-		compatible = "startek,kd070fhfid078";
-		reg = <0>;
-		reset-gpios = <&pio 25 GPIO_ACTIVE_HIGH>;
-		dcdc-gpios = <&pio 45 GPIO_ACTIVE_HIGH>;
-		backlight = <&backlight_lcd1>;
-		iovcc-supply = <&dsi0_en>;
-		status = "okay";
-		port {
-			panel0_in: endpoint {
-				remote-endpoint = <&disp_dsi0_out>;
-			};
-		};
-	};
-
-	ports {
-		port {
-			disp_dsi0_out: endpoint {
-				remote-endpoint = <&panel0_in>;
-			};
-		};
-	};
 };

@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2025 BayLibre, SAS.
+ * Author: Esteban Blanc <eblanc@baylibre.com>
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "mt8390-genio-700-evk-android-dsi.dtsi"
+
+&disp_dsi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	panel: panel@0 {
+		compatible = "startek,kd070fhfid015";
+		reg = <0>;
+		reset-gpios = <&pio 25 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&pio 45 GPIO_ACTIVE_HIGH>;
+		backlight = <&backlight_lcd1>;
+		iovcc-supply = <&dsi0_en>;
+		status = "okay";
+		port {
+			panel0_in: endpoint {
+				remote-endpoint = <&disp_dsi0_out>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			disp_dsi0_out: endpoint {
+				remote-endpoint = <&panel0_in>;
+			};
+		};
+	};
+};
