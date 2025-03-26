@@ -458,15 +458,22 @@ int wave6_vpu_ctrl_require_buffer(struct device *dev, struct wave6_vpu_entity *e
 	struct vpu_ctrl *ctrl = dev_get_drvdata(dev);
 	struct vpu_buf *pbuf;
 	u32 size;
-	int ret = -ENOMEM;
+	int ret;
 
 	if (!ctrl || !entity)
 		return -EINVAL;
 
+	ret = pm_runtime_resume_and_get(ctrl->dev);
+	if (ret) {
+		dev_err(ctrl->dev, "pm runtime resume fail, ret = %d\n", ret);
+		return ret;
+	}
+
+	ret = -ENOMEM;
 	size = entity->read_reg(entity->dev, W6_CMD_SET_CTRL_WORK_BUF_SIZE);
 	dprintk(dev, "require work buffer, size = 0x%x\n", size);
 	if (!size)
-		return 0;
+		goto exit;
 
 	WARN_ON(size > WAVE6_WORKBUF_SIZE);
 
@@ -484,6 +491,7 @@ int wave6_vpu_ctrl_require_buffer(struct device *dev, struct wave6_vpu_entity *e
 	ret = 0;
 exit:
 	entity->write_reg(entity->dev, W6_CMD_SET_CTRL_WORK_BUF_SIZE, 0);
+	pm_runtime_put_sync(ctrl->dev);
 	dprintk(dev, "require work buffer, ret = %d\n", ret);
 	wave6_vpu_ctrl_prepare_work_buffer(ctrl);
 	return ret;
