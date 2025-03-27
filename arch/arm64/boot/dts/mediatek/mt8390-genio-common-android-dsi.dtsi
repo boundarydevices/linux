@@ -10,7 +10,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
 
-#include "mt8390-genio-700-evk-android.dtsi"
+#include "mt8390-genio-common-android.dtsi"
 
 &{/} {
 	backlight_lcd1: backlight-lcd1 {

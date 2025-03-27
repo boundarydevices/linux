@@ -7,7 +7,7 @@
 /dts-v1/;
 /plugin/;
 
-#include "mt8390-genio-700-evk-android-dsi.dtsi"
+#include "mt8390-genio-common-android-dsi.dtsi"
 
 &disp_dsi0 {
 	#address-cells = <1>;

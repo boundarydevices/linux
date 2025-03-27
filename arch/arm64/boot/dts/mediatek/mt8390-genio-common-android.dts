@@ -7,4 +7,4 @@
 /dts-v1/;
 /plugin/;
 
-#include "mt8390-genio-700-evk-android.dtsi"
+#include "mt8390-genio-common-android.dtsi"
