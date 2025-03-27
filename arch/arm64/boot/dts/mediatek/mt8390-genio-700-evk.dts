@@ -7,7 +7,6 @@
  */
 /dts-v1/;
 
-#include "mt8188.dtsi"
 #include "mt8390-genio-common.dtsi"
 
 / {

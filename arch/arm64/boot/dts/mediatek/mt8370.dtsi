@@ -4,9 +4,6 @@
  * Author: Louis-Alexis Eyraud <louisalexis.eyraud@collabora.com>
  */
 
-/dts-v1/;
-#include "mt8188.dtsi"
-
 / {
 	compatible = "mediatek,mt8370";
 
