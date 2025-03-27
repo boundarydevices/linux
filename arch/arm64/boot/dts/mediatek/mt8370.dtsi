@@ -2316,6 +2316,7 @@
 			power-domains = <&spm MT8188_POWER_DOMAIN_MFG2>,
 					<&spm MT8188_POWER_DOMAIN_MFG3>;
 			power-domain-names = "core0", "core1";
+			#cooling-cells = <2>;
 			status = "disabled";
 		};
 
