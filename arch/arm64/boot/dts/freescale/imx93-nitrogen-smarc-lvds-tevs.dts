@@ -10,6 +10,10 @@
 	compatible = "fsl,imx93-nitrogen-smarc-lvds-tevs", "fsl,imx93";
 };
 
+&dphy_rx {
+	status = "okay";
+};
+
 &i2c_mux_som_csi0 {
 	pca9554_a27_0: pca9554@27 {
 		compatible = "nxp,pca9554";
@@ -41,28 +45,39 @@
 	};
 };
 
-&cameradev {
-	status = "okay";
-};
-
-&isi_0 {
+&isi {
 	status = "okay";
 
-	cap_device {
-		status = "okay";
+	port {
+		isi_in: endpoint {
+			remote-endpoint = <&mipi_csi_out>;
+		};
 	};
 };
 
 &mipi_csi {
 	status = "okay";
 
-	port {
-		mipi_csi_ep: endpoint {
-			remote-endpoint = <&tevs_0_ep>;
-			data-lanes = <2>;
-			cfg-clk-range = <28>;
-			hs-clk-range = <0x16>;
-			bus-type = <4>;
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			mipi_csi_ep: endpoint {
+				remote-endpoint = <&tevs_0_ep>;
+				data-lanes = <1 2>;
+				clock-lanes = <0>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+
+			mipi_csi_out: endpoint {
+				remote-endpoint = <&isi_in>;
+			};
 		};
 	};
 };
