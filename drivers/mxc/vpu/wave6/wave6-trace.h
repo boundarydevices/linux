@@ -17,7 +17,7 @@ DECLARE_EVENT_CLASS(register_access,
 		__field(u32, value)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(dev));
+		__assign_str(name);
 		__entry->addr = addr;
 		__entry->value = value;
 	),
@@ -41,7 +41,7 @@ TRACE_EVENT(send_command,
 		__field(u32, cmd)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(vpu_dev->dev));
+		__assign_str(name);
 		__entry->id = id;
 		__entry->std = std;
 		__entry->cmd = cmd;
@@ -58,7 +58,7 @@ TRACE_EVENT(irq,
 		__field(u32, irq)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(vpu_dev->dev));
+		__assign_str(name);
 		__entry->irq = irq;
 	),
 	TP_printk("%s: irq 0x%x", __get_str(name), __entry->irq)
@@ -74,10 +74,10 @@ TRACE_EVENT(set_state,
 		__string(nxt_state, wave6_vpu_instance_state_name(state))
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(inst->dev->dev));
+		__assign_str(name);
 		__entry->id = inst->id;
-		__assign_str(cur_state, wave6_vpu_instance_state_name(inst->state));
-		__assign_str(nxt_state, wave6_vpu_instance_state_name(state));
+		__assign_str(cur_state);
+		__assign_str(nxt_state);
 	),
 	TP_printk("%s: inst[%d] set state %s -> %s",
 		  __get_str(name), __entry->id, __get_str(cur_state), __get_str(nxt_state))
@@ -99,9 +99,9 @@ DECLARE_EVENT_CLASS(inst_internal,
 		__field(u32, error_cnt)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(inst->dev->dev));
+		__assign_str(name);
 		__entry->id = inst->id;
-		__assign_str(type, V4L2_TYPE_IS_OUTPUT(type) ? "output" : "capture");
+		__assign_str(type);
 		__entry->pixelformat  = V4L2_TYPE_IS_OUTPUT(type) ? inst->src_fmt.pixelformat :
 								    inst->dst_fmt.pixelformat;
 		__entry->width = V4L2_TYPE_IS_OUTPUT(type) ? inst->src_fmt.width :
@@ -143,7 +143,7 @@ TRACE_EVENT(dec_pic,
 		__field(u32, size)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(inst->dev->dev));
+		__assign_str(name);
 		__entry->id = inst->id;
 		__entry->srcidx = srcidx;
 		__entry->start = inst->codec_info->dec_info.stream_rd_ptr;
@@ -172,7 +172,7 @@ TRACE_EVENT(source_change,
 		__field(u32, ycbcr_enc)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(inst->dev->dev));
+		__assign_str(name);
 		__entry->id = inst->id;
 		__entry->width = info->pic_width,
 		__entry->height = info->pic_height,
@@ -212,7 +212,7 @@ TRACE_EVENT(dec_done,
 		__field(u32, warn)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(inst->dev->dev));
+		__assign_str(name);
 		__entry->id = inst->id;
 		__entry->dec_flag = info->frame_decoded_flag;
 		__entry->dec_poc = info->decoded_poc;
@@ -251,7 +251,7 @@ TRACE_EVENT(enc_pic,
 		__field(u32, end_flag)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(inst->dev->dev));
+		__assign_str(name);
 		__entry->id = inst->id;
 		__entry->srcidx = param->src_idx;
 		__entry->buf_y = param->source_frame->buf_y;
@@ -285,7 +285,7 @@ TRACE_EVENT(enc_done,
 		__field(u32, avg_qp)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(inst->dev->dev));
+		__assign_str(name);
 		__entry->id = inst->id;
 		__entry->srcidx = info->enc_src_idx;
 		__entry->frmidx = info->recon_frame_index;
@@ -310,9 +310,9 @@ TRACE_EVENT(s_ctrl,
 		__field(u32, val)
 	),
 	TP_fast_assign(
-		__assign_str(name, dev_name(inst->dev->dev));
+		__assign_str(name);
 		__entry->id = inst->id;
-		__assign_str(ctrl_name, ctrl->name);
+		__assign_str(ctrl_name);
 		__entry->val = ctrl->val;
 	),
 	TP_printk("%s: inst[%d] %s = %d",
