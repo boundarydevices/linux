@@ -174,6 +174,7 @@ enum mtk_iommu_plat {
 	M4U_MT8183,
 	M4U_MT8186,
 	M4U_MT8188,
+	M4U_MT8189,
 	M4U_MT8192,
 	M4U_MT8195,
 	M4U_MT8365,
@@ -343,6 +344,7 @@ static int mtk_iommu_hw_init(const struct mtk_iommu_data *data, unsigned int ban
 
 static LIST_HEAD(m4ulist);	/* List all the M4U HWs */
 static LIST_HEAD(apulist);	/* List the apu iommu HWs */
+static LIST_HEAD(infralist);	/* List the iommu_infra HW */
 
 #define for_each_m4u(data, head)  list_for_each_entry(data, head, list)
 
@@ -359,6 +361,26 @@ static const struct mtk_iommu_iova_region mt8188_multi_dom_apu[] = {
 	{ .iova_base = 0x70000000ULL,	.size = 0x12600000},	/* APU VLM */
 	{ .iova_base = SZ_4G,		.size = SZ_4G * 3},	/* APU VPU */
 	#endif
+};
+
+static const struct mtk_iommu_iova_region mt8189_multi_dom_apu[] = {
+	{ .iova_base = 0x200000ULL,	.size = SZ_512M},	/* APU SECURE */
+	#if IS_ENABLED(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+	{ .iova_base = SZ_1G,		.size = 0xc0000000},	/* APU CODE */
+	{ .iova_base = 0x70000000ULL,	.size = 0x12600000},	/* APU VLM */
+	{ .iova_base = SZ_4G,		.size = SZ_4G * 3},	/* APU VPU */
+	#endif
+};
+
+static const struct mtk_iommu_iova_region mt8189_multi_dom[] = {
+	{ .iova_base = 0,               .size = MTK_IOMMU_IOVA_SZ_4G, },	/* 0 ~ 4G */
+	#if IS_ENABLED(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+	{ .iova_base = SZ_4G,		.size = MTK_IOMMU_IOVA_SZ_4G, },	/* 4G ~ 8G */
+	{ .iova_base = SZ_4G * 2,	.size = MTK_IOMMU_IOVA_SZ_4G, },	/* 8G ~ 12G */
+	{ .iova_base = SZ_4G * 3,	.size = MTK_IOMMU_IOVA_SZ_4G, },	/* 12G ~ 16G */
+	#endif
+	/* this region is linear mapped in atf for GCE use, so need to reserve */
+	{ .iova_base = 0x50000000,      .size = SZ_1M, },	/* 1G+256M ~ 1G+257M */
 };
 
 #define MT8192_MULTI_REGION_NR_MAX	6
@@ -1840,6 +1862,66 @@ static const struct mtk_iommu_plat_data mt8188_data_apu = {
 	.larbid_remap	= {{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}},
 };
 
+static const u32 mt8189_larb_region_msk[MT8192_MULTI_REGION_NR_MAX][MTK_LARB_NR_MAX] = {
+	[0] = {~0, ~0, ~0, [22] = BIT(0)},	/* Region0: all ports for larb0/1/2 */
+	[1] = {[3] = ~0, [4] = ~0},		/* Region1: all ports for larb4(3)/7(4) */
+	[2] = {[5] = ~0, [6] = ~0,		/* Region2: all ports for larb9(5)/11(6) */
+	       [7] = ~0, [8] = ~0,		/* Region2: all ports for larb13(7)/14(8) */
+	       [9] = ~0, [10] = ~0,		/* Region2: all ports for larb16(9)/17(10) */
+	       [11] = ~0, [12] = ~0,		/* Region2: all ports for larb19(11)/20(12) */
+	       [21] = ~0},			/* Region2: larb21 fake GCE larb */
+};
+
+static const struct mtk_iommu_plat_data mt8189_data_infra = {
+	.m4u_plat	= M4U_MT8189,
+	.flags		= WR_THROT_EN | DCM_DISABLE | MTK_IOMMU_TYPE_INFRA |
+			  CFG_IFA_MASTER_IN_ATF | SHARE_PGTABLE | PGTABLE_PA_35_EN,
+	.hw_list	= &infralist,
+	.banks_num	= 1,
+	.banks_enable	= {true},
+	.inv_sel_reg	= REG_MMU_INV_SEL_GEN2,
+	.iova_region	= single_domain,
+	.iova_region_nr	= ARRAY_SIZE(single_domain),
+};
+
+static const struct mtk_iommu_plat_data mt8189_data_mm = {
+	.m4u_plat	= M4U_MT8189,
+	.flags		= HAS_BCLK | HAS_SUB_COMM_3BITS | OUT_ORDER_WR_EN |
+			  WR_THROT_EN | IOVA_34_EN | MTK_IOMMU_TYPE_MM |
+			  PGTABLE_PA_35_EN,
+	.hw_list	= &m4ulist,
+	.inv_sel_reg	= REG_MMU_INV_SEL_GEN2,
+	.banks_num	= 5,
+	.banks_enable	= {true, false, false, false, false},
+	.iova_region	= mt8189_multi_dom,
+	.iova_region_nr	= ARRAY_SIZE(mt8189_multi_dom),
+	.iova_region_larb_msk = mt8189_larb_region_msk,
+	.larbid_remap	= {{0}, {1}, {21/*GCE_D*/, 21/*GCE_M*/, 2},
+			   {19, 20, 9, 11}, {7}, {4},
+			   {13, 17}, {14, 16}},
+};
+
+static const unsigned int mt8189_apu_region_msk[][MTK_LARB_NR_MAX] = {
+	[0] = {[0] = BIT(2)},	/* Region0: fake larb 0 APU_SECURE */
+	[1] = {[0] = BIT(1)},	/* Region1: fake larb 0 APU_CODE */
+	[2] = {[0] = BIT(3)},	/* Region2: fake larb 0 APU_VLM */
+	[3] = {[0] = BIT(0)},	/* Region3: fake larb 0 APU_DATA */
+};
+
+static const struct mtk_iommu_plat_data mt8189_data_apu = {
+	.m4u_plat       = M4U_MT8189,
+	.flags          = IOVA_34_EN | DCM_DISABLE |
+			  MTK_IOMMU_TYPE_APU | PGTABLE_PA_35_EN,
+	.hw_list        = &apulist,
+	.inv_sel_reg    = REG_MMU_INV_SEL_GEN2,
+	.banks_num	= 1,
+	.banks_enable	= {true},
+	.iova_region	= mt8189_multi_dom_apu,
+	.iova_region_nr	= ARRAY_SIZE(mt8189_multi_dom_apu),
+	.larbid_remap   = {{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}},
+	.iova_region_larb_msk = mt8189_apu_region_msk,
+};
+
 static const unsigned int mt8192_larb_region_msk[MT8192_MULTI_REGION_NR_MAX][MTK_LARB_NR_MAX] = {
 	[0] = {~0, ~0},				/* Region0: larb0/1 */
 	[1] = {0, 0, 0, 0, ~0, ~0, 0, ~0},	/* Region1: larb4/5/7 */
@@ -1974,6 +2056,9 @@ static const struct of_device_id mtk_iommu_of_ids[] = {
 	{ .compatible = "mediatek,mt8188-iommu-infra", .data = &mt8188_data_infra},
 	{ .compatible = "mediatek,mt8188-iommu-vdo",   .data = &mt8188_data_vdo},
 	{ .compatible = "mediatek,mt8188-iommu-vpp",   .data = &mt8188_data_vpp},
+	{ .compatible = "mediatek,mt8189-iommu-infra", .data = &mt8189_data_infra},
+	{ .compatible = "mediatek,mt8189-iommu-mm",   .data = &mt8189_data_mm},
+	{ .compatible = "mediatek,mt8189-iommu-apu",   .data = &mt8189_data_apu},
 	{ .compatible = "mediatek,mt8192-m4u", .data = &mt8192_data},
 	{ .compatible = "mediatek,mt8195-iommu-apu",   .data = &mt8195_data_apu},
 	{ .compatible = "mediatek,mt8195-iommu-infra", .data = &mt8195_data_infra},
