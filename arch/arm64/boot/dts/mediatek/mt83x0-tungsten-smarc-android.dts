@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2025 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "mt8390-genio-common-android.dtsi"
