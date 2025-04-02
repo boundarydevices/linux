@@ -261,19 +261,19 @@ int mtk_soundcard_common_probe(struct platform_device *pdev)
 	else
 		adsp_node = NULL;
 
-	if (adsp_node) {
-		if (of_property_read_bool(pdev->dev.of_node, "mediatek,dai-link")) {
-			ret = mtk_sof_dailink_parse_of(card, pdev->dev.of_node,
-						       "mediatek,dai-link",
-						       card->dai_link, card->num_links);
-			if (ret) {
-				of_node_put(adsp_node);
-				of_node_put(platform_node);
-				return dev_err_probe(&pdev->dev, ret,
-						     "Cannot parse mediatek,dai-link\n");
-			}
+	if (of_property_read_bool(pdev->dev.of_node, "mediatek,dai-link")) {
+		ret = mtk_sof_dailink_parse_of(card, pdev->dev.of_node,
+					       "mediatek,dai-link",
+					       card->dai_link, card->num_links);
+		if (ret) {
+			of_node_put(adsp_node);
+			of_node_put(platform_node);
+			return dev_err_probe(&pdev->dev, ret,
+					     "Cannot parse mediatek,dai-link\n");
 		}
+	}
 
+	if (adsp_node) {
 		soc_card_data->sof_priv = pdata->sof_priv;
 		card->probe = mtk_sof_card_probe;
 		card->late_probe = mtk_sof_card_late_probe;
