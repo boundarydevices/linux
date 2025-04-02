@@ -1313,6 +1313,7 @@ pkg_install(
 _MTK_MODULE_OUTS = [
     # keep sorted
     "block/bfq.ko",
+    "drivers/base/regmap/regmap-spi.ko",
     "drivers/bluetooth/btintel.ko",
     "drivers/bluetooth/btmtk.ko",
     "drivers/bluetooth/btrtl.ko",
@@ -1422,6 +1423,20 @@ _MTK_MODULE_OUTS = [
     "drivers/watchdog/mtk_wdt.ko",
     "net/mac80211/mac80211.ko",
     "net/wireless/cfg80211.ko",
+    "sound/core/snd-compress.ko",
+    "sound/core/snd-pcm-dmaengine.ko",
+    "sound/soc/codecs/snd-soc-dmic.ko",
+    "sound/soc/codecs/snd-soc-es8326.ko",
+    "sound/soc/codecs/snd-soc-hdmi-codec.ko",
+    "sound/soc/codecs/snd-soc-max98390.ko",
+    "sound/soc/codecs/snd-soc-mt6359.ko",
+    "sound/soc/codecs/snd-soc-nau8315.ko",
+    "sound/soc/codecs/snd-soc-nau8825.ko",
+    "sound/soc/codecs/snd-soc-rt5682s.ko",
+    "sound/soc/mediatek/common/snd-soc-mtk-common.ko",
+    "sound/soc/mediatek/mt8188/mt8188-mt6359.ko",
+    "sound/soc/mediatek/mt8188/snd-soc-mt8188-afe.ko",
+    "sound/soc/snd-soc-core.ko",
 ]
 
 _MTK_EXT_MODULES = [
