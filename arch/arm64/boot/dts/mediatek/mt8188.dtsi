@@ -3647,6 +3647,10 @@
 			reg = <0 0x1c01d000 0 0x1000>;
 			#clock-cells = <1>;
 			mboxes = <&gce0 0 CMDQ_THR_PRIO_4>;
+			clocks = <&vdosys0 CLK_VDO0_DL_ASYNC2>,
+				<&vdosys0 CLK_VDO0_DL_RELAY3>,
+				<&vdosys0 CLK_VDO0_DL_RELAY4>;
+			clock-names = "cross_sys_async0","cross_sys_async1","cross_sys_async2";
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c01XXXX 0xd000 0x1000>;
 			mediatek,gce-events =
 				 <CMDQ_EVENT_VDO0_DISP_STREAM_DONE_0>;
@@ -3658,6 +3662,9 @@
 			#clock-cells = <1>;
 			#reset-cells = <1>;
 			mboxes = <&gce0 1 CMDQ_THR_PRIO_4>;
+			clocks = <&vdosys1 CLK_VDO1_MERGE_VDO1_DL_ASYNC>,
+				<&vdosys1 CLK_VDO1_DSC_VDO1_DL_ASYNC>;
+			clock-names = "cross_sys_async0","cross_sys_async1";
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0 0x1000>;
 		};
 

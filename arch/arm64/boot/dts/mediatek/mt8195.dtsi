@@ -3271,6 +3271,10 @@
 			compatible = "mediatek,mt8195-vdosys0", "mediatek,mt8195-mmsys", "syscon";
 			reg = <0 0x1c01a000 0 0x1000>;
 			mboxes = <&gce0 0 CMDQ_THR_PRIO_4>;
+			clocks = <&vdosys0 CLK_VDO0_DL_ASYNC2>,
+				<&vdosys0 CLK_VDO0_DL_ASYNC3>,
+				<&vdosys0 CLK_VDO0_DL_ASYNC4>;
+			clock-names = "cross_sys_async0","cross_sys_async1","cross_sys_async2";
 			#clock-cells = <1>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c01XXXX 0xa000 0x1000>;
 		};
@@ -3548,6 +3552,9 @@
 			reg = <0 0x1c100000 0 0x1000>;
 			mboxes = <&gce0 1 CMDQ_THR_PRIO_4>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x0000 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_VDO0_MERGE_TO_VDO1_DL_ASYNC>,
+				<&vdosys1 CLK_VDO1_VDO0_DSC_TO_VDO1_DL_ASYNC>;
+			clock-names = "cross_sys_async0","cross_sys_async1";
 			#clock-cells = <1>;
 			#reset-cells = <1>;
 		};
