@@ -82,6 +82,7 @@ struct mtk_ddp_comp_funcs {
 	void (*add)(struct device *dev, struct mtk_mutex *mutex);
 	void (*remove)(struct device *dev, struct mtk_mutex *mutex);
 	int (*encoder_index)(struct device *dev);
+	void (*set_2p_input)(struct device *dev, bool is_2p_input);
 	bool (*check_output_to_lvds)(struct device *dev);
 };
 

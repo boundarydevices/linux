@@ -45,6 +45,7 @@ void mtk_dither_set_common(void __iomem *regs, struct cmdq_client_reg *cmdq_reg,
 void mtk_dpi_start(struct device *dev);
 void mtk_dpi_stop(struct device *dev);
 int mtk_dpi_encoder_index(struct device *dev);
+void mtk_dpi_set_2p_input(struct device *dev, bool is_2p_input);
 bool mtk_dpi_check_output_to_lvds(struct device *dev);
 
 void mtk_dsi_ddp_start(struct device *dev);

@@ -33,6 +33,8 @@ struct mtk_drm_route {
 struct mtk_mmsys_driver_data {
 	const unsigned int *main_path;
 	unsigned int main_len;
+	const unsigned int *main_dualpipe_path;
+	unsigned int main_dualpipe_len;
 	const unsigned int *main_subpipe_path;
 	unsigned int main_subpipe_len;
 	const unsigned int *ext_path;
@@ -41,6 +43,8 @@ struct mtk_mmsys_driver_data {
 	unsigned int third_len;
 	const struct mtk_drm_route *conn_routes;
 	unsigned int conn_routes_num;
+	const struct mtk_drm_route *conn_subpipe_routes;
+	unsigned int conn_subpipe_routes_num;
 
 	bool shadow_register;
 	unsigned int mmsys_id;
@@ -52,6 +56,8 @@ struct mtk_drm_private {
 	struct device *dma_dev;
 	bool mtk_drm_bound;
 	bool drm_master;
+	bool is_dual_pipe;
+	bool is_sub_pipe;
 	struct device *dev;
 	struct device_node *mutex_node;
 	struct device *mutex_dev;

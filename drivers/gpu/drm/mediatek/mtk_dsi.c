@@ -841,6 +841,7 @@ void mtk_dsi_ddp_stop(struct device *dev)
 static int mtk_dsi_encoder_init(struct drm_device *drm, struct mtk_dsi *dsi)
 {
 	int ret;
+	int indicated_disp_path = -1;
 
 	ret = drm_simple_encoder_init(drm, &dsi->encoder,
 				      DRM_MODE_ENCODER_DSI);
@@ -849,7 +850,25 @@ static int mtk_dsi_encoder_init(struct drm_device *drm, struct mtk_dsi *dsi)
 		return ret;
 	}
 
-	dsi->encoder.possible_crtcs = mtk_drm_find_possible_crtc_by_comp(drm, dsi->host.dev);
+	if (of_find_property(dsi->host.dev->of_node, "mediatek,indicated-display-path", &ret)) {
+		ret = of_property_read_u32(dsi->host.dev->of_node,
+					   "mediatek,indicated-display-path",
+					   &indicated_disp_path);
+		if (ret) {
+			dev_err(dsi->host.dev, "Failed to get indicated-display-path id\n");
+			return ret;
+		}
+		if (indicated_disp_path < 0 || indicated_disp_path >= MAX_CRTC) {
+			dev_err(dsi->host.dev, "Wrong indicated-display-path id read from dts !\n");
+			indicated_disp_path = -1;
+		}
+	}
+
+	if (indicated_disp_path == -1)
+		dsi->encoder.possible_crtcs =
+			mtk_drm_find_possible_crtc_by_comp(drm, dsi->host.dev);
+	else
+		dsi->encoder.possible_crtcs = (1 << indicated_disp_path);
 
 	ret = drm_bridge_attach(&dsi->encoder, &dsi->bridge, NULL,
 				DRM_BRIDGE_ATTACH_NO_CONNECTOR);

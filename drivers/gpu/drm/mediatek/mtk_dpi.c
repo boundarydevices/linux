@@ -91,6 +91,7 @@ struct mtk_dpi {
 	u32 output_fmt;
 	int refcount;
 	bool oob_hpd;
+	bool is_2p_input;
 	bool output_to_lvds;
 };
 
@@ -682,7 +683,7 @@ static int mtk_dpi_set_display_mode(struct mtk_dpi *dpi,
 		if (dpi->conf->is_internal_hdmi) {
 			mtk_dpi_mask(dpi, DPI_CON, DPI_OUTPUT_1T1P_EN,
 					DPI_OUTPUT_1T1P_EN);
-			mtk_dpi_mask(dpi, DPI_CON, DPI_INPUT_2P_EN,
+			mtk_dpi_mask(dpi, DPI_CON, dpi->is_2p_input ? DPI_INPUT_2P_EN : 0,
 					DPI_INPUT_2P_EN);
 		} else {
 			mtk_dpi_dual_edge(dpi);
@@ -690,7 +691,7 @@ static int mtk_dpi_set_display_mode(struct mtk_dpi *dpi,
 		mtk_dpi_config_disable_edge(dpi);
 	}
 	if (dpi->conf->input_2pixel) {
-		mtk_dpi_mask(dpi, DPI_CON, DPINTF_INPUT_2P_EN,
+		mtk_dpi_mask(dpi, DPI_CON, dpi->is_2p_input ? DPINTF_INPUT_2P_EN : 0,
 			     DPINTF_INPUT_2P_EN);
 	}
 	mtk_dpi_sw_reset(dpi, false);
@@ -883,6 +884,13 @@ int mtk_dpi_encoder_index(struct device *dev)
 	return encoder_index;
 }
 
+void mtk_dpi_set_2p_input(struct device *dev, bool is_2p_input)
+{
+	struct mtk_dpi *dpi = dev_get_drvdata(dev);
+
+	dpi->is_2p_input = is_2p_input;
+}
+
 bool mtk_dpi_check_output_to_lvds(struct device *dev)
 {
 	struct mtk_dpi *dpi = dev_get_drvdata(dev);
@@ -896,6 +904,7 @@ static int mtk_dpi_bind(struct device *dev, struct device *master, void *data)
 	struct drm_device *drm_dev = data;
 	struct mtk_drm_private *priv = drm_dev->dev_private;
 	int ret;
+	int indicated_disp_path = -1;
 
 	dpi->mmsys_dev = priv->mmsys_dev;
 	ret = drm_simple_encoder_init(drm_dev, &dpi->encoder,
@@ -905,7 +914,24 @@ static int mtk_dpi_bind(struct device *dev, struct device *master, void *data)
 		return ret;
 	}
 
-	dpi->encoder.possible_crtcs = mtk_drm_find_possible_crtc_by_comp(drm_dev, dpi->dev);
+	if (of_find_property(dev->of_node, "mediatek,indicated-display-path", &ret)) {
+		ret = of_property_read_u32(dev->of_node,
+					   "mediatek,indicated-display-path",
+					   &indicated_disp_path);
+		if (ret) {
+			dev_err(dev, "Failed to get indicated-display-path id\n");
+			return ret;
+		}
+		if (indicated_disp_path < 0 || indicated_disp_path >= MAX_CRTC) {
+			dev_err(dev, "Wrong indicated-display-path id read from dts !\n");
+			indicated_disp_path = -1;
+		}
+	}
+
+	if (indicated_disp_path == -1)
+		dpi->encoder.possible_crtcs = mtk_drm_find_possible_crtc_by_comp(drm_dev, dpi->dev);
+	else
+		dpi->encoder.possible_crtcs = (1 << indicated_disp_path);
 
 	ret = drm_bridge_attach(&dpi->encoder, &dpi->bridge, NULL,
 				DRM_BRIDGE_ATTACH_NO_CONNECTOR);

@@ -264,6 +264,17 @@ static const unsigned int mt8195_mtk_ddp_main[] = {
 	DDP_COMPONENT_DITHER0,
 };
 
+static const unsigned int mt8195_mtk_ddp_main_dualpipe[] = {
+	DDP_COMPONENT_OVL1,
+	DDP_COMPONENT_RDMA1,
+	DDP_COMPONENT_COLOR1,
+	DDP_COMPONENT_CCORR1,
+	DDP_COMPONENT_AAL1,
+	DDP_COMPONENT_GAMMA1,
+	DDP_COMPONENT_DITHER1,
+	DDP_COMPONENT_MERGE0,
+};
+
 static const unsigned int mt8195_mtk_ddp_main_routes_0[] = {
 	DDP_COMPONENT_DSC0,
 	DDP_COMPONENT_MERGE0,
@@ -294,7 +305,27 @@ static const unsigned int mt8195_mtk_ddp_main_subpipe[] = {
 	DDP_COMPONENT_AAL1,
 	DDP_COMPONENT_GAMMA1,
 	DDP_COMPONENT_DITHER1,
-	DDP_COMPONENT_MERGE0,
+};
+
+static const unsigned int mt8195_mtk_ddp_main_subpipe_routes_0[] = {
+	DDP_COMPONENT_DP_INTF0,
+};
+
+static const unsigned int mt8195_mtk_ddp_main_subpipe_routes_1[] = {
+	DDP_COMPONENT_DP_INTF1,
+};
+
+static const unsigned int mt8195_mtk_ddp_main_subpipe_routes_2[] = {
+	DDP_COMPONENT_DPI1,
+};
+
+static const struct mtk_drm_route mt8195_mtk_ddp_main_subpipe_routes[] = {
+	{0, 0, ARRAY_SIZE(mt8195_mtk_ddp_main_subpipe_routes_0),
+		mt8195_mtk_ddp_main_subpipe_routes_0},
+	{0, 1, ARRAY_SIZE(mt8195_mtk_ddp_main_subpipe_routes_1),
+		mt8195_mtk_ddp_main_subpipe_routes_1},
+	{0, 1, ARRAY_SIZE(mt8195_mtk_ddp_main_subpipe_routes_2),
+		mt8195_mtk_ddp_main_subpipe_routes_2},
 };
 
 static const unsigned int mt8195_mtk_ddp_ext[] = {
@@ -422,10 +453,14 @@ static const struct mtk_mmsys_driver_data mt8192_mmsys_driver_data = {
 static const struct mtk_mmsys_driver_data mt8195_vdosys0_driver_data = {
 	.main_path = mt8195_mtk_ddp_main,
 	.main_len = ARRAY_SIZE(mt8195_mtk_ddp_main),
+	.main_dualpipe_path = mt8195_mtk_ddp_main_dualpipe,
+	.main_dualpipe_len = ARRAY_SIZE(mt8195_mtk_ddp_main_dualpipe),
 	.main_subpipe_path = mt8195_mtk_ddp_main_subpipe,
 	.main_subpipe_len = ARRAY_SIZE(mt8195_mtk_ddp_main_subpipe),
 	.conn_routes = mt8195_mtk_ddp_main_routes,
 	.conn_routes_num = ARRAY_SIZE(mt8195_mtk_ddp_main_routes),
+	.conn_subpipe_routes = mt8195_mtk_ddp_main_subpipe_routes,
+	.conn_subpipe_routes_num = ARRAY_SIZE(mt8195_mtk_ddp_main_subpipe_routes),
 	.mmsys_dev_num = 2,
 };
 
@@ -495,7 +530,8 @@ static bool mtk_drm_get_all_drm_priv(struct device *dev)
 	const struct of_device_id *of_id;
 	struct device_node *node;
 	struct device *drm_dev;
-	unsigned int cnt = 0;
+	int dev_cnt = 0;
+	int priv_cnt = 0;
 	int i, j;
 
 	for_each_child_of_node(phandle->parent, node) {
@@ -515,21 +551,38 @@ static bool mtk_drm_get_all_drm_priv(struct device *dev)
 
 		drm_dev_priv = dev_get_drvdata(drm_dev);
 		if (drm_dev_priv && drm_dev_priv->mtk_drm_bound)
-			cnt++;
-		if (drm_dev_priv && drm_dev_priv->data->main_len)
+			dev_cnt++;
+		if (drm_dev_priv && drm_dev_priv->data->main_len) {
 			all_drm_priv[0] = drm_dev_priv;
-		else if (drm_dev_priv && drm_dev_priv->data->ext_len)
-			all_drm_priv[1] = drm_dev_priv;
-		else if (drm_dev_priv && drm_dev_priv->data->third_len)
-			all_drm_priv[2] = drm_dev_priv;
+			priv_cnt++;
+			if ((drm_dev_priv->data->main_dualpipe_path)
+				&& (drm_dev_priv->data->main_dualpipe_len)) {
+				int lenp;
+				int comp_id = drm_dev_priv->data->main_dualpipe_path[0];
+				struct device_node *node;
 
-		if (cnt == MAX_CRTC)
-			break;
+				node = drm_dev_priv->comp_node[comp_id];
+				if (of_find_property(node, "mediatek,enable-dualpipe", &lenp))
+					all_drm_priv[0]->is_dual_pipe = true;
+			}
+		} else if (drm_dev_priv && drm_dev_priv->data->ext_len) {
+			all_drm_priv[1] = drm_dev_priv;
+			priv_cnt++;
+		} else if (drm_dev_priv && drm_dev_priv->data->third_len) {
+			all_drm_priv[2] = drm_dev_priv;
+			priv_cnt++;
+		}
+		if (!all_drm_priv[0]->is_dual_pipe
+			&& drm_dev_priv && drm_dev_priv->data->main_subpipe_len) {
+			all_drm_priv[2] = drm_dev_priv;
+			all_drm_priv[2]->is_sub_pipe = true;
+			priv_cnt++;
+		}
 	}
 
-	if (drm_priv->data->mmsys_dev_num == cnt) {
-		for (i = 0; i < cnt; i++)
-			for (j = 0; j < cnt; j++)
+	if (drm_priv->data->mmsys_dev_num == dev_cnt) {
+		for (i = 0; i < priv_cnt; i++)
+			for (j = 0; j < priv_cnt; j++)
 				all_drm_priv[j]->all_drm_private[i] = all_drm_priv[i];
 
 		return true;
@@ -546,6 +599,11 @@ static bool mtk_drm_find_mmsys_comp(struct mtk_drm_private *private, int comp_id
 	if (drv_data->main_path)
 		for (i = 0; i < drv_data->main_len; i++)
 			if (drv_data->main_path[i] == comp_id)
+				return true;
+
+	if (drv_data->main_dualpipe_path)
+		for (i = 0; i < drv_data->main_dualpipe_len; i++)
+			if (drv_data->main_dualpipe_path[i] == comp_id)
 				return true;
 
 	if (drv_data->main_subpipe_path)
@@ -567,6 +625,13 @@ static bool mtk_drm_find_mmsys_comp(struct mtk_drm_private *private, int comp_id
 		for (i = 0; i < drv_data->conn_routes_num; i++) {
 			for (j = 0; j < drv_data->conn_routes[i].route_len; j++)
 				if (drv_data->conn_routes[i].route_ddp[j] == comp_id)
+					return true;
+		}
+
+	if (drv_data->conn_subpipe_routes_num)
+		for (i = 0; i < drv_data->conn_subpipe_routes_num; i++) {
+			for (j = 0; j < drv_data->conn_subpipe_routes[i].route_len; j++)
+				if (drv_data->conn_subpipe_routes[i].route_ddp[j] == comp_id)
 					return true;
 		}
 
@@ -624,23 +689,14 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 	 */
 	for (i = 0; i < MAX_CRTC; i++) {
 		for (j = 0; j < private->data->mmsys_dev_num; j++) {
-			bool is_dual_pipe = false;
 			priv_n = private->all_drm_private[j];
-
-			if ((priv_n->data->main_subpipe_path) && (priv_n->data->main_subpipe_len)) {
-				int lenp;
-				struct device_node  *node;
-
-				node = priv_n->comp_node[priv_n->data->main_subpipe_path[0]];
-				if (of_find_property(node, "mediatek,enable-dualpipe", &lenp))
-					is_dual_pipe = true;
-			}
 
 			if (i == 0 && priv_n->data->main_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->main_path,
 					priv_n->data->main_len,
-					is_dual_pipe ? priv_n->data->main_subpipe_path : NULL,
-					is_dual_pipe ? priv_n->data->main_subpipe_len : 0,
+					priv_n->is_dual_pipe ?
+					priv_n->data->main_dualpipe_path : NULL,
+					priv_n->is_dual_pipe ? priv_n->data->main_dualpipe_len : 0,
 					j, priv_n->data->conn_routes,
 					priv_n->data->conn_routes_num);
 				if (ret)
@@ -652,15 +708,38 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 					priv_n->data->ext_len, NULL, 0,  j,
 					priv_n->data->conn_routes,
 					priv_n->data->conn_routes_num);
-				if (ret)
-					goto err_component_unbind;
+				if (ret) {
+					dev_info(drm->dev, "did not create crtc 1(ext_path) for mmsys(%d) ext_len(%d)",
+						j,
+						priv_n->data->ext_len);
+					break;
+				}
 
 				continue;
 			} else if (i == 2 && priv_n->data->third_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->third_path,
 					priv_n->data->third_len, NULL, 0, j, NULL, 0);
-				if (ret)
-					goto err_component_unbind;
+				if (ret) {
+					dev_info(drm->dev, "did not create crtc 2(third_path) for mmsys(%d) third_len(%d)",
+						j,
+						priv_n->data->third_len);
+					break;
+				}
+
+				continue;
+			}
+			if (i == 2 && j == 0 && !private->all_drm_private[0]->is_dual_pipe
+				&& priv_n->data->main_subpipe_len) {
+				ret = mtk_drm_crtc_create(drm, priv_n->data->main_subpipe_path,
+					priv_n->data->main_subpipe_len, NULL, 0, j,
+					priv_n->data->conn_subpipe_routes,
+					priv_n->data->conn_subpipe_routes_num);
+				if (ret) {
+					dev_info(drm->dev,
+						"did not create crtc 3(main_subpipe) for mmsys(%d) main_subpipe_len(%d)",
+						j, priv_n->data->main_subpipe_len);
+					break;
+				}
 
 				continue;
 			}
@@ -983,7 +1062,7 @@ static int mtk_drm_probe(struct platform_device *pdev)
 
 	private->data = of_id->data;
 
-	private->all_drm_private = devm_kmalloc_array(dev, private->data->mmsys_dev_num,
+	private->all_drm_private = devm_kmalloc_array(dev, MAX_CRTC,
 						      sizeof(*private->all_drm_private),
 						      GFP_KERNEL);
 	if (!private->all_drm_private)

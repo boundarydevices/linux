@@ -307,6 +307,7 @@ static const struct mtk_ddp_comp_funcs ddp_dpi = {
 	.start = mtk_dpi_start,
 	.stop = mtk_dpi_stop,
 	.encoder_index = mtk_dpi_encoder_index,
+	.set_2p_input = mtk_dpi_set_2p_input,
 	.check_output_to_lvds = mtk_dpi_check_output_to_lvds,
 };
 
@@ -558,14 +559,15 @@ unsigned int mtk_drm_find_possible_crtc_by_comp(struct drm_device *drm,
 	struct mtk_drm_private *private = drm->dev_private;
 	struct mtk_drm_private **private_all = private->all_drm_private;
 	unsigned int ret = 0;
-	int i;
+	int i, j;
 
 	for (i = 0; i < private->data->mmsys_dev_num; i++) {
 		if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->main_path,
 				private_all[i]->data->main_len, private_all[i]->ddp_comp))
 			ret |= BIT(0);
-		if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->main_subpipe_path,
-				  private_all[i]->data->main_subpipe_len, private_all[i]->ddp_comp))
+		if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->main_dualpipe_path,
+				  private_all[i]->data->main_dualpipe_len,
+				  private_all[i]->ddp_comp))
 			ret |= BIT(0);
 		if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->ext_path,
 				  private_all[i]->data->ext_len, private_all[i]->ddp_comp))
@@ -578,6 +580,19 @@ unsigned int mtk_drm_find_possible_crtc_by_comp(struct drm_device *drm,
 						 private_all[i]->data->conn_routes,
 						 private_all[i]->data->conn_routes_num,
 						 private_all[i]->ddp_comp);
+
+		if (private_all[i]->is_sub_pipe) {
+			if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->main_subpipe_path,
+				private_all[i]->data->main_subpipe_len, private_all[i]->ddp_comp))
+				ret |= BIT(2);
+
+			for (j = 0; j < private_all[i]->data->conn_subpipe_routes_num; j++)
+				if (mtk_drm_find_comp_in_ddp(dev,
+					private_all[i]->data->conn_subpipe_routes[j].route_ddp,
+					private_all[i]->data->conn_subpipe_routes[j].route_len,
+					private_all[i]->ddp_comp))
+					ret |= BIT(2);
+		}
 	}
 
 	if (ret == 0)

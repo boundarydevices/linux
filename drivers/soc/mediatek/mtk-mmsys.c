@@ -4,6 +4,7 @@
  * Author: James Liao <jamesjj.liao@mediatek.com>
  */
 
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/io.h>
@@ -24,6 +25,10 @@
 #include "mt8365-mmsys.h"
 
 #define MMSYS_SW_RESET_PER_REG 32
+
+#define MAX_PROP_NAME_LENGTH 32
+
+#define MAX_CROSS_SYS_ASYNC_NUM 3
 
 static const struct mtk_mmsys_driver_data mt2701_mmsys_driver_data = {
 	.clk_driver = "clk-mt2701-mm",
@@ -169,6 +174,7 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 
 struct mtk_mmsys {
 	void __iomem *regs;
+	struct clk *async_clk[MAX_CROSS_SYS_ASYNC_NUM];
 	const struct mtk_mmsys_driver_data *data;
 	struct platform_device *clks_pdev;
 	struct platform_device *drm_pdev;
@@ -268,13 +274,14 @@ void mtk_mmsys_mixer_in_channel_swap(struct device *dev, int idx, bool channel_s
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_mixer_in_channel_swap);
 
-void mtk_mmsys_cross_sys_config(struct device *dev_main_sys,
+void mtk_mmsys_cross_sys_prepare(struct device *dev_main_sys,
 					struct device *dev_cross_sys, int width, int height,
 					struct cmdq_pkt *cmdq_pkt)
 {
 	struct mtk_mmsys *main_mmsys = dev_get_drvdata(dev_main_sys);
 	struct mtk_mmsys *cross_mmsys = dev_get_drvdata(dev_cross_sys);
-	int i;
+	char async_clk_prop[MAX_PROP_NAME_LENGTH] = {0};
+	int i, ret;
 
 	for (i = 0; i < main_mmsys->data->num_main_sys_w_h_configs; i++)
 		mtk_mmsys_update_bits(main_mmsys,
@@ -285,8 +292,58 @@ void mtk_mmsys_cross_sys_config(struct device *dev_main_sys,
 		mtk_mmsys_update_bits(cross_mmsys,
 				cross_mmsys->data->cross_sys_w_h_configs[i],
 			      ~0, height << 16 | width, cmdq_pkt);
+
+	for (i = 0; i < MAX_CROSS_SYS_ASYNC_NUM; i++) {
+		snprintf(async_clk_prop, MAX_PROP_NAME_LENGTH, "cross_sys_async%d", i);
+		main_mmsys->async_clk[i] = devm_clk_get_optional(dev_main_sys, async_clk_prop);
+		if (IS_ERR(main_mmsys->async_clk[i])) {
+			dev_err(dev_main_sys, "failed to get async clock\n");
+			goto err;
+		}
+		cross_mmsys->async_clk[i] = devm_clk_get_optional(dev_cross_sys, async_clk_prop);
+		if (IS_ERR(cross_mmsys->async_clk[i])) {
+			dev_err(dev_cross_sys, "failed to get async clock\n");
+			goto err;
+		}
+	}
+
+	for (i = 0; i < MAX_CROSS_SYS_ASYNC_NUM; i++) {
+		ret = clk_prepare_enable(main_mmsys->async_clk[i]);
+		if (ret) {
+			dev_err(dev_main_sys, "cross sys async clk prepare enable failed\n");
+			goto err;
+		}
+
+		ret = clk_prepare_enable(cross_mmsys->async_clk[i]);
+		if (ret) {
+			dev_err(dev_cross_sys, "cross sys async clk prepare enable failed\n");
+			goto err;
+		}
+	}
+
+	return;
+err:
+	for (i = 0; i < MAX_CROSS_SYS_ASYNC_NUM; i++) {
+		clk_disable_unprepare(main_mmsys->async_clk[i]);
+		clk_disable_unprepare(cross_mmsys->async_clk[i]);
+	}
+
 }
-EXPORT_SYMBOL_GPL(mtk_mmsys_cross_sys_config);
+EXPORT_SYMBOL_GPL(mtk_mmsys_cross_sys_prepare);
+
+void mtk_mmsys_cross_sys_unprepare(struct device *dev_main_sys,
+					struct device *dev_cross_sys)
+{
+	struct mtk_mmsys *main_mmsys = dev_get_drvdata(dev_main_sys);
+	struct mtk_mmsys *cross_mmsys = dev_get_drvdata(dev_cross_sys);
+	int i;
+
+	for (i = 0; i < MAX_CROSS_SYS_ASYNC_NUM; i++) {
+		clk_disable_unprepare(main_mmsys->async_clk[i]);
+		clk_disable_unprepare(cross_mmsys->async_clk[i]);
+	}
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_cross_sys_unprepare);
 
 void mtk_mmsys_ddp_dpi_fmt_config(struct device *dev, u32 val)
 {
