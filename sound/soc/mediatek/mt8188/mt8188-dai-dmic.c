@@ -292,7 +292,7 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 	struct mtk_dai_dmic_priv *dmic_priv = afe_priv->dai_priv[MT8188_AFE_IO_DMIC_IN];
 	const struct mtk_dai_dmic_ctrl_reg *reg = NULL;
 	unsigned int channels = dmic_priv->channels;
-	unsigned int msk;
+	unsigned int msk = 0;
 	u8 dmic_num;
 	int i;
 
