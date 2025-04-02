@@ -71,6 +71,8 @@ struct mtk_drm_crtc {
 	struct mtk_ddp_comp		**ddp_dualpipe_comp;
 	unsigned int			conn_route_nr;
 	const struct mtk_drm_route	*conn_routes;
+	struct device			*cross_sys_mmsys_dev;
+	struct mtk_mutex		*cross_sys_mutex;
 
 	/* lock for display hardware access */
 	struct mutex			hw_lock;
@@ -162,6 +164,8 @@ static void mtk_drm_crtc_destroy(struct drm_crtc *crtc)
 	struct mtk_drm_crtc *mtk_crtc = to_mtk_crtc(crtc);
 
 	mtk_mutex_put(mtk_crtc->mutex);
+	if (mtk_crtc->cross_sys_mutex)
+		mtk_mutex_put(mtk_crtc->cross_sys_mutex);
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
 	mtk_drm_cmdq_pkt_destroy(&mtk_crtc->cmdq_handle);
 
@@ -491,6 +495,9 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 	}
 
 	ret = mtk_mutex_prepare(mtk_crtc->mutex);
+	if (mtk_crtc->cross_sys_mutex)
+		mtk_mutex_prepare(mtk_crtc->cross_sys_mutex);
+
 	if (ret < 0) {
 		DRM_ERROR("Failed to enable mutex clock: %d\n", ret);
 		goto err_pm_runtime_put;
@@ -504,10 +511,16 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 
 	for (i = 0; i < mtk_crtc->ddp_comp_nr - 1; i++) {
 		if (!mtk_ddp_comp_connect(mtk_crtc->ddp_comp[i], mtk_crtc->mmsys_dev,
-					  mtk_crtc->ddp_comp[i + 1]->id))
+					  mtk_crtc->ddp_comp[i + 1]->id)) {
 			mtk_mmsys_ddp_connect(mtk_crtc->mmsys_dev,
 					      mtk_crtc->ddp_comp[i]->id,
 					      mtk_crtc->ddp_comp[i + 1]->id);
+			if (mtk_crtc->cross_sys_mmsys_dev) {
+				mtk_mmsys_ddp_connect(mtk_crtc->cross_sys_mmsys_dev,
+						      mtk_crtc->ddp_comp[i]->id,
+						      mtk_crtc->ddp_comp[i + 1]->id);
+			}
+		}
 		if (!mtk_ddp_comp_add(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 			mtk_mutex_add_comp(mtk_crtc->mutex,
 					   mtk_crtc->ddp_comp[i]->id);
@@ -523,6 +536,17 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 
 	if (!mtk_ddp_comp_add(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 		mtk_mutex_add_comp(mtk_crtc->mutex, mtk_crtc->ddp_comp[i]->id);
+	if (mtk_crtc->cross_sys_mutex) {
+		if (!mtk_ddp_comp_add(mtk_crtc->ddp_comp[i], mtk_crtc->cross_sys_mutex))
+			mtk_mutex_add_comp(mtk_crtc->cross_sys_mutex, mtk_crtc->ddp_comp[i]->id);
+		mtk_mutex_cross_sys_config(mtk_crtc->mutex, mtk_crtc->cross_sys_mutex);
+	}
+
+	if (mtk_crtc->cross_sys_mmsys_dev) {
+		mtk_mmsys_cross_sys_config(mtk_crtc->mmsys_dev,
+			mtk_crtc->cross_sys_mmsys_dev,
+			width, height, NULL);
+	}
 
 	if (mtk_crtc->is_dual_pipe) {
 		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr - 1; i++) {
@@ -539,6 +563,8 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 	}
 
 	mtk_mutex_enable(mtk_crtc->mutex);
+	if (mtk_crtc->cross_sys_mutex)
+		mtk_mutex_enable(mtk_crtc->cross_sys_mutex);
 
 	for (i = 0; i < mtk_crtc->ddp_comp_nr; i++) {
 		struct mtk_ddp_comp *comp = mtk_crtc->ddp_comp[i];
@@ -602,6 +628,8 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 
 err_mutex_unprepare:
 	mtk_mutex_unprepare(mtk_crtc->mutex);
+	if (mtk_crtc->cross_sys_mutex)
+		mtk_mutex_unprepare(mtk_crtc->cross_sys_mutex);
 err_pm_runtime_put:
 	pm_runtime_put(crtc->dev->dev);
 	return ret;
@@ -650,6 +678,11 @@ static void mtk_crtc_ddp_hw_fini(struct mtk_drm_crtc *mtk_crtc)
 	}
 	if (!mtk_ddp_comp_remove(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 		mtk_mutex_remove_comp(mtk_crtc->mutex, mtk_crtc->ddp_comp[i]->id);
+	if (mtk_crtc->cross_sys_mutex) {
+		if (!mtk_ddp_comp_remove(mtk_crtc->ddp_comp[i], mtk_crtc->cross_sys_mutex))
+			mtk_mutex_remove_comp(mtk_crtc->cross_sys_mutex, mtk_crtc->ddp_comp[i]->id);
+		mtk_mutex_cross_sys_deconfig(mtk_crtc->mutex, mtk_crtc->cross_sys_mutex);
+	}
 
 	if (mtk_crtc->is_dual_pipe) {
 		for (i = 0; i < mtk_crtc->ddp_dualpipe_comp_nr - 1; i++) {
@@ -669,6 +702,8 @@ static void mtk_crtc_ddp_hw_fini(struct mtk_drm_crtc *mtk_crtc)
 
 	mtk_crtc_ddp_clk_disable(mtk_crtc);
 	mtk_mutex_unprepare(mtk_crtc->mutex);
+	if (mtk_crtc->cross_sys_mutex)
+		mtk_mutex_unprepare(mtk_crtc->cross_sys_mutex);
 
 	pm_runtime_put(drm->dev);
 
@@ -949,6 +984,17 @@ static int mtk_drm_crtc_update_output(struct drm_crtc *crtc,
 		}
 	}
 
+	if (conn_routes[route_index].route_mmsys_id != priv->data->mmsys_id) {
+		unsigned int cross_mmsys_id;
+
+		cross_mmsys_id = conn_routes[route_index].route_mmsys_id;
+		mtk_crtc->cross_sys_mmsys_dev =
+			priv->all_drm_private[cross_mmsys_id]->mmsys_dev;
+		if (mtk_crtc->cross_sys_mutex)
+			mtk_mutex_put(mtk_crtc->cross_sys_mutex);
+		mtk_crtc->cross_sys_mutex =
+			mtk_mutex_get(priv->all_drm_private[cross_mmsys_id]->mutex_dev);
+	}
 	for (i = 0; i < route_len; i++) {
 		struct mtk_ddp_comp *comp;
 		struct device_node *node;

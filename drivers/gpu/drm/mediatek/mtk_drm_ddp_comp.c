@@ -529,9 +529,10 @@ static int mtk_drm_find_comp_in_ddp_conn_path(struct device *dev,
 	for (i = 0U; i < routes_num; i++)
 		if (mtk_drm_find_comp_in_ddp(dev, routes[i].route_ddp,
 					     routes[i].route_len, ddp_comp))
-			return BIT(routes[i].crtc_id);
+			ret |= BIT(routes[i].crtc_id);
 
-	DRM_INFO("Failed to find comp in ddp connector table\n");
+	if (ret == 0)
+		DRM_DEBUG_DRIVER("comp not found in this ddp conn path. Might in other path\n");
 
 	return ret;
 }
@@ -555,25 +556,29 @@ unsigned int mtk_drm_find_possible_crtc_by_comp(struct drm_device *drm,
 						struct device *dev)
 {
 	struct mtk_drm_private *private = drm->dev_private;
+	struct mtk_drm_private **private_all = private->all_drm_private;
 	unsigned int ret = 0;
+	int i;
 
-	if (mtk_drm_find_comp_in_ddp(dev, private->data->main_path, private->data->main_len,
-				     private->ddp_comp))
-		ret = BIT(0);
-	else if (mtk_drm_find_comp_in_ddp(dev, private->data->main_subpipe_path,
-					  private->data->main_subpipe_len,  private->ddp_comp))
-		ret = BIT(0);
-	else if (mtk_drm_find_comp_in_ddp(dev, private->data->ext_path,
-					  private->data->ext_len, private->ddp_comp))
-		ret = BIT(1);
-	else if (mtk_drm_find_comp_in_ddp(dev, private->data->third_path,
-					  private->data->third_len, private->ddp_comp))
-		ret = BIT(2);
-	else
-		ret = mtk_drm_find_comp_in_ddp_conn_path(dev,
-							 private->data->conn_routes,
-							 private->data->conn_routes_num,
-							 private->ddp_comp);
+	for (i = 0; i < private->data->mmsys_dev_num; i++) {
+		if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->main_path,
+				private_all[i]->data->main_len, private_all[i]->ddp_comp))
+			ret |= BIT(0);
+		if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->main_subpipe_path,
+				  private_all[i]->data->main_subpipe_len, private_all[i]->ddp_comp))
+			ret |= BIT(0);
+		if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->ext_path,
+				  private_all[i]->data->ext_len, private_all[i]->ddp_comp))
+			ret |= BIT(1);
+		if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->third_path,
+				  private_all[i]->data->third_len, private_all[i]->ddp_comp))
+			ret |= BIT(2);
+
+		ret |= mtk_drm_find_comp_in_ddp_conn_path(dev,
+						 private_all[i]->data->conn_routes,
+						 private_all[i]->data->conn_routes_num,
+						 private_all[i]->ddp_comp);
+	}
 
 	if (ret == 0)
 		DRM_INFO("Failed to find comp in ddp table\n");

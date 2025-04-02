@@ -36,6 +36,8 @@
 #define DRIVER_MAJOR 1
 #define DRIVER_MINOR 0
 
+static bool drm_comp_add_list[DDP_COMPONENT_DRM_ID_MAX];
+
 static const struct drm_mode_config_helper_funcs mtk_drm_mode_config_helpers = {
 	.atomic_commit_tail = drm_atomic_helper_commit_tail_rpm,
 };
@@ -199,8 +201,8 @@ static const unsigned int mt8188_mtk_ddp_main_routes_1[] = {
 };
 
 static const struct mtk_drm_route mt8188_mtk_ddp_main_routes[] = {
-	{0, ARRAY_SIZE(mt8188_mtk_ddp_main_routes_0), mt8188_mtk_ddp_main_routes_0},
-	{0, ARRAY_SIZE(mt8188_mtk_ddp_main_routes_1), mt8188_mtk_ddp_main_routes_1}
+	{0, 0, ARRAY_SIZE(mt8188_mtk_ddp_main_routes_0), mt8188_mtk_ddp_main_routes_0},
+	{0, 0, ARRAY_SIZE(mt8188_mtk_ddp_main_routes_1), mt8188_mtk_ddp_main_routes_1}
 };
 
 static const unsigned int mt8188_mtk_ddp_ext[] = {
@@ -217,8 +219,8 @@ static const unsigned int mt8188_mtk_ddp_ext_routes_1[] = {
 };
 
 static const struct mtk_drm_route mt8188_mtk_ddp_ext_routes[] = {
-	{1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_0), mt8188_mtk_ddp_ext_routes_0},
-	{1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_1), mt8188_mtk_ddp_ext_routes_1},
+	{1, 1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_0), mt8188_mtk_ddp_ext_routes_0},
+	{1, 1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_1), mt8188_mtk_ddp_ext_routes_1},
 };
 
 static const unsigned int mt8192_mtk_ddp_main[] = {
@@ -260,9 +262,16 @@ static const unsigned int mt8195_mtk_ddp_main_routes_1[] = {
 	DDP_COMPONENT_DSI0
 };
 
+static const unsigned int mt8195_mtk_ddp_main_routes_2[] = {
+	DDP_COMPONENT_DSC0,
+	DDP_COMPONENT_MERGE0,
+	DDP_COMPONENT_DPI1,
+};
+
 static const struct mtk_drm_route mt8195_mtk_ddp_main_routes[] = {
-	{0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_0), mt8195_mtk_ddp_main_routes_0},
-	{0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_1), mt8195_mtk_ddp_main_routes_1}
+	{0, 0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_0), mt8195_mtk_ddp_main_routes_0},
+	{0, 0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_1), mt8195_mtk_ddp_main_routes_1},
+	{0, 1, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_2), mt8195_mtk_ddp_main_routes_2}
 };
 
 static const unsigned int mt8195_mtk_ddp_main_subpipe[] = {
@@ -290,8 +299,8 @@ static const unsigned int mt8195_mtk_ddp_ext_routes_1[] = {
 };
 
 static const struct mtk_drm_route mt8195_mtk_ddp_ext_routes[] = {
-	{1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_0), mt8195_mtk_ddp_ext_routes_0},
-	{1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_1), mt8195_mtk_ddp_ext_routes_1}
+	{1, 1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_0), mt8195_mtk_ddp_ext_routes_0},
+	{1, 1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_1), mt8195_mtk_ddp_ext_routes_1}
 };
 
 static const unsigned int mt8365_mtk_ddp_main[] = {
@@ -719,6 +728,11 @@ static const struct drm_driver mtk_drm_driver = {
 	.minor = DRIVER_MINOR,
 };
 
+static int compare_of(struct device *dev, void *data)
+{
+	return dev->of_node == data;
+}
+
 static int compare_dev(struct device *dev, void *data)
 {
 	return dev == (struct device *)data;
@@ -1028,10 +1042,13 @@ static int mtk_drm_probe(struct platform_device *pdev)
 		    comp_type == MTK_DP_INTF ||
 		    comp_type == MTK_DPI ||
 		    comp_type == MTK_DSI) {
-			dev_info(dev, "Adding component match for %pOF\n",
-				 node);
-			drm_of_component_match_add(dev, &match, component_compare_of,
-						   node);
+			if (!drm_comp_add_list[comp_id]) {
+				dev_info(dev, "Adding component match for %pOF\n",
+					 node);
+				drm_of_component_match_add(dev, &match, compare_of,
+							   node);
+				drm_comp_add_list[comp_id] = true;
+			}
 		}
 
 		ret = mtk_ddp_comp_init(node, &private->ddp_comp[comp_id], comp_id);
@@ -1063,6 +1080,8 @@ err_node:
 	of_node_put(private->mutex_node);
 	for (i = 0; i < DDP_COMPONENT_DRM_ID_MAX; i++)
 		of_node_put(private->comp_node[i]);
+	memset(drm_comp_add_list, 0, sizeof(drm_comp_add_list));
+
 	return ret;
 }
 
@@ -1076,6 +1095,7 @@ static void mtk_drm_remove(struct platform_device *pdev)
 	of_node_put(private->mutex_node);
 	for (i = 0; i < DDP_COMPONENT_DRM_ID_MAX; i++)
 		of_node_put(private->comp_node[i]);
+	memset(drm_comp_add_list, 0, sizeof(drm_comp_add_list));
 }
 
 static int mtk_drm_sys_prepare(struct device *dev)
