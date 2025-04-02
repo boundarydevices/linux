@@ -93,5 +93,6 @@ void cmdq_set_event(void *chan, u16 event_id);
 u32 cmdq_get_event(void *chan, u16 event_id);
 phys_addr_t cmdq_mbox_get_base_pa(struct mbox_chan *chan);
 s16 cmdq_get_gpr_timer_event(struct mbox_chan *chan);
-
+dma_addr_t cmdq_get_offset_pa(struct mbox_chan *chan);
+bool cmdq_addr_need_offset(struct mbox_chan *chan, dma_addr_t addr);
 #endif /* __MTK_CMDQ_MAILBOX_H__ */
