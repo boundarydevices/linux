@@ -71,6 +71,12 @@
 			compatible = "shared-dma-pool";
 			reg = <0 0x57000000 0 0x1400000>; /* 20 MB */
 		};
+
+		afe_dma_mem: memory@60f00000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60f00000 0 0x100000>;
+			no-map;
+		};
 	};
 
 	common_fixed_5v: regulator-0 {
@@ -176,6 +182,11 @@
 		regulator-max-microvolt = <5000000>;
 		enable-active-high;
 	};
+};
+
+&afe {
+	memory-region = <&afe_dma_mem>;
+	status = "okay";
 };
 
 &cpu0 {
@@ -953,6 +964,29 @@
 	pinctrl-0 = <&uart2_pins>;
 	pinctrl-names = "default";
 	status = "okay";
+};
+
+&sound {
+	compatible = "mediatek,mt8390-mt6359-evk", "mediatek,mt8188-mt6359-evb";
+	mediatek,dai-link =
+		"DL2_FE", "DL3_FE", "DL6_FE", "DL7_FE", "DL8_FE", "DL10_FE", "DL11_FE",
+		"UL1_FE", "UL2_FE", "UL3_FE", "UL4_FE", "UL5_FE", "UL6_FE", "UL8_FE",
+		"UL9_FE", "UL10_FE", "DL_SRC_BE";
+	model = "mt8390-evk";
+	pinctrl-names = "default";
+	pinctrl-0 = <&audio_default_pins>;
+	audio-routing =
+		"Headphone", "Headphone L",
+		"Headphone", "Headphone R";
+	status = "okay";
+
+	dai-link-0 {
+		link-name = "DL_SRC_BE";
+
+		codec {
+			sound-dai = <&pmic 0>;
+		};
+	};
 };
 
 &spi2 {
