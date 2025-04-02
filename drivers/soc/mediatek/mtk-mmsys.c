@@ -122,12 +122,20 @@ static const struct mtk_mmsys_driver_data mt8195_vdosys0_driver_data = {
 	.clk_driver = "clk-mt8195-vdo0",
 	.routes = mmsys_mt8195_routing_table,
 	.num_routes = ARRAY_SIZE(mmsys_mt8195_routing_table),
+	.main_sys_w_h_configs = mmsys_mt8195_vdo0_main_sys_w_h_configs_list,
+	.num_main_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8195_vdo0_main_sys_w_h_configs_list),
+	.cross_sys_w_h_configs = mmsys_mt8195_vdo0_cross_sys_w_h_configs_list,
+	.num_cross_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8195_vdo0_cross_sys_w_h_configs_list),
 };
 
 static const struct mtk_mmsys_driver_data mt8195_vdosys1_driver_data = {
 	.clk_driver = "clk-mt8195-vdo1",
 	.routes = mmsys_mt8195_vdo1_routing_table,
 	.num_routes = ARRAY_SIZE(mmsys_mt8195_vdo1_routing_table),
+	.main_sys_w_h_configs = mmsys_mt8195_vdo1_main_sys_w_h_configs_list,
+	.num_main_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8195_vdo1_main_sys_w_h_configs_list),
+	.cross_sys_w_h_configs = mmsys_mt8195_vdo1_cross_sys_w_h_configs_list,
+	.num_cross_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8195_vdo1_cross_sys_w_h_configs_list),
 	.sw0_rst_offset = MT8195_VDO1_SW0_RST_B,
 	.num_resets = 64,
 	.need_gce = true,
@@ -251,6 +259,26 @@ void mtk_mmsys_mixer_in_channel_swap(struct device *dev, int idx, bool channel_s
 			      BIT(4), channel_swap << 4, cmdq_pkt);
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_mixer_in_channel_swap);
+
+void mtk_mmsys_cross_sys_config(struct device *dev_main_sys,
+					struct device *dev_cross_sys, int width, int height,
+					struct cmdq_pkt *cmdq_pkt)
+{
+	struct mtk_mmsys *main_mmsys = dev_get_drvdata(dev_main_sys);
+	struct mtk_mmsys *cross_mmsys = dev_get_drvdata(dev_cross_sys);
+	int i;
+
+	for (i = 0; i < main_mmsys->data->num_main_sys_w_h_configs; i++)
+		mtk_mmsys_update_bits(main_mmsys,
+				main_mmsys->data->main_sys_w_h_configs[i],
+			      ~0, height << 16 | width, cmdq_pkt);
+
+	for (i = 0; i < cross_mmsys->data->num_cross_sys_w_h_configs; i++)
+		mtk_mmsys_update_bits(cross_mmsys,
+				cross_mmsys->data->cross_sys_w_h_configs[i],
+			      ~0, height << 16 | width, cmdq_pkt);
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_cross_sys_config);
 
 void mtk_mmsys_ddp_dpi_fmt_config(struct device *dev, u32 val)
 {
