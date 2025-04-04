@@ -62,7 +62,7 @@
 
 	csi_mclk: csi-mclk {
 		#clock-cells = <0>;
-		clock-frequency = <12000000>;
+		clock-frequency = <24000000>;
 		compatible = "fixed-clock";
 	};
 
@@ -182,10 +182,10 @@
 		clocks = <&csi_mclk>;
 		clock-names = "csi_mclk";
 		csi_id = <0>;
-		mclk = <12000000>;
+		mclk = <24000000>;
 		mclk_source = <0>;
-		pwn-gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
-		rst-gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
+		pwn-gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
+		rst-gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
 		reg = <0x3c>;
 		status = "okay";
 
