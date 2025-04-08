@@ -918,6 +918,11 @@
 			input-enable;
 		};
 
+		pins-drv-vbus {
+			pinmux = <PINMUX_GPIO87__FUNC_O_USB_DRVVBUS_1P>;
+			output-low;
+		};
+
 		pins-usb-hub-3v3-en {
 			pinmux = <PINMUX_GPIO112__FUNC_B_GPIO112>;
 			output-high;
@@ -1083,6 +1088,30 @@
 &xhci0 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+};
+
+&ssusb1 {
+	pinctrl-0 = <&usb1_default_pins>;
+	pinctrl-names = "default";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	dr_mode = "host";
+	usb-role-switch;
+	status = "okay";
+	wakeup-source;
+};
+
+&u2port1 {
+	status = "okay";
+};
+
+&u3port1 {
+	status = "okay";
+};
+
+&xhci1 {
+	status = "okay";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&usb_hub_reset_1v8>;
 };
 
 &ssusb2 {
