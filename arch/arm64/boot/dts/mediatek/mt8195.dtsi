@@ -3852,7 +3852,7 @@
 			clocks = <&vdosys1 CLK_VDO1_DPI1_MM>,
 				 <&vdosys1 CLK_VDO1_DPI1>,
 				 <&vdosys1 CLK_VDO1_DPI1_HDMI>;
-			clock-names = "engine", "pixel", "pll";
+			clock-names = "engine", "ck_cg", "pll";
 			status = "disabled";
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_DPI1>;
 			reset-names = "dpi_on";
