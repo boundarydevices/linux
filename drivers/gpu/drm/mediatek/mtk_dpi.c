@@ -1254,7 +1254,7 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	dpi->pixel_clk = devm_clk_get(dev, "pixel");
+	dpi->pixel_clk = devm_clk_get_optional(dev, "pixel");
 	if (IS_ERR(dpi->pixel_clk))
 		return dev_err_probe(dev, PTR_ERR(dpi->pixel_clk),
 				     "Failed to get pixel clock\n");
