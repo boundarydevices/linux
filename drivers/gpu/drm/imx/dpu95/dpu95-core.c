@@ -2,7 +2,7 @@
 
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2020,2022,2023 NXP
+ * Copyright 2017-2020,2022,2023,2025 NXP
  */
 
 #include <linux/clk.h>
@@ -20,6 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
+#include <linux/sys_soc.h>
 
 #include "dpu95.h"
 #include "dpu95-drv.h"
@@ -30,6 +31,12 @@
 #define  DISPLAY_PANIC_QOS(n)		(((n) & 0x7) << 4)
 #define  DISPLAY_ARQOS_MASK		0x7
 #define  DISPLAY_ARQOS(n)		((n) & 0x7)
+
+static const struct soc_device_attribute imx95_rev_1_x_soc_devices[] = {
+	{ .soc_id = "i.MX95", .revision = "1.0" },
+	{ .soc_id = "i.MX95", .revision = "1.1" },
+	{ /* sentinel */ }
+};
 
 static inline u32 dpu95_comctrl_irq_read(struct dpu95_soc *dpu, unsigned int offset)
 {
@@ -244,6 +251,39 @@ static const struct dpu95_units dpu_lbs = {
 	.hw_init = dpu95_lb_hw_init,
 };
 
+/* Vertical Scaler */
+static const unsigned int vs_ids[] = {4, 9};
+static const enum dpu95_unit_type vs_types[] = {DPU95_DISP, DPU95_BLIT};
+static const unsigned long vs_ofss[] = {0x280000, 0xc0000};
+static const unsigned long vs_aux_ofss[] = {0x281000, 0xc1000};
+
+static const struct dpu95_units dpu_vss = {
+	.ids = vs_ids,
+	.types = vs_types,
+	.ofss = vs_ofss,
+	.aux_ofss = vs_aux_ofss,
+	.cnt = ARRAY_SIZE(vs_ids),
+	.name = "VScaler",
+	.init = dpu95_vs_init,
+	.hw_init = dpu95_vs_hw_init,
+};
+
+static const unsigned int vs_ids_no_vs4[] = {9};
+static const enum dpu95_unit_type vs_types_no_vs4[] = {DPU95_BLIT};
+static const unsigned long vs_ofss_no_vs4[] = {0xc0000};
+static const unsigned long vs_aux_ofss_no_vs4[] = {0xc1000};
+
+static const struct dpu95_units dpu_vss_no_vs4 = {
+	.ids = vs_ids_no_vs4,
+	.types = vs_types_no_vs4,
+	.ofss = vs_ofss_no_vs4,
+	.aux_ofss = vs_aux_ofss_no_vs4,
+	.cnt = ARRAY_SIZE(vs_ids_no_vs4),
+	.name = "VScaler",
+	.init = dpu95_vs_init,
+	.hw_init = dpu95_vs_hw_init,
+};
+
 static const struct dpu95_units *dpu_all_units[] = {
 	&dpu_cfs,
 	&dpu_dbs,
@@ -255,6 +295,21 @@ static const struct dpu95_units *dpu_all_units[] = {
 	&dpu_fys,
 	&dpu_hss,
 	&dpu_lbs,
+	&dpu_vss,
+};
+
+static const struct dpu95_units *dpu_all_units_no_vs4[] = {
+	&dpu_cfs,
+	&dpu_dbs,
+	&dpu_dts,
+	&dpu_eds,
+	&dpu_fes,
+	&dpu_fgs,
+	&dpu_fls,
+	&dpu_fys,
+	&dpu_hss,
+	&dpu_lbs,
+	&dpu_vss_no_vs4,
 };
 
 static void dpu95_dm_extdst0_dm_allow_all(struct dpu95_soc *dpu)
@@ -813,8 +868,18 @@ static void devm_dpu95_irq_exit(void *data)
 
 void dpu95_submodules_hw_init(struct dpu95_soc *dpu)
 {
+	const struct dpu95_units **all_units;
 	const struct dpu95_units *us;
+	int units_num;
 	int i, j;
+
+	if (dpu->use_vs4) {
+		all_units = dpu_all_units;
+		units_num = ARRAY_SIZE(dpu_all_units);
+	} else {
+		all_units = dpu_all_units_no_vs4;
+		units_num = ARRAY_SIZE(dpu_all_units_no_vs4);
+	}
 
 	dpu95_dm_extdst0_dm_allow_all(dpu);
 	dpu95_dm_extdst1_dm_allow_all(dpu);
@@ -826,8 +891,8 @@ void dpu95_submodules_hw_init(struct dpu95_soc *dpu)
 	dpu95_dm_extdst4_master(dpu);
 	dpu95_dm_extdst5_master(dpu);
 
-	for (i = 0; i < ARRAY_SIZE(dpu_all_units); i++) {
-		us = dpu_all_units[i];
+	for (i = 0; i < units_num; i++) {
+		us = all_units[i];
 
 		for (j = 0; j < us->cnt; j++)
 			us->hw_init(dpu, j);
@@ -851,12 +916,22 @@ int dpu95_set_qos(struct dpu95_soc *dpu)
 
 static int dpu95_submodules_init(struct dpu95_soc *dpu, unsigned long dpu_base)
 {
+	const struct dpu95_units **all_units;
 	const struct dpu95_units *us;
 	unsigned long aux_ofs;
+	int units_num;
 	int i, j, ret;
 
-	for (i = 0; i < ARRAY_SIZE(dpu_all_units); i++) {
-		us = dpu_all_units[i];
+	if (dpu->use_vs4) {
+		all_units = dpu_all_units;
+		units_num = ARRAY_SIZE(dpu_all_units);
+	} else {
+		all_units = dpu_all_units_no_vs4;
+		units_num = ARRAY_SIZE(dpu_all_units_no_vs4);
+	}
+
+	for (i = 0; i < units_num; i++) {
+		us = all_units[i];
 
 		for (j = 0; j < us->cnt; j++) {
 			aux_ofs = us->aux_ofss ? dpu_base + us->aux_ofss[j] : 0;
@@ -1005,6 +1080,11 @@ int dpu95_core_init(struct dpu95_drm_device *dpu_drm)
 	if (IS_ERR(dpu->clk_ldb_vco))
 		return dev_err_probe(dev, PTR_ERR(dpu->clk_ldb_vco),
 				     "failed to get ldb_vco clock\n");
+
+	if (soc_device_match(imx95_rev_1_x_soc_devices))
+		dev_dbg(dev, "VScaler4 is disabled for i.MX95 rev1.x SoC\n");
+	else
+		dpu->use_vs4 = true;
 
 	ret = dpu95_submodules_init(dpu, dpu_base);
 	if (ret)

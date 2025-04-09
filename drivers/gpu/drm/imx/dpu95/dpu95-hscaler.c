@@ -37,7 +37,7 @@ static const enum dpu95_link_id dpu95_hs_link_id[] = {
 	DPU95_LINK_ID_HSCALER4, DPU95_LINK_ID_HSCALER9
 };
 
-static const enum dpu95_link_id src_sels[2][6] = {
+static const enum dpu95_link_id src_sels[2][7] = {
 	{
 		DPU95_LINK_ID_NONE,
 		DPU95_LINK_ID_FETCHYUV0,
@@ -45,8 +45,10 @@ static const enum dpu95_link_id src_sels[2][6] = {
 		DPU95_LINK_ID_FETCHYUV2,
 		DPU95_LINK_ID_FETCHYUV3,
 		DPU95_LINK_ID_MATRIX4,
+		DPU95_LINK_ID_VSCALER4,
 	}, {
 		DPU95_LINK_ID_NONE,
+		DPU95_LINK_ID_VSCALER9,
 		DPU95_LINK_ID_FILTER9,
 	},
 };
