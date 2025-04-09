@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2023 MediaTek Inc.
+ */
+/dts-v1/;
+#include "mt8391-genio-720-evk.dts"
+
+&mmc0 {
+	status = "disabled";
+};
+
+&ufshci {
+	status = "okay";
+};
+
+&ufsphy {
+	status = "okay";
+};
