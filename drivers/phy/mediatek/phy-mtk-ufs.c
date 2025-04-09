@@ -39,6 +39,7 @@
 struct ufs_mtk_phy {
 	struct device *dev;
 	void __iomem *mmio;
+	u32 ver;
 	struct clk_bulk_data clks[UFSPHY_CLKS_CNT];
 };
 
@@ -121,6 +122,9 @@ static int ufs_mtk_phy_power_on(struct phy *generic_phy)
 	struct ufs_mtk_phy *phy = get_ufs_mtk_phy(generic_phy);
 	int ret;
 
+	if (phy->ver)
+		return 0;
+
 	ret = clk_bulk_prepare_enable(UFSPHY_CLKS_CNT, phy->clks);
 	if (ret)
 		return ret;
@@ -134,6 +138,9 @@ static int ufs_mtk_phy_power_off(struct phy *generic_phy)
 {
 	struct ufs_mtk_phy *phy = get_ufs_mtk_phy(generic_phy);
 
+	if (phy->ver)
+		return 0;
+
 	ufs_mtk_phy_set_deep_hibern(phy);
 
 	clk_bulk_disable_unprepare(UFSPHY_CLKS_CNT, phy->clks);
@@ -146,6 +153,22 @@ static const struct phy_ops ufs_mtk_phy_ops = {
 	.power_off      = ufs_mtk_phy_power_off,
 	.owner          = THIS_MODULE,
 };
+
+static int ufs_mtk_phy_init(struct ufs_mtk_phy *phy)
+{
+	struct device *dev = phy->dev;
+	u32 val = 0;
+	int ret;
+
+	ret = of_property_read_u32(dev->of_node, "mphy-ver", &val);
+	if (!ret)
+		phy->ver = val;
+
+	if (!phy->ver)
+		ufs_mtk_phy_clk_init(phy);
+
+	return 0;
+}
 
 static int ufs_mtk_phy_probe(struct platform_device *pdev)
 {
@@ -165,7 +188,7 @@ static int ufs_mtk_phy_probe(struct platform_device *pdev)
 
 	phy->dev = dev;
 
-	ret = ufs_mtk_phy_clk_init(phy);
+	ret = ufs_mtk_phy_init(phy);
 	if (ret)
 		return ret;
 
