@@ -8,6 +8,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/phy/phy.h>
+#include <dt-bindings/reset/ti-syscon.h>
 #include <dt-bindings/clock/mediatek,mt8189-clk.h>
 #include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/power/mediatek,mt8189-power.h>
@@ -329,16 +330,124 @@
 			status = "disabled";
 		};
 
+		ufsphy: ufsphy@112a0000 {
+			compatible = "mediatek,mt8183-ufsphy";
+			reg = <0 0x112a0000 0 0x10000>;
+			#phy-cells = <0>;
+			mphy-ver = <1>;
+			status = "disabled";
+		};
+
+		ufshci: ufshci@112b0000 {
+			compatible = "mediatek,mt8183-ufshci";
+			reg = <0 0x112b0000 0 0x2300>;
+			phys = <&ufsphy>;
+			interrupts = <GIC_SPI 393 IRQ_TYPE_LEVEL_HIGH 0>;
+
+			clocks =
+				<&topckgen_clk CLK_TOP_U_SEL>,
+				<&topckgen_clk CLK_TOP_AES_UFSFDE_SEL>,
+				<&topckgen_clk CLK_TOP_U_MBIST_SEL>,
+				<&ufscfg_ao_reg_clk CLK_UFSCFG_AO_REG_UNIPRO_TX_SYM>,
+				<&ufscfg_ao_reg_clk CLK_UFSCFG_AO_REG_UNIPRO_RX_SYM0>,
+				<&ufscfg_ao_reg_clk CLK_UFSCFG_AO_REG_UNIPRO_RX_SYM1>,
+				<&ufscfg_ao_reg_clk CLK_UFSCFG_AO_REG_UNIPRO_SYS>,
+				<&ufscfg_ao_reg_clk CLK_UFSCFG_AO_REG_U_SAP_CFG>,
+				<&ufscfg_ao_reg_clk CLK_UFSCFG_AO_REG_U_PHY_TOP_AHB_S_BUS>,
+				<&ufscfg_pdn_reg_clk CLK_UFSCFG_REG_UFSHCI_UFS>,
+				<&ufscfg_pdn_reg_clk CLK_UFSCFG_REG_UFSHCI_AES>,
+				<&ufscfg_pdn_reg_clk CLK_UFSCFG_REG_UFSHCI_U_AHB>,
+				<&ufscfg_pdn_reg_clk CLK_UFSCFG_REG_UFSHCI_U_AXI>;
+
+			clock-names =
+				"ufs_sel",
+				"ufs_fde",
+				"ufs_mbist",
+				"unipro_tx_sym",
+				"unipro_rx_sym0",
+				"unipro_rx_sym1",
+				"unipro_sys",
+				"unipro_phy_sap",
+				"phy_top_ahb_s_bus",
+				"ufshci_ufs",
+				"ufshci_aes",
+				"ufshci_ufs_ahb",
+				"ufshci_aes_axi";
+
+			freq-table-hz =
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>,
+				<0 0>;
+
+			vcc-supply = <&mt6359_vemc_1_ldo_reg>;
+			vccq-supply = <&mt6359_vio18_ldo_reg>;
+			vccq2-supply = <&mt6359_vufs_ldo_reg>;
+
+			resets =	<&ufscfgpdn_rst 0>,
+					<&ufscfgpdn_rst 1>,
+					<&ufscfgpdn_rst 2>;
+			reset-names =	"unipro_rst",
+					"crypto_rst",
+					"hci_rst";
+
+			mediatek,ufs-qos;
+			mediatek,ufs-mphy-debug;
+			mediatek,ufs-disable-mcq;
+			mediatek,ufs-rtff-mtcmos;
+			mediatek,ufs-bypass-vccqx-lpm;
+			status = "disabled";
+		};
+
 		ufscfg_ao_reg_clk: syscon@112b8000 {
 			compatible = "mediatek,mt8189-ufscfg_ao", "syscon", "simple-mfd";
 			reg = <0 0x112b8000 0 0x1000>;
 			#clock-cells = <1>;
+
+			ufscfgao_rst: reset-controller {
+				compatible = "ti,syscon-reset";
+				#reset-cells = <1>;
+
+				ti,reset-bits = <
+					/* ufs mphy reset */
+					/* 8: mphy */
+					0x48  8 0x4c  8 0 0
+					(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+					>;
+			};
 		};
 
 		ufscfg_pdn_reg_clk: syscon@112bb000 {
 			compatible = "mediatek,mt8189-ufscfg_pdn", "syscon", "simple-mfd";
 			reg = <0 0x112bb000 0 0x1000>;
 			#clock-cells = <1>;
+
+			ufscfgpdn_rst: reset-controller {
+				compatible = "ti,syscon-reset";
+				#reset-cells = <1>;
+
+				ti,reset-bits = <
+					/* ufs ufschi/crypto/unipro reset */
+					/* 0: unipro */
+					0x48  0 0x4c  0 0 0
+					(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+					/* 1: ufs-crypto */
+					0x48  1 0x4c  1 0 0
+					(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+					/* 2: ufshci */
+					0x48  2 0x4c  2 0 0
+					(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+					>;
+			};
 		};
 
 		imp_iic_wrap_ws_clk: syscon@11b21000 {
