@@ -102,6 +102,25 @@
 		enable-active-high;
 		regulator-always-on;
 	};
+
+	usb_p1_vbus: regulator-5 {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_p1_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 84 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	usb_p3_vbus: regulator-6 {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_p3_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 86 0>;
+		enable-active-high;
+	};
 };
 
 &mt6359_vmodem_buck_reg {
@@ -393,6 +412,12 @@
 			bias-disable;
 		};
 	};
+
+	usb0_default_pins: usb0-default-pins {
+		pins-vbus-valid {
+			pinmux = <PINMUX_GPIO83__FUNC_VBUSVALID>;
+		};
+	};
 };
 
 &mmc0 {
@@ -418,6 +443,38 @@
 };
 
 &uart0 {
+	status = "okay";
+};
+
+&ssusb {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb0_default_pins>;
+	wakeup-source;
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	role-switch-default-mode = "peripheral";
+};
+
+&xhci1 {
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&usb_p1_vbus>;
+	wakeup-source;
+	status = "okay";
+};
+
+&xhci2 {
+	wakeup-source;
+	status = "okay";
+};
+
+&xhci3 {
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&usb_p3_vbus>;
+	wakeup-source;
+	status = "okay";
+};
+
+&xhci4 {
+	wakeup-source;
 	status = "okay";
 };
 
