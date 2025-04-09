@@ -313,6 +313,171 @@
 			#clock-cells = <1>;
 		};
 
+		ssusb: usb0@11201000 {
+			compatible = "mediatek,mtu3";
+			reg = <0 0x11201000 0 0x2e00>,
+			      <0 0x11203e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 384 IRQ_TYPE_LEVEL_HIGH 0>;
+			phy-cells = <1>;
+			phys = <&u2port0 PHY_TYPE_USB2>,
+			       <&u3port0 PHY_TYPE_USB3>;
+			assigned-clocks = <&topckgen_clk CLK_TOP_USB_TOP_P0_SEL>;
+			assigned-clock-parents = <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>;
+			clocks = <&pericfg_ao_clk CLK_PERAO_SSUSB0_XHCI>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB0_SYS>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB0_H>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB0_F>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB0_REF>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB0_FRMCNT>;
+			clock-names = "host_ck",
+				      "sys_ck",
+				      "mcu_ck",
+				      "dma_ck",
+				      "ref_ck",
+				      "frmcnt_ck";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			dr_mode = "otg";
+			mediatek,syscon-wakeup = <&pericfg_ao_clk 0x214 106>;
+			usb-role-switch;
+			xhci0: xhci0@11200000 {
+				compatible = "mediatek,mtk-xhci";
+				reg = <0 0x11200000 0 0x1000>;
+				reg-names = "mac";
+				interrupts = <GIC_SPI 385 IRQ_TYPE_LEVEL_HIGH 0>;
+				assigned-clocks = <&topckgen_clk CLK_TOP_USB_XHCI_P0_SEL>;
+				assigned-clock-parents = <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>;
+				clocks = <&pericfg_ao_clk CLK_PERAO_SSUSB0_XHCI>;
+				clock-names = "xhci_ck";
+			};
+		};
+
+		xhci1: xhci1@11210000 {
+			compatible = "mediatek,mtk-xhci";
+			reg = <0 0x11210000 0 0x1000>,
+			      <0 0x11213e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 386 IRQ_TYPE_LEVEL_HIGH 0>;
+			phy-cells = <1>;
+			phys = <&u2port1 PHY_TYPE_USB2>;
+			assigned-clocks = <&topckgen_clk CLK_TOP_USB_TOP_P1_SEL>,
+					  <&topckgen_clk CLK_TOP_USB_XHCI_P1_SEL>;
+			assigned-clock-parents = <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>,
+						 <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>;
+			clocks = <&pericfg_ao_clk CLK_PERAO_SSUSB1_XHCI>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB1_SYS>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB1_H>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB1_F>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB1_REF>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB1_FRMCNT>;
+			clock-names = "xhci_ck",
+				      "sys_ck",
+				      "mcu_ck",
+				      "dma_ck",
+				      "ref_ck",
+				      "frmcnt_ck";
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_SSUSB>;
+			mediatek,syscon-wakeup = <&pericfg_ao_clk 0x21c 107>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			status = "disabled";
+		};
+
+		xhci2: xhci2@11220000 {
+			compatible = "mediatek,mtk-xhci";
+			reg = <0 0x11220000 0 0x1000>,
+			      <0 0x11223e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 472 IRQ_TYPE_LEVEL_HIGH 0>;
+			phy-cells = <1>;
+			phys = <&u2port2 PHY_TYPE_USB2>;
+			assigned-clocks = <&topckgen_clk CLK_TOP_USB_TOP_P2_SEL>,
+					  <&topckgen_clk CLK_TOP_USB_XHCI_P2_SEL>;
+			assigned-clock-parents = <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>,
+						 <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>;
+			clocks = <&pericfg_ao_clk CLK_PERAO_SSUSB2_XHCI>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB2_SYS>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB2_H>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB2_F>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB2_REF>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB2_FRMCNT>;
+			clock-names = "xhci_ck",
+				      "sys_ck",
+				      "mcu_ck",
+				      "dma_ck",
+				      "ref_ck",
+				      "frmcnt_ck";
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_SSUSB>;
+			mediatek,syscon-wakeup = <&pericfg_ao_clk 0x27c 107>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			status = "disabled";
+		};
+
+		xhci3: xhci3@11260000 {
+			compatible = "mediatek,mtk-xhci";
+			reg = <0 0x11260000 0 0x2e00>,
+			      <0 0x11263e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 473 IRQ_TYPE_LEVEL_HIGH 0>;
+			phy-cells = <1>;
+			phys = <&u2port3 PHY_TYPE_USB2>,
+			       <&u3port3 PHY_TYPE_USB3>;
+			assigned-clocks = <&topckgen_clk CLK_TOP_USB_TOP_P3_SEL>,
+					  <&topckgen_clk CLK_TOP_USB_XHCI_P3_SEL>;
+			assigned-clock-parents = <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>,
+						 <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>;
+			clocks = <&pericfg_ao_clk CLK_PERAO_SSUSB3_XHCI>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB3_SYS>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB3_H>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB3_F>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB3_REF>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB3_FRMCNT>;
+			clock-names = "xhci_ck",
+				      "sys_ck",
+				      "mcu_ck",
+				      "dma_ck",
+				      "ref_ck",
+				      "frmcnt_ck";
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_SSUSB>;
+			mediatek,syscon-wakeup = <&pericfg_ao_clk 0x284 107>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			status = "disabled";
+		};
+
+		xhci4: xhci4@11270000 {
+			compatible = "mediatek,mtk-xhci";
+			reg = <0 0x11270000 0 0x1000>,
+			      <0 0x11273e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 474 IRQ_TYPE_LEVEL_HIGH 0>;
+			phy-cells = <1>;
+			phys = <&u2port4 PHY_TYPE_USB2>;
+			assigned-clocks = <&topckgen_clk CLK_TOP_USB_TOP_P4_SEL>,
+					  <&topckgen_clk CLK_TOP_USB_XHCI_P4_SEL>;
+			assigned-clock-parents = <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>,
+						 <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>;
+			clocks = <&pericfg_ao_clk CLK_PERAO_SSUSB4_XHCI>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB4_SYS>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB4_H>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB4_F>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB4_REF>,
+				 <&pericfg_ao_clk CLK_PERAO_SSUSB4_FRMCNT>;
+			clock-names = "xhci_ck",
+				      "sys_ck",
+				      "mcu_ck",
+				      "dma_ck",
+				      "ref_ck",
+				      "frmcnt_ck";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			mediatek,syscon-wakeup = <&pericfg_ao_clk 0x28c 107>;
+			status = "disabled";
+		};
+
 		mmc0: mmc@11230000 {
 			compatible = "mediatek,mt8196-mmc";
 			reg = <0 0x11230000 0 0x10000>,
@@ -450,6 +615,43 @@
 			};
 		};
 
+		u3phy3: t-phy3@11b00000 {
+			compatible = "mediatek,generic-tphy-v2";
+			reg = <0 0x11b00000 0 0x700>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			u2port3: usb2-phy3@11b00000 {
+				reg = <0 0x11b00000 0 0x400>;
+				clocks = <&topckgen_clk CLK_TOP_USB2_PHY_RF_P3_EN>;
+				clock-names = "ref";
+				#phy-cells = <1>;
+			};
+
+			u3port3: usb3-phy3@11b00700 {
+				reg = <0 0x11b00700 0 0x700>;
+				clocks = <&topckgen_clk CLK_TOP_USB2_PHY_RF_P3_EN>;
+				clock-names = "ref";
+				#phy-cells = <1>;
+				mediatek,keep-u3-phy-power;
+			};
+		};
+
+		u2phy4: xs-phy4@11b10000 {
+			compatible = "mediatek,xsphy";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			u2port4: usb2-phy4@11b10000 {
+				reg = <0 0x11b10000 0 0x400>;
+				clocks = <&topckgen_clk CLK_TOP_USB2_PHY_RF_P4_EN>;
+				clock-names = "ref";
+				#phy-cells = <1>;
+			};
+		};
+
 		imp_iic_wrap_ws_clk: syscon@11b21000 {
 			compatible = "mediatek,mt8189-iic_wrap_ws", "syscon";
 			reg = <0 0x11b21000 0 0x1000>;
@@ -466,6 +668,56 @@
 			compatible = "mediatek,mt8189-iic_wrap_s", "syscon";
 			reg = <0 0x11d74000 0 0x1000>;
 			#clock-cells = <1>;
+		};
+
+		u3phy0: xs-phy0@11e80000 {
+			compatible = "mediatek,xsphy";
+			reg = <0 0x11e83000 0 0x200>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			u2port0: usb2-phy0@11e80000 {
+				reg = <0 0x11e80000 0 0x400>;
+				clocks = <&topckgen_clk CLK_TOP_USB2_PHY_RF_P0_EN>;
+				clock-names = "ref";
+				#phy-cells = <1>;
+			};
+
+			u3port0: usb3-phy0@11e83000 {
+				reg = <0 0x11e83400 0 0x500>;
+				clocks = <&topckgen_clk CLK_TOP_USB2_PHY_RF_P0_EN>;
+				clock-names = "ref";
+				#phy-cells = <1>;
+			};
+		};
+
+		u2phy1: xs-phy1@11e90000 {
+			compatible = "mediatek,xsphy";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			u2port1: usb2-phy1@11e90000 {
+				reg = <0 0x11e90000 0 0x700>;
+				clocks = <&topckgen_clk CLK_TOP_USB2_PHY_RF_P1_EN>;
+				clock-names = "ref";
+				#phy-cells = <1>;
+			};
+		};
+
+		u2phy2: xs-phy2@11ef0000 {
+			compatible = "mediatek,xsphy";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			u2port2: usb2-phy2@11ef0000 {
+				reg = <0 0x11ef0000 0 0x400>;
+				clocks = <&topckgen_clk CLK_TOP_USB2_PHY_RF_P2_EN>;
+				clock-names = "ref";
+				#phy-cells = <1>;
+			};
 		};
 
 		imp_iic_wrap_en_clk: syscon@11f32000 {
