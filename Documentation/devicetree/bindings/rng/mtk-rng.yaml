@@ -37,6 +37,13 @@ properties:
     items:
       - const: rng
 
+  polling-delay:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description:
+      The maximum number of time to wait between polls when
+      checking random number generator. If not provided,
+      the default number of 60 is configured.
+
 required:
   - compatible
   - reg
