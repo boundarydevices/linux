@@ -36,6 +36,7 @@ struct mtk_rng {
 	void __iomem *base;
 	struct clk *clk;
 	struct hwrng rng;
+	u32 timeout_poll;
 };
 
 static int mtk_rng_init(struct hwrng *rng)
@@ -76,7 +77,7 @@ static bool mtk_rng_wait_ready(struct hwrng *rng, bool wait)
 	if (!ready && wait)
 		readl_poll_timeout_atomic(priv->base + RNG_CTRL, ready,
 					  ready & RNG_READY, USEC_POLL,
-					  TIMEOUT_POLL);
+					  priv->timeout_poll);
 	return !!(ready & RNG_READY);
 }
 
@@ -107,6 +108,8 @@ static int mtk_rng_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct mtk_rng *priv;
+	struct device *dev = &pdev->dev;
+	struct device_node *node = dev->of_node;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -138,6 +141,9 @@ static int mtk_rng_probe(struct platform_device *pdev)
 			ret);
 		return ret;
 	}
+
+	if (of_property_read_u32(node, "polling-delay", &priv->timeout_poll))
+		priv->timeout_poll = TIMEOUT_POLL;
 
 	dev_set_drvdata(&pdev->dev, priv);
 	pm_runtime_set_autosuspend_delay(&pdev->dev, RNG_AUTOSUSPEND_TIMEOUT);
