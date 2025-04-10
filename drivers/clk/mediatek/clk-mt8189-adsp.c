@@ -54,8 +54,7 @@ static const struct mtk_gate_regs afe4_cg_regs = {
 		.parent_name = _parent,			\
 		.regs = &afe0_cg_regs,			\
 		.shift = _shift,			\
-		.ops = &mtk_clk_gate_ops_no_setclr,	\
-		.flags = CLK_OPS_PARENT_ENABLE,		\
+		.ops = &mtk_clk_gate_ops_no_setclr_counted,\
 	}
 
 #define GATE_AFE0_V(_id, _name, _parent) {    \
@@ -70,8 +69,7 @@ static const struct mtk_gate_regs afe4_cg_regs = {
 		.parent_name = _parent,			\
 		.regs = &afe1_cg_regs,			\
 		.shift = _shift,			\
-		.ops = &mtk_clk_gate_ops_no_setclr,	\
-		.flags = CLK_OPS_PARENT_ENABLE,		\
+		.ops = &mtk_clk_gate_ops_no_setclr_counted,\
 	}
 
 #define GATE_AFE1_V(_id, _name, _parent) {    \
@@ -86,8 +84,7 @@ static const struct mtk_gate_regs afe4_cg_regs = {
 		.parent_name = _parent,			\
 		.regs = &afe2_cg_regs,			\
 		.shift = _shift,			\
-		.ops = &mtk_clk_gate_ops_no_setclr,	\
-		.flags = CLK_OPS_PARENT_ENABLE,		\
+		.ops = &mtk_clk_gate_ops_no_setclr_counted,\
 	}
 
 #define GATE_AFE2_V(_id, _name, _parent) {    \
@@ -102,8 +99,7 @@ static const struct mtk_gate_regs afe4_cg_regs = {
 		.parent_name = _parent,			\
 		.regs = &afe3_cg_regs,			\
 		.shift = _shift,			\
-		.ops = &mtk_clk_gate_ops_no_setclr,	\
-		.flags = CLK_OPS_PARENT_ENABLE,		\
+		.ops = &mtk_clk_gate_ops_no_setclr_counted,\
 	}
 
 #define GATE_AFE3_V(_id, _name, _parent) {    \
@@ -118,8 +114,7 @@ static const struct mtk_gate_regs afe4_cg_regs = {
 		.parent_name = _parent,			\
 		.regs = &afe4_cg_regs,			\
 		.shift = _shift,			\
-		.ops = &mtk_clk_gate_ops_no_setclr,	\
-		.flags = CLK_OPS_PARENT_ENABLE,		\
+		.ops = &mtk_clk_gate_ops_no_setclr_counted,\
 	}
 
 #define GATE_AFE4_V(_id, _name, _parent) {    \
@@ -246,7 +241,6 @@ static const struct mtk_gate_regs vad1_cg_regs = {
 		.regs = &vad0_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_no_setclr_inv,	\
-		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_VAD0_V(_id, _name, _parent) {    \
@@ -262,7 +256,6 @@ static const struct mtk_gate_regs vad1_cg_regs = {
 		.regs = &vad1_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_no_setclr,	\
-		.flags = CLK_OPS_PARENT_ENABLE,		\
 	}
 
 #define GATE_VAD1_V(_id, _name, _parent) {    \

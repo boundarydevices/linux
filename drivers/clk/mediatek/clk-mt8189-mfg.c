@@ -30,8 +30,7 @@ static const struct mtk_gate_regs mfg_cg_regs = {
 		.parent_name = _parent,			\
 		.regs = &mfg_cg_regs,			\
 		.shift = _shift,			\
-		.ops = &mtk_clk_gate_ops_setclr,	\
-		.flags = CLK_OPS_PARENT_ENABLE,		\
+		.ops = &mtk_clk_gate_ops_setclr_counted,\
 	}
 
 #define GATE_MFG_V(_id, _name, _parent) {    \
