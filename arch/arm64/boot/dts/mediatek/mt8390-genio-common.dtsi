@@ -286,6 +286,23 @@
 	pinctrl-0 = <&i2c1_pins>;
 	clock-frequency = <400000>;
 	status = "okay";
+
+	typec-mux@48 {
+		compatible = "ite,it5205";
+		reg = <0x48>;
+
+		mode-switch;
+		orientation-switch;
+
+		vcc-supply = <&mt6359_vcn33_1_bt_ldo_reg>;
+		status = "okay";
+
+		port {
+			it5205_sbu_mux: endpoint {
+				remote-endpoint = <&typec_sbu_out>;
+			};
+		};
+	};
 };
 
 &i2c2 {
@@ -305,9 +322,66 @@
 &i2c4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c4_pins>;
-	pinctrl-1 = <&rt1715_int_pins>;
 	clock-frequency = <1000000>;
 	status = "okay";
+
+	rt1715@4e {
+		compatible = "richtek,rt1715";
+		reg = <0x4e>;
+		interrupts-extended = <&pio 12 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&rt1715_int_pins>;
+		vbus-supply = <&usb_p1_vbus>;
+		status = "okay";
+
+		connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "dual";
+			op-sink-microwatt = <10000000>;
+			power-role = "dual";
+			try-power-role = "sink";
+			pd-revision = /bits/ 8 <0x03 0x00 0x01 0x08>;
+
+			source-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			altmodes {
+				displayport {
+					svid = /bits/ 16 <0xff01>;
+					vdo = <0x001c1c47>;
+				};
+			};
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					typec_con_hs: endpoint {
+						remote-endpoint = <&mtu3_hs1_role_sw>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					typec_con_ss: endpoint {
+						remote-endpoint = <&xhci_ss_ep>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					typec_sbu_out: endpoint {
+						remote-endpoint = <&it5205_sbu_mux>;
+					};
+
+				};
+			};
+		};
+	};
 };
 
 &i2c5 {
@@ -1107,6 +1181,12 @@
 	usb-role-switch;
 	status = "okay";
 	wakeup-source;
+
+	port {
+		mtu3_hs1_role_sw: endpoint {
+			remote-endpoint = <&typec_con_hs>;
+		};
+	};
 };
 
 &u2port1 {
@@ -1138,6 +1218,12 @@
 		peer-hub = <&hub_2_0>;
 		vdd-supply = <&usb_hub_fixed_3v3>;
 		status = "okay";
+	};
+
+	port {
+		xhci_ss_ep: endpoint {
+			remote-endpoint = <&typec_con_ss>;
+		};
 	};
 };
 
