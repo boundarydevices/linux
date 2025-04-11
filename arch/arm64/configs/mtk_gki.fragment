@@ -22,6 +22,7 @@ CONFIG_HW_RANDOM_MTK=m
 # I2C system bus drivers (mostly embedded / system-on-chip)
 #
 CONFIG_I2C_MT65XX=m
+CONFIG_I2C_CHARDEV=m
 
 #
 # MediaTek pinctrl drivers
@@ -70,6 +71,14 @@ CONFIG_USB_CONN_GPIO=m
 # USB dual-mode controller drivers
 #
 CONFIG_USB_MTU3=m
+
+#
+# USB HUB and Type-C
+#
+CONFIG_TYPEC_MUX_IT5205=m
+CONFIG_TYPEC_RT1711H=m
+CONFIG_USB_ONBOARD_DEV=m
+# CONFIG_USB_ONBOARD_DEV_USB5744 is not set
 
 #
 # PCIe Drivers
