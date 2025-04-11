@@ -2,15 +2,20 @@
 //
 // Copyright 2017-2019 NXP
 
+#include <linux/arm-smccc.h>
 #include <linux/interrupt.h>
 #include <linux/clockchips.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/sys_soc.h>
 
 #include "timer-of.h"
 
 #define CMP_OFFSET	0x10000
 #define RD_OFFSET	0x20000
+
+#define IMX_SIP_GET_SOC_INFO	0xc2000006
+#define SOC_REV_MAJOR(x)	((((x) >> 28) & 0xF) - 0x9)
 
 #define CNTCV_LO	0x8
 #define CNTCV_HI	0xc
@@ -25,7 +30,7 @@
 
 #define SYS_CTR_CLK_DIV		0x3
 
-#define SYSCTRL_IMX95		BIT(0)
+#define SYSCTRL_IMX95_QUIRK	BIT(0)
 
 static void __iomem *sys_ctr_base __ro_after_init;
 static u32 cmpcr __ro_after_init;
@@ -34,9 +39,9 @@ static u32 cntcv_hi = CNTCV_HI;
 static u32 cntcv_lo = CNTCV_LO;
 static struct timer_of to_sysctr;
 
-static inline bool sysctr_is_imx95(void)
+static inline bool sysctr_is_imx95_quirk(void)
 {
-	return sysctr_flag & SYSCTRL_IMX95 ? true : false;
+	return sysctr_flag & SYSCTRL_IMX95_QUIRK ? true : false;
 }
 
 static void sysctr_timer_read_write(void __iomem *addr, u32 mask, u32 val, int count)
@@ -61,7 +66,7 @@ static void sysctr_timer_enable(bool enable)
 	val = enable ? cmpcr | SYS_CTR_EN : cmpcr;
 	writel(val, sys_ctr_base + CMPCR);
 
-	if (!sysctr_is_imx95())
+	if (!sysctr_is_imx95_quirk())
 		return;
 
 	sysctr_timer_read_write(sys_ctr_base + CMPCR, val, val, 1000);
@@ -108,12 +113,12 @@ static int sysctr_set_next_event(unsigned long delta,
 	writel_relaxed(cmp_hi, sys_ctr_base + CMPCV_HI);
 	writel_relaxed(cmp_lo, sys_ctr_base + CMPCV_LO);
 
-	if (sysctr_is_imx95())
+	if (sysctr_is_imx95_quirk())
 		disable_irq_nosync(to_sysctr.clkevt.irq);
 
 	sysctr_timer_enable(true);
 
-	if (!sysctr_is_imx95())
+	if (!sysctr_is_imx95_quirk())
 		return 0;
 
 	sysctr_timer_read_write(sys_ctr_base + CMPCV_HI, GENMASK(31, 0), cmp_hi, 1000);
@@ -178,6 +183,7 @@ static void __init sysctr_clockevent_init(void)
 
 static int __init sysctr_timer_init(struct device_node *np)
 {
+	struct arm_smccc_res res;
 	int ret = 0;
 
 	ret = timer_of_init(np, &to_sysctr);
@@ -192,7 +198,10 @@ static int __init sysctr_timer_init(struct device_node *np)
 	if (of_device_is_compatible(np, "nxp,imx95-sysctr-timer")) {
 		cntcv_hi = CNTCV_HI_IMX95;
 		cntcv_lo = CNTCV_LO_IMX95;
-		sysctr_flag |= SYSCTRL_IMX95;
+
+		arm_smccc_smc(IMX_SIP_GET_SOC_INFO, 0, 0, 0, 0, 0, 0, 0, &res);
+		if ((res.a0 != SMCCC_RET_SUCCESS) || (SOC_REV_MAJOR(res.a1) == 1))
+			sysctr_flag |= SYSCTRL_IMX95_QUIRK;
 	}
 
 	sys_ctr_base = timer_of_base(&to_sysctr);
