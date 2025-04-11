@@ -414,3 +414,11 @@ endif # PHYLIB
 config MICREL_KS8995MA
 	tristate "Micrel KS8995MA 5-ports 10/100 managed Ethernet switch"
 	depends on SPI
+
+config AIROHA_AN8801_PHY
+	tristate "Drivers for Airoha AN8801 Gigabit PHYs"
+	help
+	  The Airoha AN8801 PHY is designed for high-speed networking applications.
+	  Enabling this driver allows thesystem to communicate with the Airoha AN8801
+	  PHY hardware, providing network connectivity to platforms and devices
+	  incorporating this PHY.
