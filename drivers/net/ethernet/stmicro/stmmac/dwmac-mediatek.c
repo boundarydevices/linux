@@ -7,6 +7,8 @@
 #include <linux/mfd/syscon.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_mdio.h>
 #include <linux/of_net.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
@@ -66,6 +68,35 @@
 #define MT8195_DLY_RMII_TXC_ENABLE	BIT(5)
 #define MT8195_DLY_RMII_TXC_STAGES	GENMASK(4, 0)
 
+/* Peri Configuration register for mt8189 */
+#define MT8189_PERI_ETH_CTRL0		0x270
+#define MT8189_RMII_CLK_SRC_INTERNAL	BIT(28)
+#define MT8189_RMII_CLK_SRC_RXC		BIT(27)
+#define MT8189_ETH_INTF_SEL		GENMASK(26, 24)
+#define MT8189_RGMII_TXC_PHASE_CTRL	BIT(22)
+#define MT8189_EXT_PHY_MODE		BIT(21)
+#define MT8189_TXC_OUT_OP		BIT(20)
+#define MT8189_DLY_GTXC_INV		BIT(12)
+#define MT8189_DLY_GTXC_STAGE_FINE	GENMASK(11, 6)
+#define MT8189_DLY_GTXC_ENABLE		BIT(5)
+#define MT8189_DLY_GTXC_STAGES		GENMASK(4, 0)
+
+#define MT8189_PERI_ETH_CTRL1		0x274
+#define MT8189_DLY_RXC_INV		BIT(25)
+#define MT8189_DLY_RXC_ENABLE		BIT(18)
+#define MT8189_DLY_RXC_STAGES		GENMASK(17, 13)
+#define MT8189_DLY_TXC_INV		BIT(12)
+#define MT8189_DLY_TXC_ENABLE		BIT(5)
+#define MT8189_DLY_TXC_STAGES		GENMASK(4, 0)
+
+#define MT8189_PERI_ETH_CTRL2		0x278
+#define MT8189_DLY_RMII_RXC_INV		BIT(25)
+#define MT8189_DLY_RMII_RXC_ENABLE	BIT(18)
+#define MT8189_DLY_RMII_RXC_STAGES	GENMASK(17, 13)
+#define MT8189_DLY_RMII_TXC_INV		BIT(12)
+#define MT8189_DLY_RMII_TXC_ENABLE	BIT(5)
+#define MT8189_DLY_RMII_TXC_STAGES	GENMASK(4, 0)
+
 struct mac_delay_struct {
 	u32 tx_delay;
 	u32 rx_delay;
@@ -90,7 +121,7 @@ struct mediatek_dwmac_plat_data {
 struct mediatek_dwmac_variant {
 	int (*dwmac_set_phy_interface)(struct mediatek_dwmac_plat_data *plat);
 	int (*dwmac_set_delay)(struct mediatek_dwmac_plat_data *plat);
-
+	void (*dwmac_fix_mac_speed)(void *priv, unsigned int speed, unsigned int mode);
 	/* clock ids to be requested */
 	const char * const *clk_list;
 	int num_clks;
@@ -107,6 +138,10 @@ static const char * const mt2712_dwmac_clk_l[] = {
 
 static const char * const mt8195_dwmac_clk_l[] = {
 	"axi", "apb", "mac_cg", "mac_main", "ptp_ref"
+};
+
+static const char * const mt8189_dwmac_clk_l[] = {
+	"mac_main", "ptp_ref"
 };
 
 static int mt2712_set_interface(struct mediatek_dwmac_plat_data *plat)
@@ -452,6 +487,197 @@ static const struct mediatek_dwmac_variant mt8195_gmac_variant = {
 	.tx_delay_max = 9280,
 };
 
+static int mt8189_set_interface(struct mediatek_dwmac_plat_data *plat)
+{
+	int rmii_clk_from_mac = plat->rmii_clk_from_mac ? MT8189_RMII_CLK_SRC_INTERNAL : 0;
+	int rmii_rxc = plat->rmii_rxc ? MT8189_RMII_CLK_SRC_RXC : 0;
+	u32 intf_val = 0;
+
+	/* select phy interface in top control domain */
+	switch (plat->phy_mode) {
+	case PHY_INTERFACE_MODE_MII:
+		intf_val |= FIELD_PREP(MT8189_ETH_INTF_SEL, PHY_INTF_MII);
+		break;
+	case PHY_INTERFACE_MODE_RMII:
+		intf_val |= (rmii_rxc | rmii_clk_from_mac);
+		intf_val |= FIELD_PREP(MT8189_ETH_INTF_SEL, PHY_INTF_RMII);
+		break;
+	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+		intf_val |= FIELD_PREP(MT8189_ETH_INTF_SEL, PHY_INTF_RGMII);
+		break;
+	default:
+		dev_err(plat->dev, "phy interface not supported\n");
+		return -EINVAL;
+	}
+
+	/* MT8189 only support external PHY */
+	intf_val |= MT8189_EXT_PHY_MODE;
+	intf_val |= MT8189_TXC_OUT_OP;
+
+	regmap_write(plat->peri_regmap, MT8189_PERI_ETH_CTRL0, intf_val);
+
+	return 0;
+}
+
+static void mt8189_delay_ps2stage(struct mediatek_dwmac_plat_data *plat)
+{
+	struct mac_delay_struct *mac_delay = &plat->mac_delay;
+
+	/* 290ps per stage */
+	mac_delay->tx_delay /= 290;
+	mac_delay->rx_delay /= 290;
+}
+
+static void mt8189_delay_stage2ps(struct mediatek_dwmac_plat_data *plat)
+{
+	struct mac_delay_struct *mac_delay = &plat->mac_delay;
+
+	/* 290ps per stage */
+	mac_delay->tx_delay *= 290;
+	mac_delay->rx_delay *= 290;
+}
+
+static int mt8189_set_delay(struct mediatek_dwmac_plat_data *plat)
+{
+	struct mac_delay_struct *mac_delay = &plat->mac_delay;
+	u32 gtxc_delay_val = 0, delay_val = 0, rmii_delay_val = 0;
+
+	mt8189_delay_ps2stage(plat);
+
+	switch (plat->phy_mode) {
+	case PHY_INTERFACE_MODE_MII:
+		delay_val |= FIELD_PREP(MT8189_DLY_TXC_ENABLE, !!mac_delay->tx_delay);
+		delay_val |= FIELD_PREP(MT8189_DLY_TXC_STAGES, mac_delay->tx_delay);
+		delay_val |= FIELD_PREP(MT8189_DLY_TXC_INV, mac_delay->tx_inv);
+
+		delay_val |= FIELD_PREP(MT8189_DLY_RXC_ENABLE, !!mac_delay->rx_delay);
+		delay_val |= FIELD_PREP(MT8189_DLY_RXC_STAGES, mac_delay->rx_delay);
+		delay_val |= FIELD_PREP(MT8189_DLY_RXC_INV, mac_delay->rx_inv);
+		break;
+	case PHY_INTERFACE_MODE_RMII:
+		if (plat->rmii_clk_from_mac) {
+			/* case 1: mac provides the rmii reference clock,
+			 * and the clock output to TXC pin.
+			 * The egress timing can be adjusted by RMII_TXC delay macro circuit.
+			 * The ingress timing can be adjusted by RMII_RXC delay macro circuit.
+			 */
+			rmii_delay_val |= FIELD_PREP(MT8189_DLY_RMII_TXC_ENABLE,
+						     !!mac_delay->tx_delay);
+			rmii_delay_val |= FIELD_PREP(MT8189_DLY_RMII_TXC_STAGES,
+						     mac_delay->tx_delay);
+			rmii_delay_val |= FIELD_PREP(MT8189_DLY_RMII_TXC_INV,
+						     mac_delay->tx_inv);
+
+			rmii_delay_val |= FIELD_PREP(MT8189_DLY_RMII_RXC_ENABLE,
+						     !!mac_delay->rx_delay);
+			rmii_delay_val |= FIELD_PREP(MT8189_DLY_RMII_RXC_STAGES,
+						     mac_delay->rx_delay);
+			rmii_delay_val |= FIELD_PREP(MT8189_DLY_RMII_RXC_INV,
+						     mac_delay->rx_inv);
+		} else {
+			/* case 2: the rmii reference clock is from external phy,
+			 * and the property "rmii_rxc" indicates which pin(TXC/RXC)
+			 * the reference clk is connected to. The reference clock is a
+			 * received signal, so rx_delay/rx_inv are used to indicate
+			 * the reference clock timing adjustment
+			 */
+			if (plat->rmii_rxc) {
+				/* the rmii reference clock from outside is connected
+				 * to RXC pin, the reference clock will be adjusted
+				 * by RXC delay macro circuit.
+				 */
+				delay_val |= FIELD_PREP(MT8189_DLY_RXC_ENABLE,
+							!!mac_delay->rx_delay);
+				delay_val |= FIELD_PREP(MT8189_DLY_RXC_STAGES,
+							mac_delay->rx_delay);
+				delay_val |= FIELD_PREP(MT8189_DLY_RXC_INV,
+							mac_delay->rx_inv);
+			} else {
+				/* the rmii reference clock from outside is connected
+				 * to TXC pin, the reference clock will be adjusted
+				 * by TXC delay macro circuit.
+				 */
+				delay_val |= FIELD_PREP(MT8189_DLY_TXC_ENABLE,
+							!!mac_delay->rx_delay);
+				delay_val |= FIELD_PREP(MT8189_DLY_TXC_STAGES,
+							mac_delay->rx_delay);
+				delay_val |= FIELD_PREP(MT8189_DLY_TXC_INV,
+							mac_delay->rx_inv);
+			}
+		}
+		break;
+	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+		gtxc_delay_val |= FIELD_PREP(MT8189_DLY_GTXC_ENABLE, !!mac_delay->tx_delay);
+		gtxc_delay_val |= FIELD_PREP(MT8189_DLY_GTXC_STAGES, mac_delay->tx_delay);
+		gtxc_delay_val |= FIELD_PREP(MT8189_DLY_GTXC_INV, mac_delay->tx_inv);
+		gtxc_delay_val |= MT8189_DLY_GTXC_STAGE_FINE;
+
+		delay_val |= FIELD_PREP(MT8189_DLY_RXC_ENABLE, !!mac_delay->rx_delay);
+		delay_val |= FIELD_PREP(MT8189_DLY_RXC_STAGES, mac_delay->rx_delay);
+		delay_val |= FIELD_PREP(MT8189_DLY_RXC_INV, mac_delay->rx_inv);
+
+		break;
+	default:
+		dev_err(plat->dev, "phy interface not supported\n");
+		return -EINVAL;
+	}
+
+	regmap_update_bits(plat->peri_regmap,
+			   MT8189_PERI_ETH_CTRL0,
+			   MT8189_RGMII_TXC_PHASE_CTRL |
+			   MT8189_DLY_GTXC_INV |
+			   MT8189_DLY_GTXC_STAGE_FINE |
+			   MT8189_DLY_GTXC_ENABLE |
+			   MT8189_DLY_GTXC_STAGES,
+			   gtxc_delay_val);
+	regmap_write(plat->peri_regmap, MT8189_PERI_ETH_CTRL1, delay_val);
+	regmap_write(plat->peri_regmap, MT8189_PERI_ETH_CTRL2, rmii_delay_val);
+
+	mt8189_delay_stage2ps(plat);
+
+	return 0;
+}
+
+static void mt8189_fix_mac_speed(void *priv, unsigned int speed, unsigned int mode)
+{
+	struct mediatek_dwmac_plat_data *priv_plat = priv;
+
+	if ((phy_interface_mode_is_rgmii(priv_plat->phy_mode))) {
+		/* prefer 2ns fixed delay which is controlled by TXC_PHASE_CTRL,
+		 * when link speed is 1Gbps with RGMII interface,
+		 * Fall back to delay macro circuit for 10/100Mbps link speed.
+		 */
+		if (speed == SPEED_1000)
+			regmap_update_bits(priv_plat->peri_regmap,
+					   MT8189_PERI_ETH_CTRL0,
+					   MT8189_RGMII_TXC_PHASE_CTRL |
+					   MT8189_DLY_GTXC_STAGE_FINE |
+					   MT8189_DLY_GTXC_ENABLE |
+					   MT8189_DLY_GTXC_INV |
+					   MT8189_DLY_GTXC_STAGES,
+					   MT8189_RGMII_TXC_PHASE_CTRL);
+		else
+			mt8189_set_delay(priv_plat);
+	}
+}
+
+static const struct mediatek_dwmac_variant mt8189_gmac_variant = {
+	.dwmac_set_phy_interface = mt8189_set_interface,
+	.dwmac_set_delay = mt8189_set_delay,
+	.dwmac_fix_mac_speed = mt8189_fix_mac_speed,
+	.clk_list = mt8189_dwmac_clk_l,
+	.num_clks = ARRAY_SIZE(mt8189_dwmac_clk_l),
+	.dma_bit_mask = 35,
+	.rx_delay_max = 9280,
+	.tx_delay_max = 9280,
+};
+
 static int mediatek_dwmac_config_dt(struct mediatek_dwmac_plat_data *plat)
 {
 	struct mac_delay_struct *mac_delay = &plat->mac_delay;
@@ -598,6 +824,9 @@ static int mediatek_dwmac_common_data(struct platform_device *pdev,
 	plat->bsp_priv = priv_plat;
 	plat->init = mediatek_dwmac_init;
 	plat->clks_config = mediatek_dwmac_clks_config;
+
+	if (priv_plat->variant->dwmac_fix_mac_speed)
+		plat->fix_mac_speed = priv_plat->variant->dwmac_fix_mac_speed;
 
 	plat->safety_feat_cfg = devm_kzalloc(&pdev->dev,
 					     sizeof(*plat->safety_feat_cfg),
