@@ -3654,6 +3654,8 @@
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c01XXXX 0xd000 0x1000>;
 			mediatek,gce-events =
 				 <CMDQ_EVENT_VDO0_DISP_STREAM_DONE_0>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 		};
 
 		vdosys1: syscon@1c100000 {
@@ -3666,6 +3668,8 @@
 				<&vdosys1 CLK_VDO1_DSC_VDO1_DL_ASYNC>;
 			clock-names = "cross_sys_async0","cross_sys_async1";
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0 0x1000>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 		};
 
 		dp_intf0: dp-intf@1c015000 {
@@ -3752,7 +3756,7 @@
 			clocks = <&vdosys1 CLK_VDO1_DPI1_MM>,
 				 <&vdosys1 CLK_VDO1_DPI1>,
 				 <&vdosys1 CLK_VDO1_DPI1_HDMI>;
-			clock-names = "engine", "pixel", "pll";
+			clock-names = "engine", "ck_cg", "pll";
 			status = "disabled";
 			ports {
 				#address-cells = <1>;
