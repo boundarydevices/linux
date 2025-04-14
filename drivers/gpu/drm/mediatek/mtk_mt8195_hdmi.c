@@ -1181,10 +1181,10 @@ static void mtk_hdmi_change_video_resolution(struct mtk_hdmi *hdmi)
 	mtk_hdmi_enable_scrambling(hdmi, is_over_340M);
 	if (scdc->supported) {
 		if (scdc->scrambling.supported) {
-			ret = drm_scdc_set_scrambling(&hdmi->conn, is_over_340M);
+			ret = drm_scdc_set_scrambling(hdmi->curr_conn, is_over_340M);
 			dev_info(hdmi->dev, "set_scrambling:%d\n", ret);
 		}
-		ret = drm_scdc_set_high_tmds_clock_ratio(&hdmi->conn, is_over_340M);
+		ret = drm_scdc_set_high_tmds_clock_ratio(hdmi->curr_conn, is_over_340M);
 		dev_info(hdmi->dev, "set_high_tmds_clock_ratio:%d\n", ret);
 	}
 
@@ -1537,7 +1537,8 @@ static int mtk_hdmi_bridge_attach(struct drm_bridge *bridge,
 	return 0;
 }
 
-static void mtk_hdmi_bridge_disable(struct drm_bridge *bridge)
+static void mtk_hdmi_bridge_atomic_disable(struct drm_bridge *bridge,
+					   struct drm_bridge_state *old_state)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 
@@ -1564,7 +1565,8 @@ static void mtk_hdmi_handle_plugged_change(struct mtk_hdmi *hdmi, bool plugged)
 		hdmi->plugged_cb(hdmi->codec_dev, plugged);
 }
 
-static void mtk_hdmi_bridge_post_disable(struct drm_bridge *bridge)
+static void mtk_hdmi_bridge_atomic_post_disable(struct drm_bridge *bridge,
+						struct drm_bridge_state *old_state)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 
@@ -1583,8 +1585,10 @@ static void mtk_hdmi_bridge_post_disable(struct drm_bridge *bridge)
 	mtk_hdmi_handle_plugged_change(hdmi, false);
 }
 
-static void mtk_hdmi_bridge_pre_enable(struct drm_bridge *bridge)
+static void mtk_hdmi_bridge_atomic_pre_enable(struct drm_bridge *bridge,
+					      struct drm_bridge_state *old_state)
 {
+	struct drm_atomic_state *state = old_state->base.state;
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 	u8 buffer_spd[MT8195_HDMI_SPD_BUFFER_SIZE];
 	u8 buffer_avi[MT8195_HDMI_AVI_BUFFER_SIZE];
@@ -1593,6 +1597,9 @@ static void mtk_hdmi_bridge_pre_enable(struct drm_bridge *bridge)
 	};
 
 	DRM_DEV_DEBUG_DRIVER(hdmi->dev, "[%s][%d]\n", __func__, __LINE__);
+
+	/* Retrieve the connector through the atomic state */
+	hdmi->curr_conn = drm_atomic_get_new_connector_for_encoder(state, bridge->encoder);
 
 	mtk_hdmi_convert_colorspace_depth(hdmi);
 	mtk_hdmi_output_set_display_mode(hdmi, &hdmi->mode);
@@ -1606,7 +1613,8 @@ static void mtk_hdmi_bridge_pre_enable(struct drm_bridge *bridge)
 	hdmi->powered = true;
 }
 
-static void mtk_hdmi_bridge_enable(struct drm_bridge *bridge)
+static void mtk_hdmi_bridge_atomic_enable(struct drm_bridge *bridge,
+					  struct drm_bridge_state *old_state)
 {
 	struct mtk_hdmi *hdmi = hdmi_ctx_from_bridge(bridge);
 
@@ -1648,11 +1656,14 @@ static enum drm_connector_status mtk_hdmi_bridge_detect(struct drm_bridge *bridg
 const struct drm_bridge_funcs mtk_mt8195_hdmi_bridge_funcs = {
 	.attach = mtk_hdmi_bridge_attach,
 	.mode_fixup = mtk_hdmi_bridge_mode_fixup,
-	.disable = mtk_hdmi_bridge_disable,
-	.post_disable = mtk_hdmi_bridge_post_disable,
 	.mode_set = mtk_hdmi_bridge_mode_set,
-	.pre_enable = mtk_hdmi_bridge_pre_enable,
-	.enable = mtk_hdmi_bridge_enable,
+	.atomic_duplicate_state = drm_atomic_helper_bridge_duplicate_state,
+	.atomic_destroy_state = drm_atomic_helper_bridge_destroy_state,
+	.atomic_reset = drm_atomic_helper_bridge_reset,
+	.atomic_pre_enable = mtk_hdmi_bridge_atomic_pre_enable,
+	.atomic_enable = mtk_hdmi_bridge_atomic_enable,
+	.atomic_disable = mtk_hdmi_bridge_atomic_disable,
+	.atomic_post_disable = mtk_hdmi_bridge_atomic_post_disable,
 	.get_edid = mtk_hdmi_bridge_get_edid,
 	.detect = mtk_hdmi_bridge_detect,
 };
