@@ -44,3 +44,10 @@ config DRM_MEDIATEK_HDMI
 	select DRM_MEDIATEK_HDMI_COMMON
 	help
 	  DRM/KMS HDMI driver for Mediatek SoCs
+
+config DRM_MEDIATEK_HDMI_V2
+	tristate "DRM HDMI v2 IP support for MediaTek SoCs"
+	depends on DRM_MEDIATEK
+	select DRM_MEDIATEK_HDMI_COMMON
+	help
+	  DRM/KMS HDMI driver for MediaTek SoCs with HDMIv2 IP
