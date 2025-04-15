@@ -21,6 +21,7 @@ select:
           - mediatek,mt2712-gmac
           - mediatek,mt8188-gmac
           - mediatek,mt8195-gmac
+          - mediatek,mt8189-gmac
   required:
     - compatible
 
@@ -41,6 +42,11 @@ properties:
       - items:
           - enum:
               - mediatek,mt8188-gmac
+          - const: mediatek,mt8195-gmac
+          - const: snps,dwmac-5.10a
+      - items:
+          - enum:
+              - mediatek,mt8189-gmac
           - const: mediatek,mt8195-gmac
           - const: snps,dwmac-5.10a
 
