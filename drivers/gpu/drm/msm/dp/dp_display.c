@@ -1488,14 +1488,14 @@ int msm_dp_modeset_init(struct msm_dp *dp_display, struct drm_device *dev,
 	return 0;
 }
 
-void dp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
-			     struct drm_bridge_state *old_bridge_state)
+void msm_dp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
+				 struct drm_atomic_state *state)
 {
 	struct msm_dp_bridge *dp_bridge = to_dp_bridge(drm_bridge);
 	struct msm_dp *dp = dp_bridge->dp_display;
 	int rc = 0;
-	struct dp_display_private *dp_display;
-	u32 state;
+	struct msm_dp_display_private *msm_dp_display;
+	u32 hpd_state;
 	bool force_link_train = false;
 
 	dp_display = container_of(dp, struct dp_display_private, dp_display);
@@ -1514,9 +1514,9 @@ void dp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
 		return;
 	}
 
-	state = dp_display->hpd_state;
-	if (state != ST_DISPLAY_OFF && state != ST_MAINLINK_READY) {
-		mutex_unlock(&dp_display->event_mutex);
+	hpd_state = msm_dp_display->hpd_state;
+	if (hpd_state != ST_DISPLAY_OFF && hpd_state != ST_MAINLINK_READY) {
+		mutex_unlock(&msm_dp_display->event_mutex);
 		return;
 	}
 
@@ -1527,10 +1527,8 @@ void dp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
 		return;
 	}
 
-	state =  dp_display->hpd_state;
-
-	if (state == ST_DISPLAY_OFF) {
-		dp_display_host_phy_init(dp_display);
+	if (hpd_state == ST_DISPLAY_OFF) {
+		msm_dp_display_host_phy_init(msm_dp_display);
 		force_link_train = true;
 	}
 
