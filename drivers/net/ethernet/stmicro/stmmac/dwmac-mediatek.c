@@ -684,7 +684,7 @@ static int mediatek_dwmac_config_dt(struct mediatek_dwmac_plat_data *plat)
 	u32 tx_delay_ps, rx_delay_ps;
 	int err;
 
-	plat->peri_regmap = syscon_regmap_lookup_by_phandle(plat->np, "mediatek,pericfg");
+	plat->peri_regmap = syscon_regmap_lookup_by_phandle(plat->np, "mediatek,pericfg-ao");
 	if (IS_ERR(plat->peri_regmap)) {
 		dev_err(plat->dev, "Failed to get pericfg syscon\n");
 		return PTR_ERR(plat->peri_regmap);
@@ -923,6 +923,8 @@ static const struct of_device_id mediatek_dwmac_match[] = {
 	  .data = &mt2712_gmac_variant },
 	{ .compatible = "mediatek,mt8195-gmac",
 	  .data = &mt8195_gmac_variant },
+	{ .compatible = "mediatek,mt8189-gmac",
+	  .data = &mt8189_gmac_variant },
 	{ }
 };
 
