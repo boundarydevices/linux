@@ -1639,22 +1639,38 @@ static int mt8195_mt6359_dev_probe(struct platform_device *pdev)
 		}
 
 		if (strcmp(dai_link->name, "DPTX_BE") == 0) {
-			if (!dp_node) {
-				dev_dbg(&pdev->dev, "No property 'dptx-codec'\n");
-			} else {
-				dai_link->codecs->of_node = dp_node;
-				dai_link->codecs->name = NULL;
-				dai_link->codecs->dai_name = "i2s-hifi";
-				dai_link->init = mt8195_dptx_codec_init;
+			switch (card_data->quirk) {
+			case MT6359_SPEAKER_AMP_PRESENT:
+				if (strcmp(dai_link->codecs->dai_name, "snd-soc-dummy-dai"))
+					dai_link->init = mt8195_dptx_codec_init;
+				break;
+			default:
+				if (!dp_node) {
+					dev_dbg(&pdev->dev, "No property 'dptx-codec'\n");
+				} else {
+					dai_link->codecs->of_node = dp_node;
+					dai_link->codecs->name = NULL;
+					dai_link->codecs->dai_name = "i2s-hifi";
+					dai_link->init = mt8195_dptx_codec_init;
+				}
+				break;
 			}
 		} else if (strcmp(dai_link->name, "ETDM3_OUT_BE") == 0) {
-			if (!hdmi_node) {
-				dev_dbg(&pdev->dev, "No property 'hdmi-codec'\n");
-			} else {
-				dai_link->codecs->of_node = hdmi_node;
-				dai_link->codecs->name = NULL;
-				dai_link->codecs->dai_name = "i2s-hifi";
-				dai_link->init = mt8195_hdmi_codec_init;
+			switch (card_data->quirk) {
+			case MT6359_SPEAKER_AMP_PRESENT:
+				if (strcmp(dai_link->codecs->dai_name, "snd-soc-dummy-dai"))
+					dai_link->init = mt8195_hdmi_codec_init;
+				break;
+			default:
+				if (!hdmi_node) {
+					dev_dbg(&pdev->dev, "No property 'hdmi-codec'\n");
+				} else {
+					dai_link->codecs->of_node = hdmi_node;
+					dai_link->codecs->name = NULL;
+					dai_link->codecs->dai_name = "i2s-hifi";
+					dai_link->init = mt8195_hdmi_codec_init;
+				}
+				break;
 			}
 		} else if (strcmp(dai_link->name, "ETDM1_OUT_BE") == 0) {
 			switch (card_data->quirk) {
