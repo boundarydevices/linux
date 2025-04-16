@@ -1295,7 +1295,7 @@ static const struct mtk_dsi_driver_data mt8188_dsi_driver_data = {
 	.has_shadow_ctl = true,
 	.has_size_ctl = true,
 	.cmdq_long_packet_ctl = true,
-	.support_per_frame_lp = true,
+	.support_per_frame_lp = false,
 };
 
 static const struct of_device_id mtk_dsi_of_match[] = {
