@@ -66,12 +66,6 @@ int v2x_late_init(struct se_if_priv *priv)
 	int ret = 0;
 
 	if (priv->if_defs->se_if_type == SE_TYPE_ID_HSM) {
-		ret = ele_init_fw(priv);
-		if (ret) {
-			dev_err(priv->dev, "ELE INIT FW failed.");
-			ret = -EPERM;
-			goto exit;
-		}
 		if (ele_get_v2x_fw_state(priv, &v2x_fw_state)) {
 			dev_warn(priv->dev, "Failed to fetch the v2x-fw-state via ELE.");
 			v2x_fw_state = V2X_FW_STATE_UNKNOWN;
@@ -86,7 +80,7 @@ int v2x_late_init(struct se_if_priv *priv)
 			v2x_fw_state = V2X_FW_STATE_UNKNOWN;
 		}
 	}
-exit:
+
 	return ret;
 }
 
