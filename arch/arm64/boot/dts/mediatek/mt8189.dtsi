@@ -1384,5 +1384,59 @@
 
 			clock-names = "top", "main", "pwm1", "pwm2", "pwm3";
 		};
+
+		pcie: pcie@112f0000 {
+			device_type = "pci";
+			compatible = "mediatek,mt8189-pcie",
+				     "mediatek,mt8192-pcie";
+			reg = <0 0x112f0000 0 0x4000>;
+			reg-names = "pcie-mac";
+			linux,pci-domain = <0>;
+			#address-cells = <3>;
+			#size-cells = <2>;
+			interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH 0>;
+			bus-range = <0x00 0xff>;
+			ranges = <0x82000000 0 0x30000000
+				  0x0 0x30000000 0 0x04000000>;
+
+			status = "disabled";
+
+			clocks = <&pericfg_ao_clk CLK_PERAO_AXI>,
+				 <&pericfg_ao_clk CLK_PERAO_AHB_APB>,
+				 <&pericfg_ao_clk CLK_PERAO_TL>,
+				 <&pericfg_ao_clk CLK_PERAO_REF>,
+				 <&topckgen_clk CLK_TOP_F26M_CK_EN>;
+
+			phys = <&pcieport PHY_TYPE_PCIE>;
+			phy-names = "pcie-phy";
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_PCIE>;
+
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &pcie_intc 0>,
+					<0 0 0 2 &pcie_intc 1>,
+					<0 0 0 3 &pcie_intc 2>,
+					<0 0 0 4 &pcie_intc 3>;
+			pcie_intc: interrupt-controller {
+				interrupt-controller;
+				#address-cells = <0>;
+				#interrupt-cells = <1>;
+			};
+		};
+
+		pciephy: t-phy@11e50700 {
+			compatible = "mediatek,mt8189-tphy",
+				     "mediatek,generic-tphy-v2";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x0 0x0 0x11e50700 0x700>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_PCIE_PHY>;
+			status = "disabled";
+
+			pcieport: pcie-phy@0 {
+				reg = <0 0x700>;
+				#phy-cells = <1>;
+			};
+		};
 	};
 };
