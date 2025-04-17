@@ -475,6 +475,15 @@
 		};
 	};
 
+	pcie_pins_default: pcie-default {
+		mux {
+			pinmux = <PINMUX_GPIO48__FUNC_WAKEN>,
+				 <PINMUX_GPIO49__FUNC_PERSTN>,
+				 <PINMUX_GPIO50__FUNC_CLKREQN>;
+			bias-pull-up;
+		};
+	};
+
 	usb0_default_pins: usb0-default-pins {
 		pins-vbus-valid {
 			pinmux = <PINMUX_GPIO83__FUNC_VBUSVALID>;
@@ -616,5 +625,15 @@
 };
 
 &auxadc {
+	status = "okay";
+};
+
+&pcie {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pcie_pins_default>;
+	status = "okay";
+};
+
+&pciephy {
 	status = "okay";
 };
