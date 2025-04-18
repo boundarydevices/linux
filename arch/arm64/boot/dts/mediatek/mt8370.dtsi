@@ -64,7 +64,7 @@
  * of the cores fused out in this lower-binned SoC.
  */
 &gpu {
-	compatible = "mediatek,mt8370-mali", "arm,mali-valhall-jm";
+	compatible = "mediatek,mt8370-mali", "mediatek,mt8188-mali", "arm,mali-valhall-jm";
 
 	power-domains = <&spm MT8188_POWER_DOMAIN_MFG2>,
 			<&spm MT8188_POWER_DOMAIN_MFG3>;
