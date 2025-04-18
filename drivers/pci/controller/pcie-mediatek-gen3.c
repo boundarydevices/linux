@@ -15,6 +15,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/msi.h>
+#include <linux/of_device.h>
 #include <linux/pci.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
@@ -68,6 +69,9 @@
 #define PCIE_MSI_SET_ENABLE_REG		0x190
 #define PCIE_MSI_SET_ENABLE		GENMASK(PCIE_MSI_SET_NUM - 1, 0)
 
+#define PCIE_AXI_IF_CTRL_REG		0x1a8
+#define PCIE_AXI0_SLV_RESP_MASK		BIT(12)
+
 #define PCIE_MSI_SET_BASE_REG		0xc00
 #define PCIE_MSI_SET_OFFSET		0x10
 #define PCIE_MSI_SET_STATUS_OFFSET	0x04
@@ -100,6 +104,16 @@
 #define PCIE_ATR_TLP_TYPE_MEM		PCIE_ATR_TLP_TYPE(0)
 #define PCIE_ATR_TLP_TYPE_IO		PCIE_ATR_TLP_TYPE(2)
 
+struct mtk_gen3_pcie;
+
+/**
+ * struct mtk_pcie_data - PCIe data for each SoC
+ * @pre_init: Specific init data, called before linkup
+ */
+struct mtk_pcie_data {
+	int (*pre_init)(struct mtk_gen3_pcie *pcie);
+};
+
 /**
  * struct mtk_msi_set - MSI information for each set
  * @base: IO mapped register base
@@ -122,6 +136,7 @@ struct mtk_msi_set {
  * @phy: PHY controller block
  * @clks: PCIe clocks
  * @num_clks: PCIe clocks count for this port
+ * @data: special init data of each SoC
  * @irq: PCIe controller interrupt number
  * @saved_irq_state: IRQ enable state saved at suspend time
  * @irq_lock: lock protecting IRQ register access
@@ -141,6 +156,7 @@ struct mtk_gen3_pcie {
 	struct phy *phy;
 	struct clk_bulk_data *clks;
 	int num_clks;
+	struct mtk_pcie_data *data;
 
 	int irq;
 	u32 saved_irq_state;
@@ -350,6 +366,12 @@ static int mtk_pcie_startup_port(struct mtk_gen3_pcie *pcie)
 	val &= ~GENMASK(31, 8);
 	val |= PCI_CLASS(PCI_CLASS_BRIDGE_PCI_NORMAL);
 	writel_relaxed(val, pcie->base + PCIE_PCI_IDS_1);
+
+	if (pcie->data && pcie->data->pre_init) {
+		err = pcie->data->pre_init(pcie);
+		if (err)
+			return err;
+	}
 
 	/* Mask all INTx interrupts */
 	val = readl_relaxed(pcie->base + PCIE_INT_ENABLE_REG);
@@ -939,6 +961,7 @@ static int mtk_pcie_probe(struct platform_device *pdev)
 	pcie = pci_host_bridge_priv(host);
 
 	pcie->dev = dev;
+	pcie->data = (struct mtk_pcie_data *)of_device_get_match_data(dev);
 	platform_set_drvdata(pdev, pcie);
 
 	err = mtk_pcie_setup(pcie);
@@ -1074,8 +1097,25 @@ static const struct dev_pm_ops mtk_pcie_pm_ops = {
 				  mtk_pcie_resume_noirq)
 };
 
+static int mtk_pcie_pre_init_8189(struct mtk_gen3_pcie *pcie)
+{
+	u32 val;
+
+	/* Don't let PCIe AXI0 port reply slave error */
+	val = readl_relaxed(pcie->base + PCIE_AXI_IF_CTRL_REG);
+	val |= PCIE_AXI0_SLV_RESP_MASK;
+	writel_relaxed(val, pcie->base + PCIE_AXI_IF_CTRL_REG);
+
+	return 0;
+}
+
+static const struct mtk_pcie_data mt8189_data = {
+	.pre_init = mtk_pcie_pre_init_8189,
+};
+
 static const struct of_device_id mtk_pcie_of_match[] = {
 	{ .compatible = "mediatek,mt8192-pcie" },
+	{ .compatible = "mediatek,mt8189-pcie", .data = &mt8189_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, mtk_pcie_of_match);
