@@ -1527,4 +1527,24 @@
 			sound-dai = <&dmic_codec>;
 		};
 	};
+
+	dai-link-3 {
+		sound-dai = <&afe>;
+		link-name = "ETDM3_OUT_BE";
+		status = "disabled";
+
+		codec {
+			sound-dai = <&hdmi0>;
+		};
+	};
+
+	dai-link-4 {
+		sound-dai = <&afe>;
+		link-name = "DPTX_BE";
+		status = "disabled";
+
+		codec {
+			sound-dai = <&dp_tx>;
+		};
+	};
 };
