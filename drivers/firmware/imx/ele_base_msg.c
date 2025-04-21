@@ -819,3 +819,58 @@ int ele_v2x_fw_authenticate(struct se_if_priv *priv, phys_addr_t addr)
 exit:
 	return ret;
 }
+
+int ele_get_fw_version(struct se_if_priv *priv, u32 *fw_ver_word,
+		       u32 *commit_sha1)
+{
+	struct se_api_msg *tx_msg __free(kfree) = NULL;
+	struct se_api_msg *rx_msg __free(kfree) = NULL;
+	int ret = 0;
+
+	if (!priv) {
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	tx_msg = kzalloc(ELE_GET_FW_VERSION_REQ_SZ, GFP_KERNEL);
+	if (!tx_msg) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	rx_msg = kzalloc(ELE_GET_FW_VERSION_RSP_SZ, GFP_KERNEL);
+	if (!rx_msg) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	ret = se_fill_cmd_msg_hdr(priv,
+				  (struct se_msg_hdr *)&tx_msg->header,
+				  ELE_GET_FW_VERSION_REQ,
+				  ELE_GET_FW_VERSION_REQ_SZ,
+				  true);
+	if (ret)
+		goto exit;
+
+	ret = ele_msg_send_rcv(priv->priv_dev_ctx,
+			       tx_msg,
+			       ELE_GET_FW_VERSION_REQ_SZ,
+			       rx_msg,
+			       ELE_GET_FW_VERSION_RSP_SZ);
+	if (ret < 0)
+		goto exit;
+
+	ret = se_val_rsp_hdr_n_status(priv,
+				      rx_msg,
+				      ELE_GET_FW_VERSION_REQ,
+				      ELE_GET_FW_VERSION_RSP_SZ,
+				      true);
+	if (ret)
+		goto exit;
+
+	*fw_ver_word = rx_msg->data[1];
+	*commit_sha1 = rx_msg->data[2];
+
+exit:
+	return ret;
+}
