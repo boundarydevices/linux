@@ -23,7 +23,6 @@ properties:
     enum:
       - mediatek,mt8195-dp-tx
       - mediatek,mt8195-edp-tx
-      - mediatek,mt8188-dp-tx
 
   reg:
     maxItems: 1
