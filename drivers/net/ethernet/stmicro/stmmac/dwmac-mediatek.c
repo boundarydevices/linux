@@ -684,7 +684,7 @@ static int mediatek_dwmac_config_dt(struct mediatek_dwmac_plat_data *plat)
 	u32 tx_delay_ps, rx_delay_ps;
 	int err;
 
-	plat->peri_regmap = syscon_regmap_lookup_by_phandle(plat->np, "mediatek,pericfg-ao");
+	plat->peri_regmap = syscon_regmap_lookup_by_phandle(plat->np, "mediatek,pericfg");
 	if (IS_ERR(plat->peri_regmap)) {
 		dev_err(plat->dev, "Failed to get pericfg syscon\n");
 		return PTR_ERR(plat->peri_regmap);
