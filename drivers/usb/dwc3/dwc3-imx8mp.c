@@ -15,6 +15,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/sys_soc.h>
 
 #include "../host/xhci.h"
 #include "core.h"
@@ -58,6 +59,8 @@ struct dwc3_imx8mp {
 	struct clk			*hsio_clk;
 	struct clk			*suspend_clk;
 	int				irq;
+	u8				tx_maxburst;
+	u8				tx_thr_num;
 	bool				pm_suspended;
 	bool				wakeup_pending;
 };
@@ -188,6 +191,45 @@ static struct of_dev_auxdata dwc3_imx8mp_auxdata[] = {
 	{},
 };
 
+static const struct soc_device_attribute imx95_rev_1_x_soc_devices[] = {
+	{ .soc_id = "i.MX95", .revision = "1.0" },
+	{ .soc_id = "i.MX95", .revision = "1.1" },
+	{ /* sentinel */ }
+};
+
+static int dwc3_imx95_limit_tx_maxburst(struct dwc3_imx8mp *dwc3_imx,
+					struct device_node *dwc3_node)
+{
+	struct device		*dev = dwc3_imx->dev;
+	struct property		*prop;
+	int			ret;
+
+	dwc3_imx->tx_maxburst = 4;
+	dwc3_imx->tx_thr_num = 1;
+
+	prop = devm_kzalloc(dev, sizeof(*prop), GFP_KERNEL);
+	if (!prop)
+		return -ENOMEM;
+
+	prop->name = "snps,tx-max-burst";
+	prop->value = &dwc3_imx->tx_maxburst;
+	prop->length = sizeof(u8);
+	ret = of_add_property(dwc3_node, prop);
+	if (ret)
+		return ret;
+
+	prop = devm_kzalloc(dev, sizeof(*prop), GFP_KERNEL);
+	if (!prop)
+		return -ENOMEM;
+
+	prop->name = "snps,tx-thr-num-pkt";
+	prop->value = &dwc3_imx->tx_thr_num;
+	prop->length = sizeof(u8);
+	ret = of_add_property(dwc3_node, prop);
+
+	return ret;
+}
+
 static int dwc3_imx8mp_probe(struct platform_device *pdev)
 {
 	struct device		*dev = &pdev->dev;
@@ -269,6 +311,14 @@ static int dwc3_imx8mp_probe(struct platform_device *pdev)
 		err = -ENODEV;
 		dev_err(dev, "failed to find dwc3 core child\n");
 		goto disable_rpm;
+	}
+
+	if (soc_device_match(imx95_rev_1_x_soc_devices)) {
+		err = dwc3_imx95_limit_tx_maxburst(dwc3_imx, dwc3_np);
+		if (err) {
+			dev_err(dev, "failed to limit tx maxburst for i.MX95 A1\n");
+			goto disable_rpm;
+		}
 	}
 
 	err = of_platform_populate(node, NULL, dwc3_imx8mp_auxdata, dev);
