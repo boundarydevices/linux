@@ -41,31 +41,6 @@ struct mtk_hdmi_ddc {
 	struct i2c_adapter adap;
 };
 
-static int mtk_ddc_check_and_rise_low_bus(struct mtk_hdmi_ddc *ddc)
-{
-	u32 val;
-
-	regmap_read(ddc->regs, HDCP2X_DDCM_STATUS, &val);
-	if (val & DDC_I2C_BUS_LOW) {
-		regmap_update_bits(ddc->regs, DDC_CTRL, DDC_CTRL_CMD,
-				   FIELD_PREP(DDC_CTRL_CMD, DDC_CMD_CLOCK_SCL));
-		usleep_range(250, 300);
-	}
-
-	if (val & DDC_I2C_NO_ACK) {
-		u32 ddc_ctrl, hpd_ddc_ctrl, hpd_ddc_status;
-
-		regmap_read(ddc->regs, DDC_CTRL, &ddc_ctrl);
-		regmap_read(ddc->regs, HPD_DDC_CTRL, &hpd_ddc_ctrl);
-		regmap_read(ddc->regs, HPD_DDC_STATUS, &hpd_ddc_status);
-	}
-
-	if (val & DDC_I2C_NO_ACK)
-		return -EIO;
-
-	return 0;
-}
-
 static int mtk_ddc_wr_one(struct mtk_hdmi_ddc *ddc, u16 addr_id,
 			  u16 offset_id, u8 wr_data)
 {
@@ -73,7 +48,12 @@ static int mtk_ddc_wr_one(struct mtk_hdmi_ddc *ddc, u16 addr_id,
 	int ret;
 
 	/* If down, rise bus for write operation */
-	mtk_ddc_check_and_rise_low_bus(ddc);
+	regmap_read(ddc->regs, HDCP2X_DDCM_STATUS, &val);
+	if (val & DDC_I2C_BUS_LOW) {
+		regmap_update_bits(ddc->regs, DDC_CTRL, DDC_CTRL_CMD,
+				   FIELD_PREP(DDC_CTRL_CMD, DDC_CMD_CLOCK_SCL));
+		usleep_range(250, 300);
+	}
 
 	regmap_update_bits(ddc->regs, HPD_DDC_CTRL, HPD_DDC_DELAY_CNT,
 			   FIELD_PREP(HPD_DDC_DELAY_CNT, DDC2_DLY_CNT));
@@ -98,10 +78,11 @@ static int mtk_ddc_wr_one(struct mtk_hdmi_ddc *ddc, u16 addr_id,
 	}
 
 	/* The I2C bus might be down after WR operation: rise it again */
-	ret = mtk_ddc_check_and_rise_low_bus(ddc);
-	if (ret) {
-		dev_err(ddc->dev, "Error during write operation: No ACK\n");
-		return ret;
+	regmap_read(ddc->regs, HDCP2X_DDCM_STATUS, &val);
+	if (val & DDC_I2C_BUS_LOW) {
+		regmap_update_bits(ddc->regs, DDC_CTRL, DDC_CTRL_CMD,
+				   FIELD_PREP(DDC_CTRL_CMD, DDC_CMD_CLOCK_SCL));
+		usleep_range(250, 300);
 	}
 
 	return 0;
@@ -114,7 +95,12 @@ static int mtk_ddcm_read_hdmi(struct mtk_hdmi_ddc *ddc, u16 uc_dev,
 	u32 rem, uc_read_count, val;
 	int ret;
 
-	mtk_ddc_check_and_rise_low_bus(ddc);
+	regmap_read(ddc->regs, HDCP2X_DDCM_STATUS, &val);
+	if (val & DDC_I2C_BUS_LOW) {
+		regmap_update_bits(ddc->regs, DDC_CTRL, DDC_CTRL_CMD,
+				   FIELD_PREP(DDC_CTRL_CMD, DDC_CMD_CLOCK_SCL));
+		usleep_range(250, 300);
+	}
 
 	regmap_update_bits(ddc->regs, DDC_CTRL, DDC_CTRL_CMD,
 			   FIELD_PREP(DDC_CTRL_CMD, DDC_CMD_CLEAR_FIFO));
@@ -179,10 +165,11 @@ static int mtk_ddcm_read_hdmi(struct mtk_hdmi_ddc *ddc, u16 uc_dev,
 			return ret;
 		}
 
-		ret = mtk_ddc_check_and_rise_low_bus(ddc);
-		if (ret) {
-			dev_err(ddc->dev, "Error during read operation: No ACK\n");
-			return ret;
+		regmap_read(ddc->regs, HDCP2X_DDCM_STATUS, &val);
+		if (val & DDC_I2C_BUS_LOW) {
+			regmap_update_bits(ddc->regs, DDC_CTRL, DDC_CTRL_CMD,
+					   FIELD_PREP(DDC_CTRL_CMD, DDC_CMD_CLOCK_SCL));
+			usleep_range(250, 300);
 		}
 
 		for (uc_idx = 0; uc_idx < temp_length; uc_idx++) {
