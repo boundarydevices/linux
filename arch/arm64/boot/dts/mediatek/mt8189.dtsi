@@ -1242,7 +1242,7 @@
 						<&topckgen_clk CLK_TOP_ETHPLL_D8>,
 						<&topckgen_clk CLK_TOP_ETHPLL_D10>;
 			power-domains = <&scpsys MT8189_POWER_DOMAIN_PCIE>;
-			mediatek,pericfg-ao = <&pericfg_ao_clk>;
+			mediatek,pericfg = <&pericfg_ao_clk>;
 			snps,axi-config = <&stmmac_axi_setup>;
 			snps,mtl-rx-config = <&mtl_rx_setup>;
 			snps,mtl-tx-config = <&mtl_tx_setup>;
