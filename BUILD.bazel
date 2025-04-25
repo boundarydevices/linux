@@ -1373,6 +1373,7 @@ _MTK_MODULE_OUTS = [
     "drivers/i2c/busses/i2c-mt65xx.ko",
     "drivers/i2c/i2c-dev.ko",
     "drivers/iio/adc/mt6359-auxadc.ko",
+    "drivers/input/keyboard/mtk-pmic-keys.ko",
     "drivers/input/touchscreen/goodix_ts.ko",
     "drivers/iommu/mtk_iommu.ko",
     "drivers/irqchip/irq-mtk-sysirq.ko",
