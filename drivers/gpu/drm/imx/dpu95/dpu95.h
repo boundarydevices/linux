@@ -2,7 +2,7 @@
 
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2020,2023 NXP
+ * Copyright 2017-2020,2023,2025 NXP
  */
 
 #ifndef __DRM_DPU95_H__
@@ -18,6 +18,7 @@
 #include <drm/drm_color_mgmt.h>
 #include <drm/drm_fourcc.h>
 #include <drm/drm_modes.h>
+#include <drm/drm_plane.h>
 
 /* IRQ register */
 #define INTERRUPTENABLE(n)		(0x8 + 0x4 * (n))
@@ -601,7 +602,7 @@ void dpu95_hs_setup1(struct dpu95_hscaler *hs,
 void dpu95_hs_setup2(struct dpu95_hscaler *hs, u32 phase_offset);
 void dpu95_hs_output_size(struct dpu95_hscaler *hs, u32 line_num);
 void dpu95_hs_filter_mode(struct dpu95_hscaler *hs,
-			  enum dpu95_scaler_filter_mode m);
+			  enum drm_scaling_filter filter);
 void dpu95_hs_scale_mode(struct dpu95_hscaler *hs,
 			 enum dpu95_scaler_scale_mode m);
 void dpu95_hs_mode(struct dpu95_hscaler *hs, enum dpu95_scaler_mode m);

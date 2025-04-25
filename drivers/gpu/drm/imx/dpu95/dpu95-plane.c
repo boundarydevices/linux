@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 
 /*
- * Copyright 2017-2020,2022,2023 NXP
+ * Copyright 2017-2020,2022,2023,2025 NXP
  */
 
 #include <drm/drm_atomic.h>
@@ -72,6 +72,7 @@ static void dpu95_plane_reset(struct drm_plane *plane)
 	plane->state->zpos = dpu95_plane_get_default_zpos(plane->type);
 	plane->state->color_encoding = DRM_COLOR_YCBCR_BT709;
 	plane->state->color_range = DRM_COLOR_YCBCR_LIMITED_RANGE;
+	plane->state->scaling_filter = DRM_SCALING_FILTER_DEFAULT;
 }
 
 static struct drm_plane_state *
@@ -536,7 +537,7 @@ static void dpu95_plane_atomic_update(struct drm_plane *plane,
 		dpu95_hs_pec_clken(hs, CLKEN_AUTOMATIC);
 		dpu95_hs_setup1(hs, src_w, dst_w);
 		dpu95_hs_output_size(hs, dst_w);
-		dpu95_hs_filter_mode(hs, SCALER_LINEAR);
+		dpu95_hs_filter_mode(hs, new_state->scaling_filter);
 		dpu95_hs_scale_mode(hs, SCALER_UPSCALE);
 		dpu95_hs_mode(hs, SCALER_ACTIVE);
 
@@ -613,11 +614,17 @@ int dpu95_plane_initialize(struct dpu95_drm_device *dpu_drm,
 	if (ret)
 		return ret;
 
-	return drm_plane_create_color_properties(plane,
+	ret = drm_plane_create_color_properties(plane,
 					BIT(DRM_COLOR_YCBCR_BT601) |
 					BIT(DRM_COLOR_YCBCR_BT709),
 					BIT(DRM_COLOR_YCBCR_LIMITED_RANGE) |
 					BIT(DRM_COLOR_YCBCR_FULL_RANGE),
 					DRM_COLOR_YCBCR_BT709,
 					DRM_COLOR_YCBCR_LIMITED_RANGE);
+	if (ret)
+		return ret;
+
+	return drm_plane_create_scaling_filter_property(plane,
+					BIT(DRM_SCALING_FILTER_DEFAULT) |
+					BIT(DRM_SCALING_FILTER_NEAREST_NEIGHBOR));
 }

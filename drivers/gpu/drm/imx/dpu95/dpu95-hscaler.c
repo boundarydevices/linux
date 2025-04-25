@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0+
 
 /*
- * Copyright 2017-2019,2023 NXP
+ * Copyright 2017-2019,2023,2025 NXP
  */
 
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/sizes.h>
+
+#include <drm/drm_plane.h>
 
 #include "dpu95.h"
 
@@ -170,9 +172,11 @@ void dpu95_hs_output_size(struct dpu95_hscaler *hs, u32 line_num)
 }
 
 void dpu95_hs_filter_mode(struct dpu95_hscaler *hs,
-			  enum dpu95_scaler_filter_mode m)
+			  enum drm_scaling_filter filter)
 {
-	dpu95_hs_write_mask(hs, CONTROL, FILTER_MODE_MASK, FILTER_MODE(m));
+	dpu95_hs_write_mask(hs, CONTROL, FILTER_MODE_MASK,
+			    filter == DRM_SCALING_FILTER_DEFAULT ?
+			    FILTER_MODE(SCALER_LINEAR) : FILTER_MODE(SCALER_NEAREST));
 }
 
 void dpu95_hs_scale_mode(struct dpu95_hscaler *hs,
