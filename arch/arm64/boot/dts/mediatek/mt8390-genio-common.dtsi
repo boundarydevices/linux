@@ -517,6 +517,17 @@
 	mediatek,mic-type-1 = <3>; /* DCC */
 };
 
+&mt6359keys {
+	key-0 {
+		linux,keycodes = <KEY_POWER>;
+		wakeup-source;
+	};
+
+	key-1 {
+		linux,keycodes = <KEY_HOME>;
+	};
+};
+
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie_pins_default>;
