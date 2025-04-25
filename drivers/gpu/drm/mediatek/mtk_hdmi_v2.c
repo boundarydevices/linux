@@ -1516,4 +1516,3 @@ module_platform_driver(mtk_hdmi_v2_driver);
 MODULE_AUTHOR("AngeloGioacchino Del Regno <angelogioacchino.delregno@collabora.com>>");
 MODULE_DESCRIPTION("MediaTek HDMIv2 Driver");
 MODULE_LICENSE("GPL");
-MODULE_IMPORT_NS("DRM_MTK_HDMI");

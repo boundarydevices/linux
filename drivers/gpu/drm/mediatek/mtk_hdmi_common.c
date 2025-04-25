@@ -99,7 +99,7 @@ void mtk_hdmi_get_ncts(unsigned int sample_rate, unsigned int clock,
 	*n = hdmi_recommended_n(sample_rate, clock);
 	*cts = hdmi_expected_cts(sample_rate, clock, *n);
 }
-EXPORT_SYMBOL_NS_GPL(mtk_hdmi_get_ncts, "DRM_MTK_HDMI");
+EXPORT_SYMBOL_GPL(mtk_hdmi_get_ncts);
 
 int mtk_hdmi_audio_params(struct mtk_hdmi *hdmi,
 			  struct hdmi_codec_daifmt *daifmt,
@@ -174,7 +174,7 @@ int mtk_hdmi_audio_params(struct mtk_hdmi *hdmi,
 
 	return 0;
 }
-EXPORT_SYMBOL_NS_GPL(mtk_hdmi_audio_params, "DRM_MTK_HDMI");
+EXPORT_SYMBOL_GPL(mtk_hdmi_audio_params);
 
 int mtk_hdmi_audio_get_eld(struct device *dev, void *data, uint8_t *buf, size_t len)
 {
@@ -187,7 +187,7 @@ int mtk_hdmi_audio_get_eld(struct device *dev, void *data, uint8_t *buf, size_t 
 
 	return 0;
 }
-EXPORT_SYMBOL_NS_GPL(mtk_hdmi_audio_get_eld, "DRM_MTK_HDMI");
+EXPORT_SYMBOL_GPL(mtk_hdmi_audio_get_eld);
 
 void mtk_hdmi_audio_set_plugged_cb(struct mtk_hdmi *hdmi, hdmi_codec_plugged_cb fn,
 				   struct device *codec_dev)
@@ -197,7 +197,7 @@ void mtk_hdmi_audio_set_plugged_cb(struct mtk_hdmi *hdmi, hdmi_codec_plugged_cb 
 	hdmi->codec_dev = codec_dev;
 	mutex_unlock(&hdmi->update_plugged_status_lock);
 }
-EXPORT_SYMBOL_NS_GPL(mtk_hdmi_audio_set_plugged_cb, "DRM_MTK_HDMI");
+EXPORT_SYMBOL_GPL(mtk_hdmi_audio_set_plugged_cb);
 
 static int mtk_hdmi_get_all_clk(struct mtk_hdmi *hdmi, struct device_node *np,
 				const char * const *clock_names, size_t num_clocks)
@@ -220,7 +220,7 @@ bool mtk_hdmi_bridge_mode_fixup(struct drm_bridge *bridge,
 {
 	return true;
 }
-EXPORT_SYMBOL_NS_GPL(mtk_hdmi_bridge_mode_fixup, "DRM_MTK_HDMI");
+EXPORT_SYMBOL_GPL(mtk_hdmi_bridge_mode_fixup);
 
 void mtk_hdmi_bridge_mode_set(struct drm_bridge *bridge,
 			      const struct drm_display_mode *mode,
@@ -243,7 +243,7 @@ void mtk_hdmi_bridge_mode_set(struct drm_bridge *bridge,
 
 	drm_mode_copy(&hdmi->mode, adjusted_mode);
 }
-EXPORT_SYMBOL_NS_GPL(mtk_hdmi_bridge_mode_set, "DRM_MTK_HDMI");
+EXPORT_SYMBOL_GPL(mtk_hdmi_bridge_mode_set);
 
 static int mtk_hdmi_get_cec_dev(struct mtk_hdmi *hdmi, struct device *dev, struct device_node *np)
 {
@@ -427,7 +427,7 @@ struct mtk_hdmi *mtk_hdmi_common_probe(struct platform_device *pdev)
 
 	return hdmi;
 }
-EXPORT_SYMBOL_NS_GPL(mtk_hdmi_common_probe, "DRM_MTK_HDMI");
+EXPORT_SYMBOL_GPL(mtk_hdmi_common_probe);
 
 MODULE_AUTHOR("AngeloGioacchino Del Regno <angelogioacchino.delregno@collabora.com>");
 MODULE_DESCRIPTION("MediaTek HDMI Common Library");
