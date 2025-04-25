@@ -482,11 +482,23 @@
 				 <PINMUX_GPIO50__FUNC_CLKREQN>;
 			bias-pull-up;
 		};
+
+		pins-3v3en {
+			pinmux = <PINMUX_GPIO79__FUNC_GPIO79>;
+			output-high;
+		};
 	};
 
 	usb0_default_pins: usb0-default-pins {
 		pins-vbus-valid {
 			pinmux = <PINMUX_GPIO83__FUNC_VBUSVALID>;
+		};
+	};
+
+	wifi_pcie_default_pins: wifi-pcie-default-pins {
+		pins-wcn-3v3-en {
+			pinmux = <PINMUX_GPIO75__FUNC_GPIO75>;
+			output-high;
 		};
 	};
 };
