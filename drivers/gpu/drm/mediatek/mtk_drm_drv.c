@@ -524,7 +524,7 @@ static int mtk_drm_match(struct device *dev, void *data)
 static bool mtk_drm_get_all_drm_priv(struct device *dev)
 {
 	struct mtk_drm_private *drm_priv = dev_get_drvdata(dev);
-	struct mtk_drm_private *all_drm_priv[MAX_CRTC];
+	struct mtk_drm_private *all_drm_priv[MAX_CRTC] = {NULL};
 	struct mtk_drm_private *drm_dev_priv;
 	struct device_node *phandle = dev->parent->of_node;
 	const struct of_device_id *of_id;
@@ -572,7 +572,7 @@ static bool mtk_drm_get_all_drm_priv(struct device *dev)
 			all_drm_priv[2] = drm_dev_priv;
 			priv_cnt++;
 		}
-		if (!all_drm_priv[0]->is_dual_pipe
+		if (all_drm_priv[0] && !all_drm_priv[0]->is_dual_pipe
 			&& drm_dev_priv && drm_dev_priv->data->main_subpipe_len) {
 			all_drm_priv[2] = drm_dev_priv;
 			all_drm_priv[2]->is_sub_pipe = true;
