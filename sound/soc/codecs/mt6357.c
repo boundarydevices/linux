@@ -745,7 +745,7 @@ static int adc_enable_event(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
 	struct mt6357_priv *priv = snd_soc_component_get_drvdata(cmpnt);
-	int lgain, rgain;
+	int lgain = 0, rgain = 0;
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
@@ -1012,7 +1012,7 @@ static int lo_mux_event(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
 	struct mt6357_priv *priv = snd_soc_component_get_drvdata(cmpnt);
-	int lgain, rgain;
+	int lgain = 0, rgain;
 
 	/* Get current gain value */
 	regmap_read(priv->regmap, MT6357_ZCD_CON1, &lgain);
@@ -1079,7 +1079,7 @@ static int hs_mux_event(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
 	struct mt6357_priv *priv = snd_soc_component_get_drvdata(cmpnt);
-	int gain; /* HS register has only one gain slot */
+	int gain = 0; /* HS register has only one gain slot */
 
 	/* Get current gain value */
 	regmap_read(priv->regmap, MT6357_ZCD_CON3, &gain);
@@ -1137,7 +1137,7 @@ static int hp_main_mux_event(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
 	struct mt6357_priv *priv = snd_soc_component_get_drvdata(cmpnt);
-	int lgain, rgain;
+	int lgain = 0, rgain;
 
 	/* Get current gain value */
 	regmap_read(priv->regmap, MT6357_ZCD_CON2, &lgain);
@@ -1769,7 +1769,7 @@ static int mt6357_codec_probe(struct snd_soc_component *codec)
 static unsigned int mt6357_read(struct snd_soc_component *codec, unsigned int reg)
 {
 	struct mt6357_priv *priv = snd_soc_component_get_drvdata(codec);
-	unsigned int val;
+	unsigned int val = 0;
 
 	regmap_read(priv->regmap, reg, &val);
 	return val;
