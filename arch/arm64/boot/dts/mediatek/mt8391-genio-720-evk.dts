@@ -279,8 +279,6 @@
 
 &pmic {
 	interrupts-extended = <&pio 194 IRQ_TYPE_LEVEL_HIGH>;
-
-	/delete-node/ mt6359rtc;
 };
 
 &pio {
