@@ -637,7 +637,7 @@ static int mtk_stf_event(struct snd_soc_dapm_widget *w,
 
 	size_t half_tap_num;
 	const u16 *stf_coeff_table;
-	unsigned int ul_rate, reg_value;
+	unsigned int ul_rate = 0, reg_value = 0;
 	size_t coef_addr;
 
 	regmap_read(afe->regmap, AFE_ADDA_UL_SRC_CON0, &ul_rate);
