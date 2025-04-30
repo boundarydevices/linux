@@ -805,6 +805,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-nitrogen-smarc.dtb \
 			  imx93-nvc-rpmsg.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx91-nitrogen-smarc.dtb \
+			  imx91-nitrogen-smarc-ti351.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx95-nitrogen-smarc.dtb \
 
