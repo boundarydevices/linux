@@ -16,23 +16,10 @@
 
 #define MIN_BUF_NEED 8
 
-#define PARSING_CAP_STATUS(x) (					\
-	(x) == MDP_CAP_STATE_DISCONNECTED	? "DISCONNECTED" :	\
-	(x) == MDP_CAP_STATE_PROBED		? "PROBED" :		\
-	(x) == MDP_CAP_STATE_OPENED		? "OPENED" :		\
-	(x) == MDP_CAP_STATE_PLAY		? "PLAY" :		\
-	(x) == MDP_CAP_STATE_DISCONNECTING	? "DISCONNECTING" :	\
-						  "UNKNOWN")
-
 enum {
 	MDP_CAP_SRC = 0,
 	MDP_CAP_DST = 1,
 	MDP_CAP_MAX,
-};
-
-enum cap_status {
-	CAP_STATUS_STOP,
-	CAP_STATUS_START,
 };
 
 struct mdp_cap_ctx {
@@ -53,11 +40,10 @@ struct mdp_cap_ctx {
 	/* synchronization protect for mdp cap */
 	struct mutex			ctx_lock;
 	bool				pp_enable;
-	enum cap_status			cap_status;
 
-	u8				num_comps;
-	struct mdp_comp			*comps[MDP_VPU_UID_MAX];
-	struct mtk_mutex		*mutex[MDP_VPU_UID_MAX];
+	u8				num_comps[MDP_PP_CONS_MAX];
+	struct mdp_comp			*comps[MDP_PP_CONS_MAX];
+	struct mtk_mutex		*mutex[MDP_PP_CONS_MAX];
 };
 
 struct v4l2_cap_buffer {

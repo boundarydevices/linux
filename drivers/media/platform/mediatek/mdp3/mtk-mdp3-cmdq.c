@@ -545,27 +545,28 @@ static void mdp_cmdq_release_work(struct mdp_dev *mdp, struct mdp_cmdq_cmd *cmd)
 {
 	struct mtk_mutex *mutex;
 	enum mdp_pipe_id pipe_id;
-	atomic_t *job;
+	int c;
 
 	if (!mdp || !cmd)
 		return;
 
-	if (cmd->user == MDP_CMDQ_USER_M2M) {
-		pipe_id = __get_pipe(mdp, cmd->comps[0].public_id);
-		mutex = __get_mutex(mdp, &mdp->mdp_data->pipe_info[pipe_id]);
-		mtk_mutex_unprepare(mutex);
-		mdp_comp_clocks_off(&mdp->pdev->dev, cmd->comps,
-				    cmd->num_comps);
-	}
-
-	job = &mdp->job_count[cmd->user];
-	atomic_dec(job);
-	if (!(atomic_read(job) % cmd->pp_used)) {
+	c = atomic_read(&mdp->job_count[cmd->user]);
+	if (!((c - 1) % cmd->pp_used)) {
 		if (cmd->user == MDP_CMDQ_USER_M2M)
 			mdp_m2m_job_finish(cmd->mdp_ctx);
 		else
 			mdp_cap_job_finish(cmd->mdp_ctx, cmd->job_timeout);
 	}
+	atomic_dec(&mdp->job_count[cmd->user]);
+
+	if (cmd->user == MDP_CMDQ_USER_CAP)
+		goto cmdq_send_done;
+
+	pipe_id = __get_pipe(mdp, cmd->comps[0].public_id);
+	mutex = __get_mutex(mdp, &mdp->mdp_data->pipe_info[pipe_id]);
+	mtk_mutex_unprepare(mutex);
+	mdp_comp_clocks_off(&mdp->pdev->dev, cmd->comps,
+			    cmd->num_comps);
 
 	if (cmd->user_cmdq_cb) {
 		struct cmdq_cb_data user_cb_data = {0};
@@ -574,13 +575,13 @@ static void mdp_cmdq_release_work(struct mdp_dev *mdp, struct mdp_cmdq_cmd *cmd)
 		user_cb_data.pkt = cmd->data->pkt;
 		cmd->user_cmdq_cb(user_cb_data);
 	}
-	wake_up(&mdp->callback_wq);
 
+	kfree(cmd->comps);
+	cmd->comps = NULL;
+
+cmdq_send_done:
+	wake_up(&mdp->callback_wq);
 	mdp_cmdq_pkt_destroy(&cmd->pkt);
-	if (cmd->user == MDP_CMDQ_USER_M2M) {
-		kfree(cmd->comps);
-		cmd->comps = NULL;
-	}
 	kfree(cmd);
 	cmd = NULL;
 }
@@ -633,19 +634,14 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	struct mdp_cmdq_cmd *cmd = NULL;
 	struct mdp_comp *comps = NULL;
 	struct device *dev = &mdp->pdev->dev;
-	const struct mdp_comp_ctx *ctx;
 	const int p_id = mdp->mdp_data->mdp_plat_id;
 	struct img_config *config;
 	struct mtk_mutex *mutex = NULL;
 	enum mdp_pipe_id pipe_id;
 	int i, ret = -ECANCELED;
-	int index;
 	u32 num_comp;
-	s32 event;
-	s32 inner_id = MDP_COMP_NONE;
 	u8 pp_ofst = __get_pp_ofst(&param->param->inputs[0].buffer);
 	u8 pp_s = pp_idx + pp_ofst;
-	struct mdp_cap_ctx *cap_ctx = param->mdp_ctx;
 
 	config = __get_config_offset(mdp, param, pp_idx);
 	if (IS_ERR(config)) {
@@ -710,7 +706,7 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	pipe_id = __get_pipe(mdp, path->comps[0].comp->public_id);
 	mutex = __get_mutex(mdp, &mdp->mdp_data->pipe_info[pipe_id]);
 	if (cmd->user == MDP_CMDQ_USER_M2M ||
-	    cap_ctx->cap_status != CAP_STATUS_START) {
+	    atomic_read(&mdp->cap_oneshot)) {
 		ret = mtk_mutex_prepare(mutex);
 		if (ret) {
 			dev_err(dev, "Fail to enable mutex %d clk\n", pp_idx);
@@ -718,27 +714,18 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 		}
 	}
 
-	for (index = 0; index < num_comp; index++) {
-		if (CFG_CHECK(MT8183, p_id))
-			inner_id = CFG_GET(MT8183, path->config, components[index].type);
-		else if (CFG_CHECK(MT8195, p_id))
-			inner_id = CFG_GET(MT8195, path->config, components[index].type);
-		else if (CFG_CHECK(MT8188, p_id))
-			inner_id = CFG_GET(MT8188, path->config, components[index].type);
+	/*
+	 * In HDMI-RX case, the entire CMDQ packet needs to wait until the
+	 * HDMI EOF (Vsync) is received before it can be executed at the
+	 * vertical front porch time point.
+	 */
+	if (pipe_id == MDP_PIPE_SPLIT || pipe_id == MDP_PIPE_SPLIT2) {
+		s32 event;
 
-		if (mdp_cfg_comp_is_dummy(path->mdp_dev, inner_id))
-			continue;
-		ctx = &path->comps[index];
-		if (mdp_cfg_get_id_public(path->mdp_dev, inner_id) == MDP_COMP_SPLIT ||
-		    mdp_cfg_get_id_public(path->mdp_dev, inner_id) == MDP_COMP_SPLIT2) {
-			event = ctx->comp->gce_event[MDP_GCE_EVENT_SOF] + mutex->id;
-			if (cmd->user == MDP_CMDQ_USER_CAP &&
-			    cap_ctx->cap_status != CAP_STATUS_START)
-				MM_REG_SET_EVENT(cmd, event);
-
-			/* Capture case: split0 need wait stream_done event */
-			MM_REG_WAIT(cmd, event);
-		}
+		event = path->comps[0].comp->gce_event[MDP_GCE_EVENT_SOF] + mutex->id;
+		if (atomic_read(&mdp->cap_oneshot))
+			MM_REG_SET_EVENT(cmd, event);
+		MM_REG_WAIT(cmd, event);
 	}
 
 	ret = mdp_path_config(mdp, cmd, path);
@@ -774,14 +761,15 @@ static struct mdp_cmdq_cmd *mdp_cmdq_prepare(struct mdp_dev *mdp,
 	 * is stopped. There is no need for any additional allocation to comp in the process,
 	 * which prevents memory leaks.
 	 */
-	if (cap_ctx->cap_status != CAP_STATUS_START) {
-		cap_ctx->num_comps = num_comp;
+	if (atomic_read(&mdp->cap_oneshot)) {
+		struct mdp_cap_ctx *cap_ctx = param->mdp_ctx;
+
+		cap_ctx->num_comps[pp_idx] = num_comp;
 		cap_ctx->comps[pp_idx] = comps;
 		cap_ctx->mutex[pp_idx] = mutex;
 	} else {
-		kfree(cmd->comps);
+		kfree(comps);
 		cmd->comps = NULL;
-		cmd->num_comps = 0;
 	}
 
 prepare_done:
@@ -806,7 +794,6 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 {
 	struct mdp_cmdq_cmd *cmd[MDP_VPU_UID_MAX] = {NULL};
 	struct device *dev = &mdp->pdev->dev;
-	struct mdp_cap_ctx *cap_ctx = param->mdp_ctx;
 	enum mdp_cmdq_user u_id = param->user;
 	int i, ret = -ECANCELED;
 	u8 pp_used = __get_pp_num(param->param->type);
@@ -828,8 +815,7 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 		}
 	}
 
-	if (u_id == MDP_CMDQ_USER_M2M ||
-	    cap_ctx->cap_status != CAP_STATUS_START) {
+	if (u_id == MDP_CMDQ_USER_M2M || atomic_read(&mdp->cap_oneshot)) {
 		for (i = 0; i < pp_used; i++) {
 			mbox_flush(mdp->cmdq_clt[i + pp_ofst]->chan, 0);
 			ret = mdp_comp_clocks_on(&mdp->pdev->dev,
@@ -838,6 +824,9 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 				goto err_clock_off;
 		}
 	}
+
+	if (atomic_read(&mdp->cap_oneshot))
+		atomic_set(&mdp->cap_oneshot, 0);
 
 	for (i = 0; i < pp_used; i++) {
 		dma_sync_single_for_device(mdp->cmdq_clt[i + pp_ofst]->chan->mbox->dev,
@@ -855,9 +844,12 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 	return 0;
 
 err_clock_off:
-	while (--i >= 0)
-		mdp_comp_clocks_off(&mdp->pdev->dev, cmd[i]->comps,
-				    cmd[i]->num_comps);
+	if (u_id == MDP_CMDQ_USER_M2M || atomic_read(&mdp->cap_oneshot)) {
+		while (--i >= 0) {
+			mdp_comp_clocks_off(&mdp->pdev->dev, cmd[i]->comps,
+					    cmd[i]->num_comps);
+		}
+	}
 err_cancel_job:
 	atomic_set(&mdp->job_count[u_id], 0);
 
