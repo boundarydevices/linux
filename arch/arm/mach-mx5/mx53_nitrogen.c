@@ -1866,7 +1866,7 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	mxc_register_device(&mxci2c_devices[2], i2c2_data);
 	mxc_register_device(&mxc_rtc_device, NULL);
 
-	mx53_nitrogen_init_da9052(da9052_irq);
+	//mx53_nitrogen_init_da9052(da9052_irq);
 
 	mxc_register_device(&mxc_w1_master_device, &mxc_w1_data);
 	mxc_register_device(&mxc_ipu_device, &mxc_ipu_data);
