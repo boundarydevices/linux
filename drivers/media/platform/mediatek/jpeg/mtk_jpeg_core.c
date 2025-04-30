@@ -1098,6 +1098,11 @@ static void mtk_jpeg_enc_device_run(void *priv)
 	src_buf = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
 	dst_buf = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
 	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
+	if (!src_buf || !dst_buf) {
+		v4l2_err(&jpeg->v4l2_dev, "Buffer is NULL\n");
+		v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
+		return;
+	}
 
 	ret = pm_runtime_resume_and_get(jpeg->dev);
 	if (ret < 0)
@@ -1159,7 +1164,17 @@ static void mtk_jpeg_dec_device_run(void *priv)
 
 	src_buf = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
 	dst_buf = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
+	if (!src_buf || !dst_buf) {
+		v4l2_err(&jpeg->v4l2_dev, "Buffer is NULL\n");
+		v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
+		return;
+	}
 	jpeg_src_buf = mtk_jpeg_vb2_to_srcbuf(&src_buf->vb2_buf);
+	if (!jpeg_src_buf) {
+		v4l2_err(&jpeg->v4l2_dev, "jpeg_src_buf is NULL\n");
+		v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
+		return;
+	}
 
 	if (mtk_jpeg_check_resolution_change(ctx, &jpeg_src_buf->dec_param)) {
 		mtk_jpeg_queue_src_chg_event(ctx);
@@ -1422,6 +1437,12 @@ static void mtk_jpeg_job_timeout_work(struct work_struct *work)
 	}
 	src_buf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
 	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+	if (!src_buf || !dst_buf) {
+		v4l2_err(&jpeg->v4l2_dev, "Buffer is NULL\n");
+		v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
+		return;
+	}
+
 	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
 
 	jpeg->variant->hw_reset(jpeg->reg_base);
@@ -1771,6 +1792,12 @@ static irqreturn_t mtk_jpeg_enc_irq(int irq, void *priv)
 
 	src_buf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
 	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+	if (!src_buf || !dst_buf) {
+		v4l2_err(&jpeg->v4l2_dev, "Buffer is NULL\n");
+		v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
+		return IRQ_HANDLED;
+	}
+
 	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
 
 	if (irq_status & JPEG_ENC_INT_STATUS_STALL) {
@@ -2022,8 +2049,19 @@ static irqreturn_t mtk_jpeg_dec_irq(int irq, void *priv)
 
 	src_buf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
 	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+	if (!src_buf || !dst_buf) {
+		v4l2_err(&jpeg->v4l2_dev, "Buffer is NULL\n");
+		v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
+		return IRQ_HANDLED;
+	}
+
 	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
 	jpeg_src_buf = mtk_jpeg_vb2_to_srcbuf(&src_buf->vb2_buf);
+	if (!jpeg_src_buf) {
+		v4l2_err(&jpeg->v4l2_dev, "jpeg_src_buf is NULL\n");
+		v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
+		return IRQ_HANDLED;
+	}
 
 	if (dec_irq_ret >= MTK_JPEG_DEC_RESULT_UNDERFLOW)
 		mtk_jpeg_dec_reset(jpeg->reg_base);
