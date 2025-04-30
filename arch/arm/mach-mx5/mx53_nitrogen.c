@@ -305,7 +305,7 @@
  * GPIO_6	gpio1[6]	i2c3-sda	SCKT of esai1
  */
 
-extern int __init mx53_nitrogen_init_da9052(unsigned irq);
+extern int __init mx53_nitrogen_init_mc34708(void);
 
 #define MAKE_GP(port, bit) ((port - 1) * 32 + bit)
 
@@ -929,7 +929,7 @@ static struct imxi2c_platform_data mxci2c2_data = {
 };
 
 static struct mxc_dvfs_platform_data dvfs_core_data = {
-	.reg_id = "DA9052_BUCK_CORE",
+	.reg_id = "SW1A",
 	.clk1_id = "cpu_clk",
 	.clk2_id = "gpc_dvfs_clk",
 	.gpc_cntr_offset = MXC_GPC_CNTR_OFFSET,
@@ -953,12 +953,12 @@ static struct mxc_dvfs_platform_data dvfs_core_data = {
 };
 
 static struct mxc_bus_freq_platform_data bus_freq_data = {
-	.gp_reg_id = "DA9052_BUCK_CORE",
-	.lp_reg_id = "DA9052_BUCK_PRO",
+	.gp_reg_id = "SW1A",
+	.lp_reg_id = "SW2",
 };
 
 static struct tve_platform_data tve_data = {
-	.dac_reg = "VVIDEO",
+	.dac_reg = "VDAC",
 };
 
 static struct ldb_platform_data ldb_data = {
@@ -1723,16 +1723,6 @@ static struct platform_device dumb_battery_device = {
 };
 #endif
 
-#if defined (CONFIG_DA905X_CHARDEV) || defined (CONFIG_DA905X_CHARDEV_MODULE)
-static struct platform_device da905x_chardev_dev = {
-	.name   = "da905x_chardev",
-	.id     = -1,
-	.dev    = {
-		.platform_data  = 0
-	},
-};
-#endif
-
 #if defined(CONFIG_GPIO_OUTPUT) || defined (CONFIG_GPIO_OUTPUT_MODULE)
 static struct platform_device gpio_output_pdev = {
        .name = "gpio_output",
@@ -1840,7 +1830,7 @@ static struct mxc_pm_platform_data nitrogen_pm_data = {
 static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	struct i2c_board_info *bi1, int bi1_size,
 	struct i2c_board_info *bi2, int bi2_size,
-	unsigned da9052_irq, struct imxi2c_platform_data *i2c2_data)
+	unsigned mc34708_irq, struct imxi2c_platform_data *i2c2_data)
 {
 
 	mxc_ipu_data.di_clk[0] = clk_get(NULL, "ipu_di0_clk");
@@ -1866,7 +1856,7 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	mxc_register_device(&mxci2c_devices[2], i2c2_data);
 	mxc_register_device(&mxc_rtc_device, NULL);
 
-	mx53_nitrogen_init_da9052(da9052_irq);
+	mx53_nitrogen_init_mc34708();
 
 	mxc_register_device(&mxc_w1_master_device, &mxc_w1_data);
 	mxc_register_device(&mxc_ipu_device, &mxc_ipu_data);
@@ -1927,10 +1917,6 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	platform_device_register(&dumb_battery_device);
 #endif
 
-#if defined (CONFIG_DA905X_CHARDEV) || defined (CONFIG_DA905X_CHARDEV_MODULE)
-	platform_device_register(&da905x_chardev_dev);
-#endif
-
 #if defined(CONFIG_GPIO_OUTPUT) || defined (CONFIG_GPIO_OUTPUT_MODULE)
        platform_device_register(&gpio_output_pdev);
 #endif
@@ -1989,8 +1975,6 @@ struct gpio nitrogen53_gpios_specific_a[] __initdata = {
 	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
 	{.label = "power_down_req",	.gpio = POWER_DOWN,		.flags = GPIOF_INIT_HIGH},
 };
-
-extern struct da9052_tsi_platform_data da9052_tsi;
 
 static struct plat_i2c_generic_data i2c_pic16f616_data = {
 	.irq = gpio_to_irq(N53A_I2C_PIC16F616_INT),
@@ -2243,7 +2227,7 @@ const char n53a_camera_i2c_dev_name[] = "8-003c";
 
 static void __init mxc_board_init_nitrogen_a(void)
 {
-	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
+	unsigned mc34708_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 	ldo8_consumers[0].dev_name = n53a_camera_i2c_dev_name;
 	ldo9_consumers[0].dev_name = n53a_camera_i2c_dev_name;
 	mxci2c2_data.i2c_clock_toggle = n53a_i2c_clock_toggle2;
@@ -2265,15 +2249,10 @@ static void __init mxc_board_init_nitrogen_a(void)
 	gpio_keys[2].gpio = MAKE_GP(3,31);	/* new rev - menu key */
 #endif
 
-#ifdef CONFIG_DA905X_TS_MODE
-#if CONFIG_DA905X_TS_MODE == DA9052_5_WIRE_YXSXY_IO1
-	da9052_tsi.config_index = DA9052_5_WIRE_XYSXY_IO2;
-#endif
-#endif
 	mxc_board_init(NULL, 0,
 		mxc_i2c1_board_info_a, ARRAY_SIZE(mxc_i2c1_board_info_a),
 		mxc_i2c2_board_info_a, ARRAY_SIZE(mxc_i2c2_board_info_a),
-		da9052_irq, &mxci2c2_data);
+		mc34708_irq, &mxci2c2_data);
 	mx5_set_otghost_vbus_func(mx53a_gpio_usbotg_driver_vbus);
 
 	mxc_register_device(&mxcsdhc4_device, &mmc4_data);
@@ -2508,7 +2487,7 @@ static struct imxuart_platform_data uart3_pdata = {
 
 static void __init mxc_board_init_nitrogen(void)
 {
-	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
+	unsigned mc34708_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 	mxc_uart_device1.dev.platform_data = UART1_DATA;
 	mxc_uart_device3.dev.platform_data = UART3_DATA;
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
@@ -2537,7 +2516,7 @@ static void __init mxc_board_init_nitrogen(void)
 	mxc_board_init(NULL, 0,
 		mxc_i2c1_board_info, ARRAY_SIZE(mxc_i2c1_board_info),
 		mxc_i2c2_board_info, ARRAY_SIZE(mxc_i2c2_board_info),
-		da9052_irq, &mxci2c2_data);
+		mc34708_irq, &mxci2c2_data);
 	mx5_set_otghost_vbus_func(mx53_gpio_usbotg_driver_vbus);
 
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) \
@@ -2663,7 +2642,6 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "da9053 fault",	.gpio = MAKE_GP(2, 28),		.flags = GPIOF_DIR_IN},
 	{.label = "uart1 cts",		.gpio = MAKE_GP(2, 31),		.flags = GPIOF_INIT_LOW},
 	{.label = "Dispay w3 cs",	.gpio = MAKE_GP(3, 3),		.flags = GPIOF_DIR_IN},
-	{.label = "da9053 shutdown",	.gpio = MAKE_GP(3, 4),		.flags = GPIOF_INIT_HIGH},
 	{.label = "ambient int",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_DIR_IN},
 #define I2C2_HUB_EDID				MAKE_GP(3, 8)
 //	{.label = "i2c2 hub-EDID",	.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_LOW},
@@ -2979,7 +2957,6 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	MX53_PAD_EIM_CS1__GPIO_2_24,		/* accelerometer int2 */
 	NEW_PAD_CTRL(MX53_PAD_EIM_EB0__GPIO2_28, BUTTON_PAD_CTRL) | MUX_SION_MASK,     /* da9053 fault */
 	MX53_PAD_EIM_EB3__GPIO2_31,		/* uart1 cts */
-	MX53_PAD_EIM_DA4__GPIO3_4,		/* da9053 shutdown */
 	MX53_PAD_EIM_DA7__GPIO3_7,		/* ambient int */
 	MX53_PAD_NANDF_RB0__GPIO6_10,		/* i2c2 hub-Camera */
 	MX53_PAD_NANDF_WE_B__GPIO6_12,		/* main power */
@@ -3064,7 +3041,7 @@ const char n53k_camera_i2c_dev_name[] = "6-003c";
 
 static void __init n53k_board_init(void)
 {
-	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
+	unsigned mc34708_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 #ifdef CONFIG_K2
 #ifdef HAVE_CAMERA
 	camera_data.power_down = N53K_CAMERA_POWER_DOWN;
@@ -3091,7 +3068,7 @@ static void __init n53k_board_init(void)
 		n53k_i2c0_board_info, ARRAY_SIZE(n53k_i2c0_board_info),
 		n53k_i2c1_board_info, ARRAY_SIZE(n53k_i2c1_board_info),
 		n53k_i2c2_board_info, ARRAY_SIZE(n53k_i2c2_board_info),
-		da9052_irq, &mxci2c2_data);
+		mc34708_irq, &mxci2c2_data);
 
 #ifdef CONFIG_K2
 	mxc_register_device(&i2c2_i2cmux, &i2c2_i2cmux_data);
