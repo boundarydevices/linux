@@ -511,28 +511,6 @@
 	};
 };
 
-&mmc0 {
-	status = "okay";
-	pinctrl-names = "default", "state_uhs";
-	pinctrl-0 = <&mmc0_pins_default>;
-	pinctrl-1 = <&mmc0_pins_uhs>;
-	bus-width = <8>;
-	max-frequency = <200000000>;
-	cap-mmc-highspeed;
-	mmc-hs200-1_8v;
-	mmc-hs400-1_8v;
-	mmc-hs400-enhanced-strobe;
-	supports-cqe;
-	cap-mmc-hw-reset;
-	no-sdio;
-	no-sd;
-	non-removable;
-	hs400-ds-delay = <0x1481b>;
-	mediatek,hs400-ds-dly3 = <0x14>;
-	vmmc-supply = <&mt6359_vemc_1_ldo_reg>;
-	vqmmc-supply = <&mt6359_vufs_ldo_reg>;
-};
-
 &uart0 {
 	status = "okay";
 };
