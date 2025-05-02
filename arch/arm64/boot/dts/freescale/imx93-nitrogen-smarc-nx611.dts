@@ -1,0 +1,27 @@
+
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC
+ */
+
+#include "imx93-nitrogen-smarc.dts"
+
+/ {
+	model = "Boundary Devices Nitrogen93 SMARC + NX611 WiFi";
+	compatible = "ezurio,imx93-nitrogen-smarc-nx611", "fsl,imx93";
+};
+
+&lpuart5 {
+	bluetooth {
+		compatible = "nxp,88w8987-bt";
+		fw-init-baudrate = <3000000>;
+	};
+};
+
+&usdhc3 { /* WiFi / Bluetooth */
+	max-frequency = <50000000>;
+	cap-power-off-card;
+
+	/delete-node/ wifi_wake_host;
+	/delete-node/ wifi@1;
+};

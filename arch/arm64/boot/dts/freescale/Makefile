@@ -797,6 +797,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-nitrogen-smarc.dtb \
 			  imx93-nitrogen-smarc-rpmsg.dtb \
 			  imx93-nitrogen-smarc-lvds.dtb \
 			  imx93-nitrogen-smarc-lvds-tevs.dtb \
+			  imx93-nitrogen-smarc-nx611.dtb \
 			  imx93-nitrogen-smarc-ov5640.dtb \
 			  imx93-nitrogen-smarc-spi-slave.dtb \
 			  imx93-nitrogen-smarc-tevs.dtb \
