@@ -1272,15 +1272,15 @@ static const struct panel_desc boe_nv140fhmn49 = {
 };
 
 static const struct drm_display_mode innolux_hk173vb_01b_mode = {
-	.clock = 533280,
+	.clock = 533250,
 	.hdisplay = 3840,
-	.hsync_start = 3840 + 100,
-	.hsync_end = 3840 + 100 + 20,
-	.htotal = 3840 + 100 + 20 + 40,
+	.hsync_start = 3840 + 48,
+	.hsync_end = 3840 + 48 + 32,
+	.htotal = 3840 + 48 + 32 + 80,
 	.vdisplay = 2160,
-	.vsync_start = 2160 + 16,
-	.vsync_end = 2160 + 16 + 22,
-	.vtotal = 2160 + 16 + 22 + 24,
+	.vsync_start = 2160 + 3,
+	.vsync_end = 2160 + 3 + 5,
+	.vtotal = 2160 + 3 + 5 + 54,
 };
 
 static const struct panel_desc innolux_hk173vb_01b = {
@@ -1528,15 +1528,15 @@ static const struct panel_desc lg_lp120up1 = {
 };
 
 static const struct drm_display_mode auo_g156han03_mode = {
-	.clock = 140910,
+	.clock = 142000,
 	.hdisplay = 1920,
-	.hsync_start = 1920 + 40,
-	.hsync_end = 1920 + 40 + 40,
-	.htotal = 1920 + 40 + 40 + 80,
+	.hsync_start = 1920 + 108,
+	.hsync_end = 1920 + 108 + 48,
+	.htotal = 1920 + 108 + 48 + 24,
 	.vdisplay = 1080,
 	.vsync_start = 1080 + 10,
 	.vsync_end = 1080 + 10 + 10,
-	.vtotal = 1080 + 10 + 10 + 28,
+	.vtotal = 1080 + 10 + 10 + 26,
 };
 
 static const struct panel_desc auo_g156han03 = {
