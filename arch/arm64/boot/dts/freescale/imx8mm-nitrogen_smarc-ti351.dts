@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC
+ */
+
+#include "imx8mm-nitrogen_smarc.dts"
+
+/ {
+	model = "Ezurio Nitrogen8MM SMARC board + TI351 WiFi";
+	compatible = "ezurio,imx8mm-nitrogen_smarc-ti351", "fsl,imx8mm";
+};
+
+&uart3 {
+	bluetooth {
+		compatible = "ti,cc33xx-bt";
+		cc33xx-supply = <&reg_wlan_vmmc>;
+		max-speed = <115200>;
+	};
+};
+
+&usdhc3 { /* WiFi / Bluetooth */
+	max-frequency = <50000000>;
+	cap-power-off-card;
+
+	/delete-node/ wifi@1 ;
+
+	wlcore: wlcore@2 {
+		compatible = "ti,cc33xx";
+		/* To use in-band SDIO interrupts remove the following line */
+		interrupts-extended = <&gpio1 12 IRQ_TYPE_EDGE_RISING>; /* SDIO_WAKE# */
+		reg = <2>;
+	};
+};
+
+&iomuxc {
+	pinctrl_usdhc3: usdhc3grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_NAND_WE_B_USDHC3_CLK	0x10
+			MX8MM_IOMUXC_NAND_WP_B_USDHC3_CMD	0x150
+			MX8MM_IOMUXC_NAND_DATA04_USDHC3_DATA0	0x150
+			MX8MM_IOMUXC_NAND_DATA05_USDHC3_DATA1	0x150
+			MX8MM_IOMUXC_NAND_DATA06_USDHC3_DATA2	0x150
+			MX8MM_IOMUXC_NAND_DATA07_USDHC3_DATA3	0x150
+			MX8MM_IOMUXC_NAND_READY_B_SD3_RESET_B	0x150
+			MX8MM_IOMUXC_GPIO1_IO12_GPIO1_IO12	0x180	/* SDIO_WAKE */
+
+		>;
+	};
+};
