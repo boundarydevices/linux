@@ -501,6 +501,7 @@ static void mtk_dpi_power_off(struct mtk_dpi *dpi)
 
 	clk_disable_unprepare(dpi->dpix);
 	clk_disable_unprepare(dpi->pixel_clk);
+	clk_disable_unprepare(dpi->dpi_ck_cg);
 	clk_disable_unprepare(dpi->engine_clk);
 	clk_disable_unprepare(dpi->tvd_clk);
 	clk_disable_unprepare(dpi->dpi_sel_clk);
