@@ -14,7 +14,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MMini Nitrogen8MM Rev2";
-	compatible = "boundary,imx8mm-nitrogen8mm_rev2", "fsl,imx8mm";
+	compatible = "ezurio,imx8mm-nitrogen8mm_rev2", "fsl,imx8mm";
 
 	aliases {
 		a53 = &A53_0;

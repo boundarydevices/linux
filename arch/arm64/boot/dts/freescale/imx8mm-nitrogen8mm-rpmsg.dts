@@ -7,7 +7,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MMini Nitrogen8MM M4";
-	compatible = "boundary,imx8mm-nitrogen8mm-m4", "fsl,imx8mm";
+	compatible = "ezurio,imx8mm-nitrogen8mm-m4", "fsl,imx8mm";
 
 	reserved-memory {
 		#address-cells = <2>;
