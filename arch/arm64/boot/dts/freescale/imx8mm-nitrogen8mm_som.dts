@@ -8,7 +8,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MMini Nitrogen8MM Som";
-	compatible = "boundary,imx8mm-nitrogen8mm_som", "fsl,imx8mm";
+	compatible = "ezurio,imx8mm-nitrogen8mm_som", "fsl,imx8mm";
 
 	aliases {
 		reg_sw4 = &reg_buck4;
