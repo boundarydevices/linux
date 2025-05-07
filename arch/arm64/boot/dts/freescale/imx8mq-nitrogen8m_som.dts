@@ -14,7 +14,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MQ Nitrogen8M_som";
-	compatible = "boundary,imx8mq-nitrogen8m_som", "fsl,imx8mq";
+	compatible = "ezurio,imx8mq-nitrogen8m_som", "fsl,imx8mq";
 
 	aliases {
 		backlight_mipi = &backlight_mipi;

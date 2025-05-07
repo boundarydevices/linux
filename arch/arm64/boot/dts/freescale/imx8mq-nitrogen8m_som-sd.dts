@@ -7,7 +7,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM SD2";
-	compatible = "boundary,imx8mq-nitrogen8m_som_sd", "fsl,imx8mq";
+	compatible = "ezurio,imx8mq-nitrogen8m_som_sd", "fsl,imx8mq";
 };
 
 &usdhc2 {
