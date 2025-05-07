@@ -7,7 +7,7 @@
 
 / {
 	model = "Boundary i.MX 8M Mini Nitrogen SMARC board + RPMSG";
-	compatible = "boundary,imx8mm-nitrogen_smarc-rpmsg", "fsl,imx8mm";
+	compatible = "ezurio,imx8mm-nitrogen_smarc-rpmsg", "fsl,imx8mm";
 
 	reserved-memory {
 		#address-cells = <2>;

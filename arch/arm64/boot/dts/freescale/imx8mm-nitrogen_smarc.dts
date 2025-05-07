@@ -12,7 +12,7 @@
 
 / {
 	model = "Boundary Nitrogen8M Mini SMARC board";
-	compatible = "boundary,imx8mm-nitrogen_smarc", "fsl,imx8mm";
+	compatible = "ezurio,imx8mm-nitrogen_smarc", "fsl,imx8mm";
 
 	aliases {
 		backlight_mipi_alt = &backlight_mipi;
