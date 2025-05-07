@@ -136,7 +136,7 @@
 
 / {
 	model = "NXP i.MX 8ULP tag";
-	compatible = "boundary,imx8ulp-tag", "fsl,imx8ulp";
+	compatible = "ezurio,imx8ulp-tag", "fsl,imx8ulp";
 
 	aliases {
 		backlight_mipi = &backlight_mipi;
