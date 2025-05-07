@@ -1118,14 +1118,7 @@
 				/* MDP0 */
 				<&mdpsys_config_clk CLK_MDP_SMI0>,
 				/*VADSP_TOP */
-				<&vlp_cksys_clk CLK_VLP_CK_VADSYS_VLP_26M_EN>,
-				/* VADSP */
-				<&vadsys_clk CLK_VAD_CORE0_EN>,
-				<&vadsys_clk CLK_VAD_BUSEMI_EN>,
-				<&vadsys_clk CLK_VAD_TIMER_EN>,
-				<&vadsys_clk CLK_VAD_DMA0_EN>,
-				<&vadsys_clk CLK_VAD_UART_EN>,
-				<&vadsys_clk CLK_VAD_VOWPLL_EN>;
+				<&vlp_cksys_clk CLK_VLP_CK_VADSYS_VLP_26M_EN>;
 			clock-names = "mfg1", "audio", "venc", "vdec", "ipe", "cam",
 				"img1", "disp",
 				"mdp", "mm_infra", "vadsp",
@@ -1138,9 +1131,7 @@
 				"disp-0",
 				"vdec-0", "venc-0",
 				"mdp0-0",
-				"vadsp-top-0",
-				"vadsp-0", "vadsp-1", "vadsp-2", "vadsp-3",
-				"vadsp-4", "vadsp-5";
+				"vadsp-top-0";
 		};
 
 		vlpcfg_reg_bus_clk: syscon@1c00c000 {
@@ -1176,6 +1167,7 @@
 		vadsys_clk: syscon@1e010000 {
 			compatible = "mediatek,mt8189-vadsys", "syscon";
 			reg = <0 0x1e010000 0 0x1000>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_ADSP_INFRA>;
 			#clock-cells = <1>;
 		};
 
