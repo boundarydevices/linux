@@ -13,7 +13,7 @@
 
 / {
 	model = "Boundary i.MX8MPlus nitrogen8mp board";
-	compatible = "boundary,imx8mp-nitrogen8mp", "fsl,imx8mp";
+	compatible = "ezurio,imx8mp-nitrogen8mp", "fsl,imx8mp";
 
 	aliases {
 		backlight_mipi = &backlight_mipi;

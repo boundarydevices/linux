@@ -9,7 +9,7 @@
 
 / {
 	model = "Boundary i.MX 8M Plus Nitrogen8MP board (M-core)";
-	compatible = "boundary,imx8mp-nitrogen8mp-rpmsg", "fsl,imx8mp";
+	compatible = "ezurio,imx8mp-nitrogen8mp-rpmsg", "fsl,imx8mp";
 
 	reserved-memory {
 		#address-cells = <2>;
