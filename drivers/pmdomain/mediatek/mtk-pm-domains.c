@@ -67,7 +67,7 @@ struct scpsys {
 static bool scpsys_domain_is_on(struct scpsys_domain *pd)
 {
 	struct scpsys *scpsys = pd->scpsys;
-	u32 status, status2;
+	u32 status = 0, status2 = 0;
 
 	regmap_read(scpsys->base, pd->data->pwr_sta_offs, &status);
 	status &= pd->data->sta_mask;
