@@ -573,7 +573,7 @@ static void mtk_cpu_dvfs_info_release(struct mtk_cpu_dvfs_info *info)
 static int mtk_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct mtk_cpu_dvfs_info *info;
-	struct cpufreq_frequency_table *freq_table;
+	struct cpufreq_frequency_table *freq_table = NULL;
 	int ret;
 
 	info = mtk_cpu_dvfs_info_lookup(policy->cpu);
