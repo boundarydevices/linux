@@ -8,7 +8,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MQ Nitrogen8M eDP";
-	compatible = "boundary,imx8mq-nitrogen8m-edp", "fsl,imx8mq";
+	compatible = "ezurio,imx8mq-nitrogen8m-edp", "fsl,imx8mq";
 };
 
 &backlight_edp {
