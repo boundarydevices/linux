@@ -288,6 +288,7 @@ static const struct mtk_gate vad_clks[] = {
 static const struct mtk_clk_desc vad_mcd = {
 	.clks = vad_clks,
 	.num_clks = CLK_VAD_NR_CLK,
+	.need_runtime_pm = true,
 };
 
 static const struct of_device_id of_match_clk_mt8189_adsp[] = {
