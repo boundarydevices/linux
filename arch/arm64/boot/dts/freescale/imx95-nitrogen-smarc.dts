@@ -9,7 +9,7 @@
 
 / {
 	model = "Ezurio Nitrogen95 SMARC board";
-	compatible = "fsl,imx95-nitrogen-smarc", "fsl,imx95";
+	compatible = "ezurio,imx95-nitrogen-smarc", "fsl,imx95";
 
 	aliases {
 		can0 = &flexcan1;
