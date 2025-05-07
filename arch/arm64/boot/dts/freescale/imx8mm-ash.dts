@@ -14,7 +14,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MMini AltoSHAMM";
-	compatible = "boundary,imx8mm-ash", "fsl,imx8mm";
+	compatible = "ezurio,imx8mm-ash", "fsl,imx8mm";
 
 	aliases {
 		a53 = &A53_0;
