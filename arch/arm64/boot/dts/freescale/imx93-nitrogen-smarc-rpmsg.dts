@@ -7,7 +7,7 @@
 
 / {
 	model = "Boundary i.MX 93 Nitrogen SMARC board + RPMSG";
-	compatible = "boundary,imx93-nitrogen-smarc-rpmsg", "fsl,imx93";
+	compatible = "ezurio,imx93-nitrogen-smarc-rpmsg", "fsl,imx93";
 
 	reserved-memory {
 		m33_reserved: m33@a5000000 {
