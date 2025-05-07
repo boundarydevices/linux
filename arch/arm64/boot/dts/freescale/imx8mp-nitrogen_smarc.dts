@@ -12,7 +12,7 @@
 
 / {
 	model = "Boundary Nitrogen8M Plus SMARC board";
-	compatible = "boundary,imx8mp-nitrogen_smarc", "fsl,imx8mp";
+	compatible = "ezurio,imx8mp-nitrogen_smarc", "fsl,imx8mp";
 
 	aliases {
 		backlight_lvds2 = &backlight_lvds2;
