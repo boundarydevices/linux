@@ -561,6 +561,10 @@
 	post-power-on-delay-ms = <200>;
 };
 
+&watchdog {
+	/delete-property/ mediatek,disable-extrst;
+};
+
 &mmc2 {
 	status = "okay";
 	pinctrl-names = "default", "state_uhs", "state_eint",
