@@ -395,6 +395,11 @@ static int imx_fsb_s400_fuse_probe(struct platform_device *pdev)
 	}
 
 	fuse->se_dev = get_se_dev(fuse->hw->se_pdev_name);
+	if (IS_ERR_OR_NULL(fuse->se_dev)) {
+		dev_err(&pdev->dev, "failed to get the se-fw2 device\n");
+		return -EPROBE_DEFER;
+	}
+
 	dev_dbg(&pdev->dev, "fuse nvmem device registered successfully\n");
 
 	return 0;
