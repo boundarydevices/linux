@@ -62,8 +62,10 @@ static struct platform_device *__get_pdev_by_id(struct platform_device *pdev,
 	if (strlen(compat) == 0)
 		return NULL;
 
-	if (from)
+	if (from) {
 		f = from->dev.of_node;
+		of_node_get(f);
+	}
 	node = of_find_compatible_node(f, NULL, compat);
 	if (WARN_ON(!node)) {
 		dev_err(&pdev->dev, "find node from id %d failed\n", id);
