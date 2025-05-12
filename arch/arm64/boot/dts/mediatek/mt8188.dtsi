@@ -496,6 +496,12 @@
 			thermal-sensors = <&lvts_mcu MT8188_MCU_LITTLE_CPU0>;
 
 			trips {
+				cpu_little0_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu_little0_alert0: trip-alert0 {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -534,6 +540,12 @@
 			thermal-sensors = <&lvts_mcu MT8188_MCU_LITTLE_CPU1>;
 
 			trips {
+				cpu_little1_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu_little1_alert0: trip-alert0 {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -572,6 +584,12 @@
 			thermal-sensors = <&lvts_mcu MT8188_MCU_LITTLE_CPU2>;
 
 			trips {
+				cpu_little2_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu_little2_alert0: trip-alert0 {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -610,6 +628,12 @@
 			thermal-sensors = <&lvts_mcu MT8188_MCU_LITTLE_CPU3>;
 
 			trips {
+				cpu_little3_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu_little3_alert0: trip-alert0 {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -648,6 +672,12 @@
 			thermal-sensors = <&lvts_mcu MT8188_MCU_BIG_CPU0>;
 
 			trips {
+				cpu_big0_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu_big0_alert0: trip-alert0 {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -682,6 +712,12 @@
 			thermal-sensors = <&lvts_mcu MT8188_MCU_BIG_CPU1>;
 
 			trips {
+				cpu_big1_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu_big1_alert0: trip-alert0 {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -742,6 +778,12 @@
 			thermal-sensors = <&lvts_ap MT8188_AP_GPU0>;
 
 			trips {
+				gpu_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				gpu_alert0: trip-alert0 {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -775,6 +817,12 @@
 			thermal-sensors = <&lvts_ap MT8188_AP_GPU1>;
 
 			trips {
+				gpu1_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				gpu1_alert0: trip-alert0 {
 					temperature = <85000>;
 					hysteresis = <2000>;
