@@ -3974,6 +3974,12 @@
 			thermal-sensors = <&lvts_mcu MT8195_MCU_LITTLE_CPU0>;
 
 			trips {
+				cpu0_little0_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu0_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4004,6 +4010,12 @@
 			thermal-sensors = <&lvts_mcu MT8195_MCU_LITTLE_CPU1>;
 
 			trips {
+				cpu1_little1_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu1_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4034,6 +4046,12 @@
 			thermal-sensors = <&lvts_mcu MT8195_MCU_LITTLE_CPU2>;
 
 			trips {
+				cpu2_little2_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu2_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4064,6 +4082,12 @@
 			thermal-sensors = <&lvts_mcu MT8195_MCU_LITTLE_CPU3>;
 
 			trips {
+				cpu3_little3_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu3_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4094,6 +4118,12 @@
 			thermal-sensors = <&lvts_mcu MT8195_MCU_BIG_CPU0>;
 
 			trips {
+				cpu4_big0_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu4_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4124,6 +4154,12 @@
 			thermal-sensors = <&lvts_mcu MT8195_MCU_BIG_CPU1>;
 
 			trips {
+				cpu5_big1_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu5_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4154,6 +4190,12 @@
 			thermal-sensors = <&lvts_mcu MT8195_MCU_BIG_CPU2>;
 
 			trips {
+				cpu6_big2_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu6_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4184,6 +4226,12 @@
 			thermal-sensors = <&lvts_mcu MT8195_MCU_BIG_CPU3>;
 
 			trips {
+				cpu7_big3_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				cpu7_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4254,6 +4302,12 @@
 			thermal-sensors = <&lvts_ap MT8195_AP_GPU0>;
 
 			trips {
+				gpu0_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				gpu0_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
@@ -4274,6 +4328,12 @@
 			thermal-sensors = <&lvts_ap MT8195_AP_GPU1>;
 
 			trips {
+				gpu1_switch_on: trip-switch-on0 {
+					temperature = <68000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				gpu1_alert: trip-alert {
 					temperature = <85000>;
 					hysteresis = <2000>;
