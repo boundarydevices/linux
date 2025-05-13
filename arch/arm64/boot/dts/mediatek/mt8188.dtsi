@@ -477,19 +477,19 @@
 
 			trips {
 				cpu_little0_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_little0_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_little0_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -515,19 +515,19 @@
 
 			trips {
 				cpu_little1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_little1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_little1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -553,19 +553,19 @@
 
 			trips {
 				cpu_little2_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_little2_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_little2_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -591,19 +591,19 @@
 
 			trips {
 				cpu_little3_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_little3_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_little3_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -629,19 +629,19 @@
 
 			trips {
 				cpu_big0_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_big0_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_big0_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -663,19 +663,19 @@
 
 			trips {
 				cpu_big1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_big1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_big1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -697,19 +697,19 @@
 
 			trips {
 				apu_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				apu_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				apu_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -723,19 +723,19 @@
 
 			trips {
 				gpu_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				gpu_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				gpu_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -756,19 +756,19 @@
 
 			trips {
 				gpu1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				gpu1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				gpu1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -789,19 +789,19 @@
 
 			trips {
 				soc_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				soc_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				soc_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -815,19 +815,19 @@
 
 			trips {
 				soc1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				soc1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				soc1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -841,19 +841,19 @@
 
 			trips {
 				soc2_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				soc2_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				soc2_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -867,19 +867,19 @@
 
 			trips {
 				cam1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cam1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cam1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -893,19 +893,19 @@
 
 			trips {
 				cam2_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cam2_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cam2_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
