@@ -237,8 +237,6 @@ static const struct regmap_config sn65dsi83_regmap_config = {
 	.max_register = REG_IRQ_STAT,
 };
 
-static int sn65dsi83_host_attach(struct sn65dsi83 *ctx);
-
 static struct sn65dsi83 *bridge_to_sn65dsi83(struct drm_bridge *bridge)
 {
 	return container_of(bridge, struct sn65dsi83, bridge);
@@ -248,13 +246,7 @@ static int sn65dsi83_attach(struct drm_bridge *bridge,
 			    enum drm_bridge_attach_flags flags)
 {
 	struct sn65dsi83 *ctx = bridge_to_sn65dsi83(bridge);
-	int ret;
 
-	ret = sn65dsi83_host_attach(ctx);
-	if (ret) {
-		dev_err_probe(ctx->dev, ret, "failed to attach DSI host\n");
-		return ret;
-	}
 	return drm_bridge_attach(bridge->encoder, ctx->panel_bridge,
 				 &ctx->bridge, flags);
 }
@@ -720,6 +712,16 @@ static int sn65dsi83_probe(struct i2c_client *client)
 	ctx->bridge.pre_enable_prev_first = true;
 	drm_bridge_add(&ctx->bridge);
 
+	ret = sn65dsi83_host_attach(ctx);
+	if (ret) {
+		dev_err_probe(dev, ret, "failed to attach DSI host\n");
+		goto err_remove_bridge;
+	}
+
+	return 0;
+
+err_remove_bridge:
+	drm_bridge_remove(&ctx->bridge);
 	return ret;
 }
 
