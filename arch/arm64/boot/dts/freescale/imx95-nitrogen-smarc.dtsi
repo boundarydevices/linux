@@ -11,12 +11,47 @@
 / {
 	chosen {
 		bootargs = "console=ttyLP0,115200 earlycon";
+		rng-seed = <0x01 0x02 0x03 0x04 0x05 0x06>;
 		stdout-path = &lpuart1;
 	};
 
 	memory@80000000 {
 		device_type = "memory";
 		reg = <0x0 0x80000000 0 0x80000000>;
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				system {
+					compatible = "android,system";
+					dev = "/dev/block/platform/soc/42800000.bus/42850000.mmc/by-name/system";
+					type = "ext4";
+					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,avb";
+				};
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/soc/42800000.bus/42850000.mmc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,avb";
+				};
+				metadata {
+					compatible = "android,metadata";
+					dev = "/dev/block/by-name/metadata";
+					type = "ext4";
+					mnt_flags = "noatime,nosuid,nodev,discard,sync";
+					fsmgr_flags = "wait,formattable,first_stage_mount,check";
+				};
+			};
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,dtbo,boot,system,vendor";
+			};
+		};
 	};
 
 	reserved-memory {
