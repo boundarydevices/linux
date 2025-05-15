@@ -2713,6 +2713,10 @@ static const struct mtk_composite top_composites[] = {
 		"apll_tdmout_m_sel"/* parent */, 0x0320/* pdn ofs */,
 		13/* pdn bit */, CLK_AUDDIV_5/* ofs */, 8/* width */,
 		8/* lsb */),
+	DIV_GATE(CLK_TOP_APLL12_CK_DIV_TDMOUT_B/* dts */, "apll12_div_tdmout_b"/* ccf */,
+		"apll12_div_tdmout_m"/* parent */, 0x0320/* pdn ofs */,
+		14/* pdn bit */, CLK_AUDDIV_5/* ofs */, 8/* width */,
+		16/* lsb */),
 };
 
 static const struct mtk_gate_regs top_cg_regs = {
