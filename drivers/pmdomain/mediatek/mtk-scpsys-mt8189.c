@@ -119,23 +119,6 @@ static const struct scp_domain_data scp_domain_mt8189_spm_data[] = {
 		},
 		.caps = MTK_SCPD_IS_PWR_CON_ON | default_cap,
 	},
-	[MT8189_POWER_DOMAIN_ADSP_TOP_DORMANT] = {
-		.name = "adsp-top-dormant",
-		.ctl_offs = 0xE1C,
-		.sram_slp_bits = GENMASK(9, 9),
-		.sram_slp_ack_bits = GENMASK(13, 13),
-		.basic_clk_name = {"vadsp"},
-		.subsys_clk_prefix = "vadsp-top",
-		.caps = MTK_SCPD_SRAM_ISO | MTK_SCPD_SRAM_SLP | MTK_SCPD_IS_PWR_CON_ON
-				| MTK_SCPD_ACTIVE_WAKEUP | MTK_SCPD_KEEP_DEFAULT_OFF | default_cap,
-	},
-	[MT8189_POWER_DOMAIN_ADSP_INFRA] = {
-		.name = "adsp-infra",
-		.ctl_offs = 0xE20,
-		.basic_clk_name = {"vadsp"},
-		.subsys_clk_prefix = "vadsp",
-		.caps = MTK_SCPD_IS_PWR_CON_ON | MTK_SCPD_KEEP_DEFAULT_OFF | default_cap,
-	},
 	[MT8189_POWER_DOMAIN_ADSP_AO] = {
 		.name = "adsp-ao",
 		.ctl_offs = 0xE24,
