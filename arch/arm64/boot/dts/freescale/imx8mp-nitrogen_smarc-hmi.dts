@@ -1,0 +1,145 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC
+ */
+
+/dts-v1/;
+
+#include "imx8mp-nitrogen_smarc-nx611.dts"
+
+/ {
+	model = "Ezurio Nitrogen8MP SMARC NX611 HMI board";
+	compatible = "ezurio,imx8mp-nitrogen_smarc-hmi", "fsl,imx8mp";
+
+	/delete-node/ sound-wm8962;
+
+	codec_audio: sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,bitclock-master = <&codec_dai>;
+		simple-audio-card,format = "i2s";
+		simple-audio-card,frame-master = <&codec_dai>;
+		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,name = "tac5112";
+
+		simple-audio-card,widgets =
+			"Headphone", "Headphone Jack",
+			"Line",      "Line In",
+			"Line",      "Line Out";
+
+		simple-audio-card,routing =
+			"Headphone Jack", "OUT1",
+			"Headphone Jack", "OUT2",
+			"AIN1", "Line In",
+			"AIN2", "Line In",
+			"Line Out", "OUT1",
+			"Line Out", "OUT2";
+
+		simple-audio-card,codec {
+			clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
+			sound-dai = <&tac5112>;
+		};
+
+		codec_dai: simple-audio-card,cpu {
+			sound-dai = <&sai3>;
+			bitclock-master;
+			frame-master;
+			system-clock-direction-out;
+		};
+	};
+};
+
+&backlight_lvds2 {
+	status = "okay";
+};
+
+&i2c_gp_c {
+
+	/delete-node/ codec@1a;
+
+	tac5112: audio-codec@51 {
+		/* U1, TI, XTAC5112IRGER */
+		#sound-dai-cells = <0>;
+		compatible = "ti,tac5112";
+		reg = <0x51>;
+
+		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
+		clock-names = "mclk";
+
+		ti,vref = <0>;  /* 2.75V */
+		ti,micbias-vg = <0>; /* same as Vref */
+		ti,gpios-func = <0>, <0>, <0>; /* GPIOx - Disable */
+		ti,gpi1-func = <0>; /* TAC5X1X_GPIO_DISABLE */
+
+		ti,gpios-drive = <0>, <0>, <0>; /* Hi-Z Output */
+		ti,gpa-gpio = <0>; /* GPA using GPIO1 is disabled */
+		ti,gpa-threshold = <75>, <186>; /* GPA Low and High threshold Values */
+
+		avdd-supply = <&reg_vref_3v3>;
+		iovdd-supply = <&reg_vref_1v8>;
+	};
+};
+
+/* I2C_PM */
+&i2c4 {
+	ts_lvds_goodix_hmi_2: touchscreen@ba {
+		   compatible = "goodix,gt928";
+		   esd-recovery-timeout-ms = <2000>;
+		   interrupts-extended = <&gpio4 2 IRQ_TYPE_LEVEL_HIGH>;
+		   irq-gpios = <&gpio4 2 GPIO_ACTIVE_HIGH>;
+		   pinctrl-names = "default";
+		   pinctrl-0 = <&pinctrl_ts_lvds_gt911>;
+		   reg = <0xba>;
+		   reset-gpios = <&mcp23018 8 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		   status = "okay";
+	};
+};
+
+&lcdif2 { /* fb_lvds */
+	interface_pix_fmt = "RGB24";
+	status = "okay";
+};
+
+&lcdif3 { /* fb_hdmi */
+	status = "okay"; /* TODO */
+};
+
+&ldb {
+	status = "okay";
+
+	lvds-channel@0 {  /* TODO LVDS0 */
+		status = "disabled";
+	};
+
+	lvds-channel@1 { /* LVDS1 */
+		primary;
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <24>;
+		status = "okay";
+
+		/* 10.1" HMI display timings here */
+		display-timings {
+			t_lvds2: t_lvds_default {
+				clock-frequency = <74250000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <88>;
+				hfront-porch = <72>;
+				vback-porch = <23>;
+				vfront-porch = <15>;
+				hsync-len = <20>;
+				vsync-len = <10>;
+				de-active = <1>;
+			};
+		};
+	};
+};
+
+&mipi_dsi {
+	status = "disabled";
+};
+
+&sai3 {
+	#sound-dai-cells = <0>;
+	assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
+	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL2_OUT>; /* Needed for a 49152000 clock */
+};
