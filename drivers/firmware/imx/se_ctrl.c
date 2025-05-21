@@ -1384,6 +1384,14 @@ static int se_ioctl_setup_iobuf_handler(struct se_if_device_ctx *dev_ctx,
 		dev_err(dev_ctx->priv->dev,
 			"%s: Not enough space in shared memory\n",
 			dev_ctx->devname);
+		if (io.flags & SE_IO_BUF_FLAGS_RESET_ON_ERROR) {
+			if (shared_mem->pos)
+				memset_io(shared_mem->ptr, 0, shared_mem->pos);
+			else
+				memset(shared_mem->ptr, 0, shared_mem->pos);
+
+			shared_mem->pos = 0;
+		}
 		err = -ENOMEM;
 		goto exit;
 	}
