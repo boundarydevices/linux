@@ -777,7 +777,10 @@ static const struct v4l2_file_operations mdp_cap_fops = {
 
 void mdp_capture_device_release(struct video_device *vdev)
 {
-	/* Should not release mdp context, do nothing currently */
+	struct mdp_dev *mdp = (struct mdp_dev *)video_get_drvdata(vdev);
+
+	video_device_release(mdp->cap_vdev);
+	mdp->cap_vdev = NULL;
 }
 
 int mdp_capture_device_register(struct mdp_dev *mdp)

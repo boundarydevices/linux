@@ -383,8 +383,10 @@ static void mdp_remove(struct platform_device *pdev)
 {
 	struct mdp_dev *mdp = platform_get_drvdata(pdev);
 
-	if (mdp->comp[MDP_COMP_SPLIT])
+	if (mdp->comp[MDP_COMP_SPLIT]) {
 		mdp_cap_deinit();
+		mdp_capture_device_unregister(mdp);
+	}
 	if (mdp->m2m_dev)
 		v4l2_m2m_unregister_media_controller(mdp->m2m_dev);
 	media_device_unregister(&mdp->mdev);

@@ -56,6 +56,7 @@ struct mdp_cap_driver {
 };
 
 int mdp_capture_device_register(struct mdp_dev *mdp);
+void mdp_capture_device_unregister(struct mdp_dev *mdp);
 void mdp_cap_job_finish(struct mdp_cap_ctx *ctx, bool is_timeout);
 int mdp_cap_init(struct mdp_dev *mdp);
 void mdp_cap_deinit(void);
