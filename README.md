@@ -20,6 +20,7 @@ This section targets the following platforms:
 * Android 12 kernel is in branch [boundary-android-12.1.0\_1.0.0][imx-12]
 * Android 13 kernel is in branch [boundary-android-13.0.0\_1.0.0][imx-13]
 * Android 14 kernel is in branch [boundary-android-14.0.0\_1.2.0][imx-14]
+* Android 15 kernel is in branch [ezurio-android-15.0.0\_1.2.0][imx-15]
 
 -------------------------------------------
 
@@ -56,6 +57,7 @@ This section targets the following platforms:
 [imx-12]:https://github.com/boundarydevices/linux/tree/boundary-android-12.1.0_1.0.0 "Ezurio Android 12.1 kernel tree"
 [imx-13]:https://github.com/boundarydevices/linux/tree/boundary-android-13.0.0_1.0.0 "Ezurio Android 13 kernel tree"
 [imx-14]:https://github.com/boundarydevices/linux/tree/boundary-android-14.0.0_1.2.0 "Ezurio Android 14 kernel tree"
+[imx-15]:https://github.com/boundarydevices/linux/tree/ezurio-android-15.0.0_1.2.0 "Ezurio Android 15 kernel tree"
 [imx-3.0.35]:https://github.com/boundarydevices/linux/tree/boundary-imx_3.0.35_4.1.0 "Ezurio 3.0.35 4.1.0 kernel tree"
 [imx-3.10.x]:https://github.com/boundarydevices/linux/tree/boundary-imx_3.10.53_1.1.1_ga "Ezurio 3.10.53-1.1.1 GA kernel tree"
 [imx-3.14.x]:https://github.com/boundarydevices/linux/tree/boundary-imx_3.14.52_1.1.0_ga "Ezurio 3.14.52-1.1.0 GA kernel tree"
