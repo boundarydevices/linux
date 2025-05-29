@@ -358,7 +358,7 @@ config TOUCHSCREEN_EKTF2K_SINGLE_TOUCH
 
 config TOUCHSCREEN_MXC
 	tristate "MXC touchscreen input driver"
-	depends on MXC_MC13783_ADC || MXC_MC13892_ADC
+	depends on MXC_MC13783_ADC || MXC_MC13892_ADC || MXC_MC34708_ADC
 	help
 	  Say Y here if you have an MXC based board with touchscreen
 	  attached to it.
