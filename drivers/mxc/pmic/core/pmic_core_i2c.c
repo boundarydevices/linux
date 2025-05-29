@@ -202,12 +202,7 @@ static int __devinit is_chip_onboard(struct i2c_client *client)
 		return -1;
 	if ((MC13892_GEN_ID_VALUE != BITFEXT(ret, MC13892_GENERATION_ID)) &&
 	   (MC34708_GEN_ID_VALUE != BITFEXT(ret, MC34708_GENERATION_ID))) {
-		/*compare the address value */
-		dev_err(&client->dev,
-			"read generation ID 0x%x is not equal to 0x%x!\n",
-			BITFEXT(ret, MC13892_GENERATION_ID),
-			MC13892_GEN_ID_VALUE);
-		return -1;
+		dev_info(&client->dev, "unknown ID ver 0x%x assumed ok\n", ret);
 	}
 
 	return 0;
