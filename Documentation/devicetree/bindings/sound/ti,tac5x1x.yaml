@@ -1,0 +1,222 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+# Copyright (C) 2025 Texas Instruments Incorporated
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/sound/ti,tac5x1x.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Texas Instruments TAC5X1X Codec
+
+description: |
+  TAC5X1X are series of low-power and high performance mono or stereo
+  audio codecs, as well as multiple inputs and outputs programmable in
+  single-ended or fully differential configurations. Device supports both
+  Microphone and Line In input on ADC Channel. DAC Output can be configured
+  for either Line Out or Head Phone Load.
+
+  The serial control bus supports SPI or I2C protocols, while the serial audio
+  data bus is programmable for I2S, left/right-justified, DSP, or TDM modes.
+
+  Specification about the codecs can be found at:
+    https://www.ti.com/lit/gpn/taa5212
+    https://www.ti.com/lit/gpn/taa5412-q1
+    https://www.ti.com/lit/gpn/tac5111
+    https://www.ti.com/lit/gpn/tac5112
+    https://www.ti.com/lit/gpn/tac5211
+    https://www.ti.com/lit/gpn/tac5212
+    https://www.ti.com/lit/gpn/tac5311-q1
+    https://www.ti.com/lit/gpn/tac5312-q1
+    https://www.ti.com/lit/gpn/tac5411-q1
+    https://www.ti.com/lit/gpn/tac5412-q1
+    https://www.ti.com/lit/gpn/tad5112
+    https://www.ti.com/lit/gpn/tad5212
+
+maintainers:
+  - Niranjan H Y <niranjan.hy@ti.com>
+  - Kevin Lu <kevin-lu@ti.com>
+
+properties:
+  compatible:
+    enum:
+      - ti,taa5212
+      - ti,taa5412
+      - ti,tac5111
+      - ti,tac5112
+      - ti,tac5211
+      - ti,tac5212
+      - ti,tac5311
+      - ti,tac5312
+      - ti,tac5411
+      - ti,tac5412
+      - ti,tad5112
+      - ti,tad5212
+
+  reg:
+    maxItems: 1
+
+  ti,vref:
+    description: VREF required voltage. If node is omitted then VREF is powered down.
+    $ref: /schemas/types.yaml#/definitions/uint32
+    oneOf:
+      - const: 0
+        description: VREF output is powered to 2.75V.
+      - const: 1
+        description: VREF output is powered to 2.5V.
+      - const: 2
+        description: VREF output is powered to 1.375V.
+
+  ti,micbias-vg:
+    description: MicBias required voltage. If node is omitted then MicBias is powered down.
+    $ref: /schemas/types.yaml#/definitions/uint32
+    oneOf:
+      - const: 0
+        description: MICBIAS output is same as the VREF output
+      - const: 1
+        description: MICBIAS output is 0.5 times the VREF output
+      - const: 3
+        description: MICBIAS output is same as the AVDD
+
+  avdd-supply:
+    description: Analog DAC voltage.
+
+  iovdd-supply:
+    description: I/O voltage.
+
+  ti,gpios-func:
+    description: |
+      Array indicating the GPIO1, GPIO2, GPO1 Functionality in the same order.
+      Each integer elemnent in the array represent the following
+      - 0  TAC5X1X_GPIO_DISABLE        - GPIO is Disabled
+      - 1  TAC5X1X_GPIO_GPI            - General Purpose Input
+      - 2  ADC3XXX_GPIO_GPO            - General Purpose Output
+      - 3  TAC5X1X_GPIO_IRQ            - Chip Interrupt
+      - 4  TAC5X1X_GPIO_PDMCLK         - PDM CLK Output
+      - 5  TAC5X1X_GPIO_P_DOUT         - Primary ASI DOUT
+      - 6  TAC5X1X_GPIO_P_DOUT2        - Primary ASI DOUT2
+      - 7  TAC5X1X_GPIO_S_DOUT         - Secondary ASI DOUT
+      - 8  TAC5X1X_GPIO_S_DOUT2        - Secondary ASI DOUT2
+      - 9  TAC5X1X_GPIO_S_BCLK         - Secondary BCLK Output
+      - 10 TAC5X1X_GPIO_S_FSYNC       - Secondary FSYNC Output
+      - 11 TAC5X1X_GPIO_CLKOUT        - General Purpose Output
+      - 12 TAC5X1X_GPIO_DOUT_MUX
+      - 13 TAC5X1X_GPIO_DAISY_OUT
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+    minItems: 3
+    maxItems: 3
+
+  ti,gpios-drive:
+    description: |
+      Array indicating the GPIO1, GPIO2, GPO1 Driver values
+      Each number in the array indicate the following driver values.
+      - 0 # Hi-Z Output
+      - 1 # Drive active low and active High
+      - 2 # Drive active low and weak High
+      - 3 # Drive acive low and Hi-Z
+      - 4 # Drive weak low and active High
+      - 5 # Drive Hi-Z and active High
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+    minItems: 3
+    maxItems: 3
+
+  ti,gpi1-func:
+    description: GPI1 Functionality
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum:
+      - 0 # TAC5X1X_GPIO_DISABLE       - I/O buffers powered down and not used
+      - 1 # TAC5X1X_GPIO_GPI          - General purpose input
+    default: 0
+
+  '#sound-dai-cells':
+    const: 0
+
+  clocks:
+    maxItems: 1
+
+  ti,gpa-gpio:
+    description: GPA using GPIO1 configuration
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum:
+      - 0 # GPA using GPIO1 is disabled
+      - 1 # GPA using GPIO1
+    default: 0
+
+  ti,in-ch-en:
+    description: Enable Input channel diagnostics for TAC54XX and TAC53XX device.
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum:
+      - 0 # Disable input channel diagnostics
+      - 1 # Enable input channel diagnostics
+
+  ti,out-ch-en:
+    description: Enable Output channel diagnostics for TAC54XX and TAC53XX device
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum:
+      - 0 # Disable Output channel diagnostics
+      - 1 # Enable Output channel Diagnostics
+
+  ti,incl-se-inm:
+    description: INxM pin Diagnostics Scan Selection for Single Ended Configuration
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum:
+      - 0 # INxM pin Diagnostics Scan Selection for Single Ended excluded for diagnosis
+      - 1 # INxM pin Diagnostics Scan Selection for Single Ended included for diagnosis
+
+  ti,incl-ac-coup:
+    description: AC coupled channels pins Scan Selection for Diagnostics
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum:
+      - 0 # AC coupled channels pins Scan Selection for Diagnostics exluded for diagnosis
+      - 1 # AC coupled channels pins Scan Selection for Diagnostics included for diagnosis
+
+  ti,micbias-threshold:
+    description: Micbias Low and High threshold values for TAC54XX and TAC53XX series
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+    maxItems: 2
+    minItems: 2
+    items:
+      minimum: 72
+      maximum: 162
+
+  ti,gpa-threshold:
+    description: GPA Low and High threshold Values
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+    maxItems: 2
+    minItems: 2
+    items:
+      minimum: 75
+      maximum: 186
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    i2c {
+      #address-cells = <1>;
+      #size-cells = <0>;
+
+      tac5x1x: tac5x1x@52 {
+        compatible = "ti,tac5212";
+        reg = <0x52>;
+        #sound-dai-cells = <0>;
+        avdd-supply = <&vdd_3v3_reg>;
+        iovdd-supply = <&vdd_3v3_reg>;
+        ti,vref = <0>;
+        ti,micbias-vg = <3>;
+        ti,gpi1-func = <0>;
+        ti,gpios-func = <4>, <1>, <0>;
+        ti,gpios-drive = <0>, <0>, <0>;
+        ti,gpa-gpio = <0>;
+        ti,in-ch-en = <1>;
+        ti,out-ch-en = <1>;
+        ti,incl-ac-coup = <0>;
+        ti,incl-se-inm = <0>;
+        ti,gpa-threshold = <75>, <186>;
+      };
+    };
+...
