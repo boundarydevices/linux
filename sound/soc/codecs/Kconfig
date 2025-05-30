@@ -236,6 +236,7 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_STA529
 	imply SND_SOC_STAC9766
 	imply SND_SOC_STI_SAS
+	imply SND_SOC_TAC5X1X
 	imply SND_SOC_TAS2552
 	imply SND_SOC_TAS2562
 	imply SND_SOC_TAS2764
@@ -1759,6 +1760,11 @@ config SND_SOC_STAC9766
 
 config SND_SOC_STI_SAS
 	tristate "codec Audio support for STI SAS codec"
+
+config SND_SOC_TAC5X1X
+	tristate "Texas Instruments TAC5X1X audio CODEC - I2C"
+	depends on I2C
+	select REGMAP_I2C
 
 config SND_SOC_TAS2552
 	tristate "Texas Instruments TAS2552 Mono Audio amplifier"
