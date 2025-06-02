@@ -85,6 +85,16 @@
 		};
 	};
 
+	common_fixed_5v: regulator-0 {
+		compatible = "regulator-fixed";
+		regulator-name = "5v_en";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 81 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
 	sdio_fixed_1v8: regulator-3 {
 		compatible = "regulator-fixed";
 		regulator-name = "sdio_io";
