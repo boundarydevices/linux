@@ -1147,6 +1147,22 @@
 							#power-domain-cells = <0>;
 						};
 
+						power-domain@MT8188_POWER_DOMAIN_VDEC1 {
+							reg = <MT8188_POWER_DOMAIN_VDEC1>;
+							clocks = <&vdecsys CLK_VDEC2_LARB1>;
+							clock-names = "ss-vdec";
+							mediatek,infracfg = <&infracfg_ao>;
+							#power-domain-cells = <0>;
+						};
+
+						power-domain@MT8188_POWER_DOMAIN_VDEC0 {
+							reg = <MT8188_POWER_DOMAIN_VDEC0>;
+							clocks = <&vdecsys_soc CLK_VDEC1_SOC_LARB1>;
+							clock-names = "ss-vdec";
+							mediatek,infracfg = <&infracfg_ao>;
+							#power-domain-cells = <0>;
+						};
+
 						power-domain@MT8188_POWER_DOMAIN_VDOSYS1 {
 							reg = <MT8188_POWER_DOMAIN_VDOSYS1>;
 							clocks = <&topckgen CLK_TOP_CFGREG_CLOCK_EN_VDO1>,
@@ -1181,6 +1197,27 @@
 								mediatek,infracfg = <&infracfg_ao>;
 								#power-domain-cells = <0>;
 							};
+						};
+
+						power-domain@MT8188_POWER_DOMAIN_VENC {
+							reg = <MT8188_POWER_DOMAIN_VENC>;
+							clocks = <&vencsys CLK_VENC1_LARB>,
+								 <&vencsys CLK_VENC1_VENC>,
+								 <&vencsys CLK_VENC1_GALS>,
+								 <&vencsys CLK_VENC1_GALS_SRAM>;
+							clock-names = "ss-ve1-larb", "ss-ve1-core",
+								      "ss-ve1-gals", "ss-ve1-sram";
+							mediatek,infracfg = <&infracfg_ao>;
+							#power-domain-cells = <0>;
+						};
+
+						power-domain@MT8188_POWER_DOMAIN_WPE {
+							reg = <MT8188_POWER_DOMAIN_WPE>;
+							clocks = <&wpesys CLK_WPE_TOP_SMI_LARB7>,
+								 <&wpesys CLK_WPE_TOP_SMI_LARB7_PCLK_EN>;
+							clock-names = "ss-wpe-l7", "ss-wpe-l7pce";
+							mediatek,infracfg = <&infracfg_ao>;
+							#power-domain-cells = <0>;
 						};
 
 					};
@@ -2205,7 +2242,7 @@
 			interrupts = <GIC_SPI 594 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VPPSYS0>;
 			#iommu-cells = <1>;
-			mediatek,larbs = <&larb1 &larb3 &larb4 &larb6>;
+			mediatek,larbs = <&larb1 &larb3 &larb4 &larb6 &larb7 &larb23>;
 		};
 
 		wpesys: clock-controller@14e00000 {
@@ -2749,7 +2786,7 @@
 			interrupts = <GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			#iommu-cells = <1>;
-			mediatek,larbs = <&larb0 &larb2 &larb5>;
+			mediatek,larbs = <&larb0 &larb2 &larb5 &larb19 &larb21>;
 		};
 
 		vdosys1: syscon@1c100000 {
