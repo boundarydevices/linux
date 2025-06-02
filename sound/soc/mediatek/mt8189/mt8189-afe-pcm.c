@@ -1476,7 +1476,7 @@ static const struct snd_soc_dapm_route mt8189_memif_routes[] = {
 	{"UL0_CH2", "I2SIN1_CH2", "I2SIN1"},
 
 	{"UL0_CH1", "PCM_0_CAP_CH1", "PCM 0 Capture"},
-	{"UL0_CH2", "PCM_0_CAP_CH1", "PCM 0 Capture"},
+	{"UL0_CH2", "PCM_0_CAP_CH2", "PCM 0 Capture"},
 
 	{"UL1", NULL, "UL1_CH1"},
 	{"UL1", NULL, "UL1_CH2"},
@@ -1490,7 +1490,7 @@ static const struct snd_soc_dapm_route mt8189_memif_routes[] = {
 	{"UL1_CH2", "I2SIN1_CH2", "I2SIN1"},
 
 	{"UL1_CH1", "PCM_0_CAP_CH1", "PCM 0 Capture"},
-	{"UL1_CH2", "PCM_0_CAP_CH1", "PCM 0 Capture"},
+	{"UL1_CH2", "PCM_0_CAP_CH2", "PCM 0 Capture"},
 
 	{"UL2", NULL, "UL2_CH1"},
 	{"UL2", NULL, "UL2_CH2"},
@@ -1521,7 +1521,7 @@ static const struct snd_soc_dapm_route mt8189_memif_routes[] = {
 	{"UL4_CH2", "ADDA_UL_CH2", "ADDA Capture"},
 
 	{"UL4_CH1", "PCM_0_CAP_CH1", "PCM 0 Capture"},
-	{"UL4_CH2", "PCM_0_CAP_CH1", "PCM 0 Capture"},
+	{"UL4_CH2", "PCM_0_CAP_CH2", "PCM 0 Capture"},
 
 	{"UL5", NULL, "UL5_CH1"},
 	{"UL5", NULL, "UL5_CH2"},

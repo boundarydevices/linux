@@ -686,6 +686,7 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 			| SND_SOC_DAIFMT_GATED,
 		.no_pcm = 1,
 		.dpcm_playback = 1,
+		.dpcm_capture = 1,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pcm0),
 	},

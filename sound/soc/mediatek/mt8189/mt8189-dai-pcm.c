@@ -260,7 +260,7 @@ static int mtk_dai_pcm_hw_params(struct snd_pcm_substream *substream,
 		pcm_con0 |= rate_reg << PCM0_MODE_SFT;
 		pcm_con0 |= AUD_PCM_FMT_I2S << PCM0_FMT_SFT;
 
-		pcm_con1 |= AUD_EXT_MODEM_SELECT_INTERNAL << PCM0_EXT_MODEM_SFT;
+		pcm_con1 |= AUD_EXT_MODEM_SELECT_EXTERNAL << PCM0_EXT_MODEM_SFT;
 		pcm_con1 |= AUD_BT_MODE_DUAL_MIC_ON_TX << PCM0_BT_MODE_SFT;
 		pcm_con1 |= HOPPING_26M << PCM0_1X_EN_DOMAIN_SFT;
 		pcm_con1 |= x_rate_reg << PCM0_1X_EN_MODE_SFT;
