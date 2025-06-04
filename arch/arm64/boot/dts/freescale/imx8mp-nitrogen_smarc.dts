@@ -6,6 +6,7 @@
 /dts-v1/;
 
 #include <dt-bindings/usb/pd.h>
+#include <dt-bindings/leds/common.h>
 #include "imx8mp-nitrogen_smarc-som.dtsi"
 
 #include "../panel-m101nwwb.dtsi"
@@ -116,6 +117,30 @@
 		#clock-cells = <0>;
 		clock-frequency = <24000000>;
 		compatible = "fixed-clock";
+	};
+
+	led-controller {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
+
+		led-0 {
+			label = "30BF-link-100";
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&mcp23018 5 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			linux,default-trigger = "stmmac-0:07:100Mbps";
+		};
+
+		led-1 {
+			label = "30BE-link-100";
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&gpio4 29 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			linux,default-trigger = "30be0000.ethernet-1:07:100Mbps";
+		};
 	};
 
 	reg_can1_stby: regulator-can1-stby {
@@ -507,6 +532,12 @@
 			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19	0x140
 			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x140
 			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03	0x140
+		>;
+	};
+
+	pinctrl_leds: ledsgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI3_RXC__GPIO4_IO29	0x100
 		>;
 	};
 
