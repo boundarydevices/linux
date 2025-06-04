@@ -62,7 +62,7 @@
 			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&pcal6534 30 GPIO_ACTIVE_LOW>;
 			default-state = "off";
-			linux,default-trigger = "stmmac-0:03:100Mbps";
+			linux,default-trigger = "stmmac-1:07:100Mbps";
 		};
 
 		led-1 {
@@ -71,7 +71,7 @@
 			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&pcal6534 11 GPIO_ACTIVE_LOW>;
 			default-state = "off";
-			linux,default-trigger = "42890000.ethernet-1:03:100Mbps";
+			linux,default-trigger = "42890000.ethernet-1:07:100Mbps";
 		};
 
 	};
