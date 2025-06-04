@@ -1763,6 +1763,29 @@
 			assigned-clock-parents = <&topckgen_clk CLK_TOP_OSC_D10>;
 		};
 
+		efuse: efuse@11f10000 {
+			compatible = "mediatek,efuse";
+			reg = <0 0x11f10000 0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			dp_calib_data: dp-calib@1a0 {
+				reg = <0x1a0 0xc>;
+			};
+
+			lvts_efuse_data1: lvts1-calib@1ac {
+				reg = <0x1ac 0x40>;
+			};
+
+			socinfo-data1@7a0 {
+				reg = <0x7a0 0x4>;
+			};
+
+			socinfo-data2@7e0 {
+				reg = <0x7e0 0x4>;
+			};
+		};
+
 		spmi: spmi@1cc06000 {
 			compatible = "mediatek,mt8189-spmi";
 			reg = <0 0x1cc06000 0 0x0008ff>,
