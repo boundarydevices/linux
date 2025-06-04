@@ -176,9 +176,8 @@ static int scpsys_clamp_bus_protection_enable(struct scpsys_domain *pd, bool is_
 {
 	int smi_count = 0;
 
-	if (pd->num_smi == 0) {
+	if (is_smi && pd->num_smi == 0)
 		return 0;
-	}
 
 	for (int i = 0; i < SPM_MAX_BUS_PROT_DATA; i++) {
 		const struct scpsys_bus_prot_data *bpd = &pd->data->bp_cfg[i];
@@ -213,9 +212,8 @@ static int scpsys_clamp_bus_protection_disable(struct scpsys_domain *pd, bool is
 {
 	int smi_count = pd->num_smi - 1;
 
-	if (pd->num_smi == 0) {
+	if (is_smi && pd->num_smi == 0)
 		return 0;
-	}
 
 	for (int i = SPM_MAX_BUS_PROT_DATA - 1; i >= 0; i--) {
 		const struct scpsys_bus_prot_data *bpd = &pd->data->bp_cfg[i];
@@ -509,7 +507,6 @@ generic_pm_domain *scpsys_add_one_domain(struct scpsys *scpsys, struct device_no
 		}
 	} else {
 		pd->num_smi = 0;
-		dev_info(scpsys->dev, "dts not set, skip smi clamp protection.\n");
 	}
 
 	pd->num_larb = of_count_phandle_with_args(node, "mediatek,larb", NULL);
