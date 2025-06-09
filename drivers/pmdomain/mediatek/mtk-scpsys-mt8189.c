@@ -123,7 +123,7 @@ static const struct scp_domain_data scp_domain_mt8189_spm_data[] = {
 		.name = "adsp-ao",
 		.ctl_offs = 0xE24,
 		.basic_clk_name = {"vadsp"},
-		.caps = MTK_SCPD_IS_PWR_CON_ON | default_cap,
+		.caps = MTK_SCPD_IS_PWR_CON_ON | MTK_SCPD_ALWAYS_ON | default_cap,
 	},
 	[MT8189_POWER_DOMAIN_ISP_IMG1] = {
 		.name = "isp-img1",
@@ -214,7 +214,6 @@ static const struct scp_domain_data scp_domain_mt8189_spm_data[] = {
 		.ctl_offs = 0xE50,
 		.sram_pdn_bits = GENMASK(8, 8),
 		.sram_pdn_ack_bits = GENMASK(12, 12),
-		.basic_clk_name = {"cam"},
 		.subsys_clk_prefix = "cam_suba",
 		.caps = MTK_SCPD_IS_PWR_CON_ON | MTK_SCPD_KEEP_DEFAULT_OFF | default_cap,
 	},
@@ -223,7 +222,6 @@ static const struct scp_domain_data scp_domain_mt8189_spm_data[] = {
 		.ctl_offs = 0xE54,
 		.sram_pdn_bits = GENMASK(8, 8),
 		.sram_pdn_ack_bits = GENMASK(12, 12),
-		.basic_clk_name = {"cam"},
 		.subsys_clk_prefix = "cam_subb",
 		.caps = MTK_SCPD_IS_PWR_CON_ON | MTK_SCPD_KEEP_DEFAULT_OFF | default_cap,
 	},
@@ -296,7 +294,7 @@ static const struct scp_domain_data scp_domain_mt8189_spm_data[] = {
 			BUS_PROT_IGN(VLP_TYPE, 0x0214, 0x0218, 0x0210, 0x0220,
 				MT8189_VLP_AXI_PROT_EN_SCP_CORE_2ND),
 		},
-		.caps = MTK_SCPD_SRAM_ISO | MTK_SCPD_SRAM_SLP
+		.caps = MTK_SCPD_SRAM_ISO | MTK_SCPD_SRAM_SLP | MTK_SCPD_ALWAYS_ON
 				| MTK_SCPD_IS_PWR_CON_ON | default_cap,
 	},
 	[MT8189_POWER_DOMAIN_CSI_RX] = {
@@ -377,8 +375,6 @@ static const struct scp_domain_data scp_domain_mt8189_spm_data[] = {
 };
 
 static const struct scp_subdomain scp_subdomain_mt8189_spm[] = {
-	{MT8189_POWER_DOMAIN_ADSP_AO, MT8189_POWER_DOMAIN_ADSP_INFRA},
-	{MT8189_POWER_DOMAIN_ADSP_INFRA, MT8189_POWER_DOMAIN_ADSP_TOP_DORMANT},
 	{MT8189_POWER_DOMAIN_MM_INFRA, MT8189_POWER_DOMAIN_ISP_IMG1},
 	{MT8189_POWER_DOMAIN_ISP_IMG1, MT8189_POWER_DOMAIN_ISP_IMG2},
 	{MT8189_POWER_DOMAIN_MM_INFRA, MT8189_POWER_DOMAIN_ISP_IPE},
@@ -394,7 +390,6 @@ static const struct scp_subdomain scp_subdomain_mt8189_spm[] = {
 	{MT8189_POWER_DOMAIN_MFG1, MT8189_POWER_DOMAIN_MFG2},
 	{MT8189_POWER_DOMAIN_MFG1, MT8189_POWER_DOMAIN_MFG3},
 	{MT8189_POWER_DOMAIN_DP_TX, MT8189_POWER_DOMAIN_EDP_TX_DORMANT},
-	{MT8189_POWER_DOMAIN_PCIE, MT8189_POWER_DOMAIN_PCIE_PHY},
 };
 
 static const struct scp_soc_data mt8189_spm_data = {

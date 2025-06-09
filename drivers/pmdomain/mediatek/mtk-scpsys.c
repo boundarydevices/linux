@@ -568,9 +568,6 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
 	u32 val;
 	int ret, tmp;
 
-	if (MTK_SCPD_CAPS(scpd, MTK_SCPD_KEEP_DEFAULT_OFF) && !scpd->boot_status)
-		return 0;
-
 	ret = scpsys_regulator_enable(scpd);
 	if (ret < 0)
 		goto err_regulator;
