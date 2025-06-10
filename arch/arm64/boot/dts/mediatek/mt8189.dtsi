@@ -1083,6 +1083,8 @@
 				<&topckgen_clk CLK_TOP_MDP0_SEL>,
 				/* MM_INFRA */
 				<&topckgen_clk CLK_TOP_MMINFRA_SEL>,
+				/* VADSP */
+				<&vlp_cksys_clk CLK_VLP_CK_VADSP_SEL>,
 				/* IPE */
 				<&ipesys_clk CLK_IPE_LARB19>,
 				<&ipesys_clk CLK_IPE_LARB20>,
@@ -1117,7 +1119,7 @@
 				<&mdpsys_config_clk CLK_MDP_SMI0>;
 			clock-names = "mfg1", "audio", "venc", "vdec", "ipe", "cam",
 				"img1", "disp",
-				"mdp", "mm_infra",
+				"mdp", "mm_infra", "vadsp",
 				"ipe-0", "ipe-1", "ipe-2", "ipe-3",
 				"cam_main-0", "cam_main-1", "cam_main-2",
 				"cam_suba-0", "cam-subb-0",
