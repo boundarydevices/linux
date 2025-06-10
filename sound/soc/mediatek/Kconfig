@@ -334,3 +334,31 @@ config SND_SOC_MT8365_MT6357
 	  boards with the MT6357 PMIC codec.
 	  Select Y if you have such device.
 	  If unsure select "N".
+
+config SND_SOC_MT8189
+	tristate "ASoC support for MediaTek MT8189 chip"
+	depends on ARCH_MEDIATEK
+	select SND_SOC_MEDIATEK
+	help
+	  This adds ASoC driver for MediaTek MT8189 boards
+	  that can be used with other codecs.
+	  Select Y if you have such device.
+	  If unsure select "N".
+
+config SND_SOC_MT8189_MT6359P
+	tristate "ASoc Audio driver for MT8189 with I2S codec"
+	depends on SND_SOC_MT8189
+	depends on I2C
+	select SND_SOC_DMIC
+	select SND_SOC_HDMI_CODEC
+	select SND_SOC_NAU8825
+	select SND_SOC_RT5645
+	select SND_SOC_RT9123P
+	select SND_SOC_RT1015P
+	select SND_SOC_RT5682S
+	select SND_SOC_RT5682_I2C
+	help
+	  This adds support for ASoC machine driver for MediaTek MT8189
+	  boards with the other I2S audio codecs.
+	  Select Y if you have such device.
+	  If unsure select "N".
