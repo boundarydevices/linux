@@ -707,6 +707,53 @@
 			bias-disable;
 		};
 	};
+
+	/* Audio PCM Interface */
+	aud_gpio_pcm_off: aud-gpio-pcm-off {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO115__FUNC_GPIO115>;
+			input-enable;
+			bias-pull-down;
+		};
+		pins-cmd2-dat {
+			pinmux = <PINMUX_GPIO116__FUNC_GPIO116>;
+			input-enable;
+			bias-pull-down;
+		};
+		pins-cmd3-dat {
+			pinmux = <PINMUX_GPIO117__FUNC_GPIO117>;
+			input-enable;
+			bias-pull-down;
+		};
+		pins-cmd4-dat {
+			pinmux = <PINMUX_GPIO118__FUNC_GPIO118>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	aud_gpio_pcm_on: aud-gpio-pcm-on {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO115__FUNC_PCM0_CLK>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+		pins-cmd2-dat {
+			pinmux = <PINMUX_GPIO116__FUNC_PCM0_SYNC>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+		pins-cmd3-dat {
+			pinmux = <PINMUX_GPIO117__FUNC_PCM0_DI>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+		pins-cmd4-dat {
+			pinmux = <PINMUX_GPIO118__FUNC_PCM0_DO>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+	};
 	/* AUDIO GPIO standardization end */
 };
 
@@ -874,7 +921,10 @@
 		"aud-gpio-i2sout0-on",
 		/*dmic*/
 		"aud-gpio-ap-dmic-off",
-		"aud-gpio-ap-dmic-on";
+		"aud-gpio-ap-dmic-on",
+		/*pcm*/
+		"aud-gpio-pcm-off",
+		"aud-gpio-pcm-on";
 
 	/* i2s */
 	pinctrl-0 = <&aud_gpio_i2sin0_off>;
@@ -884,10 +934,15 @@
 	/* dmic */
 	pinctrl-4 = <&aud_gpio_ap_dmic_off>;
 	pinctrl-5 = <&aud_gpio_ap_dmic_on>;
+	/* pcm */
+	pinctrl-6 = <&aud_gpio_pcm_off>;
+	pinctrl-7 = <&aud_gpio_pcm_on>;
 
 	audio-routing = "I2SOUT0", "ETDMOUT_HP_PIN",
 			"I2SIN0", "ETDMIN_HP_PIN",
-			"AP DMIC Capture", "AP_DMIC0_PIN";
+			"AP DMIC Capture", "AP_DMIC0_PIN",
+			"PCM 0 Capture", "ETDMOUT_HDMI_PIN",
+			"PCM 0 Playback", "ETDMOUT_HDMI_PIN";
 
 	dai-link-0 {
 		link-name = "AP_DMIC_BE";
