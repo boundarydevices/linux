@@ -1,0 +1,154 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * LVDS to HDMI Expansion Board for carbon am62
+ *
+ * Copyright (C) 2024 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+#include "k3-pinctrl.h"
+
+&{/} {
+#if 0
+	hdmi-connector {
+		compatible = "hdmi-connector";
+		label = "hdmi";
+		type = "a";
+		/* MIPI_LVDS_D - &i2c_port_d ; MIPI_LVDS_E - &i2c_port_e */
+		ddc-i2c-bus = <&i2c_port_d>;
+		digital;
+		/* MIPI_LVDS_D - &exp3 11 ; MIPI_LVDS_E - &exp3 13 */
+		// hpd-gpios = <&exp3 11 GPIO_ACTIVE_HIGH>; /* Not going to 1.8, only 1.1 */
+
+		port {
+			hdmi_connector_in: endpoint {
+				// remote-endpoint = <&tfp410_out>;
+				remote-endpoint = <&oldi_0_out>;
+			};
+		};
+	};
+#endif
+	display {
+		compatible = "toshiba,lt089ac29000", "panel-simple"; /* 1280 X 720 */
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				lcd_in0: endpoint {
+					remote-endpoint = <&oldi_0_out>;
+				};
+			};
+			port@1 {
+				reg = <1>;
+				lcd_in1: endpoint {
+					remote-endpoint = <&oldi_1_out>;
+				};
+			};
+		};
+	};
+#if 0
+	dvi-bridge {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "ti,tfp410";
+
+		port@0 {
+			reg = <0>;
+
+			tfp410_in: endpoint {
+				remote-endpoint = <&oldi_0_out>;
+				pclk-sample = <1>;
+				bus-width = <24>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+
+			tfp410_out: endpoint {
+				remote-endpoint =
+					<&hdmi_connector_in>;
+			};
+		};
+	};
+#endif
+};
+
+&dss {
+	status = "okay";
+	/* OLDITX ports have no mux on them */
+};
+
+&dss_ports {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* Video Port 1 Output to OLDI */
+	port@0 {
+		reg = <0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dpi0_out0: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&oldi_0_in>;
+		};
+		dpi0_out1: endpoint@1 {
+			reg = <1>;
+			remote-endpoint = <&oldi_1_in>;
+		};
+	};
+};
+
+&oldi0 {
+	status = "okay";
+};
+
+&oldi0_ports {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	port@0 {
+		reg = <0>;
+		oldi_0_in: endpoint {
+			remote-endpoint = <&dpi0_out0>;
+		};
+	};
+
+	port@1 {
+		reg = <1>;
+		oldi_0_out: endpoint {
+			// remote-endpoint = <&tfp410_in>;
+			remote-endpoint = <&lcd_in0>;
+		};
+	};
+};
+
+&oldi1 {
+	status = "okay";
+};
+
+&oldi1_ports {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	port@0 {
+		reg = <0>;
+		oldi_1_in: endpoint {
+			remote-endpoint = <&dpi0_out1>;
+		};
+	};
+	port@1 {
+		reg = <1>;
+		oldi_1_out: endpoint {
+			remote-endpoint = <&lcd_in1>;
+		};
+	};
+};

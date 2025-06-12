@@ -1,0 +1,563 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+/*
+ * Copyright 2024 Ezurio LLC
+ *
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/leds/common.h>
+#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "k3-am625-carbon-som.dtsi"
+
+/ {
+	model = "Ezurio Carbon AM625 OSM Carrier Board V.2-0";
+	compatible = "ezurio,am62-dev",
+		     "ti,am625";
+
+	vdd_mmc1: regulator-sdio-a {
+		bootph-all;
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&main_vdd_sdio_a_gpio>;
+		regulator-name = "vdd_mmc1";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <100000>;
+		regulator-boot-on;
+		enable-active-high;
+		gpio = <&main_gpio0 25 GPIO_ACTIVE_HIGH>;
+	};
+
+	vdd_3v3: regulator-u4-sw2 {
+		/* output of U4 */
+		bootph-all;
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	vdd_1v8: regulator-u4-sw3 {
+		/* output of U4 */
+		bootph-all;
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	vdd_aud_3v3: regulator-aud-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_aud_3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&exp1 8 GPIO_ACTIVE_HIGH>;
+	};
+
+	codec_audio: sound {
+		compatible = "simple-audio-card";
+		status = "okay";
+
+		simple-audio-card,bitclock-master = <&dailink0_master>;
+		simple-audio-card,frame-master = <&dailink0_master>;
+
+		simple-audio-card,name = "ti,tac5x1x-soundcard";
+		simple-audio-card,format = "i2s";
+
+		simple-audio-card,widgets =
+			"Headphone", "Headphone Jack",
+			"Line",      "Line In",
+			"Line",      "Line Out";
+
+		simple-audio-card,routing =
+			"Headphone Jack", "OUT1",
+			"Headphone Jack", "OUT2",
+			"AIN1", "Line In",
+			"AIN2", "Line In",
+			"Line Out", "OUT1",
+			"Line Out", "OUT2";
+
+		simple-audio-card,aux-devs = <&headset>;
+
+		dailink0_master: simple-audio-card,cpu {
+			sound-dai = <&mcasp1>;
+			bitclock-master;
+			frame-master;
+			system-clock-direction-out;
+		};
+
+		simple-audio-card,codec {
+			sound-dai = <&tac5112>;
+		};
+	};
+
+	audio_volume {
+		compatible = "gpio-keys";
+
+		volume-up {
+			label = "Volume Up";
+			gpios = <&exp2 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			linux,code = <KEY_VOLUMEUP>;
+		};
+
+		volume-down {
+			label = "Volume Down";
+			gpios = <&exp2 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			linux,code = <KEY_VOLUMEDOWN>;
+		};
+	};
+
+	leds {
+		compatible = "pwm-leds";
+
+		/* For H/W test */
+
+		pwm_1: led-1 {
+			function = LED_FUNCTION_STATUS;
+			label = "PWM_1";
+			color = <LED_COLOR_ID_RED>;
+			max-brightness = <248>;
+			pwms = <&epwm1 0 30000 0>; /* 3.3 KHz */
+		};
+
+		pwm_2: led-2 {
+			function = LED_FUNCTION_STATUS;
+			label = "PWM_2";
+			color = <LED_COLOR_ID_RED>;
+			max-brightness = <248>;
+			pwms = <&epwm1 1 30000 0>; /* 3.3 KHz */
+		};
+
+#if 0
+		/* disable cam_mck before enabling this */
+		test_cam_mck: cam-mck {
+			function = LED_FUNCTION_STATUS;
+			label = "CAM_MCK";
+			color = <LED_COLOR_ID_RED>;
+			max-brightness = <248>;
+			pwms = <&ecap2 0 50 0>; /* 1 / 50 ns = 20 MHz */
+		};
+#endif
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		led-0 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&main_led_gpio_default>;
+			gpios = <&main_gpio0 13 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+			function = LED_FUNCTION_HEARTBEAT;
+			label = "LED10";
+			default-state = "on";
+		};
+	};
+
+	transceiver1: can-phy0 {
+		compatible = "ti,tcan1042";
+		#phy-cells = <0>;
+		max-bitrate = <5000000>;
+		standby-gpios = <&exp1 2 GPIO_ACTIVE_HIGH>; /* TCAN1046 STB */
+	};
+
+	transceiver2: can-phy1 {
+		compatible = "ti,tcan1042";
+		#phy-cells = <0>;
+		max-bitrate = <5000000>;
+		standby-gpios = <&exp1 3 GPIO_ACTIVE_HIGH>; /* TCAN1046 STB */
+	};
+};
+
+&cam_mck {
+	status = "okay";
+};
+
+&cpsw3g_mdio {
+	status = "okay";
+
+	cpsw3g_phy0: ethernet-phy@3 {
+		reg = <3>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&main_rgmii_phy0_gpio>;
+		interrupt-parent = <&main_gpio0>;
+		interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&main_gpio0 2 GPIO_ACTIVE_LOW>;
+		reset-assert-us = <25>;
+		reset-deassert-us = <60000>; /* T2 */
+		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_25_NS>;
+		ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+		ti,clk-output-sel = <DP83867_CLK_O_SEL_OFF>;
+	};
+
+	cpsw3g_phy1: ethernet-phy@1 {
+		reg = <1>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&main_rgmii_phy1_gpio>;
+		interrupt-parent = <&main_gpio0>;
+		interrupts = <41 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&main_gpio0 39 GPIO_ACTIVE_LOW>;
+		reset-assert-us = <25>;
+		reset-deassert-us = <60000>; /* T2 */
+		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_25_NS>;
+		ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+		ti,clk-output-sel = <DP83867_CLK_O_SEL_OFF>;
+	};
+};
+
+&epwm1 {
+	status = "okay";
+};
+
+&main_gpio0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_gpio0_hog_pins_default>; /* Just Muxing them to a GPIO */
+};
+
+&main_i2c1 { /* I2C_A */
+	status = "okay";
+
+	power-sensor-5v@40 {
+		compatible = "ti,ina232"; /* TI, INA232AIDDFR */
+		reg = <0x40>;
+		vs-supply = <&vdd_3v3>;
+		shunt-resistor = <33000>; /* 0.033 Ohms */
+	};
+
+	power-sensor-3v3@41 {
+		compatible = "ti,ina232"; /* TI, INA232AIDDFR */
+		reg = <0x41>;
+		vs-supply = <&vdd_3v3>;
+		shunt-resistor = <33000>; /* 0.033 Ohms */
+	};
+
+	eeprom@54 {
+		/* U53 Giantec, GT24C256C-2GLI-TR */
+		compatible = "atmel,24c256";
+		reg = <0x54>;
+		vcc-supply = <&vdd_1v8>;
+	};
+
+	exp1: gpio@74 {
+		compatible = "ti,tca9539";
+		vcc-supply = <&vdd_1v8>;
+		reg = <0x74>;
+		#gpio-cells = <2>;
+		gpio-controller;
+
+		gpio-line-names = "USB_C_OEn_P00", "USB_D_OEn_P01",
+			"CAN_A_STB", "CAN_B_STB", "M2_WDISABLE1_EXP",
+			"M2_WDISABLE2_EXP", "M2_WL_DEVICE_WAKEUP",
+			"M2_BT_DEVICE_WAKEUP",
+			"AUD_PWR_EN",	"M2_Vendor_DF38", "M2_SD_nRST",
+			"CHGR_CEn", "M2_Power_EN", "SDIO_A_SWITCH_EN",
+			"SDIO_A_SEL", "";
+
+		/* Force SDIO_A_SEL output-low for SDCARD, high for M.2 */
+		sdio_a_sel_hog: sdio-a-sel-hog {
+			/* SDIO_A_SEL U51 P10 */
+			gpio-hog;
+			gpios = <&exp1 14 GPIO_ACTIVE_HIGH>;
+			output-low;
+			line-name = "SDIO_A_SEL_SDCARD";
+		};
+	};
+
+	exp2: gpio@77 {
+		compatible = "ti,tcal9539";
+		vcc-supply = <&vdd_1v8>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&main_exp2_pins_default>;
+		reg = <0x77>;
+		#interrupt-cells = <2>;
+		interrupt-controller;
+		interrupts-extended = <&main_gpio1 12 IRQ_TYPE_EDGE_FALLING>; /* expander_INT USB_A_PD_RST / GPIO_A_3 */
+		#gpio-cells = <2>;
+		gpio-controller;
+
+		gpio-line-names = "ACD_nINT", "M2_UART_WAKE",
+			"M2_SD_HOST_WAKEUP", "CHGR_INTn",
+			"VOL_UP", "VOL_DOWN",
+			"", "",
+			"LVDS_C_INT", "LVDS_C_HPD",
+			"LVDS_D_INT", "LVDS_D_HPD",
+			"LVDS_E_INT", "LVDS_E_HPD",
+			"RGB_INT", "RGB_HDMI_HPD";
+	};
+
+	tac5112: audio-codec@51 {
+		/* U19, TI, XTAC5112IRGER */
+		#sound-dai-cells = <0>;
+		compatible = "ti,tac5112";
+		reg = <0x51>;
+
+		ti,vref = <0>;  /* 2.75V */
+		ti,micbias-vg = <0>; /* same as Vref */
+		ti,gpios-func = <0>, <0>, <0>; /* GPIOx - Disable */
+		ti,gpi1-func = <0>; /* TAC5X1X_GPIO_DISABLE */
+
+		ti,gpios-drive = <0>, <0>, <0>; /* Hi-Z Output */
+		ti,gpa-gpio = <0>; /* GPA using GPIO1 is disabled */
+		ti,gpa-threshold = <75>, <186>; /* GPA Low and High threshold Values */
+
+		avdd-supply = <&vdd_aud_3v3>;
+		iovdd-supply = <&vdd_1v8>;
+	};
+
+	headset: ts3a227e@3b {
+		/* U20, TI, TS3A227ERVAR */
+		compatible = "ti,ts3a227e";
+		reg = <0x3b>;
+
+		interrupts-extended = <&exp2 0 IRQ_TYPE_EDGE_FALLING>; /* ACD_nINT */
+		ti,micbias = <6>; /* 2.7V, must match mic bias from codec */
+	};
+
+};
+
+&mcasp1 {
+	status = "okay";
+};
+
+&main_i2c2 { /* I2C_B / I2C_B_MCU / J 25 */
+	status = "okay";
+};
+
+&main_i2c3 { /* I2C_CAM / I2C_D_ALT / J 21 */
+	status = "okay";
+};
+
+&main_i2c3 { /* I2C_CAM */
+	status = "okay";
+
+	i2c-mux@73 {
+		compatible = "nxp,pca9546"; /* U34 TCA9546APWR */
+		reg = <0x73>;
+		vdd-supply = <&vdd_1v8>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_cam_a: i2-cam-a@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_cam_b: i2-cam-b@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_cam_c: i2-cam-c@2 {
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_cam_d: i2-cam-d@3 {
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+	};
+};
+
+&main_mcan0 { /* CAN_A */
+	status = "okay";
+	phys = <&transceiver1>;
+};
+
+&main_pmx0 {
+
+	main_exp2_pins_default: main-exp2-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x01a8, PIN_INPUT, 7) /* GPIO_A_3 (D20) MCASP0_AFSX.GPIO1_12 */
+		>;
+	};
+
+	main_gpio0_hog_pins_default: main-gpio0-hog-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0048, PIN_INPUT, 7) /* (N25) GPMC0_AD3.GPIO0_18 */
+			AM62X_IOPAD(0x0044, PIN_INPUT, 7) /* GPIO_B_7 (N24) GPMC0_AD2.GPIO0_17 */
+			AM62X_IOPAD(0x004c, PIN_INPUT, 7) /* GPIO_C_2 (P24) GPMC0_AD4.GPIO0_19 */
+			AM62X_IOPAD(0x0068, PIN_INPUT, 7) /* GPIO_C_6 (R21) GPMC0_AD11.GPIO0_26 */
+			AM62X_IOPAD(0x0074, PIN_INPUT, 7) /* GPIO_C_7 (U25) GPMC0_AD14.GPIO0_29 */
+			AM62X_IOPAD(0x0078, PIN_INPUT, 7) /* GPIO_B_6 (U24) GPMC0_AD15.GPIO0_30 */
+			AM62X_IOPAD(0x009c, PIN_INPUT, 7) /* GPIO_B_2 (V25) GPMC0_WAIT1.GPIO0_38 */
+			AM62X_IOPAD(0x0088, PIN_INPUT, 7) /* RGB_RESET# (L24) GPMC0_OEn_REn.GPIO0_33 */
+		>;
+	};
+
+	main_led_gpio_default: main-gpio-led-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0034, PIN_INPUT, 7) /* (H21) OSPI0_CSn2.GPIO0_13 */
+		>;
+	};
+
+	main_rgmii_phy0_gpio: main-rgmii-phy0-gpio-default-pins {
+		bootph-all;
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0008, PIN_INPUT_PULLDOWN, 7) /* ETH_A_RST (J24) OSPI0_DQS.GPIO0_2 */
+			AM62X_IOPAD(0x0004, PIN_INPUT_PULLDOWN, 7) /* ETH_A_INT (G25) OSPI0_LBCLKO.GPIO0_1 */
+		>;
+	};
+
+	main_rgmii_phy1_gpio: main-rgmii-phy1-gpio-default-pins {
+		bootph-all;
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x00a0, PIN_INPUT, 7) /* ETH_B_RST (K25) GPMC0_WPn.GPIO0_39 */
+			AM62X_IOPAD(0x00a8, PIN_INPUT, 7) /* ETH_B_INT(M21) GPMC0_CSn0.GPIO0_41 */
+		>;
+	};
+
+	main_vdd_sdio_a_gpio: main-vdd-sdio-a-default-pins {
+		bootph-all;
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0064, PIN_INPUT, 7) /* SDIO_A_PWR_EN GPIO_C_3 (T25) GPMC0_AD10.GPIO0_25 */
+		>;
+	};
+};
+
+&main_spi0 { /* SPI_B */
+	status = "okay";
+
+	spidev@0 {
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <24000000>;
+		reg = <0>;
+	};
+};
+
+&main_uart4 { /* UART_D */
+	status = "okay";
+};
+
+&main_uart6 { /* UART_A */
+	status = "okay";
+};
+
+&mcu_mcan0 { /* CAN_B */
+	status = "okay";
+	phys = <&transceiver2>;
+};
+
+&mcu_pmx0 {
+	wkupi2c1_pins_default: mywkupi2c1-default-pins {
+		pinctrl-single,pins = <
+			AM62X_MCU_IOPAD(0x004c, PIN_INPUT_PULLUP, 0) /* GPIO_B_4 (B9) WKUP_I2C0_SCL */
+			AM62X_MCU_IOPAD(0x0050, PIN_INPUT_PULLUP, 0) /* GPIO_B_5 (A9) WKUP_I2C0_SDA */
+		>;
+	};
+};
+
+&mcu_uart0 { /* UART_B */
+	status = "okay";
+};
+
+&ospi0 { /* SPI_A Used as a qSPI */
+	status = "okay";
+
+	flash@0 {
+		compatible = "winbond,w25q64jwz", "jedec,spi-nor";
+		reg = <0>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <4>;
+		spi-max-frequency = <25000000>;
+		cdns,tshsl-ns = <60>;
+		cdns,tsd2d-ns = <60>;
+		cdns,tchsh-ns = <60>;
+		cdns,tslch-ns = <60>;
+		cdns,read-delay = <4>;
+
+		partitions {
+			bootph-all;
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* TODO Define usage / partitions */
+			partition@0 {
+				label = "qspi.part0";
+				reg = <0x0 0x80000>;
+			};
+
+			partition@80000 {
+				label = "qspi.part1";
+				reg = <0x80000 0x200000>;
+			};
+
+			partition@280000 {
+				label = "qspi.part2";
+				reg = <0x280000 0x400000>;
+			};
+
+			partition@680000 {
+				label = "qspi.part3";
+				reg = <0x680000 0x40000>;
+			};
+
+			partition@6c0000 {
+				label = "qspi.part4";
+				reg = <0x6c0000 0x40000>;
+			};
+
+		};
+	};
+};
+
+&sdhci1 { /* SDIO_A uSD / M.2_SDIO */
+	status = "okay";
+	vmmc-supply = <&vdd_mmc1>; /* SDIO_A_PWR_EN */
+	vqmmc-supply = <&vdd_sd>; /* VSEL_SD */
+	disable-wp; // MMC1_SDWP is just pulled down, so lets not use this.
+};
+
+&wkup_i2c0 { /* I2C_C */
+	status = "okay";		/* TODO HW changes */
+	pinctrl-names = "default";
+	pinctrl-0 = <&wkupi2c1_pins_default>;
+	clock-frequency = <100000>;
+
+	i2c-mux@72 {
+		compatible = "nxp,pca9546"; /* U34 TCA9546APWR */
+		reg = <0x72>;
+		vdd-supply = <&vdd_1v8>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_port_c: i2-c-port-c@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_port_d: i2-c-port-d@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_port_e: i2-c-port-e@2 {
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_port_rgb: i2-c-port-rgb@3 {
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};

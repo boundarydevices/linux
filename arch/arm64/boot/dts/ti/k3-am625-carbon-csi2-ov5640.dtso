@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * OV5640 camera module
+ * Copyright (C) 2024 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+&{/} {
+	vdd_cam_a: regulator-cam-a-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_cam_a";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpios = <&main_gpio0 26 GPIO_ACTIVE_HIGH>; /* GPIO_C_6 / CAM_A_PWR */
+		enable-active-high;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	/* On Camera module oscillator */
+	clk_ov5640_fixed: ov5640-xclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <12000000>;
+	};
+};
+
+#if 0
+&cam_mck { /* CPU CAM_MCK */
+	status = "okay";
+};
+#endif
+
+&i2c_cam_a {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	ov5640: camera@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+
+		//clocks = <&cam_mck>; /* From CPU */
+		clocks = <&clk_ov5640_fixed>; /* On Camera module */
+		clock-names = "xclk";
+
+		reset-gpios = <&main_gpio0 29 GPIO_ACTIVE_LOW>; /* GPIO_C_7 / CAM_A_RST# */
+
+		port {
+			csi2_cam0: endpoint {
+				remote-endpoint = <&csi2rx0_in_sensor>;
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+			};
+		};
+	};
+};
+
+&cdns_csi2rx0 {
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		csi0_port0: port@0 {
+			reg = <0>;
+			status = "okay";
+
+			csi2rx0_in_sensor: endpoint {
+				remote-endpoint = <&csi2_cam0>;
+				bus-type = <4>; /* CSI2 DPHY. */
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+			};
+		};
+	};
+};
+
+&ti_csi2rx0 {
+	status = "okay";
+};
+
+&dphy0 {
+	status = "okay";
+};

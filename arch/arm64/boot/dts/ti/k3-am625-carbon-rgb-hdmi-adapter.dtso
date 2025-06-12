@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * RGB to HDMI Expansion Board for carbon am62
+ *
+ * Copyright (C) 2024 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+#include "k3-pinctrl.h"
+
+&{/} {
+	hdmi-connector {
+		compatible = "hdmi-connector";
+		label = "hdmi";
+		type = "a";
+		ddc-i2c-bus = <&i2c_port_rgb>;
+		digital;
+		// hpd-gpios = <&exp3 15 GPIO_ACTIVE_HIGH>; /* Not going to 1.8, only 1.1 */
+
+		port {
+			hdmi_connector_in: endpoint {
+				remote-endpoint = <&tfp410_out>;
+			};
+		};
+	};
+
+	dvi-bridge {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "ti,tfp410";
+
+		port@0 {
+			reg = <0>;
+
+			tfp410_in: endpoint {
+				remote-endpoint = <&dpi_out0>;
+				pclk-sample = <1>;
+				/* We only do RGB666 so colours will be wrong.
+				 * I tried hacking 18 bit RGB666 into
+				 * drivers/gpu/drm/bridge/ti-tfp410.c
+				 * then correct colours, but low
+				 * brightness and contrast.
+				*/
+				bus-width = <24>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+
+			tfp410_out: endpoint {
+				remote-endpoint =
+					<&hdmi_connector_in>;
+			};
+		};
+	};
+};
+
+&dss {
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_dss0_pins_default>;
+	status = "okay";
+};
+
+&dss_ports {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	/* Video Port 2 */
+	port@1 {
+		reg = <1>;
+
+		dpi_out0: endpoint {
+			remote-endpoint = <&tfp410_in>;
+		};
+	};
+};
+
+
+
+&main_gpio0 {
+	rgb-vdd-en-hog {
+		/* RGB_VDD_EN GPIO_C_2 */
+		gpio-hog;
+		gpios = <19 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "RGB_VDD_EN";
+	};
+
+	rgb-reset-hog {
+		/* RGB_RESET#  */
+		gpio-hog;
+		gpios = <33 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "RGB_RESET#";
+	};
+};

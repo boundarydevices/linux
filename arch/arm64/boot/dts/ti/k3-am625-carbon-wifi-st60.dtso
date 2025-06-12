@@ -1,0 +1,43 @@
+
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * ST60 SIP WiFi
+ * Copyright (C) 2025 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+&main_uart1 {
+	bluetooth {
+		compatible = "mrvl,88w8997";
+		max-speed = <3000000>;
+		status = "disabled"; /* TODO */
+	};
+};
+
+&sdhci2 { /* SDIO_B  WIFI */
+	mwifiex: wifi@1 {
+		compatible = "marvell,sd8997";
+		reg = <1>;
+		interrupt-parent = <&main_gpio0>;
+		interrupts = <16 IRQ_TYPE_EDGE_FALLING>;
+	};
+
+#if 0
+	/* BT over SDIO */
+	btmrvl: bluetooth@2 {
+		compatible = "marvell,sd8897-bt";
+		reg = <2>;
+		interrupt-parent = <&main_gpio0>;
+		interrupts = <42 IRQ_TYPE_EDGE_FALLING>;
+	};
+#endif
+
+	wlcore: wlcore@2 {
+		status = "disabled";
+	};
+};

@@ -1,0 +1,89 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * RGB to LVDS Expansion Board for carbon am62
+ *
+ * Copyright (C) 2024 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+#include "k3-pinctrl.h"
+
+&{/} {
+	lcdbacklight: backlight-0 {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		pwms = <&epwm1 0 30000 0>; /* 3.3 KHz */
+		status = "okay";
+	};
+
+	lcdif: display-rgb {
+		compatible = "tianma,tm070jdhg30-666", "panel-simple"; /* BD070LIC3 as 18bit */
+		backlight = <&lcdbacklight>;
+		port {
+			lcd_in0: endpoint {
+				remote-endpoint = <&dpi_out0>;
+			};
+		};
+	};
+};
+
+&dss {
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_dss0_pins_default>;
+	status = "okay";
+};
+
+&dss_ports {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* Video Port 2 */
+	port@1 {
+		reg = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dpi_out0: endpoint {
+			remote-endpoint = <&lcd_in0>;
+		};
+	};
+};
+
+&main_gpio0 {
+	rgb-vdd-en-hog {
+		/* RGB_VDD_EN GPIO_C_2 */
+		gpio-hog;
+		gpios = <19 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "RGB_VDD_EN";
+	};
+
+	rgb-reset-hog {
+		/* RGB_RESET#  */
+		gpio-hog;
+		gpios = <33 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "RGB_RESET#";
+	};
+};
+
+#if 0
+&i2c_port_rgb {
+	touchscreen@14 {
+		compatible = "goodix,gt928";
+		reg = <0x14>;
+		interrupt-parent = <&exp3>;
+		interrupts = <14 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&exp3 14 GPIO_ACTIVE_LOW>;
+		touchscreen-size-x = <1280>;
+		touchscreen-size-y = <800>;
+		status = "okay";
+	};
+};
+#endif
