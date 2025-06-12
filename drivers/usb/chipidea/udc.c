@@ -1922,8 +1922,8 @@ static void destroy_eps(struct ci_hdrc *ci)
 }
 
 /*
- * ChipIdea HW doesn't support scatterlist well for uvc, so we disable
- * sg_support for uvc and enable it for others.
+ * ChipIdea HW doesn't support scatterlist well for uvc and ffs, so we disable
+ * sg_support for uvc and ffs and enable it for others.
  */
 static bool ci_udc_enable_sg_support(struct usb_gadget *gadget)
 {
@@ -1933,7 +1933,7 @@ static bool ci_udc_enable_sg_support(struct usb_gadget *gadget)
 
 	list_for_each_entry(c, &cdev->configs, list) {
 		list_for_each_entry(f, &c->functions, list) {
-			if (!strcmp(f->name, "uvc"))
+			if (!strcmp(f->name, "uvc") || !strcmp(f->name, "Function FS Gadget"))
 				return false;
 		}
 	}
