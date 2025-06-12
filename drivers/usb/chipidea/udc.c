@@ -20,6 +20,7 @@
 #include <linux/usb/gadget.h>
 #include <linux/usb/otg-fsm.h>
 #include <linux/usb/chipidea.h>
+#include <linux/usb/composite.h>
 
 #include "ci.h"
 #include "udc.h"
@@ -1920,6 +1921,26 @@ static void destroy_eps(struct ci_hdrc *ci)
 	}
 }
 
+/*
+ * ChipIdea HW doesn't support scatterlist well for uvc, so we disable
+ * sg_support for uvc and enable it for others.
+ */
+static bool ci_udc_enable_sg_support(struct usb_gadget *gadget)
+{
+	struct usb_composite_dev *cdev = get_gadget_data(gadget);
+	struct usb_configuration *c;
+	struct usb_function *f;
+
+	list_for_each_entry(c, &cdev->configs, list) {
+		list_for_each_entry(f, &c->functions, list) {
+			if (!strcmp(f->name, "uvc"))
+				return false;
+		}
+	}
+
+	return true;
+}
+
 /**
  * ci_udc_start: register a gadget driver
  * @gadget: our gadget
@@ -1947,6 +1968,9 @@ static int ci_udc_start(struct usb_gadget *gadget,
 		return retval;
 
 	ci->driver = driver;
+
+	if (ci_udc_enable_sg_support(gadget))
+		ci->gadget.sg_supported = 1;
 
 	/* Start otg fsm for B-device */
 	if (ci_otg_is_fsm_mode(ci) && ci->fsm.id) {
@@ -1988,6 +2012,7 @@ static int ci_udc_stop(struct usb_gadget *gadget)
 
 	spin_lock_irqsave(&ci->lock, flags);
 	ci->driver = NULL;
+	ci->gadget.sg_supported = 0;
 
 	if (ci->vbus_active) {
 		hw_device_state(ci, 0);
@@ -2096,7 +2121,7 @@ static int udc_start(struct ci_hdrc *ci)
 	ci->gadget.max_speed    = USB_SPEED_HIGH;
 	ci->gadget.name         = ci->platdata->name;
 	ci->gadget.otg_caps	= otg_caps;
-	ci->gadget.sg_supported = 1;
+	ci->gadget.sg_supported = 0;
 	ci->gadget.irq		= ci->irq;
 
 	if (ci->platdata->flags & CI_HDRC_REQUIRES_ALIGNED_DMA)
