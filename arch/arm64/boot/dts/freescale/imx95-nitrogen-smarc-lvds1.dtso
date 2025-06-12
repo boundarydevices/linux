@@ -48,6 +48,10 @@
 };
 
 &i2c_pmic {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
 	ts_lvds_goodix: touchscreen@5d {
 		compatible = "goodix,gt9271";
 		reg = <0x5d>;
