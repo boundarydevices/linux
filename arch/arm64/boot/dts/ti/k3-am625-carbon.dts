@@ -27,7 +27,7 @@
 		startup-delay-us = <100000>;
 		regulator-boot-on;
 		enable-active-high;
-		gpio = <&main_gpio0 18 GPIO_ACTIVE_HIGH>;
+		gpio = <&main_gpio0 25 GPIO_ACTIVE_HIGH>;
 	};
 
 	vdd_3v3: regulator-u4-sw2 {
@@ -388,9 +388,9 @@
 
 	main_gpio0_hog_pins_default: main-gpio0-hog-default-pins {
 		pinctrl-single,pins = <
+			AM62X_IOPAD(0x0048, PIN_INPUT, 7) /* (N25) GPMC0_AD3.GPIO0_18 */
 			AM62X_IOPAD(0x0044, PIN_INPUT, 7) /* GPIO_B_7 (N24) GPMC0_AD2.GPIO0_17 */
 			AM62X_IOPAD(0x004c, PIN_INPUT, 7) /* GPIO_C_2 (P24) GPMC0_AD4.GPIO0_19 */
-			AM62X_IOPAD(0x0064, PIN_INPUT, 7) /* GPIO_C_3 (T25) GPMC0_AD10.GPIO0_25 */
 			AM62X_IOPAD(0x0068, PIN_INPUT, 7) /* GPIO_C_6 (R21) GPMC0_AD11.GPIO0_26 */
 			AM62X_IOPAD(0x0074, PIN_INPUT, 7) /* GPIO_C_7 (U25) GPMC0_AD14.GPIO0_29 */
 			AM62X_IOPAD(0x0078, PIN_INPUT, 7) /* GPIO_B_6 (U24) GPMC0_AD15.GPIO0_30 */
@@ -424,7 +424,7 @@
 	main_vdd_sdio_a_gpio: main-vdd-sdio-a-default-pins {
 		bootph-all;
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x0048, PIN_INPUT, 7) /* SDIO_A_PWR_EN (N25) GPMC0_AD3.GPIO0_18 */
+			AM62X_IOPAD(0x0064, PIN_INPUT, 7) /* SDIO_A_PWR_EN GPIO_C_3 (T25) GPMC0_AD10.GPIO0_25 */
 		>;
 	};
 };
