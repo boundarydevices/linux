@@ -137,6 +137,13 @@
 		gpio = <&pio 86 0>;
 		enable-active-high;
 	};
+
+	dmic_codec: dmic-codec {
+		compatible = "dmic-codec";
+		#sound-dai-cells = <0>;
+		num-channels = <2>;
+		wakeup-delay-ms = <100>;
+	};
 };
 
 &mt6359_vmodem_buck_reg {
@@ -653,6 +660,53 @@
 			bias-disable;
 		};
 	};
+
+	/* Audio DMIC Interface */
+	aud_gpio_ap_dmic_off: aud-gpio-ap-dmic-off {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO111__FUNC_GPIO111>;
+			input-enable;
+			bias-pull-down;
+		};
+		pins-cmd2-dat {
+			pinmux = <PINMUX_GPIO112__FUNC_GPIO112>;
+			input-enable;
+			bias-pull-down;
+		};
+		pins-cmd3-dat {
+			pinmux = <PINMUX_GPIO113__FUNC_GPIO113>;
+			input-enable;
+			bias-pull-down;
+		};
+		pins-cmd4-dat {
+			pinmux = <PINMUX_GPIO114__FUNC_GPIO114>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	aud_gpio_ap_dmic_on: aud-gpio-ap-dmic-on {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO111__FUNC_DMIC0_CLK>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+		pins-cmd2-dat {
+			pinmux = <PINMUX_GPIO112__FUNC_DMIC0_DAT0>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+		pins-cmd3-dat {
+			pinmux = <PINMUX_GPIO113__FUNC_DMIC1_CLK>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+		pins-cmd4-dat {
+			pinmux = <PINMUX_GPIO114__FUNC_DMIC1_DAT0>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+	};
 	/* AUDIO GPIO standardization end */
 };
 
@@ -817,14 +871,29 @@
 	pinctrl-names = "aud-gpio-i2sin0-off",
 		"aud-gpio-i2sin0-on",
 		"aud-gpio-i2sout0-off",
-		"aud-gpio-i2sout0-on";
+		"aud-gpio-i2sout0-on",
+		/*dmic*/
+		"aud-gpio-ap-dmic-off",
+		"aud-gpio-ap-dmic-on";
 
 	/* i2s */
 	pinctrl-0 = <&aud_gpio_i2sin0_off>;
 	pinctrl-1 = <&aud_gpio_i2sin0_on>;
 	pinctrl-2 = <&aud_gpio_i2sout0_off>;
 	pinctrl-3 = <&aud_gpio_i2sout0_on>;
+	/* dmic */
+	pinctrl-4 = <&aud_gpio_ap_dmic_off>;
+	pinctrl-5 = <&aud_gpio_ap_dmic_on>;
 
 	audio-routing = "I2SOUT0", "ETDMOUT_HP_PIN",
-			"I2SIN0", "ETDMIN_HP_PIN";
+			"I2SIN0", "ETDMIN_HP_PIN",
+			"AP DMIC Capture", "AP_DMIC0_PIN";
+
+	dai-link-0 {
+		link-name = "AP_DMIC_BE";
+
+		codec {
+			sound-dai = <&dmic_codec>;
+		};
+	};
 };
