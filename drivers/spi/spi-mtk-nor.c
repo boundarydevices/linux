@@ -118,8 +118,9 @@ struct mtk_nor {
 	dma_addr_t buffer_dma;
 	struct clk *spi_clk;
 	struct clk *ctlr_clk;
-	struct clk *axi_clk;
-	struct clk *axi_s_clk;
+	struct clk *axi_f_clk;
+	struct clk *axi_h_clk;
+	struct clk *axi_p_clk;
 	unsigned int spi_freq;
 	bool wbuf_en;
 	bool has_irq;
@@ -705,8 +706,9 @@ static void mtk_nor_disable_clk(struct mtk_nor *sp)
 {
 	clk_disable_unprepare(sp->spi_clk);
 	clk_disable_unprepare(sp->ctlr_clk);
-	clk_disable_unprepare(sp->axi_clk);
-	clk_disable_unprepare(sp->axi_s_clk);
+	clk_disable_unprepare(sp->axi_f_clk);
+	clk_disable_unprepare(sp->axi_h_clk);
+	clk_disable_unprepare(sp->axi_p_clk);
 }
 
 static int mtk_nor_enable_clk(struct mtk_nor *sp)
@@ -723,18 +725,27 @@ static int mtk_nor_enable_clk(struct mtk_nor *sp)
 		return ret;
 	}
 
-	ret = clk_prepare_enable(sp->axi_clk);
+	ret = clk_prepare_enable(sp->axi_f_clk);
 	if (ret) {
 		clk_disable_unprepare(sp->spi_clk);
 		clk_disable_unprepare(sp->ctlr_clk);
 		return ret;
 	}
 
-	ret = clk_prepare_enable(sp->axi_s_clk);
+	ret = clk_prepare_enable(sp->axi_h_clk);
 	if (ret) {
 		clk_disable_unprepare(sp->spi_clk);
 		clk_disable_unprepare(sp->ctlr_clk);
-		clk_disable_unprepare(sp->axi_clk);
+		clk_disable_unprepare(sp->axi_f_clk);
+		return ret;
+	}
+
+	ret = clk_prepare_enable(sp->axi_p_clk);
+	if (ret) {
+		clk_disable_unprepare(sp->spi_clk);
+		clk_disable_unprepare(sp->ctlr_clk);
+		clk_disable_unprepare(sp->axi_f_clk);
+		clk_disable_unprepare(sp->axi_h_clk);
 		return ret;
 	}
 
@@ -813,7 +824,7 @@ static int mtk_nor_probe(struct platform_device *pdev)
 	struct mtk_nor *sp;
 	struct mtk_nor_caps *caps;
 	void __iomem *base;
-	struct clk *spi_clk, *ctlr_clk, *axi_clk, *axi_s_clk;
+	struct clk *spi_clk, *ctlr_clk, *axi_f_clk, *axi_h_clk, *axi_p_clk;
 	int ret, irq;
 
 	base = devm_platform_ioremap_resource(pdev, 0);
@@ -828,16 +839,20 @@ static int mtk_nor_probe(struct platform_device *pdev)
 	if (IS_ERR(ctlr_clk))
 		return PTR_ERR(ctlr_clk);
 
-	axi_clk = devm_clk_get_optional(&pdev->dev, "axi");
-	if (IS_ERR(axi_clk))
-		return PTR_ERR(axi_clk);
+	axi_f_clk = devm_clk_get_optional(&pdev->dev, "axi_f");
+	if (IS_ERR(axi_f_clk))
+		return PTR_ERR(axi_f_clk);
 
-	axi_s_clk = devm_clk_get_optional(&pdev->dev, "axi_s");
-	if (IS_ERR(axi_s_clk))
-		return PTR_ERR(axi_s_clk);
+	axi_h_clk = devm_clk_get_optional(&pdev->dev, "axi_h");
+	if (IS_ERR(axi_h_clk))
+		return PTR_ERR(axi_h_clk);
+
+	axi_p_clk = devm_clk_get_optional(&pdev->dev, "axi_p");
+	if (IS_ERR(axi_p_clk))
+		return PTR_ERR(axi_p_clk);
+
 
 	caps = (struct mtk_nor_caps *)of_device_get_match_data(&pdev->dev);
-
 	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(caps->dma_bits));
 	if (ret) {
 		dev_err(&pdev->dev, "failed to set dma mask(%u)\n", caps->dma_bits);
@@ -870,8 +885,9 @@ static int mtk_nor_probe(struct platform_device *pdev)
 	sp->dev = &pdev->dev;
 	sp->spi_clk = spi_clk;
 	sp->ctlr_clk = ctlr_clk;
-	sp->axi_clk = axi_clk;
-	sp->axi_s_clk = axi_s_clk;
+	sp->axi_f_clk = axi_f_clk;
+	sp->axi_h_clk = axi_h_clk;
+	sp->axi_p_clk = axi_p_clk;
 	sp->caps = caps;
 	sp->high_dma = caps->dma_bits > 32;
 	sp->buffer = dmam_alloc_coherent(&pdev->dev,
