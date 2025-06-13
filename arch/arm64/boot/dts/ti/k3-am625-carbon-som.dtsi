@@ -212,6 +212,13 @@
 	phy-handle = <&cpsw3g_phy1>;
 };
 
+&epwm0 {
+	/* PWM_0 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_epwm0_pins_default>;
+	status = "disabled";
+};
+
 &epwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_epwm1_pins_default>;
@@ -219,7 +226,7 @@
 };
 
 &ecap2 {
-	/* ECAP in APWM mode */
+	/* CAM_MCK ECAP in APWM mode */
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_ecap2_pins_default>;
 	status = "okay";
@@ -246,7 +253,7 @@
 		"GPIO_C_3","GPIO_C_6","","","GPIO_C_7",
 		"GPIO_B_6","SDIO_A_IOPWR","","RGB_RESET#","",	/* 30 - 34 */
 		"","GPIO_B_3","GPIO_A_0","GPIO_B_2","GPIO_C_0",
-		"","GPIO_C_1","","","",				/* 40 - 44 */
+		"SPI_B_CS1#","GPIO_C_1","","","",		/* 40 - 44 */
 		"","","","","",
 		"","","","","",					/* 50 - 54 */
 		"","","","","",
@@ -419,6 +426,12 @@
 	main_ecap2_pins_default: main-ecap2-default-pins {
 		pinctrl-single,pins = <
 			AM62X_IOPAD(0x01a4, PIN_OUTPUT, 2) /* CAM_MCK (B20) MCASP0_ACLKX.ECAP2_IN_APWM_OUT */
+		>;
+	};
+
+	main_epwm0_pins_default: main-epwm0-default-pins {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x01b8, PIN_OUTPUT, 2) /* PWM_0 (C13) SPI0_CS1.EHRPWM0_B */
 		>;
 	};
 
@@ -604,7 +617,7 @@
 			AM62X_IOPAD(0x01c0, PIN_INPUT, 0) /* SPI_B_SDI (B13) SPI0_D0 */
 			AM62X_IOPAD(0x01c4, PIN_OUTPUT, 0) /* SPI_B_SDO (B14) SPI0_D1 */
 			AM62X_IOPAD(0x01b4, PIN_INPUT, 0) /* SPI_B_CS0# (A13) SPI0_CS0 */
-			AM62X_IOPAD(0x01b8, PIN_INPUT, 0) /* SPI_B_CS1# (C13) SPI0_CS1 */
+			AM62X_IOPAD(0x00a4, PIN_INPUT, 7) /* SPI_B_CS1# (M22) GPMC0_DIR.GPIO0_40 */
 			AM62X_IOPAD(0x01bc, PIN_INPUT, 0) /* SPI_B_SCK (A14) SPI0_CLK */
 		>;
 	};
@@ -686,6 +699,7 @@
 	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_spi0_pins_default>;
+	// TODO SPI_B_CS1# is a GPIO (&main_gpio0 40)
 };
 
 &main_uart0 {
