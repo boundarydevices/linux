@@ -152,7 +152,7 @@ static const struct ina2xx_config ina2xx_config[] = {
 		.shunt_div = 400,
 		.bus_voltage_shift = 0,
 		.bus_voltage_lsb = 1600,
-		.power_lsb_factor = 25,
+		.power_lsb_factor = 32,
 	},
 };
 
