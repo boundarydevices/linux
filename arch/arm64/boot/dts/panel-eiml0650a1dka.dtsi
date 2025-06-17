@@ -1,0 +1,219 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	aliases {
+		mipi_cmds_eiml0650a1dka = &mipi_cmds_eiml0650a1dka;
+	};
+
+	mipi_cmds_eiml0650a1dka: mipi-cmds-eiml0650a1dka {
+		alias = <&mipi_cmds_eiml0650a1dka>;
+		mipi-cmds-enable = /bits/ 8 <
+			// GIP Setting - Page 1
+			DCS_L3P(0xFF,0x98,0x83,0x01)
+			DCS_S1P(0x00,0x46)		// STVA rise
+			DCS_S1P(0x01,0x33)		// STVA 4phase + 4H
+			DCS_S1P(0x04,0x42)		// STVB rise
+			DCS_S1P(0x05,0x33)		// STVB 4phase + 4H
+			DCS_S1P(0x08,0x84)		// CLKA rise
+			DCS_S1P(0x09,0x03)		// CLKA fall
+			DCS_S1P(0x0A,0x74)		// CLKA 8phase + 4H
+			DCS_S1P(0x0B,0x01)		// CLW_A_Fall_mode = 1
+			DCS_S1P(0xC3,0x00)		// reftp_tr_longV = 0
+
+			// FW_R (Forward Right)
+			DCS_S1P(0x31,0x0E)		// R[01]_STV7 (STV_B_3)
+			DCS_S1P(0x32,0x0C)		// R[02]_STV5 (STV_B_1)
+			DCS_S1P(0x33,0x16)		// R[03]_CLK7 (CLK_A_7)
+			DCS_S1P(0x34,0x14)		// R[04]_CLK5 (CLK_A_5)
+			DCS_S1P(0x35,0x12)		// R[05]_CLK3 (CLK_A_3)
+			DCS_S1P(0x36,0x10)		// R[06]_CLK1 (CLK_A_1)
+			DCS_S1P(0x37,0x08)		// R[07]_STV1 (STV_A_1)
+			DCS_S1P(0x38,0x0A)		// R[08]_STV3 (STV_A_3)
+			DCS_S1P(0x39,0x02)		// R[09]_VGLO (VGLO)
+			DCS_S1P(0x3A,0x07)		// R[10]_NC (Hi-Z)
+			DCS_S1P(0x3B,0x07)		// R[11]_NC (Hi-Z)
+			DCS_S1P(0x3C,0x07)		// R[12]_NC (Hi-Z)
+			DCS_S1P(0x3D,0x07)		// R[13]_NC (Hi-Z)
+			DCS_S1P(0x3E,0x07)		// R[14]_NC (Hi-Z)
+			DCS_S1P(0x3F,0x07)		// R[15]_NC (Hi-Z)
+			DCS_S1P(0x40,0x07)		// R[16]_NC (Hi-Z)
+			DCS_S1P(0x41,0x07)		// R[17]_NC (Hi-Z)
+			DCS_S1P(0x42,0x07)		// R[18]_NC (Hi-Z)
+			DCS_S1P(0x43,0x07)		// R[19]_NC (Hi-Z)
+			DCS_S1P(0x44,0x07)		// R[20]_NC (Hi-Z)
+			DCS_S1P(0x45,0x07)		// R[21]_NC (Hi-Z)
+			DCS_S1P(0x46,0x07)		// R[22]_NC (Hi-Z)
+
+			// FW_L (Forward Left)
+			DCS_S1P(0x47,0x02)		// L[01]_ADD_VGLO (VGLO)
+			DCS_S1P(0x48,0x0F)		// L[02]_STV8 (STV_B_4)
+			DCS_S1P(0x49,0x0D)		// L[03]_STV6 (STV_B_2)
+			DCS_S1P(0x4A,0x17)		// L[04]_CLK8 (CLK_A_8)
+			DCS_S1P(0x4B,0x15)		// L[05]_CLK6 (CLK_A_6)
+			DCS_S1P(0x4C,0x13)		// L[06]_CLK4 (CLK_A_4)
+			DCS_S1P(0x4D,0x11)		// L[07]_CLK2 (CLK_A_2)
+			DCS_S1P(0x4E,0x09)		// L[08]_STV2 (STV_A_2)
+			DCS_S1P(0x4F,0x0B)		// L[09]_STV4 (STV_A_4)
+			DCS_S1P(0x50,0x02)		// L[10]_VGLO (VGLO)
+			DCS_S1P(0x51,0x07)		// L[11]_NC (Hi-Z)
+			DCS_S1P(0x52,0x07)		// L[12]_NC (Hi-Z)
+			DCS_S1P(0x53,0x07)		// L[13]_NC (Hi-Z)
+			DCS_S1P(0x54,0x07)		// L[14]_NC (Hi-Z)
+			DCS_S1P(0x55,0x07)		// L[15]_NC (Hi-Z)
+			DCS_S1P(0x56,0x07)		// L[16]_NC (Hi-Z)
+			DCS_S1P(0x57,0x07)		// L[17]_NC (Hi-Z)
+			DCS_S1P(0x58,0x07)		// L[18]_NC (Hi-Z)
+			DCS_S1P(0x59,0x07)		// L[19]_NC (Hi-Z)
+			DCS_S1P(0x5A,0x07)		// L[20]_NC (Hi-Z)
+			DCS_S1P(0x5B,0x07)		// L[21]_NC (Hi-Z)
+			DCS_S1P(0x5C,0x07)		// L[22]_NC (Hi-Z)
+
+			// BW_R (Backward Right)
+			DCS_S1P(0x61,0x09)		// R[01]_STV7 (STV_A_2)
+			DCS_S1P(0x62,0x0B)		// R[02]_STV5 (STV_A_4)
+			DCS_S1P(0x63,0x15)		// R[03]_CLK7 (CLK_A_6)
+			DCS_S1P(0x64,0x17)		// R[04]_CLK5 (CLK_A_8)
+			DCS_S1P(0x65,0x11)		// R[05]_CLK3 (CLK_A_2)
+			DCS_S1P(0x66,0x13)		// R[06]_CLK1 (CLK_A_4)
+			DCS_S1P(0x67,0x0F)		// R[07]_STV1 (STV_B_4)
+			DCS_S1P(0x68,0x0D)		// R[08]_STV3 (STV_B_2)
+			DCS_S1P(0x69,0x02)		// R[09]_VGLO (VGLO)
+			DCS_S1P(0x6A,0x07)		// R[10]_NC (Hi-Z)
+			DCS_S1P(0x6B,0x07)		// R[11]_NC (Hi-Z)
+			DCS_S1P(0x6C,0x07)		// R[12]_NC (Hi-Z)
+			DCS_S1P(0x6D,0x07)		// R[13]_NC (Hi-Z)
+			DCS_S1P(0x6E,0x07)		// R[14]_NC (Hi-Z)
+			DCS_S1P(0x6F,0x07)		// R[15]_NC (Hi-Z)
+			DCS_S1P(0x70,0x07)		// R[16]_NC (Hi-Z)
+			DCS_S1P(0x71,0x07)		// R[17]_NC (Hi-Z)
+			DCS_S1P(0x72,0x07)		// R[18]_NC (Hi-Z)
+			DCS_S1P(0x73,0x07)		// R[19]_NC (Hi-Z)
+			DCS_S1P(0x74,0x07)		// R[20]_NC (Hi-Z)
+			DCS_S1P(0x75,0x07)		// R[21]_NC (Hi-Z)
+			DCS_S1P(0x76,0x07)		// R[22]_NC (Hi-Z)
+
+			// BW_L (Backward Left)
+			DCS_S1P(0x77,0x02)		// L[01]_ADD_VGLO (VGLO)
+			DCS_S1P(0x78,0x08)		// L[02]_STV8 (STV_A_1)
+			DCS_S1P(0x79,0x0A)		// L[03]_STV6 (STV_A_3)
+			DCS_S1P(0x7A,0x14)		// L[04]_CLK8 (CLK_A_5)
+			DCS_S1P(0x7B,0x16)		// L[05]_CLK6 (CLK_A_7)
+			DCS_S1P(0x7C,0x10)		// L[06]_CLK4 (CLK_A_1)
+			DCS_S1P(0x7D,0x12)		// L[07]_CLK2 (CLK_A_3)
+			DCS_S1P(0x7E,0x0E)		// L[08]_STV2 (STV_B_3)
+			DCS_S1P(0x7F,0x0C)		// L[09]_STV4 (STV_B_1)
+			DCS_S1P(0x80,0x02)		// L[10]_VGLO (VGLO)
+			DCS_S1P(0x81,0x07)		// L[11]_NC (Hi-Z)
+			DCS_S1P(0x82,0x07)		// L[12]_NC (Hi-Z)
+			DCS_S1P(0x83,0x07)		// L[13]_NC (Hi-Z)
+			DCS_S1P(0x84,0x07)		// L[14]_NC (Hi-Z)
+			DCS_S1P(0x85,0x07)		// L[15]_NC (Hi-Z)
+			DCS_S1P(0x86,0x07)		// L[16]_NC (Hi-Z)
+			DCS_S1P(0x87,0x07)		// L[17]_NC (Hi-Z)
+			DCS_S1P(0x88,0x07)		// L[18]_NC (Hi-Z)
+			DCS_S1P(0x89,0x07)		// L[19]_NC (Hi-Z)
+			DCS_S1P(0x8A,0x07)		// L[20]_NC (Hi-Z)
+			DCS_S1P(0x8B,0x07)		// L[21]_NC (Hi-Z)
+			DCS_S1P(0x8C,0x07)		// L[22]_NC (Hi-Z)
+
+			// RTN, Internal VBP, Internal VFP - Page 2
+			DCS_L3P(0xFF,0x98,0x83,0x02)
+			DCS_S1P(0x06,0xC6)		// Internal Line Time (RTN)
+			DCS_S1P(0x08,0x41)		// Internal Line Time (RTN)
+			DCS_S1P(0x0A,0x1B)		// Internal VFP[9:8]
+			DCS_S1P(0x0C,0x00)		// Internal VBP[8]
+			DCS_S1P(0x0D,0x12)		// Internal VBP (<512)
+			DCS_S1P(0x0E,0x58)		// Internal VFP (<1024)
+			DCS_S1P(0x39,0x31)		// VBP[8], RTN[8], VFP[9:8]
+			DCS_S1P(0x3A,0x12)		// BIST VBP
+			DCS_S1P(0x3B,0xC3)		// BIST VFP
+			DCS_S1P(0x3C,0x65)		// BIST RTN
+			DCS_S1P(0xF0,0x00)		// BIST VFP[12:8] (FRM_RAT change)
+			DCS_S1P(0xF1,0x57)		// BIST VFP (FRM_RAT change)
+			DCS_S1P(0x48,0x01)		// SRC bias @ PD enable
+			DCS_S1P(0x44,0x68)		// PAT_2COL_EN 1 & column inversion
+			DCS_S1P(0x40,0x57)		// SDT = 3us
+
+			// Pattern Detection - Page 3
+			DCS_L3P(0xFF,0x98,0x83,0x03)
+			DCS_S1P(0x20,0x01)		// PATTERN: subpixel
+			DCS_S1P(0x22,0xFA)		// PATTERN: subpixel
+
+			// Power Setting - Page 5
+			DCS_L3P(0xFF,0x98,0x83,0x05)
+			DCS_S1P(0x03,0x00)		// Vcom = -1V
+			DCS_S1P(0x04,0x42)		// Vcom = -1V
+			DCS_S1P(0x69,0x7E)		// GVDDN = -5V
+			DCS_S1P(0x6A,0x7E)		// GVDDP = 5V
+			DCS_S1P(0x6D,0xDD)		// VGHO = 18V
+			DCS_S1P(0x73,0xE3)		// VGH = 19V
+			DCS_S1P(0x79,0x8D)		// VGLO = -11V
+			DCS_S1P(0x7F,0x6B)		// VGL = -11V
+			DCS_S1P(0x61,0x12)		// VGL, VGH pump ratio
+			DCS_S1P(0x68,0x3E)		// Vcom, GVDDP, GVDDN pre buffer
+			DCS_S1P(0x66,0x33)		// GAMMA_EN_VFP off
+			DCS_S1P(0x65,0x07)		// VGLO short to VGL
+
+			// Resolution - Page 6
+			DCS_L3P(0xFF,0x98,0x83,0x06)
+			DCS_S1P(0xD9,0x1F)		// 4Lane
+			DCS_S1P(0xC0,0xE0)		// Gate=480
+			DCS_S1P(0xC1,0x11)		// Gate=480
+			DCS_S1P(0xCA,0x80)		// SRC=640
+			DCS_S1P(0xCB,0x02)		// SRC=640
+			DCS_S1P(0x0A,0x50)		// pixel update power saving
+
+			// Gamma Register - Page 8
+			DCS_L3P(0xFF,0x98,0x83,0x08)
+			0xE0 0x00 0x08 0x18 0x5F 0x93 0x54 0xDF 0x18 0x3F 0x6F 0x95 0x94 0xCB 0xF7 0x20 0xAA 0x44 0x6C 0x9D 0xBE 0xFE 0xE6 0x09 0x35 0x6D 0x3F 0x9D 0xCB 0xD8
+			0xE1 0x00 0x08 0x18 0x5F 0x93 0x54 0xDF 0x18 0x3F 0x6F 0x95 0x94 0xCB 0xF7 0x20 0xAA 0x44 0x6C 0x9D 0xBE 0xFE 0xE6 0x09 0x35 0x6D 0x3F 0x9D 0xCB 0xD8
+
+			// Pattern Detection - Page A
+			DCS_L3P(0xFF,0x98,0x83,0x0A)
+			DCS_S1P(0xE0,0x01)		// PD Enable
+			DCS_S1P(0xE1,0x0B)
+			DCS_S1P(0xE2,0x01)
+
+			// OSC Auto Trim Setting - Page B
+			DCS_L3P(0xFF,0x98,0x83,0x0B)
+			DCS_S1P(0x9A,0x9C)
+			DCS_S1P(0x9B,0x7A)
+			DCS_S1P(0x9C,0x13)
+			DCS_S1P(0x9D,0x13)
+			DCS_S1P(0x9E,0xFF)
+			DCS_S1P(0x9F,0xFF)
+			DCS_S1P(0xAA,0x22)
+			DCS_S1P(0xAB,0xE0)		// AutoTrimType
+
+			// TP Setting - Page E
+			DCS_L3P(0xFF,0x98,0x83,0x0E)
+			DCS_S1P(0x11,0x42)		// TSVD_LONGV_RISE [4:0]
+			DCS_S1P(0x12,0x02)		// TSHD_LONGV_SHIFT
+			DCS_S1P(0x13,0x0F)		// LV mode TSHD Rise position [4:0]
+			DCS_S1P(0x00,0xA0)		// LV mode
+
+			// Back to Page 6
+			DCS_L3P(0xFF,0x98,0x83,0x06)
+			DCS_S1P(0xD6,0x55)		// FTE => FTE_SYNC_OUT_INT
+			DCS_S1P(0xDC,0x68)		// FTE1 =TSVD1, FTE "=TSHD"
+
+			// Back to Page 0
+			DCS_L3P(0xFF,0x98,0x83,0x00)
+			DCS_S1P(0x35,0x00)		// Tearing Effect Line ON
+
+			// Sleep Out
+			DCS_S0P(0x11)
+			DELAY(120)
+
+			// Display ON
+			DCS_S0P(0x29)
+		>;
+		mipi-cmds-disable = /bits/ 8 <
+			DCS_S0P(0x28)		/* MIPI_DCS_SET_DISPLAY_OFF */
+			DCS_S0P(0x10)		/* Enter sleep */
+			DELAY(120)
+		>;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
+	};
+};
