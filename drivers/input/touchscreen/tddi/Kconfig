@@ -1,0 +1,6 @@
+config TOUCHSCREEN_TDDI
+	tristate "TDDI based touch panel controllers"
+	depends on I2C
+	help
+	  Say Y here if you have a TDDI touchscreen connected to your system.
+	  If unsure, say N.
