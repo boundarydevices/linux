@@ -753,7 +753,7 @@
 /* mcu_gpio0 and mcu_gpio_intr are normally reserved for mcu firmware usage */
 &mcu_gpio0 {
 	status = "okay";
-	gpio-line-names = "","","","","",                       /* 0 - 4 */
+	gpio-line-names = "","GPIO_A_7-wake-btn","","","",      /* 0 - 4 */
 		"","","","","",
 		"","GPIO_B_1","GPIO_B_0","","",			/* 10 - 14 */
 		"","USB_A_ID","GPIO_A_4","GPIO_A_5","GPIO_B_4",
