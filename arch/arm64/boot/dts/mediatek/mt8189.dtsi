@@ -650,6 +650,24 @@
 			status = "disabled";
 		};
 
+		nor_flash: spi@11018000 {
+			compatible = "mediatek,mt8186-nor",
+						"mediatek,mt8189-nor";
+			reg = <0 0x11018000 0 0x1000>;
+			clocks = <&topckgen_clk CLK_TOP_SFLASH_SEL>,
+				 <&pericfg_ao_clk CLK_PERAO_SFLASH>,
+				 <&pericfg_ao_clk CLK_PERAO_SFLASH_F>,
+				 <&pericfg_ao_clk CLK_PERAO_SFLASH_H>,
+				 <&pericfg_ao_clk CLK_PERAO_SFLASH_P>;
+			clock-names = "spi", "sf", "axi_f", "axi_h", "axi_p";
+			assigned-clocks = <&topckgen_clk CLK_TOP_SFLASH_SEL>;
+			assigned-clock-parents = <&topckgen_clk CLK_TOP_UNIVPLL_D6_D8>;
+			interrupts = <GIC_SPI 390 IRQ_TYPE_LEVEL_HIGH 0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
 		ufsphy: ufsphy@112a0000 {
 			compatible = "mediatek,mt8183-ufsphy";
 			reg = <0 0x112a0000 0 0x10000>;
