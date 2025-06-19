@@ -394,33 +394,6 @@ static s32 tac5x1x_register_interrupt(struct tac5x1x_priv *tac5x1x)
 	return 0;
 };
 
-static s32 tac5x1x_set_GPO1_gpio(struct snd_kcontrol *kcontrol,
-				 struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	s32 gpio_check, val;
-
-	val = snd_soc_component_read(component, TAC5X1X_GPO1);
-	gpio_check = ((val & TAC5X1X_GPIOX_CFG_MASK) >> 0);
-	if (gpio_check != TAC5X1X_GPIO_GPO) {
-		dev_err(component->dev,
-			"%s: GPO1 is not configure as a GPO output\n",
-			__func__);
-		return -EINVAL;
-	}
-
-	if (ucontrol->value.integer.value[0])
-		val = 0;
-	else
-		val = TAC5X1X_GPO1_VAL;
-
-	ucontrol->value.integer.value[0] = (val >> 0);
-	snd_soc_component_update_bits(component, TAC5X1X_GPIOVAL,
-				      TAC5X1X_GPO1_VAL, val);
-
-	return 1;
-};
-
 static s32 tac5x1x_get_GPIO1_gpio(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol)
 {
@@ -431,33 +404,6 @@ static s32 tac5x1x_get_GPIO1_gpio(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[0] = ((val & TAC5X1X_GPIO1_MON) >> 0);
 
 	return 0;
-};
-
-static s32 tac5x1x_set_GPIO1_gpio(struct snd_kcontrol *kcontrol,
-				  struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	s32 gpio_check, val;
-
-	val = snd_soc_component_read(component, TAC5X1X_GPIO1);
-	gpio_check = ((val & TAC5X1X_GPIOX_CFG_MASK) >> 0);
-	if (gpio_check == TAC5X1X_GPIO_DISABLE) {
-		dev_err(component->dev,
-			"%s: GPIO1 is not configure as a GPO output\n",
-			__func__);
-		return -EINVAL;
-	}
-
-	if (ucontrol->value.integer.value[0])
-		val = 0;
-	else
-		val = TAC5X1X_GPIO1_VAL;
-
-	ucontrol->value.integer.value[0] = (val >> 0);
-	snd_soc_component_update_bits(component, TAC5X1X_GPIOVAL,
-				      TAC5X1X_GPIO1_VAL, val);
-
-	return 1;
 };
 
 static s32 tac5x1x_get_GPIO2_gpio(struct snd_kcontrol *kcontrol,
@@ -472,33 +418,6 @@ static s32 tac5x1x_get_GPIO2_gpio(struct snd_kcontrol *kcontrol,
 	return 0;
 };
 
-static s32 tac5x1x_set_GPIO2_gpio(struct snd_kcontrol *kcontrol,
-				  struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	s32 gpio_check, val;
-
-	val = snd_soc_component_read(component, TAC5X1X_GPIO2);
-	gpio_check = ((val & TAC5X1X_GPIOX_CFG_MASK) >> 0);
-	if (gpio_check == TAC5X1X_GPIO_DISABLE) {
-		dev_err(component->dev,
-			"%s: GPIO2 is not configure as a GPO output\n",
-			__func__);
-		return -EINVAL;
-	}
-
-	if (ucontrol->value.integer.value[0])
-		val = 0;
-	else
-		val = TAC5X1X_GPIO2_VAL;
-
-	ucontrol->value.integer.value[0] = (val >> 0);
-	snd_soc_component_update_bits(component, TAC5X1X_GPIOVAL,
-				      TAC5X1X_GPIO2_VAL, val);
-
-	return 1;
-};
-
 static s32 tac5x1x_get_GPI1_gpio(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
 {
@@ -511,16 +430,8 @@ static s32 tac5x1x_get_GPI1_gpio(struct snd_kcontrol *kcontrol,
 	return 0;
 };
 
-static const struct snd_kcontrol_new tac5x1x_GPO1[] = {
-	SOC_SINGLE_BOOL_EXT("GPO1 GPO", 0, NULL, tac5x1x_set_GPO1_gpio),
-};
-
 static const struct snd_kcontrol_new tac5x1x_GPIO1_I[] = {
 	SOC_SINGLE_BOOL_EXT("GPIO1 GPI", 0, tac5x1x_get_GPIO1_gpio, NULL),
-};
-
-static const struct snd_kcontrol_new tac5x1x_GPIO1_O[] = {
-	SOC_SINGLE_BOOL_EXT("GPIO1 GPO", 0, NULL, tac5x1x_set_GPIO1_gpio),
 };
 
 static const struct snd_kcontrol_new tac5x1x_GPIO2_I[] = {
@@ -531,10 +442,6 @@ static const struct snd_kcontrol_new tac5x1x_GPIO2_I[] = {
 		.get = tac5x1x_get_GPIO2_gpio,
 		.info = snd_soc_info_bool_ext,
 	}
-};
-
-static const struct snd_kcontrol_new tac5x1x_GPIO2_O[] = {
-	SOC_SINGLE_BOOL_EXT("GPIO2 GPO", 0, NULL, tac5x1x_set_GPIO2_gpio),
 };
 
 static const struct snd_kcontrol_new tac5x1x_GPI1[] = {
@@ -1639,9 +1546,6 @@ static void tac5x1x_setup_gpios(struct snd_soc_component *component)
 		if (gpio_func[0] == TAC5X1X_GPIO_GPI)
 			snd_soc_add_component_controls(component, tac5x1x_GPIO1_I,
 						       ARRAY_SIZE(tac5x1x_GPIO1_I));
-		else if (gpio_func[0] == TAC5X1X_GPIO_GPO)
-			snd_soc_add_component_controls(component, tac5x1x_GPIO1_O,
-						       ARRAY_SIZE(tac5x1x_GPIO1_O));
 	}
 	/* GPIO2 */
 	if (gpio_func[1] <= TAC5X1X_GPIO_DAISY_OUT) {
@@ -1653,9 +1557,6 @@ static void tac5x1x_setup_gpios(struct snd_soc_component *component)
 		if (gpio_func[1] == TAC5X1X_GPIO_GPI)
 			snd_soc_add_component_controls(component, tac5x1x_GPIO2_I,
 						       ARRAY_SIZE(tac5x1x_GPIO2_I));
-		else if (gpio_func[1] == TAC5X1X_GPIO_GPO)
-			snd_soc_add_component_controls(component, tac5x1x_GPIO2_O,
-						       ARRAY_SIZE(tac5x1x_GPIO2_O));
 	}
 	/* GPO1 */
 	if (gpio_func[2] <= TAC5X1X_GPIO_DAISY_OUT) {
@@ -1663,10 +1564,6 @@ static void tac5x1x_setup_gpios(struct snd_soc_component *component)
 					      gpio_func[2] << 4);
 		snd_soc_component_update_bits(component, TAC5X1X_GPO1, TAC5X1X_GPIOX_DRV_MASK,
 					      gpio_drive[2]);
-
-		if (gpio_func[2] == TAC5X1X_GPIO_GPO)
-			snd_soc_add_component_controls(component, tac5x1x_GPO1,
-						       ARRAY_SIZE(tac5x1x_GPO1));
 	}
 	/* GPI1 */
 	if (tac5x1x->gpio_setup->gpi1_func) {
