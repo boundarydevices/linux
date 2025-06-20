@@ -1,2 +1,3 @@
 # SPDX-License-Identifier: GPL-2.0-only
 source "drivers/media/platform/mediatek/isp/isp_30/Kconfig"
+source "drivers/media/platform/mediatek/isp/isp_6s/Kconfig"
