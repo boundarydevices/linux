@@ -31,6 +31,7 @@ static const struct mtk_gate_regs impe_cg_regs = {
 		.regs = &impe_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_IMPE_V(_id, _name, _parent) {    \
@@ -41,9 +42,9 @@ static const struct mtk_gate_regs impe_cg_regs = {
 
 static const struct mtk_gate impe_clks[] = {
 	GATE_IMPE(CLK_IMPE_I2C0, "impe_i2c0",
-			"i2c_ck"/* parent */, 0),
+			"i2c_sel"/* parent */, 0),
 	GATE_IMPE(CLK_IMPE_I2C1, "impe_i2c1",
-			"i2c_ck"/* parent */, 1),
+			"i2c_sel"/* parent */, 1),
 };
 
 static const struct mtk_clk_desc impe_mcd = {
@@ -64,6 +65,7 @@ static const struct mtk_gate_regs impen_cg_regs = {
 		.regs = &impen_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_IMPEN_V(_id, _name, _parent) {    \
@@ -74,9 +76,9 @@ static const struct mtk_gate_regs impen_cg_regs = {
 
 static const struct mtk_gate impen_clks[] = {
 	GATE_IMPEN(CLK_IMPEN_I2C7, "impen_i2c7",
-			"i2c_ck"/* parent */, 0),
+			"i2c_sel"/* parent */, 0),
 	GATE_IMPEN(CLK_IMPEN_I2C8, "impen_i2c8",
-			"i2c_ck"/* parent */, 1),
+			"i2c_sel"/* parent */, 1),
 };
 
 static const struct mtk_clk_desc impen_mcd = {
@@ -97,6 +99,7 @@ static const struct mtk_gate_regs imps_cg_regs = {
 		.regs = &imps_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_IMPS_V(_id, _name, _parent) {    \
@@ -107,13 +110,13 @@ static const struct mtk_gate_regs imps_cg_regs = {
 
 static const struct mtk_gate imps_clks[] = {
 	GATE_IMPS(CLK_IMPS_I2C3, "imps_i2c3",
-			"i2c_ck"/* parent */, 0),
+			"i2c_sel"/* parent */, 0),
 	GATE_IMPS(CLK_IMPS_I2C4, "imps_i2c4",
-			"i2c_ck"/* parent */, 1),
+			"i2c_sel"/* parent */, 1),
 	GATE_IMPS(CLK_IMPS_I2C5, "imps_i2c5",
-			"i2c_ck"/* parent */, 2),
+			"i2c_sel"/* parent */, 2),
 	GATE_IMPS(CLK_IMPS_I2C6, "imps_i2c6",
-			"i2c_ck"/* parent */, 3),
+			"i2c_sel"/* parent */, 3),
 };
 
 static const struct mtk_clk_desc imps_mcd = {
@@ -134,6 +137,7 @@ static const struct mtk_gate_regs impws_cg_regs = {
 		.regs = &impws_cg_regs,			\
 		.shift = _shift,			\
 		.ops = &mtk_clk_gate_ops_setclr,	\
+		.flags = CLK_OPS_PARENT_ENABLE,	\
 	}
 
 #define GATE_IMPWS_V(_id, _name, _parent) {    \
@@ -144,7 +148,7 @@ static const struct mtk_gate_regs impws_cg_regs = {
 
 static const struct mtk_gate impws_clks[] = {
 	GATE_IMPWS(CLK_IMPWS_I2C2, "impws_i2c2",
-			"i2c_ck"/* parent */, 0),
+			"i2c_sel"/* parent */, 0),
 };
 
 static const struct mtk_clk_desc impws_mcd = {
