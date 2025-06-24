@@ -381,6 +381,42 @@
 			status = "disabled";
 		};
 
+		uart1: serial@11002000 {
+			compatible = "mediatek,mt6577-uart";
+			reg = <0 0x11002000 0 0x1000>;
+			interrupts = <GIC_SPI 398 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&clk26m>, <&pericfg_ao_clk CLK_PERAO_UART1>;
+			clock-names = "baud", "bus";
+			dmas = <&apdma 2 &apdma 3>;
+			dma-names = "tx", "rx";
+			uart-line = <1>;
+			status = "disabled";
+		};
+
+		uart2: serial@11003000 {
+			compatible = "mediatek,mt6577-uart";
+			reg = <0 0x11003000 0 0x1000>;
+			interrupts = <GIC_SPI 399 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&clk26m>, <&pericfg_ao_clk CLK_PERAO_UART2>;
+			clock-names = "baud", "bus";
+			dmas = <&apdma 4 &apdma 5>;
+			dma-names = "tx", "rx";
+			uart-line = <2>;
+			status = "disabled";
+		};
+
+		uart3: serial@11004000 {
+			compatible = "mediatek,mt6577-uart";
+			reg = <0 0x11004000 0 0x1000>;
+			interrupts = <GIC_SPI 457 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&clk26m>, <&pericfg_ao_clk CLK_PERAO_UART3>;
+			clock-names = "baud", "bus";
+			dmas = <&apdma 6 &apdma 7>;
+			dma-names = "tx", "rx";
+			uart-line = <3>;
+			status = "disabled";
+		};
+
 		afe_clk: syscon@11050000 {
 			compatible = "mediatek,mt8189-audiosys", "syscon";
 			reg = <0 0x11050000 0 0x1000>;
@@ -786,6 +822,30 @@
 					(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
 					>;
 			};
+		};
+
+		apdma: dma-controller@11300b00 {
+			compatible = "mediatek,mt6577-uart-dma";
+			reg = <0 0x11300b00 0 0x80>,
+			      <0 0x11300b80 0 0x80>,
+			      <0 0x11300c00 0 0x80>,
+			      <0 0x11300c80 0 0x80>,
+			      <0 0x11300d00 0 0x80>,
+			      <0 0x11300d80 0 0x80>,
+			      <0 0x11300e00 0 0x80>,
+			      <0 0x11300e80 0 0x80>;
+			interrupts = <GIC_SPI 432 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 433 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 434 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 435 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 437 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 438 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&pericfg_ao_clk CLK_PERAO_DMA_B>;
+			clock-names = "apdma";
+			dma-requests = <8>;
+			#dma-cells = <1>;
 		};
 
 		u3phy3: t-phy3@11b00000 {
