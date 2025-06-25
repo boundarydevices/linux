@@ -806,6 +806,13 @@
 
 &afe {
 	memory-region = <&afe_dma_mem_reserved>;
+	status = "okay";
+};
+
+&sound {
+	compatible = "mediatek,mt8189-mt6359p-sound";
+	model = "mt8391-evk";
+	status = "okay";
 
 	pinctrl-names = "aud-gpio-i2sin0-off",
 		"aud-gpio-i2sin0-on",
@@ -817,14 +824,6 @@
 	pinctrl-1 = <&aud_gpio_i2sin0_on>;
 	pinctrl-2 = <&aud_gpio_i2sout0_off>;
 	pinctrl-3 = <&aud_gpio_i2sout0_on>;
-
-	status = "okay";
-};
-
-&sound {
-	compatible = "mediatek,mt8189-mt6359p-sound";
-	model = "mt8391-evk";
-	status = "okay";
 
 	audio-routing = "I2SOUT0", "ETDMOUT_HP_PIN",
 			"I2SIN0", "ETDMIN_HP_PIN";
