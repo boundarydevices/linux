@@ -48,12 +48,6 @@
  */
 #define RT5682I_CODEC_DAI     "rt5682-aif1"
 
-#define SOF_DMA_DL1 "SOF_DMA_DL1"
-#define SOF_DMA_DL_24CH "SOF_DMA_DL_24CH"
-#define SOF_DMA_UL0 "SOF_DMA_UL0"
-#define SOF_DMA_UL1 "SOF_DMA_UL1"
-#define SOF_DMA_UL2 "SOF_DMA_UL2"
-
 enum mt8189_jacks {
 	MT8189_JACK_HEADSET,
 	MT8189_JACK_DP,
@@ -112,10 +106,14 @@ static const struct snd_kcontrol_new mt8189_nau8825_controls[] = {
  */
 #define EXT_SPK_AMP_W_NAME "Ext_Speaker_Amp"
 
-
-static struct snd_soc_card mt8189_mt6359p_soc_card;
-
 static const struct snd_soc_dapm_widget mt8189_mt6359p_widgets[] = {
+	SND_SOC_DAPM_PINCTRL("ETDMIN_SPK_PIN", "aud-gpio-i2sin1-on", "aud-gpio-i2sin1-off"),
+	SND_SOC_DAPM_PINCTRL("ETDMOUT_SPK_PIN", "aud-gpio-i2sout1-on", "aud-gpio-i2sout1-off"),
+	SND_SOC_DAPM_PINCTRL("ETDMIN_HP_PIN", "aud-gpio-i2sin0-on", "aud-gpio-i2sin0-off"),
+	SND_SOC_DAPM_PINCTRL("ETDMOUT_HP_PIN", "aud-gpio-i2sout0-on", "aud-gpio-i2sout0-off"),
+	SND_SOC_DAPM_PINCTRL("ETDMOUT_HDMI_PIN", "aud-gpio-pcm-on", "aud-gpio-pcm-off"),
+	SND_SOC_DAPM_PINCTRL("AP_DMIC0_PIN", "aud-gpio-ap-dmic-on", "aud-gpio-ap-dmic-off"),
+	SND_SOC_DAPM_PINCTRL("AP_DMIC1_PIN", "aud-gpio-ap-dmic1-on", "aud-gpio-ap-dmic1-off"),
 };
 
 static const struct snd_soc_dapm_route mt8189_mt6359p_routes[] = {
@@ -132,7 +130,7 @@ static const struct snd_kcontrol_new mt8189_mt6359p_controls[] = {
 static int mt8189_mt6359p_i2s_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	unsigned int rate = params_rate(params);
 	unsigned int mclk_fs_ratio = 128;
 	unsigned int mclk_fs = rate * mclk_fs_ratio;
@@ -149,7 +147,7 @@ static const struct snd_soc_ops mt8189_mt6359p_i2s_ops = {
 static int mt8189_dptx_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	unsigned int rate = params_rate(params);
 	unsigned int mclk_fs_ratio = 256;
 	unsigned int mclk_fs = rate * mclk_fs_ratio;
@@ -165,7 +163,7 @@ static const struct snd_soc_ops mt8189_dptx_ops = {
 static int mt8189_dptx_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 				       struct snd_pcm_hw_params *params)
 {
-	dev_info(rtd->dev, "%s(), fix format to 32bit\n", __func__);
+	dev_dbg(rtd->dev, "%s(), fix format to 32bit\n", __func__);
 
 	/* fix BE i2s format to 32bit, clean param mask first */
 	snd_mask_reset_range(hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT),
@@ -178,162 +176,162 @@ static int mt8189_dptx_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 
 /* FE */
 SND_SOC_DAILINK_DEFS(playback0,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL0")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL0")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback1,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL1")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback2,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL2")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL2")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback3,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL3")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL3")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback4,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL4")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL4")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback5,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL5")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL5")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback6,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL6")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL6")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback7,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL7")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL7")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback8,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL8")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL8")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback23,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL23")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL23")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback24,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL24")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL24")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback25,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL25")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL25")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback_24ch,
-	DAILINK_COMP_ARRAY(COMP_CPU("DL_24CH")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("DL_24CH")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture0,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL0")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL0")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture1,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL1")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture2,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL2")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL2")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture3,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL3")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL3")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture4,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL4")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL4")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture5,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL5")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL5")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture6,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL6")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL6")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture7,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL7")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL7")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture8,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL8")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL8")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture9,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL9")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL9")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture10,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL10")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL10")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture24,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL24")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL24")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture25,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL25")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL25")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture_cm0,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL_CM0")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL_CM0")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture_cm1,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL_CM1")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL_CM1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture_etdm_in0,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL_ETDM_IN0")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL_ETDM_IN0")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(capture_etdm_in1,
-	DAILINK_COMP_ARRAY(COMP_CPU("UL_ETDM_IN1")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("UL_ETDM_IN1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback_hdmi,
-	DAILINK_COMP_ARRAY(COMP_CPU("HDMI")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("HDMI")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 /* BE */
 SND_SOC_DAILINK_DEFS(ap_dmic,
-	DAILINK_COMP_ARRAY(COMP_CPU("AP_DMIC")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("AP_DMIC")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(ap_dmic_ch34,
-	DAILINK_COMP_ARRAY(COMP_CPU("AP_DMIC_CH34")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("AP_DMIC_CH34")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(i2sin0,
-	DAILINK_COMP_ARRAY(COMP_CPU("I2SIN0")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("I2SIN0")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(i2sin1,
-	DAILINK_COMP_ARRAY(COMP_CPU("I2SIN1")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("I2SIN1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(i2sout0,
-	DAILINK_COMP_ARRAY(COMP_CPU("I2SOUT0")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("I2SOUT0")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(i2sout1,
-	DAILINK_COMP_ARRAY(COMP_CPU("I2SOUT1")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("I2SOUT1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(pcm0,
-	DAILINK_COMP_ARRAY(COMP_CPU("PCM 0")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("PCM 0")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(tdm_dptx,
-	DAILINK_COMP_ARRAY(COMP_CPU("TDM_DPTX")),
-	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+		     DAILINK_COMP_ARRAY(COMP_CPU("TDM_DPTX")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 	/* Front End DAI links */
@@ -619,7 +617,7 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 	/* Back End DAI links */
 	{
 		.name = "I2SIN0_BE",
-		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBC_CFC
 			| SND_SOC_DAIFMT_GATED,
 		.ops = &mt8189_mt6359p_i2s_ops,
 		.no_pcm = 1,
@@ -629,7 +627,7 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 	},
 	{
 		.name = "I2SIN1_BE",
-		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBC_CFC
 			| SND_SOC_DAIFMT_GATED,
 		.ops = &mt8189_mt6359p_i2s_ops,
 		.no_pcm = 1,
@@ -639,7 +637,7 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 	},
 	{
 		.name = "I2SOUT0_BE",
-		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBC_CFC
 			| SND_SOC_DAIFMT_GATED,
 		.ops = &mt8189_mt6359p_i2s_ops,
 		.no_pcm = 1,
@@ -649,7 +647,7 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 	},
 	{
 		.name = "I2SOUT1_BE",
-		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBC_CFC
 			| SND_SOC_DAIFMT_GATED,
 		.ops = &mt8189_mt6359p_i2s_ops,
 		.no_pcm = 1,
@@ -673,7 +671,7 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 	},
 	{
 		.name = "TDM_DPTX_BE",
-		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBC_CFC
 			| SND_SOC_DAIFMT_GATED,
 		.ops = &mt8189_dptx_ops,
 		.be_hw_params_fixup = mt8189_dptx_hw_params_fixup,
@@ -684,7 +682,7 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 	},
 	{
 		.name = "PCM_0_BE",
-		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBC_CFC
 			| SND_SOC_DAIFMT_GATED,
 		.no_pcm = 1,
 		.dpcm_playback = 1,
@@ -833,7 +831,7 @@ static int mt8189_nau8825_hw_params(struct snd_pcm_substream *substream,
 	int clk_freq, ret;
 
 	clk_freq = rate * 2 * bit_width;
-	dev_info(codec_dai->dev, "clk_freq %d, rate: %d, bit_width: %d\n",
+	dev_dbg(codec_dai->dev, "clk_freq %d, rate: %d, bit_width: %d\n",
 		clk_freq, rate, bit_width);
 
 	/* Configure clock for codec */
@@ -859,10 +857,10 @@ static const struct snd_soc_ops mt8189_nau8825_ops = {
 	.hw_params = mt8189_nau8825_hw_params,
 };
 
-static int mt8189_rt5650_i2s_hw_params(struct snd_pcm_substream *substream,
+static int mt8189_headset_i2s_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
@@ -882,17 +880,13 @@ static int mt8189_rt5650_i2s_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	ret = snd_soc_dai_set_pll(codec_dai, RT5682S_PLL1, RT5682S_PLL_S_BCLK1,
-				  rate * 32, rate * 512);
+	ret = snd_soc_dai_set_pll(codec_dai, 0, 1, rate * 32, rate * 512);
 	if (ret) {
 		dev_err(card->dev, "failed to set pll\n");
 		return ret;
 	}
 
-	dev_info(card->dev, "%s set mclk rate: %d\n", __func__, rate * 512);
-
-	ret = snd_soc_dai_set_sysclk(codec_dai, RT5682S_SCLK_S_PLL1,
-				     rate * 512, SND_SOC_CLOCK_IN);
+	ret = snd_soc_dai_set_sysclk(codec_dai, 1, rate * 512, SND_SOC_CLOCK_IN);
 	if (ret) {
 		dev_err(card->dev, "failed to set sysclk\n");
 		return ret;
@@ -902,8 +896,8 @@ static int mt8189_rt5650_i2s_hw_params(struct snd_pcm_substream *substream,
 				      SND_SOC_CLOCK_OUT);
 }
 
-static const struct snd_soc_ops mt8189_rt5650_i2s_ops = {
-	.hw_params = mt8189_rt5650_i2s_hw_params,
+static const struct snd_soc_ops mt8189_headset_i2s_ops = {
+	.hw_params = mt8189_headset_i2s_hw_params,
 };
 
 static int mt8189_mt6359p_soc_card_probe(struct mtk_soc_card_data *soc_card_data, bool legacy)
@@ -917,7 +911,7 @@ static int mt8189_mt6359p_soc_card_probe(struct mtk_soc_card_data *soc_card_data
 	bool init_dumb = false;
 	int i;
 
-	dev_info(card->dev, "%s(), legacy: %d\n", __func__, legacy);
+	dev_dbg(card->dev, "%s(), legacy: %d\n", __func__, legacy);
 
 	for_each_card_prelinks(card, i, dai_link) {
 		if (strcmp(dai_link->name, "TDM_DPTX_BE") == 0) {
@@ -938,21 +932,21 @@ static int mt8189_mt6359p_soc_card_probe(struct mtk_soc_card_data *soc_card_data
 					init_nau8825 = true;
 				}
 			} else if (!strcmp(dai_link->codecs->dai_name, RT5682S_CODEC_DAI)) {
-				dai_link->ops = &mt8189_rt5650_i2s_ops;
+				dai_link->ops = &mt8189_headset_i2s_ops;
 				if (!init_rt5682s) {
 					dai_link->init = mt8189_headset_codec_init;
 					dai_link->exit = mt8189_headset_codec_exit;
 					init_rt5682s = true;
 				}
 			} else if (!strcmp(dai_link->codecs->dai_name, RT5650_CODEC_DAI)) {
-				dai_link->ops = &mt8189_rt5650_i2s_ops;
+				dai_link->ops = &mt8189_headset_i2s_ops;
 				if (!init_rt5650) {
 					dai_link->init = mt8189_headset_codec_init;
 					dai_link->exit = mt8189_headset_codec_exit;
 					init_rt5650 = true;
 				}
 			} else if (!strcmp(dai_link->codecs->dai_name, RT5682I_CODEC_DAI)) {
-				dai_link->ops = &mt8189_rt5650_i2s_ops;
+				dai_link->ops = &mt8189_headset_i2s_ops;
 				if (!init_rt5682i) {
 					dai_link->init = mt8189_headset_codec_init;
 					dai_link->exit = mt8189_headset_codec_exit;
@@ -1071,4 +1065,3 @@ MODULE_DESCRIPTION("MT8189 MT6359p ALSA SoC machine driver");
 MODULE_AUTHOR("Darren Ye <darren.ye@mediatek.com>");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("mt8189 mt6359p soc card");
-

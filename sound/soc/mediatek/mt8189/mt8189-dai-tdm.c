@@ -12,14 +12,13 @@
 #include "mt8189-afe-common.h"
 #include "mt8189-interconnection.h"
 
-struct mtk_afe_tdm_priv {
-	int bck_id;
-	int bck_rate;
-
-	int mclk_id;
-	int mclk_multiple; /* according to sample rate */
-	int mclk_rate;
-	int mclk_apll;
+enum {
+	SUPPLY_SEQ_APLL,
+	SUPPLY_SEQ_TDM_MCK_EN,
+	SUPPLY_SEQ_TDM_BCK_EN,
+	SUPPLY_SEQ_TDM_DPTX_MCK_EN,
+	SUPPLY_SEQ_TDM_DPTX_BCK_EN,
+	SUPPLY_SEQ_TDM_CG_EN,
 };
 
 enum {
@@ -62,6 +61,16 @@ enum {
 	DPTX_CH_EN_MASK_4CH = 0xf,
 	DPTX_CH_EN_MASK_6CH = 0x3f,
 	DPTX_CH_EN_MASK_8CH = 0xff,
+};
+
+struct mtk_afe_tdm_priv {
+	int bck_id;
+	int bck_rate;
+
+	int mclk_id;
+	int mclk_multiple; /* according to sample rate */
+	int mclk_rate;
+	int mclk_apll;
 };
 
 static unsigned int get_tdm_wlen(snd_pcm_format_t format)
@@ -115,7 +124,6 @@ static unsigned int get_dptx_ch_enable_mask(unsigned int ch)
 	case 8:
 		return DPTX_CH_EN_MASK_8CH;
 	default:
-		pr_info("invalid channel num, default use 2ch\n");
 		return DPTX_CH_EN_MASK_2CH;
 	}
 }
@@ -124,8 +132,8 @@ static unsigned int get_dptx_ch(unsigned int ch)
 {
 	if (ch == 2)
 		return DPTX_CHANNEL_2;
-	else
-		return DPTX_CHANNEL_8;
+
+	return DPTX_CHANNEL_8;
 }
 
 static unsigned int get_dptx_wlen(snd_pcm_format_t format)
@@ -251,48 +259,41 @@ static int tdm_out_mux_map_value[] = {
 };
 
 static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(hdmi_out_mux_map_enum,
-		SND_SOC_NOPM,
-		0,
-		1,
-		tdm_out_mux_map,
-		tdm_out_mux_map_value);
+					      SND_SOC_NOPM,
+					      0,
+					      1,
+					      tdm_out_mux_map,
+					      tdm_out_mux_map_value);
+
 static const struct snd_kcontrol_new hdmi_out_mux_control =
 	SOC_DAPM_ENUM("HDMI_OUT_MUX", hdmi_out_mux_map_enum);
 
 static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(dptx_out_mux_map_enum,
-		SND_SOC_NOPM,
-		0,
-		1,
-		tdm_out_mux_map,
-		tdm_out_mux_map_value);
+					      SND_SOC_NOPM,
+					      0,
+					      1,
+					      tdm_out_mux_map,
+					      tdm_out_mux_map_value);
+
 static const struct snd_kcontrol_new dptx_out_mux_control =
 	SOC_DAPM_ENUM("DPTX_OUT_MUX", dptx_out_mux_map_enum);
 
-
 static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(dptx_virtual_out_mux_map_enum,
-		SND_SOC_NOPM,
-		0,
-		1,
-		tdm_out_mux_map,
-		tdm_out_mux_map_value);
+					      SND_SOC_NOPM,
+					      0,
+					      1,
+					      tdm_out_mux_map,
+					      tdm_out_mux_map_value);
 
 static const struct snd_kcontrol_new dptx_virtual_out_mux_control =
 	SOC_DAPM_ENUM("DPTX_VIRTUAL_OUT_MUX", dptx_virtual_out_mux_map_enum);
-
-enum {
-	SUPPLY_SEQ_APLL,
-	SUPPLY_SEQ_TDM_MCK_EN,
-	SUPPLY_SEQ_TDM_BCK_EN,
-	SUPPLY_SEQ_TDM_DPTX_MCK_EN,
-	SUPPLY_SEQ_TDM_DPTX_BCK_EN,
-};
 
 static int get_tdm_id_by_name(const char *name)
 {
 	if (strstr(name, "DPTX"))
 		return MT8189_DAI_TDM_DPTX;
-	else
-		return MT8189_DAI_TDM;
+
+	return MT8189_DAI_TDM;
 }
 
 static int mtk_tdm_bck_en_event(struct snd_soc_dapm_widget *w,
@@ -305,8 +306,8 @@ static int mtk_tdm_bck_en_event(struct snd_soc_dapm_widget *w,
 	int dai_id = get_tdm_id_by_name(w->name);
 	struct mtk_afe_tdm_priv *tdm_priv = afe_priv->dai_priv[dai_id];
 
-	dev_info(cmpnt->dev, "name %s, event 0x%x, dai_id %d, bck: %d\n",
-		 w->name, event, dai_id, tdm_priv->bck_rate);
+	dev_dbg(cmpnt->dev, "name %s, event 0x%x, dai_id %d, bck: %d\n",
+		w->name, event, dai_id, tdm_priv->bck_rate);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
@@ -332,8 +333,8 @@ static int mtk_tdm_mck_en_event(struct snd_soc_dapm_widget *w,
 	int dai_id = get_tdm_id_by_name(w->name);
 	struct mtk_afe_tdm_priv *tdm_priv = afe_priv->dai_priv[dai_id];
 
-	dev_info(cmpnt->dev, "name %s, event 0x%x, dai_id %d, mclk %d\n",
-		 w->name, event, dai_id, tdm_priv->mclk_rate);
+	dev_dbg(cmpnt->dev, "name %s, event 0x%x, dai_id %d, mclk %d\n",
+		w->name, event, dai_id, tdm_priv->mclk_rate);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
@@ -391,6 +392,10 @@ static const struct snd_soc_dapm_widget mtk_dai_tdm_widgets[] = {
 			      SND_SOC_NOPM, 0, 0,
 			      mtk_tdm_mck_en_event,
 			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_SUPPLY_S("TDM_CG", SUPPLY_SEQ_TDM_CG_EN,
+			      AUDIO_TOP_CON2, PDN_TDM_OUT_SFT, 1,
+			      NULL, 0),
 
 	SND_SOC_DAPM_MUX("DPTX_VIRTUAL_OUT_MUX",
 			 SND_SOC_NOPM, 0, 0, &dptx_virtual_out_mux_control),
@@ -507,9 +512,11 @@ static const struct snd_soc_dapm_route mtk_dai_tdm_routes[] = {
 
 	{"TDM", NULL, "HDMI_OUT_MUX"},
 	{"TDM", NULL, "TDM_BCK"},
+	{"TDM", NULL, "TDM_CG"},
 
 	{"TDM_DPTX", NULL, "DPTX_OUT_MUX"},
 	{"TDM_DPTX", NULL, "TDM_DPTX_BCK"},
+	{"TDM_DPTX", NULL, "TDM_CG"},
 
 	{"TDM_BCK", NULL, "TDM_MCK"},
 	{"TDM_DPTX_BCK", NULL, "TDM_DPTX_MCK"},
@@ -582,14 +589,11 @@ static int mtk_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 	if (tdm_priv->mclk_rate % tdm_priv->bck_rate != 0)
 		return -EINVAL;
 
-	dev_info(afe->dev, "id %d, rate %d, channels %d, format %d, mclk_rate %d, bck_rate %d\n",
-		 tdm_id, rate, channels, format,
-		 tdm_priv->mclk_rate, tdm_priv->bck_rate);
+	dev_dbg(afe->dev, "id %d, rate %d, channels %d, format %d, mclk_rate %d, bck_rate %d\n",
+		tdm_id, rate, channels, format,
+		tdm_priv->mclk_rate, tdm_priv->bck_rate);
 
 	/* set tdm */
-	tdm_con = 0 << BCK_INVERSE_SFT;
-	tdm_con |= 0 << LRCK_INVERSE_SFT;
-	tdm_con |= 0 << DELAY_DATA_SFT;
 	tdm_con |= 1 << LEFT_ALIGN_SFT;
 	tdm_con |= get_tdm_wlen(format) << WLEN_SFT;
 	tdm_con |= get_tdm_ch(channels) << CHANNEL_NUM_SFT;
@@ -657,7 +661,7 @@ static int mtk_dai_tdm_trigger(struct snd_pcm_substream *substream,
 	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
 	int tdm_id = dai->id;
 
-	dev_info(afe->dev, "%s(), cmd %d, tdm_id %d\n", __func__, cmd, tdm_id);
+	dev_dbg(afe->dev, "%s(), cmd %d, tdm_id %d\n", __func__, cmd, tdm_id);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
@@ -711,7 +715,7 @@ static int mtk_dai_tdm_set_sysclk(struct snd_soc_dai *dai,
 	if (dai->id >= MT8189_DAI_NUM || dai->id < 0)
 		return -EINVAL;
 
-	 tdm_priv = afe_priv->dai_priv[dai->id];
+	tdm_priv = afe_priv->dai_priv[dai->id];
 
 	if (!tdm_priv)
 		return -EINVAL;
@@ -719,7 +723,7 @@ static int mtk_dai_tdm_set_sysclk(struct snd_soc_dai *dai,
 	if (dir != SND_SOC_CLOCK_OUT)
 		return -EINVAL;
 
-	dev_info(afe->dev, "%s(), freq %d\n", __func__, freq);
+	dev_dbg(afe->dev, "%s(), freq %d\n", __func__, freq);
 
 	return mtk_dai_tdm_cal_mclk(afe, tdm_priv, freq);
 }
@@ -822,4 +826,3 @@ int mt8189_dai_tdm_register(struct mtk_base_afe *afe)
 
 	return 0;
 }
-

@@ -80,7 +80,7 @@ enum AUD_PCM_EN {
 	AUD_PCM_EN_ENABLE = 1
 };
 
-enum AUD_PCM1_1x_EN_Domain {
+enum AUD_PCM1_1x_EN_DOMAIN {
 	HOPPING_26M = 0,
 	APLL = 1,
 	SLAVE = 6,
@@ -111,7 +111,7 @@ static unsigned int pcm_1x_rate_transform(struct device *dev,
 	case 48000:
 		return PCM_48K;
 	default:
-		dev_info(dev, "rate %u invalid, use %d!!!\n",
+		dev_warn(dev, "rate %u invalid, use %d!!!\n",
 			 rate, PCM_48K);
 		return PCM_48K;
 	}
@@ -130,7 +130,7 @@ static unsigned int pcm_rate_transform(struct device *dev,
 	case 48000:
 		return MTK_AFE_PCM_RATE_48K;
 	default:
-		dev_info(dev, "rate %u invalid, use %d\n",
+		dev_warn(dev, "rate %u invalid, use %d\n",
 			 rate, MTK_AFE_PCM_RATE_48K);
 		return MTK_AFE_PCM_RATE_48K;
 	}
@@ -166,46 +166,6 @@ static const struct snd_kcontrol_new mtk_pcm_0_playback_ch4_mix[] = {
 				    I_DL_24CH_CH1, 1, 0),
 };
 
-static int mtk_pcm_en_event(struct snd_soc_dapm_widget *w,
-			    struct snd_kcontrol *kcontrol,
-			    int event)
-{
-	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
-	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
-
-	dev_info(afe->dev, "%s(), name %s, event 0x%x\n",
-		 __func__, w->name, event);
-
-	switch (event) {
-	case SND_SOC_DAPM_PRE_PMU:
-		/* audio apll1 on */
-		regmap_update_bits(afe->regmap, AUDIO_ENGEN_CON0,
-				   AUDIO_APLL1_EN_ON_MASK_SFT,
-				   0x1 << AUDIO_APLL1_EN_ON_SFT);
-
-		/* audio apll2 on */
-		regmap_update_bits(afe->regmap, AUDIO_ENGEN_CON0,
-				   AUDIO_APLL2_EN_ON_MASK_SFT,
-				   0x1 << AUDIO_APLL2_EN_ON_SFT);
-		break;
-	case SND_SOC_DAPM_POST_PMD:
-		/* audio apll1 off */
-		regmap_update_bits(afe->regmap, AUDIO_ENGEN_CON0,
-				   AUDIO_APLL1_EN_ON_MASK_SFT,
-				   0x0);
-
-		/* audio apll2 off */
-		regmap_update_bits(afe->regmap, AUDIO_ENGEN_CON0,
-				   AUDIO_APLL2_EN_ON_MASK_SFT,
-				   0x0);
-		break;
-	default:
-		break;
-	}
-
-	return 0;
-}
-
 static const struct snd_soc_dapm_widget mtk_dai_pcm_widgets[] = {
 	/* inter-connections */
 	SND_SOC_DAPM_MIXER("PCM_0_PB_CH1", SND_SOC_NOPM, 0, 0,
@@ -220,8 +180,11 @@ static const struct snd_soc_dapm_widget mtk_dai_pcm_widgets[] = {
 
 	SND_SOC_DAPM_SUPPLY("PCM_0_EN",
 			    AFE_PCM0_INTF_CON0, PCM0_EN_SFT, 0,
-			    mtk_pcm_en_event,
-			    SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+			    NULL,
+			    0),
+
+	SND_SOC_DAPM_SUPPLY("PCM0_CG", AUDIO_TOP_CON0, PDN_PCM0_SFT, 1,
+			    NULL, 0),
 
 	SND_SOC_DAPM_INPUT("MD1_TO_AFE"),
 	SND_SOC_DAPM_INPUT("MD2_TO_AFE"),
@@ -236,6 +199,8 @@ static const struct snd_soc_dapm_route mtk_dai_pcm_routes[] = {
 
 	{"PCM 0 Playback", NULL, "PCM_0_EN"},
 	{"PCM 0 Capture", NULL, "PCM_0_EN"},
+	{"PCM 0 Playback", NULL, "PCM0_CG"},
+	{"PCM 0 Capture", NULL, "PCM0_CG"},
 
 	{"AFE_TO_MD2", NULL, "PCM 0 Playback"},
 	{"PCM 0 Capture", NULL, "MD2_TO_AFE"},
@@ -271,14 +236,14 @@ static int mtk_dai_pcm_hw_params(struct snd_pcm_substream *substream,
 		playback_active = playback_widget->active;
 	if (capture_widget)
 		capture_active = capture_widget->active;
-	dev_info(afe->dev,
+	dev_dbg(afe->dev,
 		"id %d, stream %d, rate %d, rate_reg %d, widget active p %d, c %d\n",
-		 dai->id,
-		 substream->stream,
-		 rate,
-		 rate_reg,
-		 playback_active,
-		 capture_active);
+		dai->id,
+		substream->stream,
+		rate,
+		rate_reg,
+		playback_active,
+		capture_active);
 
 	if (playback_active || capture_active)
 		return 0;
@@ -306,8 +271,8 @@ static int mtk_dai_pcm_hw_params(struct snd_pcm_substream *substream,
 				   0xffffffff, pcm_con1);
 		break;
 	default:
-		dev_info(afe->dev, "%s(), id %d not support\n",
-			 __func__, dai->id);
+		dev_err(afe->dev, "%s(), id %d not support\n",
+			__func__, dai->id);
 		return -EINVAL;
 	}
 	return 0;
@@ -370,4 +335,3 @@ int mt8189_dai_pcm_register(struct mtk_base_afe *afe)
 	dai->num_dapm_routes = ARRAY_SIZE(mtk_dai_pcm_routes);
 	return 0;
 }
-

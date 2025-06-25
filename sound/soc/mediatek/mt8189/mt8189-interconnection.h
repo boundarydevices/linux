@@ -81,7 +81,6 @@
 #define I_I2SIN1_CH1 (136 - I_128_OFFSET)
 #define I_I2SIN1_CH2 (137 - I_128_OFFSET)
 
-
 /* in port define >= 192 */
 #define I_192_OFFSET 192
 #define I_SRC_0_OUT_CH1 (198 - I_192_OFFSET)
