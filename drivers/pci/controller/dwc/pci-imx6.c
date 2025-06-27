@@ -47,6 +47,9 @@
 #define IMX95_PCIE_SS_RW_REG_0			0xf0
 #define IMX95_PCIE_REF_CLKEN			BIT(23)
 #define IMX95_PCIE_PHY_CR_PARA_SEL		BIT(9)
+#define IMX95_PCIE_SS_RW_REG_1			0xf4
+#define IMX95_PCIE_CLKREQ_OVERRIDE_EN		BIT(8)
+#define IMX95_PCIE_CLKREQ_OVERRIDE_VAL		BIT(9)
 
 #define IMX95_PE0_LUT_ACSCTRL			0x1008
 #define IMX95_PEO_LUT_RWA			BIT(16)
@@ -131,6 +134,7 @@ struct imx6_pcie {
 	int			host_wake_irq;
 	bool			gpio_active_high;
 	bool			link_is_up;
+	bool			supports_clkreq;
 	struct clk		*pcie_bus;
 	struct clk		*pcie_phy;
 	struct clk		*pcie_inbound_axi;
@@ -422,6 +426,15 @@ static void imx95_pcie_inti_phy(struct imx6_pcie *imx6_pcie)
 			IMX95_PCIE_SS_RW_REG_0,
 			IMX95_PCIE_PHY_CR_PARA_SEL,
 			IMX95_PCIE_PHY_CR_PARA_SEL);
+
+	/* Force CLKREQ# low by override */
+	if (imx6_pcie->supports_clkreq == false)
+		regmap_update_bits(imx6_pcie->iomuxc_gpr,
+				   IMX95_PCIE_SS_RW_REG_1,
+				   IMX95_PCIE_CLKREQ_OVERRIDE_EN |
+				   IMX95_PCIE_CLKREQ_OVERRIDE_VAL,
+				   IMX95_PCIE_CLKREQ_OVERRIDE_EN |
+				   IMX95_PCIE_CLKREQ_OVERRIDE_VAL);
 	/* Different clock modes should be handled. */
 	if (imx6_pcie->refclk_pad_mode == IMX8_PCIE_REFCLK_PAD_INPUT) {
 		/* External clock mode */
@@ -2085,6 +2098,18 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	pci->link_gen = 1;
 	of_property_read_u32(node, "fsl,max-link-speed", &pci->link_gen);
 
+	/*
+	 * CLKREQ# signal is an open drain, active low signal that is
+	 * driven by the add-in card to requtest reference clock refer
+	 * to Chapter 2.10 CLKREQ# Signal of PCI Express Card
+	 * Electromechanical Specification Rev 6.0.
+	 * If it's present in the device node of board, that means the
+	 * CLKREQ# signal had been driven low by add-in card.
+	 * Otherwise, CLKREQ# signal would be overridden to active low
+	 * by system.
+	 */
+	imx6_pcie->supports_clkreq =
+		of_property_read_bool(node, "supports-clkreq");
 	imx6_pcie->vpcie = devm_regulator_get_optional(&pdev->dev, "vpcie");
 	if (IS_ERR(imx6_pcie->vpcie)) {
 		if (PTR_ERR(imx6_pcie->vpcie) != -ENODEV)
