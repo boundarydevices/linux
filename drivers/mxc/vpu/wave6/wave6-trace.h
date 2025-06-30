@@ -1,4 +1,10 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause) */
+/*
+ * Wave6 series multi-standard codec IP - wave6 driver tracer
+ *
+ * Copyright (C) 2021 CHIPS&MEDIA INC
+ */
+
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM wave6
 
