@@ -1045,6 +1045,7 @@
 	audio-routing = "I2SOUT0", "ETDMOUT_HP_PIN",
 			"I2SIN0", "ETDMIN_HP_PIN",
 			"AP DMIC Capture", "AP_DMIC0_PIN",
+			"AP DMIC Capture", "MIC_BIAS_0",
 			"PCM 0 Capture", "ETDMOUT_HDMI_PIN",
 			"PCM 0 Playback", "ETDMOUT_HDMI_PIN",
 			"ADDA Capture", "PMIC_CODEC_PIN",
