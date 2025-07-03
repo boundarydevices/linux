@@ -350,6 +350,7 @@ config SND_SOC_MT8189_MT6359P
 	depends on SND_SOC_MT8189
 	depends on I2C
 	select SND_SOC_MT6359
+	select SND_SOC_MT6359_ACCDET
 	select SND_SOC_DMIC
 	select SND_SOC_HDMI_CODEC
 	select SND_SOC_NAU8825
