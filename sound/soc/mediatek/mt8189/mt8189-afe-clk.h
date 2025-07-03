@@ -16,6 +16,9 @@
 /* apll2 tuner default value + 1*/
 #define APLL2_TUNER_CON0_VALUE 0x78fd5265
 
+#define CKSYS_AUD_TOP_CFG 0x032c
+#define CKSYS_AUD_TOP_MON 0x0330
+
 /* APLL */
 #define APLL1_W_NAME "APLL1"
 #define APLL2_W_NAME "APLL2"

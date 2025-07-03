@@ -19,6 +19,8 @@
 #include "mt8189-afe-common.h"
 #include "mt8189-afe-clk.h"
 
+#include "../../codecs/mt6359.h"
+#include "../../codecs/mt6359-accdet.h"
 #include "../../codecs/nau8825.h"
 #include "../../codecs/rt5682s.h"
 #include "../../codecs/rt5682.h"
@@ -80,6 +82,17 @@ static struct snd_soc_jack_pin nau8825_jack_pins[] = {
 	},
 };
 
+static struct snd_soc_jack_pin mt6359_jack_pins[] = {
+	{
+		.pin    = "Headphone Jack",
+		.mask   = SND_JACK_HEADPHONE,
+	},
+	{
+		.pin    = "Headset Mic",
+		.mask   = SND_JACK_MICROPHONE,
+	},
+};
+
 static const struct snd_kcontrol_new mt8189_dumb_spk_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Ext Spk"),
 };
@@ -92,6 +105,11 @@ static const struct snd_soc_dapm_widget mt8189_nau8825_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_SINK("DP"),
+};
+
+static const struct snd_soc_dapm_widget mt8189_mt6359_widgets[] = {
+	SND_SOC_DAPM_HP("Headphone Jack", NULL),
+	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 };
 
 static const struct snd_kcontrol_new mt8189_nau8825_controls[] = {
@@ -114,6 +132,7 @@ static const struct snd_soc_dapm_widget mt8189_mt6359p_widgets[] = {
 	SND_SOC_DAPM_PINCTRL("ETDMOUT_HDMI_PIN", "aud-gpio-pcm-on", "aud-gpio-pcm-off"),
 	SND_SOC_DAPM_PINCTRL("AP_DMIC0_PIN", "aud-gpio-ap-dmic-on", "aud-gpio-ap-dmic-off"),
 	SND_SOC_DAPM_PINCTRL("AP_DMIC1_PIN", "aud-gpio-ap-dmic1-on", "aud-gpio-ap-dmic1-off"),
+	SND_SOC_DAPM_PINCTRL("PMIC_CODEC_PIN", "aud-gpio-pmic-on", "aud-gpio-pmic-off"),
 };
 
 static const struct snd_soc_dapm_route mt8189_mt6359p_routes[] = {
@@ -170,6 +189,200 @@ static int mt8189_dptx_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 			     0, (__force unsigned int)SNDRV_PCM_FORMAT_LAST);
 
 	params_set_format(params, SNDRV_PCM_FORMAT_S32_LE);
+
+	return 0;
+}
+
+static int mt8189_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct mt8189_afe_private *afe_priv = afe->platform_priv;
+	struct snd_soc_component *codec_component =
+		snd_soc_rtdcom_lookup(rtd, CODEC_MT6359_NAME);
+	struct snd_soc_dapm_widget *pin_w = NULL, *w;
+	int phase;
+	unsigned int monitor = 0;
+	int test_done_1, test_done_2;
+	int cycle_1, cycle_2;
+	int prev_cycle_1, prev_cycle_2;
+	int counter;
+	int mtkaif_calib_ok;
+
+	if (!afe_priv->topckgen || !afe->regmap)
+		return 0;
+
+	for_each_card_widgets(rtd->card, w) {
+		if (!strcmp(w->name, "PMIC_CODEC_PIN")) {
+			pin_w = w;
+			break;
+		}
+	}
+
+	if (pin_w)
+		dapm_pinctrl_event(pin_w, NULL, SND_SOC_DAPM_PRE_PMU);
+	else
+		dev_warn(afe->dev, "%s(), no pinmux widget\n", __func__);
+
+	pm_runtime_get_sync(afe->dev);
+	mt6359_mtkaif_calibration_enable(codec_component);
+
+	/* set clock protocol 2 */
+	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP_CFG0, 0xff, 0xb8);
+	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP_CFG0, 0xff, 0xb9);
+
+	/* set test type to synchronizer pulse */
+	regmap_update_bits(afe_priv->topckgen,
+			   CKSYS_AUD_TOP_CFG, 0xffff, 0x4);
+
+	mtkaif_calib_ok = true;
+	afe_priv->mtkaif_calibration_num_phase = 42;	/* mt6359: 0 ~ 42 */
+	afe_priv->mtkaif_chosen_phase[0] = -1;
+	afe_priv->mtkaif_chosen_phase[1] = -1;
+	afe_priv->mtkaif_chosen_phase[2] = -1;
+
+	for (phase = 0;
+	     phase <= afe_priv->mtkaif_calibration_num_phase &&
+	     mtkaif_calib_ok;
+	     phase++) {
+		mt6359_set_mtkaif_calibration_phase(codec_component,
+						    phase, phase, phase);
+
+		regmap_update_bits(afe_priv->topckgen,
+				   CKSYS_AUD_TOP_CFG, 0x1, 0x1);
+
+		test_done_1 = 0;
+		test_done_2 = 0;
+		cycle_1 = -1;
+		cycle_2 = -1;
+		counter = 0;
+		while (test_done_1 == 0 ||
+		       test_done_2 == 0) {
+			regmap_read(afe_priv->topckgen,
+				    CKSYS_AUD_TOP_MON, &monitor);
+
+			/* get test status */
+			if (test_done_1 == 0)
+				test_done_1 = (monitor >> 28) & 0x1;
+			if (test_done_2 == 0)
+				test_done_2 = (monitor >> 29) & 0x1;
+
+			/* get delay cycle */
+			if (test_done_1 == 1)
+				cycle_1 = monitor & 0xf;
+			if (test_done_2 == 1)
+				cycle_2 = (monitor >> 4) & 0xf;
+
+			/* handle if never test done */
+			if (++counter > 10000) {
+				dev_warn(afe->dev,
+					 "%s(), test fail, cycle_1 %d, cycle_2 %d, monitor 0x%x\n",
+					 __func__,
+					 cycle_1, cycle_2, monitor);
+				mtkaif_calib_ok = false;
+				break;
+			}
+		}
+
+		if (phase == 0) {
+			prev_cycle_1 = cycle_1;
+			prev_cycle_2 = cycle_2;
+		}
+
+		if (cycle_1 != prev_cycle_1 &&
+		    afe_priv->mtkaif_chosen_phase[0] < 0) {
+			afe_priv->mtkaif_chosen_phase[0] = phase - 1;
+			afe_priv->mtkaif_phase_cycle[0] = prev_cycle_1;
+		}
+
+		if (cycle_2 != prev_cycle_2 &&
+		    afe_priv->mtkaif_chosen_phase[1] < 0) {
+			afe_priv->mtkaif_chosen_phase[1] = phase - 1;
+			afe_priv->mtkaif_phase_cycle[1] = prev_cycle_2;
+		}
+
+		regmap_update_bits(afe_priv->topckgen,
+				   CKSYS_AUD_TOP_CFG, 0x1, 0x0);
+	}
+
+	mt6359_set_mtkaif_calibration_phase(codec_component,
+					    (afe_priv->mtkaif_chosen_phase[0] < 0) ?
+					    0 : afe_priv->mtkaif_chosen_phase[0],
+					    (afe_priv->mtkaif_chosen_phase[1] < 0) ?
+					    0 : afe_priv->mtkaif_chosen_phase[1],
+					    (afe_priv->mtkaif_chosen_phase[2] < 0) ?
+					    0 : afe_priv->mtkaif_chosen_phase[2]);
+
+	/* disable rx fifo */
+	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP_CFG0, 0xff, 0xb8);
+
+	mt6359_mtkaif_calibration_disable(codec_component);
+
+	if (pin_w)
+		dapm_pinctrl_event(pin_w, NULL, SND_SOC_DAPM_POST_PMD);
+
+	pm_runtime_put(afe->dev);
+
+	dev_info(afe->dev, "%s(), mtkaif_chosen_phase[0/1]:%d/%d\n",
+		 __func__,
+		 afe_priv->mtkaif_chosen_phase[0],
+		 afe_priv->mtkaif_chosen_phase[1]);
+
+	return 0;
+}
+
+static int mt8189_mt6359_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct mtk_soc_card_data *soc_card_data = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_card *card = rtd->card;
+	struct snd_soc_jack *jack = &soc_card_data->card_data->jacks[MT8189_JACK_HEADSET];
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct mt8189_afe_private *afe_priv = afe->platform_priv;
+	struct snd_soc_component *cmpnt;
+	struct snd_soc_dai *codec_dai;
+	int i, ret;
+
+	for_each_rtd_codec_dais(rtd, i, codec_dai) {
+		cmpnt = codec_dai->component;
+		if (strcmp(cmpnt->name, "mt6359-sound") == 0) {
+			/* set mtkaif protocol */
+			mt6359_set_mtkaif_protocol(cmpnt,
+						   MTKAIF_PROTOCOL_2_CLK_P2);
+			afe_priv->mtkaif_protocol = MTKAIF_PROTOCOL_2_CLK_P2;
+
+			/* mtkaif calibration */
+			mt8189_mt6359_mtkaif_calibration(rtd);
+		} else if (strcmp(cmpnt->name, "mt6359-accdet") == 0) {
+			ret = snd_soc_dapm_new_controls(&card->dapm, mt8189_mt6359_widgets,
+							ARRAY_SIZE(mt8189_mt6359_widgets));
+			if (ret) {
+				dev_err(rtd->dev, "unable to add card widget, ret %d\n", ret);
+				return ret;
+			}
+
+			ret = snd_soc_card_jack_new_pins(rtd->card, "Headset Jack",
+							 SND_JACK_HEADSET | SND_JACK_BTN_0 |
+							 SND_JACK_BTN_1 | SND_JACK_BTN_2 |
+							 SND_JACK_BTN_3,
+							 jack, mt6359_jack_pins,
+							 ARRAY_SIZE(mt6359_jack_pins));
+			if (ret) {
+				dev_err(rtd->dev, "Headset Jack create failed: %d\n", ret);
+				return ret;
+			}
+
+			ret = mt6359_accdet_enable_jack_detect(cmpnt, jack);
+			if (ret) {
+				dev_err(rtd->dev, "Headset Jack enable failed: %d\n", ret);
+				return ret;
+			}
+		} else {
+			dev_err(rtd->dev, "Component '%s' is invalid.\n", cmpnt->name);
+		}
+	}
 
 	return 0;
 }
@@ -300,6 +513,10 @@ SND_SOC_DAILINK_DEFS(playback_hdmi,
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 /* BE */
+SND_SOC_DAILINK_DEFS(adda,
+		     DAILINK_COMP_ARRAY(COMP_CPU("ADDA")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(ap_dmic,
 		     DAILINK_COMP_ARRAY(COMP_CPU("AP_DMIC")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
@@ -615,6 +832,15 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 		SND_SOC_DAILINK_REG(capture_etdm_in1),
 	},
 	/* Back End DAI links */
+	{
+		.name = "ADDA_BE",
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.dpcm_capture = 1,
+		.ignore_suspend = 1,
+		.init = mt8189_mt6359_init,
+		SND_SOC_DAILINK_REG(adda),
+	},
 	{
 		.name = "I2SIN0_BE",
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBC_CFC

@@ -761,6 +761,13 @@ int mt8189_init_clock(struct mtk_base_afe *afe)
 		return PTR_ERR(afe_priv->apmixed);
 	}
 
+	afe_priv->topckgen = syscon_regmap_lookup_by_phandle(afe->dev->of_node,
+							     "mediatek,topckgen");
+	if (IS_ERR(afe_priv->topckgen)) {
+		dev_err(afe->dev, "Cannot find topckgen controller\n");
+		return PTR_ERR(afe_priv->topckgen);
+	}
+
 	mt8189_afe_apll_init(afe);
 
 	ret = mt8189_afe_disable_apll(afe);
