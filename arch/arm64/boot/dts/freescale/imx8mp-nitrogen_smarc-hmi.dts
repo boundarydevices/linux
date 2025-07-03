@@ -56,7 +56,7 @@
 		enable-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds2>;
-		pwms = <&pwm1 0 100000 0>;
+		pwms = <&pwm1 0 30000 0>;
 		status = "okay";
 	};
 
@@ -328,14 +328,14 @@
 
 /* I2C_PM */
 &i2c4 {
-	ts_lvds_goodix_hmi_2: touchscreen@3a { // TODO
-		   compatible = "goodix,gt928";
+	ts_lvds_goodix_hmi_2: touchscreen@5d {
+		   compatible = "goodix,gt9271";
 		   esd-recovery-timeout-ms = <2000>;
 		   interrupts-extended = <&gpio4 2 IRQ_TYPE_LEVEL_HIGH>;
 		   irq-gpios = <&gpio4 2 GPIO_ACTIVE_HIGH>;
 		   pinctrl-names = "default";
 		   pinctrl-0 = <&pinctrl_ts_lvds_goodix>;
-		   reg = <0x3a>;
+		   reg = <0x5d>;
 		   reset-gpios = <&mcp23018 8 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
 		   status = "okay";
 	};
