@@ -304,6 +304,10 @@
 	interrupts-extended = <&pio 194 IRQ_TYPE_LEVEL_HIGH>;
 };
 
+&watchdog {
+	/delete-property/ mediatek,disable-extrst;
+};
+
 &pio {
 	uart0_pins: uart0-pins {
 		pins {
