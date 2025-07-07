@@ -121,7 +121,16 @@ enum {
 	MT8189_DAI_I2S_OUT0,
 	MT8189_DAI_I2S_OUT1,
 	MT8189_DAI_I2S_OUT4,
-	MT8189_DAI_PCM_0,
+	MT8189_DAI_SRC_START,
+	MT8189_DAI_SRC_0 = MT8189_DAI_SRC_START,
+	MT8189_DAI_SRC_1,
+	MT8189_DAI_SRC_2,
+	MT8189_DAI_SRC_3,
+	MT8189_DAI_SRC_4,
+	MT8189_DAI_SRC_END,
+	MT8189_DAI_SRC_NUM =
+		(MT8189_DAI_SRC_END - MT8189_DAI_SRC_START),
+	MT8189_DAI_PCM_0 = MT8189_DAI_SRC_END,
 	MT8189_DAI_TDM,
 	MT8189_DAI_TDM_DPTX,
 	MT8189_DAI_NUM,
@@ -292,5 +301,7 @@ int mt8189_dai_adda_register(struct mtk_base_afe *afe);
 int mt8189_dai_i2s_register(struct mtk_base_afe *afe);
 int mt8189_dai_pcm_register(struct mtk_base_afe *afe);
 int mt8189_dai_tdm_register(struct mtk_base_afe *afe);
+int mt8189_dai_src_register(struct mtk_base_afe *afe);
+unsigned int mt8189_rate_transform(struct device *dev, unsigned int rate);
 
 #endif

@@ -39,7 +39,7 @@ static const struct snd_pcm_hardware mt8189_afe_hardware = {
 	.fifo_size = 0,
 };
 
-static unsigned int mt8189_rate_transform(struct device *dev, unsigned int rate)
+unsigned int mt8189_rate_transform(struct device *dev, unsigned int rate)
 {
 	switch (rate) {
 	case 8000:
@@ -663,8 +663,12 @@ static const struct snd_kcontrol_new memif_ul1_ch1_mix[] = {
 				    I_I2SIN1_CH1, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_0_OUT_CH1", AFE_CONN020_6,
 				    I_SRC_0_OUT_CH1, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_1_OUT_CH1", AFE_CONN020_6,
+				    I_SRC_1_OUT_CH1, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_2_OUT_CH1", AFE_CONN020_6,
 				    I_SRC_2_OUT_CH1, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_3_OUT_CH1", AFE_CONN020_6,
+				    I_SRC_3_OUT_CH1, 1, 0),
 };
 
 static const struct snd_kcontrol_new memif_ul1_ch2_mix[] = {
@@ -698,8 +702,12 @@ static const struct snd_kcontrol_new memif_ul1_ch2_mix[] = {
 				    I_I2SIN1_CH2, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_0_OUT_CH2", AFE_CONN021_6,
 				    I_SRC_0_OUT_CH2, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_1_OUT_CH2", AFE_CONN021_6,
+				    I_SRC_1_OUT_CH2, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_2_OUT_CH2", AFE_CONN021_6,
 				    I_SRC_2_OUT_CH2, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_3_OUT_CH2", AFE_CONN021_6,
+				    I_SRC_3_OUT_CH2, 1, 0),
 };
 
 static const struct snd_kcontrol_new memif_ul2_ch1_mix[] = {
@@ -718,6 +726,8 @@ static const struct snd_kcontrol_new memif_ul2_ch1_mix[] = {
 				    I_GAIN1_OUT_CH1, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_1_OUT_CH1", AFE_CONN022_6,
 				    I_SRC_1_OUT_CH1, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_4_OUT_CH1", AFE_CONN022_6,
+				    I_SRC_4_OUT_CH1, 1, 0),
 };
 
 static const struct snd_kcontrol_new memif_ul2_ch2_mix[] = {
@@ -736,6 +746,8 @@ static const struct snd_kcontrol_new memif_ul2_ch2_mix[] = {
 				    I_GAIN1_OUT_CH2, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_1_OUT_CH2", AFE_CONN023_6,
 				    I_SRC_1_OUT_CH2, 1, 0),
+	SOC_DAPM_SINGLE_AUTODISABLE("HW_SRC_4_OUT_CH2", AFE_CONN023_6,
+				    I_SRC_4_OUT_CH2, 1, 0),
 };
 
 static const struct snd_kcontrol_new memif_ul3_ch1_mix[] = {
@@ -1478,6 +1490,9 @@ static const struct snd_soc_dapm_route mt8189_memif_routes[] = {
 	{"UL0_CH1", "PCM_0_CAP_CH1", "PCM 0 Capture"},
 	{"UL0_CH2", "PCM_0_CAP_CH2", "PCM 0 Capture"},
 
+	{"UL0_CH1", "HW_SRC_0_OUT_CH1", "HW_SRC_0_Out"},
+	{"UL0_CH2", "HW_SRC_0_OUT_CH2", "HW_SRC_0_Out"},
+
 	{"UL1", NULL, "UL1_CH1"},
 	{"UL1", NULL, "UL1_CH2"},
 
@@ -1491,6 +1506,13 @@ static const struct snd_soc_dapm_route mt8189_memif_routes[] = {
 
 	{"UL1_CH1", "PCM_0_CAP_CH1", "PCM 0 Capture"},
 	{"UL1_CH2", "PCM_0_CAP_CH2", "PCM 0 Capture"},
+
+	{"UL1_CH1", "HW_SRC_1_OUT_CH1", "HW_SRC_1_Out"},
+	{"UL1_CH2", "HW_SRC_1_OUT_CH2", "HW_SRC_1_Out"},
+	{"UL1_CH1", "HW_SRC_2_OUT_CH1", "HW_SRC_2_Out"},
+	{"UL1_CH2", "HW_SRC_2_OUT_CH2", "HW_SRC_2_Out"},
+	{"UL1_CH1", "HW_SRC_3_OUT_CH1", "HW_SRC_3_Out"},
+	{"UL1_CH2", "HW_SRC_3_OUT_CH2", "HW_SRC_3_Out"},
 
 	{"UL2", NULL, "UL2_CH1"},
 	{"UL2", NULL, "UL2_CH2"},
@@ -1506,6 +1528,9 @@ static const struct snd_soc_dapm_route mt8189_memif_routes[] = {
 
 	{"UL2_CH1", "AP_DMIC_UL_CH3", "AP DMIC CH34 Capture"},
 	{"UL2_CH2", "AP_DMIC_UL_CH4", "AP DMIC CH34 Capture"},
+
+	{"UL2_CH1", "HW_SRC_4_OUT_CH1", "HW_SRC_4_Out"},
+	{"UL2_CH2", "HW_SRC_4_OUT_CH2", "HW_SRC_4_Out"},
 
 	{"UL3", NULL, "UL3_CH1"},
 	{"UL3", NULL, "UL3_CH2"},
@@ -2116,26 +2141,7 @@ static bool mt8189_is_volatile_reg(struct device *dev, unsigned int reg)
 	case AFE_ASRC_NEW_CON9:
 	case AFE_ASRC_NEW_CON12:
 	case AFE_ASRC_NEW_IP_VERSION:
-	case AFE_GASRC0_NEW_CON0:
-	case AFE_GASRC0_NEW_CON6:
-	case AFE_GASRC0_NEW_CON8:
-	case AFE_GASRC0_NEW_CON9:
-	case AFE_GASRC0_NEW_CON10:
-	case AFE_GASRC0_NEW_CON11:
-	case AFE_GASRC0_NEW_CON12:
-	case AFE_GASRC0_NEW_IP_VERSION:
-	case AFE_GASRC1_NEW_CON0:
-	case AFE_GASRC1_NEW_CON6:
-	case AFE_GASRC1_NEW_CON8:
-	case AFE_GASRC1_NEW_CON9:
-	case AFE_GASRC1_NEW_CON12:
-	case AFE_GASRC1_NEW_IP_VERSION:
-	case AFE_GASRC2_NEW_CON0:
-	case AFE_GASRC2_NEW_CON6:
-	case AFE_GASRC2_NEW_CON8:
-	case AFE_GASRC2_NEW_CON9:
-	case AFE_GASRC2_NEW_CON12:
-	case AFE_GASRC2_NEW_IP_VERSION:
+	case AFE_GASRC0_NEW_CON0 ... AFE_GASRC4_NEW_IP_VERSION:
 	case AFE_GAIN0_CUR_L:
 	case AFE_GAIN0_CUR_R:
 	case AFE_GAIN1_CUR_L:
@@ -2455,11 +2461,13 @@ static const dai_register_cb dai_register_cbs[] = {
 	mt8189_dai_i2s_register,
 	mt8189_dai_pcm_register,
 	mt8189_dai_tdm_register,
+	mt8189_dai_src_register,
 	mt8189_dai_memif_register,
 };
 
 static const struct reg_sequence mt8189_cg_patch[] = {
-	{ AUDIO_TOP_CON4, 0x361c },
+	{ AUDIO_TOP_CON4, 0x360c },
+	{ AUDIO_TOP_CON3, 0x0},
 };
 
 static int mt8189_afe_pcm_dev_probe(struct platform_device *pdev)
