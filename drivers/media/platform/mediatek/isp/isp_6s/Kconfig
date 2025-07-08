@@ -14,3 +14,21 @@ config MTK_SENINF6S
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called mtk-seninf6s.
+
+config MTK_CAMSV6S
+	tristate "MediaTek ISP6S CAMSV driver"
+	depends on VIDEO_V4L2_SUBDEV_API
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	depends on OF
+	depends on PM
+	select VIDEOBUF2_DMA_CONTIG
+	select MTK_SENINF6S
+	select PHY_MTK_MIPI_CSI_2_1
+	default n
+	help
+	  This driver provides a path to bypass the SoC ISP so that
+	  image data come from the SENINF can go directly into memory
+	  without any image processing.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mtk-camsv6s.
