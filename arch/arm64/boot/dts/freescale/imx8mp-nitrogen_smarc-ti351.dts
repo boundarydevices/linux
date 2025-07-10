@@ -1,0 +1,48 @@
+
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC
+ */
+
+#include "imx8mp-nitrogen_smarc.dts"
+
+/ {
+	model = "Ezurio Nitrogen8MP SMARC + TI351 WiFi";
+	compatible = "ezurio,imx8mp-nitrogen-smarc-ti351", "fsl,imx8mp";
+};
+
+&uart1 {
+	bluetooth {
+		compatible = "ti,cc33xx-bt";
+		cc33xx-supply = <&reg_vref_3v3>;
+		max-speed = <115200>;
+		/delete-node/ shutdown-gpios;
+	};
+};
+
+&usdhc3 { /* WiFi / Bluetooth */
+	max-frequency = <50000000>;
+	cap-power-off-card;
+
+	/delete-node/ wifi@1;
+
+	wifi@2 {
+		reg = <2>;
+		compatible = "ti,cc33xx";
+	};
+};
+
+&iomuxc {
+	pinctrl_usdhc3: usdhc3grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_NAND_WE_B__USDHC3_CLK	0x10
+			MX8MP_IOMUXC_NAND_WP_B__USDHC3_CMD	0x150
+			MX8MP_IOMUXC_NAND_DATA04__USDHC3_DATA0	0x150
+			MX8MP_IOMUXC_NAND_DATA05__USDHC3_DATA1	0x150
+			MX8MP_IOMUXC_NAND_DATA06__USDHC3_DATA2	0x150
+			MX8MP_IOMUXC_NAND_DATA07__USDHC3_DATA3	0x150
+			MX8MP_IOMUXC_NAND_DQS__GPIO3_IO14	0x180a /*PULL_DOWN */
+			MX8MP_IOMUXC_SAI5_RXD0__GPIO3_IO21	0x1c0
+		>;
+	};
+};
