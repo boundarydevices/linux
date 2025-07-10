@@ -381,7 +381,15 @@ int cmdq_pkt_write_value_addr(struct cmdq_pkt *pkt, dma_addr_t addr,
 {
 	s32 err;
 	const u16 dst_reg_idx = CMDQ_SPR_FOR_TEMP;
+	struct cmdq_client *cl = (struct cmdq_client *)pkt->cl;
 
+	if (!cl) {
+		pr_err("%s %d: pkt->cl is NULL!\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	if (cmdq_addr_need_offset(cl->chan, addr))
+		addr += cmdq_get_offset_pa(cl->chan);
 	/* assign high bit to spr temp */
 	err = cmdq_pkt_assign(pkt, dst_reg_idx,
 		CMDQ_ADDR_HIGH(addr));
@@ -400,7 +408,19 @@ EXPORT_SYMBOL(cmdq_pkt_write_value_addr);
 s32 cmdq_pkt_mem_move(struct cmdq_pkt *pkt, dma_addr_t src_addr,
 		      dma_addr_t dst_addr, u16 swap_reg_idx)
 {
+	struct cmdq_client *cl = (struct cmdq_client *)pkt->cl;
 	s32 err;
+
+	if (!cl) {
+		pr_err("%s %d: pkt->cl is NULL!\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	if (cmdq_addr_need_offset(cl->chan, src_addr))
+		src_addr += cmdq_get_offset_pa(cl->chan);
+
+	if (cmdq_addr_need_offset(cl->chan, dst_addr))
+		dst_addr += cmdq_get_offset_pa(cl->chan);
 
 	err = cmdq_pkt_read_addr(pkt, src_addr, swap_reg_idx);
 	if (err != 0)
@@ -513,6 +533,15 @@ int cmdq_pkt_poll_addr(struct cmdq_pkt *pkt, u32 value, u32 addr,
 	struct cmdq_instruction inst = { {0} };
 	int err;
 	u8 use_mask = 0;
+	struct cmdq_client *cl = (struct cmdq_client *)pkt->cl;
+
+	if (!cl) {
+		pr_err("%s %d: pkt->cl is NULL!\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	if (cmdq_addr_need_offset(cl->chan, addr))
+		addr += cmdq_get_offset_pa(cl->chan);
 
 	if (mask != CMDQ_NO_MASK) {
 		inst.arg_c = CMDQ_GET_ARG_C(~mask);
@@ -717,7 +746,12 @@ int cmdq_pkt_poll_timeout(struct cmdq_pkt *pkt, u32 value, u8 subsys,
 	struct cmdq_instruction *inst = NULL;
 	//bool absolute = true;
 	u8 shift_bits = cmdq_get_shift_pa(((struct cmdq_client *)pkt->cl)->chan);
+	struct cmdq_client *cl = (struct cmdq_client *)pkt->cl;
 
+	if (!cl) {
+		pr_err("%s %d: pkt->cl is NULL!\n", __func__, __LINE__);
+		return -EINVAL;
+	}
 	/* assign compare value as compare target later */
 	cmdq_pkt_assign(pkt, reg_val, value);
 
@@ -776,10 +810,14 @@ int cmdq_pkt_poll_timeout(struct cmdq_pkt *pkt, u32 value, u8 subsys,
 
 	/* loop to begin */
 	cmd_pa = pkt->pa_base + begin_mark;
+	if (cmdq_addr_need_offset(cl->chan, cmd_pa))
+		cmd_pa += cmdq_get_offset_pa(cl->chan);
 	cmdq_pkt_jump(pkt, cmd_pa);
 
 	/* read current buffer pa as end mark and fill preview assign */
 	cmd_pa = pkt->pa_base + pkt->cmd_buf_size;
+	if (cmdq_addr_need_offset(cl->chan, cmd_pa))
+		cmd_pa += cmdq_get_offset_pa(cl->chan);
 	inst = (struct cmdq_instruction *)(pkt->va_base + end_addr_mark);
 	/* instruction may hit boundary case,
 	 * check if op code is jump and get next instruction if necessary
