@@ -965,6 +965,37 @@
 			#clock-cells = <1>;
 		};
 
+		gpu: gpu@13000000 {
+			compatible = "mediatek,mt8189-mali", "arm,mali-valhall-jm";
+			reg = <0 0x13000000 0 0x4000>;
+
+			interrupts = <GIC_SPI 271 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 270 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 269 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupt-names = "job", "mmu", "gpu";
+
+			clocks = <&mfg_clk CLK_MFG_BG3D>;
+			clock-names = "subsys_bg3d";
+
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_MFG2>,
+					<&scpsys MT8189_POWER_DOMAIN_MFG3>;
+			power-domain-names = "core0", "core1";
+			#cooling-cells = <2>;
+			status = "disabled";
+
+			power-model@0 {
+				compatible = "arm,mali-simple-power-model";
+				dynamic-coefficient = <1427>;
+				static-coefficient = <118279>;
+				thermal-zone = "soc_max";
+				ts = <6 (-238) 20283 32499>;
+			};
+			power-model@1 {
+				compatible = "arm,mali-tnax-power-model";
+				scale = <5>;
+			};
+		};
+
 		mfg_clk: syscon@13fbf000 {
 			compatible = "mediatek,mt8189-mfgsys", "syscon";
 			reg = <0 0x13fbf000 0 0x1000>;
