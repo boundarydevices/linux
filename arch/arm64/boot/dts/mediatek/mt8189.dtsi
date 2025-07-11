@@ -47,6 +47,7 @@
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
+			performance-domains = <&performance 0>;
 			#cooling-cells = <2>;
 		};
 
@@ -57,6 +58,7 @@
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
+			performance-domains = <&performance 0>;
 			#cooling-cells = <2>;
 		};
 
@@ -67,6 +69,7 @@
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
+			performance-domains = <&performance 0>;
 			#cooling-cells = <2>;
 		};
 
@@ -77,6 +80,7 @@
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
+			performance-domains = <&performance 0>;
 			#cooling-cells = <2>;
 		};
 
@@ -87,6 +91,7 @@
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
+			performance-domains = <&performance 0>;
 			#cooling-cells = <2>;
 		};
 
@@ -97,6 +102,7 @@
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
+			performance-domains = <&performance 0>;
 			#cooling-cells = <2>;
 		};
 
@@ -107,6 +113,7 @@
 			enable-method = "psci";
 			clock-frequency = <2600000000>;
 			capacity-dmips-mhz = <1024>;
+			performance-domains = <&performance 1>;
 			#cooling-cells = <2>;
 		};
 
@@ -117,6 +124,7 @@
 			enable-method = "psci";
 			clock-frequency = <2600000000>;
 			capacity-dmips-mhz = <1024>;
+			performance-domains = <&performance 1>;
 			#cooling-cells = <2>;
 		};
 
@@ -262,6 +270,15 @@
 		#size-cells = <2>;
 		compatible = "simple-bus";
 		ranges;
+
+		performance: performance-controller@108d68 {
+			compatible = "mediatek,cpufreq-hw";
+			reg = <0 0x00108d78 0 0x120>,
+			      <0 0x00108e98 0 0x120>;
+			reg-names = "performance-domain0",
+				    "performance-domain1";
+			#performance-domain-cells = <1>;
+		};
 
 		gic: interrupt-controller@c000000 {
 			compatible = "arm,gic-v3";
