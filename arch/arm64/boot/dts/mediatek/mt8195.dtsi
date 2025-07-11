@@ -1585,6 +1585,8 @@
 			freq-table-hz = <0 0>, <0 0>, <0 0>,
 					<0 0>, <0 0>, <0 0>,
 					<0 0>, <0 0>;
+
+			mediatek,ufs-disable-mcq;
 			status = "disabled";
 		};
 
