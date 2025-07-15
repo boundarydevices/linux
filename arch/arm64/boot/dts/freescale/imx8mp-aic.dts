@@ -40,7 +40,6 @@
 		rtc0 = &rv3028;
 		rtc1 = &snvs_rtc;
 		sound_hdmi= &sound_hdmi;
-		t_lvds2 = &t_lvds2;
 		t_lvds = &t_lvds;
 		t_mipi = &mipi_t;
 		ts_ft5x06 = &ts_mipi_ft5x06;
@@ -59,8 +58,8 @@
 		enable-gpios = <&gpio3 15 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds>;
-		pwms = <&pwm2 0 100000 0>;
-		status = "disabled";
+		pwms = <&pwm2 0 5000000 0>; /* 200 Hz */
+		status = "okay";
 	};
 
 	backlight_lvds2: backlight-lvds2 {
@@ -656,44 +655,28 @@
 };
 
 &ldb {
+	status = "okay";
+	fsl,dual-channel;
+
 	lvds-channel@0 {
 		backlight = <&backlight_lvds>;
-		fsl,data-mapping = "spwg";
+		fsl,data-mapping = "spwg"; // jeida
 		fsl,data-width = <24>;
 
 		display-timings {
 			t_lvds: t_lvds_default {
 
-				clock-frequency = <74250000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
+				//clock-frequency = <74250000>;
+				clock-frequency =   <70929000>;
+				hactive = <1920>;
+				vactive = <1080>;
+				hback-porch = <144>;
+				hfront-porch = <56>;
+				vback-porch = <14>;
+				vfront-porch = <15>;
+				hsync-len = <10>;
 				vsync-len = <1>;
-			};
-		};
-	};
-
-	lvds-channel@1 {
-		backlight = <&backlight_lvds2>;
-		fsl,data-mapping = "spwg";
-		fsl,data-width = <24>;
-
-		display-timings {
-			t_lvds2: t_lvds_default {
-
-				clock-frequency = <74250000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
-				vsync-len = <1>;
+				de-active = <1>;
 			};
 		};
 	};
