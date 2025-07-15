@@ -218,19 +218,17 @@
 };
 
 &ecspi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1>;
+	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
 	status = "okay";
 
-	spidev1_0: spi@0 {
+	spidev1_0: spi@0 { /* ADS7038QRTERQ1 */
 		reg = <0>;
 		compatible = "lwn,bk4";
 		spi-max-frequency = <1000000>;
 	};
 
-	spidev1_1: spi@1 {
-		reg = <1>;
-		compatible = "lwn,bk4";
-		spi-max-frequency = <1000000>;
-	};
 };
 
 &ecspi2 {
@@ -568,6 +566,15 @@
 		>;
 	};
 
+	pinctrl_ecspi1: ecspi1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_ECSPI1_SCLK__ECSPI1_SCLK		0x82
+			MX8MP_IOMUXC_ECSPI1_MOSI__ECSPI1_MOSI		0x82
+			MX8MP_IOMUXC_ECSPI1_MISO__ECSPI1_MISO		0x82
+			MX8MP_IOMUXC_ECSPI1_SS0__GPIO5_IO09		0x143
+		>;
+	};
+
 	pinctrl_hd3ss3220: hd3ss3220grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18	0x1c0
@@ -600,6 +607,12 @@
 	pinctrl_mux9546_lcd: mux9546-lcdgrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00	0x140
+		>;
+	};
+
+	pinctrl_pwm4: pwm4grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI3_MCLK__PWM4_OUT	0x116
 		>;
 	};
 
@@ -780,6 +793,8 @@
 };
 
 &pwm4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm4>;
 	status = "okay";
 };
 
