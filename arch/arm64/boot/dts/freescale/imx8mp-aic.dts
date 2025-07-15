@@ -302,7 +302,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_mux9546_lcd>;
 		reg = <0x73>;
-		reset-gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio4 23 GPIO_ACTIVE_LOW>;
 
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -605,7 +605,7 @@
 
 	pinctrl_mux9546_lcd: mux9546-lcdgrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00	0x140
+			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23	0x140
 		>;
 	};
 
