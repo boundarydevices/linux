@@ -445,7 +445,7 @@
 		#clock-cells = <0>;
 		compatible = "microcrystal,rv3028";
 		reg = <0x52>;
-		interrupts-extended = <&gpio3 2 IRQ_TYPE_LEVEL_LOW>;
+		interrupts-extended = <&gpio1 1 IRQ_TYPE_LEVEL_LOW>;
 		wakeup-source;
 	};
 };
@@ -456,7 +456,7 @@
 		interrupts-extended = <&gpio4 18 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_hd3ss3220>;
-		reg = <0x60>;
+		reg = <0x47>;
 
 		ports {
 			#address-cells = <1>;
@@ -605,7 +605,7 @@
 
 	pinctrl_rv3028: rv3028grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_NAND_CE1_B__GPIO3_IO02	0x140
+			MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01	0x140
 		>;
 	};
 
@@ -777,6 +777,10 @@
 			status = "disabled";
 		};
 	};
+};
+
+&pwm4 {
+	status = "okay";
 };
 
 &usb_dwc3_0 {
