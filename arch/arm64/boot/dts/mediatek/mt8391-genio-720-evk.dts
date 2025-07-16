@@ -403,7 +403,7 @@
 		pins-bus{
 			pinmux = <PINMUX_GPIO52__FUNC_SDA0>,
 					<PINMUX_GPIO51__FUNC_SCL0>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 
@@ -411,7 +411,7 @@
 		pins-bus{
 			pinmux = <PINMUX_GPIO54__FUNC_SDA1>,
 					<PINMUX_GPIO53__FUNC_SCL1>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 
@@ -419,7 +419,7 @@
 		pins-bus{
 			pinmux = <PINMUX_GPIO56__FUNC_SDA2>,
 					<PINMUX_GPIO55__FUNC_SCL2>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 
@@ -427,7 +427,7 @@
 		pins-bus{
 			pinmux = <PINMUX_GPIO58__FUNC_SDA3>,
 					<PINMUX_GPIO57__FUNC_SCL3>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 
@@ -435,14 +435,14 @@
 		pins-bus{
 			pinmux = <PINMUX_GPIO60__FUNC_SDA4>,
 					<PINMUX_GPIO59__FUNC_SCL4>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 	i2c5_pins:i2c5{
 		pins-bus{
 			pinmux = <PINMUX_GPIO62__FUNC_SDA5>,
 					<PINMUX_GPIO61__FUNC_SCL5>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 
@@ -450,7 +450,7 @@
 		pins-bus{
 			pinmux = <PINMUX_GPIO64__FUNC_SDA6>,
 					<PINMUX_GPIO63__FUNC_SCL6>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 
@@ -458,7 +458,7 @@
 		pins-bus{
 			pinmux = <PINMUX_GPIO66__FUNC_SDA7>,
 					<PINMUX_GPIO65__FUNC_SCL7>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 
@@ -466,7 +466,7 @@
 		pins-bus{
 			pinmux = <PINMUX_GPIO68__FUNC_SDA8>,
 					<PINMUX_GPIO67__FUNC_SCL8>;
-			bias-disable;
+			bias-pull-up;
 		};
 	};
 
