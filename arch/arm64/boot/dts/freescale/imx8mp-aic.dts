@@ -228,26 +228,20 @@
 		vref-supply = <&reg_vref_3v3>;
 		spi-max-frequency = <10000000>;
 	};
-
-	spidev1_0: spi@0 { /* ADS7038QRTERQ1 */
+#if 0
+	spidev1_0: spi1@0 { /* ADS7038QRTERQ1 */
 		reg = <0>;
 		compatible = "lwn,bk4";
 		spi-max-frequency = <1000000>;
 	};
-
+#endif
 };
 
 &ecspi2 {
 	status = "okay";
 
-	spidev2_0: spi@0 {
+	spidev2_0: spi2@0 {
 		reg = <0>;
-		compatible = "lwn,bk4";
-		spi-max-frequency = <1000000>;
-	};
-
-	spidev2_1: spi@1 {
-		reg = <1>;
 		compatible = "lwn,bk4";
 		spi-max-frequency = <1000000>;
 	};
@@ -630,6 +624,15 @@
 		>;
 	};
 
+	pinctrl_sai3: sai3grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI3_TXFS__AUDIOMIX_SAI3_TX_SYNC	0xd6
+			MX8MP_IOMUXC_SAI3_TXC__AUDIOMIX_SAI3_TX_BCLK	0xd6
+			MX8MP_IOMUXC_SAI3_RXD__AUDIOMIX_SAI3_RX_DATA00	0xd6
+			MX8MP_IOMUXC_SAI3_TXD__AUDIOMIX_SAI3_TX_DATA00	0xd6
+		>;
+	};
+
 	pinctrl_ts_lvds_ft5x06: ts-lvds-ft5x06grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02	0x1c0
@@ -663,6 +666,10 @@
 	status = "okay";
 };
 
+&lcdif2 {
+	status = "okay";
+};
+
 &ldb {
 	status = "okay";
 	fsl,dual-channel;
@@ -671,6 +678,7 @@
 		backlight = <&backlight_lvds>;
 		fsl,data-mapping = "spwg"; // jeida
 		fsl,data-width = <24>;
+		status = "okay";
 
 		display-timings {
 			t_lvds: t_lvds_default {
