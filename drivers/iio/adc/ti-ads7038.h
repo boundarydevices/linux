@@ -1,0 +1,551 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+/*
+ * This driver supports TI 12Bit ADC devices
+ *
+ *	 - ADS7038 with SPI interface
+ *	 - ADS7138 with I2C interface (future)
+ *
+ * Copyright (C) 2023 SYS TEC electronic AG
+ * Author: Andre Werner <andre.werner@systec-electronic.com>
+ */
+#include <linux/bitops.h>
+#include <linux/mutex.h>
+#include <linux/types.h>
+
+#ifndef IIO_TI_ADS7038_H_
+#define IIO_TI_ADS7038_H_
+
+#define ADS7038_REGISTER_SIZE	8	/* bits */
+
+/* Opcodes for commands */
+#define ADS7038_OP_NOOP		0x00
+#define ADS7038_OP_REG_READ	0x10
+#define ADS7038_OP_REG_WRITE	0x08
+#define ADS7038_OP_SET_BIT	0x18
+#define ADS7038_OP_CLEAR_BIT	0x20
+
+/* ADS7038 System Status Register */
+#define ADS7038_SYSTEM_STATUS_REG		0x00
+#define ADS7038_SYSTEM_STATUS_BOR		BIT(0)
+#define ADS7038_SYSTEM_STATUS_CRC_ERROR_IN	BIT(1)
+#define ADS7038_SYSTEM_STATUS_CRC_ERROR_FUSE	BIT(2)
+#define ADS7038_SYSTEM_STATUS_OSR_DONE		BIT(3)
+#define ADS7038_SYSTEM_STATUS_OSR_SEQ_STATUS	BIT(6)
+
+/* ADS7038 General Configuration Register */
+#define ADS7038_GENERAL_CFG_REG		0x01
+#define ADS7038_GENERAL_CFG_RST		BIT(0)
+#define ADS7038_GENERAL_CFG_CAL		BIT(1)
+#define ADS7038_GENERAL_CFG_CH_RST	BIT(2)
+#define ADS7038_GENERAL_CFG_DWC_EN	BIT(4)
+#define ADS7038_GENERAL_CFG_STATS_EN	BIT(5)
+#define ADS7038_GENERAL_CFG_CRC_EN	BIT(6)
+
+/* ADS7038 Data Configuration Register */
+#define ADS7038_DATA_CFG_REG			0x02
+#define ADS7038_DATA_CFG_CPOL_CPHA		GENMASK(1, 0)
+#define ADS7038_DATA_CFG_CPOL_CPHA_SPI00	0x00	/* solely ADS7038 */
+#define ADS7038_DATA_CFG_CPOL_CPHA_SPI01	0x01	/* solely ADS7038 */
+#define ADS7038_DATA_CFG_CPOL_CPHA_SPI10	0x02	/* solely ADS7038 */
+#define ADS7038_DATA_CFG_CPOL_CPHA_SPI11	0x03	/* solely ADS7038 */
+#define ADS7038_DATA_CFG_APPEND_STATUS		GENMASK(5, 4)
+#define ADS7038_DATA_CFG_APPEND_STATUS_NO	0x00
+#define ADS7038_DATA_CFG_APPEND_STATUS_CHID	BIT(4)
+#define ADS7038_DATA_CFG_APPEND_STATUS_STATUS	BIT(5)
+#define ADS7038_DATA_CFG_FIX_PAT		BIT(7)
+
+/* ADS7038 Oversampling Configuration Register */
+#define ADS7038_OSR_CFG_REG	0x03
+#define ADS7038_OSR_CFG_OSR	GENMASK(2, 0)
+#define ADS7038_OSR_CFG_OSR_NO	0x00
+#define ADS7038_OSR_CFG_OSR_2	0x01
+#define ADS7038_OSR_CFG_OSR_4	0x02
+#define ADS7038_OSR_CFG_OSR_8	0x03
+#define ADS7038_OSR_CFG_OSR_16	0x04
+#define ADS7038_OSR_CFG_OSR_32	0x05
+#define ADS7038_OSR_CFG_OSR_64	0x06
+#define ADS7038_OSR_CFG_OSR_128	0x07
+
+/* ADS7038 Operation Mode Configuration Register */
+#define ADS7038_OPMODE_CFG_REG			0x04
+#define ADS7038_OPMODE_CFG_CLK_DIV		GENMASK(3, 0)
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_1US0	0x00
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_1US5	0x01
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_2US0	0x02
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_3US0	0x03
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_4US0	0x04
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_6US0	0x05
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_8US0	0x06
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_12US0	0x07
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_16US0	0x08
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_24US0	0x09
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_32US0	0x0A
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_48US0	0x0B
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_64US0	0x0C
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_96US0	0x0D
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_128US0	0x0E
+#define ADS7038_OPMODE_CFG_CLK_DIV_FTIME_192US0	0x0F
+#define ADS7038_OPMODE_CFG_OSC_SEL		BIT(4)
+#define ADS7038_OPMODE_CFG_OSC_SEL_HIGHSPEED	0x00
+#define ADS7038_OPMODE_CFG_OSC_SEL_LOWSPEED	0x01
+#define ADS7038_OPMODE_CFG_CONV_MODE		GENMASK(6, 5)
+#define ADS7038_OPMODE_CFG_CONV_MODE_MANUAL	0x00
+#define ADS7038_OPMODE_CFG_CONV_MODE_AUTONOMOUS	BIT(5)
+#define ADS7038_OPMODE_CFG_CONV_ON_ERR		BIT(7)
+#define ADS7038_OPMODE_CFG_CONV_ON_ERR_CONTINUE	0x00
+#define ADS7038_OPMODE_CFG_CONV_ON_ERR_PAUSE	BIT(7)
+
+/* ADS7038 Pin Mode Configuration Register */
+#define ADS7038_PIN_CFG_REG		0x05
+#define ADS7038_PIN_CFG_ALL_AIN		0x00
+#define ADS7038_PIN_CFG_ALL_GPIO	GENMASK(7, 0)
+
+/* ADS7038 GPIO Mode Configuration Register */
+#define ADS7038_GPIO_CFG_REG		0x07
+#define ADS7038_GPIO_CFG_ALL_IN		0x00
+#define ADS7038_GPIO_CFG_ALL_OUT	GENMASK(7, 0)
+
+/* ADS7038 GPO Drive Strengh Configuration Register */
+#define ADS7038_GPO_DRIVE_CFG_REG		0x09
+#define ADS7038_GPO_DRIVE_CFG_ALL_OPEN_DRAIN	0x00
+#define ADS7038_GPO_DRIVE_CFG_ALL_PP		GENMASK(7, 0)
+
+/* ADS7038 GPO Value Register */
+#define ADS7038_GPO_VALUE_REG		0x0B
+#define ADS7038_GPO_VALUE_ALL_LOW	0x00
+#define ADS7038_GPO_VALUE_ALL_HIGH	GENMASK(7, 0)
+
+/* ADS7038 GPI Value Register */
+#define ADS7038_GPI_VALUE_REG		0x0D
+
+/* ADS7038 Sequence Configuration Register */
+#define ADS7038_SEQUENCE_CFG_REG			0x10
+#define ADS7038_SEQUENCE_CFG_SEQ_MODE			GENMASK(1, 0)
+#define ADS7038_SEQUENCE_CFG_SEQ_MODE_MANUAL		0x00
+#define ADS7038_SEQUENCE_CFG_SEQ_MODE_AUTO_SEQ		0x01
+#define ADS7038_SEQUENCE_CFG_SEQ_MODE_ON_THE_FLY	0x02	/* solely ADS7038 */
+#define ADS7038_SEQUENCE_CFG_SEQ_START BIT(4)
+
+/* ADS7038 Channel Selection Register */
+#define ADS7038_CHANNEL_SEL_REG			0x11
+#define ADS7038_CHANNEL_SEL_MCHILDID		GENMASK(3, 0)
+#define ADS7038_CHANNEL_SEL_MCHILDID_AIN0	0x00
+#define ADS7038_CHANNEL_SEL_MCHILDID_AIN1	0x01
+#define ADS7038_CHANNEL_SEL_MCHILDID_AIN2	0x02
+#define ADS7038_CHANNEL_SEL_MCHILDID_AIN3	0x03
+#define ADS7038_CHANNEL_SEL_MCHILDID_AIN4	0x04
+#define ADS7038_CHANNEL_SEL_MCHILDID_AIN5	0x05
+#define ADS7038_CHANNEL_SEL_MCHILDID_AIN6	0x06
+#define ADS7038_CHANNEL_SEL_MCHILDID_AIN7	0x07
+
+/* ADS7038 Auto Sequence Channel Selection Register */
+#define ADS7038_AUTO_SEQ_CH_SEL_REG	0x12
+#define ADS7038_AUTO_SEQ_CH_SEL_ALL	GENMASK(7, 0)
+
+/* ADS7038 Alert Channel Selection Register */
+#define ADS7038_ALERT_CH_SEL_REG	0x14
+#define ADS7038_ALERT_CH_SEL_ALL	GENMASK(7, 0)
+
+/* ADS7038 Alert Map Register */
+#define ADS7038_ALERT_MAP_REG		0x16
+#define ADS7038_ALERT_MAP_ALERT_CRCIN	BIT(0)
+
+/* ADS7038 Alert Pin Configuration Register */
+#define ADS7038_ALERT_PIN_CFG_REG			0x17
+#define ADS7038_ALERT_PIN_CFG_ALERT_LOGIC		GENMASK(1, 0)
+#define ADS7038_ALERT_PIN_CFG_ALERT_LOGIC_ACTIVE_LOW	0x00
+#define ADS7038_ALERT_PIN_CFG_ALERT_LOGIC_ACTIVE_HIGH	BIT(0)
+#define ADS7038_ALERT_PIN_CFG_ALERT_LOGIC_PULSED_LOW	BIT(1)
+#define ADS7038_ALERT_PIN_CFG_ALERT_LOGIC_PULSED_HIGH	GENMASK(1, 0)
+#define ADS7138_ALERT_PIN_CFG_ALERT_DRIVE		BIT(2)	/* solely ADS7138 */
+#define ADS7038_ALERT_PIN_CFG_ALERT_PIN			0xF0	/* solely ADS7038 */
+
+/* ADS7038 Event Flag Register */
+#define ADS7038_EVENT_FLAG_REG	0x18
+
+/* ADS7038 Event High Flag Register */
+#define ADS7038_EVENT_HIGH_FLAG_REG	0x1A
+
+/* ADS7038 Event Low Flag Register */
+#define ADS7038_EVENT_LOW_FLAG_REG	0x1C
+
+/* ADS7038 Event Region Register */
+#define ADS7038_EVENT_RGN_REG	0x1E
+
+/* ADS7038 HYSTERESIS CH0 Register */
+#define ADS7038_HYSTERESIS_CH0_REG			0x20
+#define ADS7038_HYSTERESIS_CH0_HYSTERESIS_CH0		GENMASK(3, 0)
+#define ADS7038_HYSTERESIS_CH0_HIGH_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH0 Register */
+#define ADS7038_HIGH_TH_CH0_REG		0x21
+
+/* ADS7038 Event Count CH0 Register */
+#define ADS7038_EVENT_CNT_CH0_REG			0x22
+#define ADS7038_EVENT_CNT_CH0_EVENT_CNT_CH0		GENMASK(3, 0)
+#define ADS7038_EVENT_CNT_CH0_LOW_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH0 Register */
+#define ADS7038_LOW_TH_CH0_REG	0x23
+
+/* ADS7038 HYSTERESIS CH1 Register */
+#define ADS7038_HYSTERESIS_CH1_REG			0x24
+#define ADS7038_HYSTERESIS_CH1_HYSTERESIS_CH0		GENMASK(3, 0)
+#define ADS7038_HYSTERESIS_CH1_HIGH_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH1 Register */
+#define ADS7038_HIGH_TH_CH1_REG	0x25
+
+/* ADS7038 Event Count CH1 Register */
+#define ADS7038_EVENT_CNT_CH1_REG			0x26
+#define ADS7038_EVENT_CNT_CH1_EVENT_CNT_CH0		GENMASK(3, 0)
+#define ADS7038_EVENT_CNT_CH1_LOW_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH1 Register */
+#define ADS7038_LOW_TH_CH1_REG	0x27
+
+/* ADS7038 HYSTERESIS CH2 Register */
+#define ADS7038_HYSTERESIS_CH2_REG			0x28
+#define ADS7038_HYSTERESIS_CH2_HYSTERESIS_CH0		GENMASK(3, 0)
+#define ADS7038_HYSTERESIS_CH2_HIGH_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH2 Register */
+#define ADS7038_HIGH_TH_CH2_REG				0x29
+
+/* ADS7038 Event Count CH2 Register */
+#define ADS7038_EVENT_CNT_CH2_REG			0x2A
+#define ADS7038_EVENT_CNT_CH2_EVENT_CNT_CH0		GENMASK(3, 0)
+#define ADS7038_EVENT_CNT_CH2_LOW_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH2 Register */
+#define ADS7038_LOW_TH_CH2_REG	0x2B
+
+/* ADS7038 HYSTERESIS CH3 Register */
+#define ADS7038_HYSTERESIS_CH3_REG			0x2C
+#define ADS7038_HYSTERESIS_CH3_HYSTERESIS_CH0		GENMASK(3, 0)
+#define ADS7038_HYSTERESIS_CH3_HIGH_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH3 Register */
+#define ADS7038_HIGH_TH_CH3_REG				0x2D
+
+/* ADS7038 Event Count CH3 Register */
+#define ADS7038_EVENT_CNT_CH3_REG			0x2E
+#define ADS7038_EVENT_CNT_CH3_EVENT_CNT_CH0		GENMASK(3, 0)
+#define ADS7038_EVENT_CNT_CH3_LOW_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH3 Register */
+#define ADS7038_LOW_TH_CH3_REG 0x2F
+
+/* ADS7038 HYSTERESIS CH4 Register */
+#define ADS7038_HYSTERESIS_CH4_REG			0x30
+#define ADS7038_HYSTERESIS_CH4_HYSTERESIS_CH0		GENMASK(3, 0)
+#define ADS7038_HYSTERESIS_CH4_HIGH_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH4 Register */
+#define ADS7038_HIGH_TH_CH4_REG				0x31
+
+/* ADS7038 Event Count CH4 Register */
+#define ADS7038_EVENT_CNT_CH4_REG			0x32
+#define ADS7038_EVENT_CNT_CH4_EVENT_CNT_CH0		GENMASK(3, 0)
+#define ADS7038_EVENT_CNT_CH4_LOW_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH4 Register */
+#define ADS7038_LOW_TH_CH4_REG				0x33
+
+/* ADS7038 HYSTERESIS CH5 Register */
+#define ADS7038_HYSTERESIS_CH5_REG			0x34
+#define ADS7038_HYSTERESIS_CH5_HYSTERESIS_CH0		GENMASK(3, 0)
+#define ADS7038_HYSTERESIS_CH5_HIGH_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH5 Register */
+#define ADS7038_HIGH_TH_CH5_REG				0x35
+
+/* ADS7038 Event Count CH5 Register */
+#define ADS7038_EVENT_CNT_CH5_REG			0x36
+#define ADS7038_EVENT_CNT_CH5_EVENT_CNT_CH0		GENMASK(3, 0)
+#define ADS7038_EVENT_CNT_CH5_LOW_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH5 Register */
+#define ADS7038_LOW_TH_CH5_REG				0x37
+
+/* ADS7038 HYSTERESIS CH6 Register */
+#define ADS7038_HYSTERESIS_CH6_REG			0x38
+#define ADS7038_HYSTERESIS_CH6_HYSTERESIS_CH0		GENMASK(3, 0)
+#define ADS7038_HYSTERESIS_CH6_HIGH_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH6 Register */
+#define ADS7038_HIGH_TH_CH6_REG 0x39
+
+/* ADS7038 Event Count CH6 Register */
+#define ADS7038_EVENT_CNT_CH6_REG			0x3A
+#define ADS7038_EVENT_CNT_CH6_EVENT_CNT_CH0		GENMASK(3, 0)
+#define ADS7038_EVENT_CNT_CH6_LOW_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH6 Register */
+#define ADS7038_LOW_TH_CH6_REG				0x3B
+
+/* ADS7038 HYSTERESIS CH7 Register */
+#define ADS7038_HYSTERESIS_CH7_REG			0x3C
+#define ADS7038_HYSTERESIS_CH7_HYSTERESIS_CH0		GENMASK(3, 0)
+#define ADS7038_HYSTERESIS_CH7_HIGH_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH7 Register */
+#define ADS7038_HIGH_TH_CH7_REG				0x3D
+
+/* ADS7038 Event Count CH7 Register */
+#define ADS7038_EVENT_CNT_CH7_REG			0x3E
+#define ADS7038_EVENT_CNT_CH7_EVENT_CNT_CH0		GENMASK(3, 0)
+#define ADS7038_EVENT_CNT_CH7_LOW_THRESHOLD_CH0_LSB	GENMASK(7, 4)
+
+/* ADS7038 High Threshold CH7 Register */
+#define ADS7038_LOW_TH_CH7_REG		0x3F
+
+/* ADS7038 MAX CH0 LSB Register */
+#define ADS7038_MAX_CH0_LSB_REG		0x60
+
+/* ADS7038 MAX CH0 MSB Register */
+#define ADS7038_MAX_CH0_MSB_REG		0x61
+
+/* ADS7038 MAX CH1 LSB Register */
+#define ADS7038_MAX_CH1_LSB_REG		0x62
+
+/* ADS7038 MAX CH1 MSB Register */
+#define ADS7038_MAX_CH1_MSB_REG		0x63
+
+/* ADS7038 MAX CH2 LSB Register */
+#define ADS7038_MAX_CH2_LSB_REG		0x64
+
+/* ADS7038 MAX CH2 MSB Register */
+#define ADS7038_MAX_CH2_MSB_REG		0x65
+
+/* ADS7038 MAX CH3 LSB Register */
+#define ADS7038_MAX_CH3_LSB_REG		0x66
+
+/* ADS7038 MAX CH3 MSB Register */
+#define ADS7038_MAX_CH3_MSB_REG		0x67
+
+/* ADS7038 MAX CH4 LSB Register */
+#define ADS7038_MAX_CH4_LSB_REG		0x68
+
+/* ADS7038 MAX CH4 MSB Register */
+#define ADS7038_MAX_CH4_MSB_REG		0x69
+
+/* ADS7038 MAX CH5 LSB Register */
+#define ADS7038_MAX_CH5_LSB_REG		0x6A
+
+/* ADS7038 MAX CH5 MSB Register */
+#define ADS7038_MAX_CH5_MSB_REG		0x6B
+
+/* ADS7038 MAX CH6 LSB Register */
+#define ADS7038_MAX_CH6_LSB_REG		0x6C
+
+/* ADS7038 MAX CH6 MSB Register */
+#define ADS7038_MAX_CH6_MSB_REG		0x6D
+
+/* ADS7038 MAX CH7 LSB Register */
+#define ADS7038_MAX_CH7_LSB_REG		0x6E
+
+/* ADS7038 MAX CH7 MSB Register */
+#define ADS7038_MAX_CH7_MSB_REG		0x6F
+
+/* ADS7038 MIN CH0 LSB Register */
+#define ADS7038_MIN_CH0_LSB_REG		0x80
+
+/* ADS7038 MIN CH0 MSB Register */
+#define ADS7038_MIN_CH0_MSB_REG		0x81
+
+/* ADS7038 MIN CH1 LSB Register */
+#define ADS7038_MIN_CH1_LSB_REG		0x82
+
+/* ADS7038 MIN CH1 MSB Register */
+#define ADS7038_MIN_CH1_MSB_REG		0x83
+
+/* ADS7038 MIN CH2 LSB Register */
+#define ADS7038_MIN_CH2_LSB_REG		0x84
+
+/* ADS7038 MIN CH2 MSB Register */
+#define ADS7038_MIN_CH2_MSB_REG		0x85
+
+/* ADS7038 MIN CH3 LSB Register */
+#define ADS7038_MIN_CH3_LSB_REG		0x86
+
+/* ADS7038 MIN CH3 MSB Register */
+#define ADS7038_MIN_CH3_MSB_REG		0x87
+
+/* ADS7038 MIN CH4 LSB Register */
+#define ADS7038_MIN_CH4_LSB_REG		0x88
+
+/* ADS7038 MIN CH4 MSB Register */
+#define ADS7038_MIN_CH4_MSB_REG		0x89
+
+/* ADS7038 MIN CH5 LSB Register */
+#define ADS7038_MIN_CH5_LSB_REG		0x8A
+
+/* ADS7038 MIN CH5 MSB Register */
+#define ADS7038_MIN_CH5_MSB_REG		0x8B
+
+/* ADS7038 MIN CH6 LSB Register */
+#define ADS7038_MIN_CH6_LSB_REG		0x8C
+
+/* ADS7038 MIN CH6 MSB Register */
+#define ADS7038_MIN_CH6_MSB_REG		0x8D
+
+/* ADS7038 MIN CH7 LSB Register */
+#define ADS7038_MIN_CH7_LSB_REG		0x8E
+
+/* ADS7038 MIN CH7 MSB Register */
+#define ADS7038_MIN_CH7_MSB_REG		0x8F
+
+/* ADS7038 RECENT CH0 LSB Register */
+#define ADS7038_RECENT_CH0_LSB_REG	0xA0
+
+/* ADS7038 RECENT CH0 MSB Register */
+#define ADS7038_RECENT_CH0_MSB_REG	0xA1
+
+/* ADS7038 RECENT CH1 LSB Register */
+#define ADS7038_RECENT_CH1_LSB_REG	0xA2
+
+/* ADS7038 RECENT CH1 MSB Register */
+#define ADS7038_RECENT_CH1_MSB_REG	0xA3
+
+/* ADS7038 RECENT CH2 LSB Register */
+#define ADS7038_RECENT_CH2_LSB_REG	0xA4
+
+/* ADS7038 RECENT CH2 MSB Register */
+#define ADS7038_RECENT_CH2_MSB_REG	0xA5
+
+/* ADS7038 RECENT CH3 LSB Register */
+#define ADS7038_RECENT_CH3_LSB_REG	0xA6
+
+/* ADS7038 RECENT CH3 MSB Register */
+#define ADS7038_RECENT_CH3_MSB_REG	0xA7
+
+/* ADS7038 RECENT CH4 LSB Register */
+#define ADS7038_RECENT_CH4_LSB_REG	0xA8
+
+/* ADS7038 RECENT CH4 MSB Register */
+#define ADS7038_RECENT_CH4_MSB_REG	0xA9
+
+/* ADS7038 RECENT CH5 LSB Register */
+#define ADS7038_RECENT_CH5_LSB_REG	0xAA
+
+/* ADS7038 RECENT CH5 MSB Register */
+#define ADS7038_RECENT_CH5_MSB_REG	0xAB
+
+/* ADS7038 RECENT CH6 LSB Register */
+#define ADS7038_RECENT_CH6_LSB_REG	0xAC
+
+/* ADS7038 RECENT CH6 MSB Register */
+#define ADS7038_RECENT_CH6_MSB_REG	0xAD
+
+/* ADS7038 RECENT CH7 LSB Register */
+#define ADS7038_RECENT_CH7_LSB_REG	0xAE
+
+/* ADS7038 RECENT CH7 MSB Register */
+#define ADS7038_RECENT_CH7_MSB_REG	0xAF
+
+/* ADS7038 GPO0 Trigger Event Selection Register */
+#define ADS7038_GPO0_TRIG_EVENT_SEL_REG		0xC3
+
+/* ADS7038 GPO1 Trigger Event Selection Register */
+#define ADS7038_GPO1_TRIG_EVENT_SEL_REG		0xC5
+
+/* ADS7038 GPO2 Trigger Event Selection Register */
+#define ADS7038_GPO2_TRIG_EVENT_SEL_REG		0xC7
+
+/* ADS7038 GPO3 Trigger Event Selection Register */
+#define ADS7038_GPO3_TRIG_EVENT_SEL_REG		0xC9
+
+/* ADS7038 GPO4 Trigger Event Selection Register */
+#define ADS7038_GPO4_TRIG_EVENT_SEL_REG		0xCB
+
+/* ADS7038 GPO5 Trigger Event Selection Register */
+#define ADS7038_GPO5_TRIG_EVENT_SEL_REG		0xCD
+
+/* ADS7038 GPO6 Trigger Event Selection Register */
+#define ADS7038_GPO6_TRIG_EVENT_SEL_REG		0xCF
+
+/* ADS7038 GPO7 Trigger Event Selection Register */
+#define ADS7038_GPO7_TRIG_EVENT_SEL_REG		0xD1
+
+/* ADS7038 GPO Trigger Configuration Register */
+#define ADS7038_GPO_TRIG_CFG_REG		0xE9
+
+/* ADS7038 GPO Value Trigger Register */
+#define ADS7038_GPO_VALUE_TRIG_REG	0xEB
+
+/* ADS7038 Register Address Max */
+#define ADS7038_REG_ADDRESS_MAX		0xEB
+
+/* Channel IDs to use for manual mode */
+enum MANUAL_CHID {
+	AIN0 = ADS7038_CHANNEL_SEL_MCHILDID_AIN0,
+	AIN1 = ADS7038_CHANNEL_SEL_MCHILDID_AIN1,
+	AIN2 = ADS7038_CHANNEL_SEL_MCHILDID_AIN2,
+	AIN3 = ADS7038_CHANNEL_SEL_MCHILDID_AIN3,
+	AIN4 = ADS7038_CHANNEL_SEL_MCHILDID_AIN4,
+	AIN5 = ADS7038_CHANNEL_SEL_MCHILDID_AIN5,
+	AIN6 = ADS7038_CHANNEL_SEL_MCHILDID_AIN6,
+	AIN7 = ADS7038_CHANNEL_SEL_MCHILDID_AIN7,
+	AIN_MAX,
+};
+
+/* Functional Modes */
+enum FUNC_MODE {
+	MAN = 0,
+	ON_THE_FLY,
+	AUTO_SEQ,
+	AUTO,
+};
+
+struct ads7038_ch_meas_result {
+	unsigned int raw;
+	unsigned int status;
+	u8 faverage;		/* Flag indicates average result */
+	u8 fstatus;		/* Flag indicated if status is appended */
+};
+
+struct device;
+struct iio_dev;
+struct regmap;
+struct regulator;
+
+/* Functions to address registers and */
+struct ads7038_info {
+	/* Address configuration registers of IC */
+	int (*read_reg)(struct device *dev, const unsigned int reg,
+			unsigned int *val);
+	int (*write_reg)(struct device *dev, const unsigned int reg,
+			 unsigned int val);
+	/* Perform a single read of a channel */
+	int (*read_channel)(struct iio_dev *indio_dev,
+			    const enum MANUAL_CHID chan,
+			    struct ads7038_ch_meas_result *const res);
+};
+
+struct ads7038_data {
+	struct device *dev;
+	const struct ads7038_info *info;
+	struct regmap *regmap;
+
+	enum FUNC_MODE func_mode;	/* actual measure mode */
+	u8 faverage;		/* flag indicates averaging enabled */
+	u8 fstatus;		/* flag indicates status appended */
+
+	struct mutex lock;	/* Mutex for single communication resource */
+
+	struct regulator *reg;	/* Regulator that controls ADC reference voltage */
+};
+
+/* Regmap configurations */
+extern const struct regmap_config ads7038_regmap_config;
+
+/* Probe called from different transports */
+int ads7038_common_probe(struct device *parent, const struct ads7038_info *info,
+			 struct regmap *const regmap,
+			 struct regulator *const ref_voltage_reg,
+			 const char *name, const int irq);
+
+int ads7038_common_remove(struct device *parent);
+
+#endif

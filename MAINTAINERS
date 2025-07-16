@@ -21303,6 +21303,16 @@ T:	git https://github.com/jcmvbkbc/linux-xtensa.git
 F:	arch/xtensa/
 F:	drivers/irqchip/irq-xtensa-*
 
+TEXAS INSTRUMENT'S ADS7038 ADC DRIVER
+M:	Andre Werner <andre.werner@systec-electronic.com>
+L:	linux-iio@vger.kernel.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/iio/adc/ti,ads7038.yaml
+F:	drivers/iio/adc/ti-ads7038.h
+F:	drivers/iio/adc/ti-ads7038-core.c
+F:	drivers/iio/adc/ti-ads7038-regmap.c
+F:	drivers/iio/adc/ti-ads7038-spi.c
+
 TEXAS INSTRUMENTS ASoC DRIVERS
 M:	Peter Ujfalusi <peter.ujfalusi@gmail.com>
 L:	alsa-devel@alsa-project.org (moderated for non-subscribers)

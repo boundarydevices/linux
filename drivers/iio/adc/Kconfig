@@ -1239,6 +1239,28 @@ config TI_ADS1015
 	  This driver can also be built as a module. If so, the module will be
 	  called ti-ads1015.
 
+config TI_ADS7038
+	tristate "Texas Instruments ADS7038 ADC driver"
+	depends on (I2C || SPI_MASTER)
+	select REGMAP
+	select TI_ADS7038_SPI if (SPI_MASTER)
+	help
+	  Say yes here to build support for TI ADS7038 12BIT ADC.
+
+	  To compile this driver as a module, choose M here: the core module
+	  will be called ti-ads7038 and you will also get ti-ads7038-spi for SPI support.
+
+config TI_ADS7038_SPI
+	tristate
+	depends on TI_ADS7038
+	depends on SPI_MASTER
+	select REGMAP
+	help
+	  Say yes here to build support for TI ADS7038 12BIT ADC (SPI connected).
+
+	  To compile this driver as a module, choose M here: the core module
+	  will be called ti-ads7038 and you will also get ti-ads7038-spi for SPI support.
+
 config TI_ADS7924
 	tristate "Texas Instruments ADS7924 ADC"
 	depends on I2C
