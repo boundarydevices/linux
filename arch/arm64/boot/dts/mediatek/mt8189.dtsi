@@ -1791,12 +1791,12 @@
 				reg = <0x1a0 0xc>;
 			};
 
-			lvts_e_data1: data1@1b4 {
-				reg = <0x1b4 0x54>;
+			lvts_e_data1: data1@1a4 {
+				reg = <0x1a4 0x54>;
 			};
 
-			lvts_e_data2: data2@e4 {
-				reg = <0xe4 0x8>;
+			lvts_e_data2: data2@1f8 {
+				reg = <0x1f8 0x8>;
 			};
 
 			socinfo-data1@7a0 {
