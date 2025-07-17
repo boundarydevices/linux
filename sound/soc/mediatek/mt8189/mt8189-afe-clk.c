@@ -28,6 +28,14 @@ static const struct mt8189_mck_div mck_div[MT8189_MCK_NUM] = {
 		.m_sel_id = MT8189_CLK_TOP_I2SIN1_M_SEL,
 		.div_clk_id = MT8189_CLK_TOP_APLL12_DIV_I2SIN1,
 	},
+	[MT8189_I2SOUT0_MCK] = {
+		.m_sel_id = MT8189_CLK_TOP_I2SOUT0_M_SEL,
+		.div_clk_id = MT8189_CLK_TOP_APLL12_DIV_I2SOUT0,
+	},
+	[MT8189_I2SOUT1_MCK] = {
+		.m_sel_id = MT8189_CLK_TOP_I2SOUT1_M_SEL,
+		.div_clk_id = MT8189_CLK_TOP_APLL12_DIV_I2SOUT1,
+	},
 	[MT8189_FMI2S_MCK] = {
 		.m_sel_id = MT8189_CLK_TOP_FMI2S_M_SEL,
 		.div_clk_id = MT8189_CLK_TOP_APLL12_DIV_FMI2S,
@@ -55,6 +63,8 @@ static const char *aud_clks[MT8189_CLK_NUM] = {
 	[MT8189_CLK_TOP_APLL2_D4] = "apll2_d4",
 	[MT8189_CLK_TOP_APLL12_DIV_I2SIN0] = "apll12_div_i2sin0",
 	[MT8189_CLK_TOP_APLL12_DIV_I2SIN1] = "apll12_div_i2sin1",
+	[MT8189_CLK_TOP_APLL12_DIV_I2SOUT0] = "apll12_div_i2sout0",
+	[MT8189_CLK_TOP_APLL12_DIV_I2SOUT1] = "apll12_div_i2sout1",
 	[MT8189_CLK_TOP_APLL12_DIV_FMI2S] = "apll12_div_fmi2s",
 	[MT8189_CLK_TOP_APLL12_DIV_TDMOUT_M] = "apll12_div_tdmout_m",
 	[MT8189_CLK_TOP_APLL12_DIV_TDMOUT_B] = "apll12_div_tdmout_b",
@@ -63,6 +73,8 @@ static const char *aud_clks[MT8189_CLK_NUM] = {
 	[MT8189_CLK_TOP_MUX_AUD_2] = "top_apll2",
 	[MT8189_CLK_TOP_I2SIN0_M_SEL] = "top_i2sin0",
 	[MT8189_CLK_TOP_I2SIN1_M_SEL] = "top_i2sin1",
+	[MT8189_CLK_TOP_I2SOUT0_M_SEL] = "top_i2sout0",
+	[MT8189_CLK_TOP_I2SOUT1_M_SEL] = "top_i2sout1",
 	[MT8189_CLK_TOP_FMI2S_M_SEL] = "top_fmi2s",
 	[MT8189_CLK_TOP_TDMOUT_M_SEL] = "top_dptx",
 	/* top 26m*/
