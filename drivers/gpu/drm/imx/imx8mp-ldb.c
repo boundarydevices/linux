@@ -256,10 +256,11 @@ imx8mp_ldb_encoder_atomic_check(struct drm_encoder *encoder,
 	 * Due to limited video PLL frequency points on i.MX8mp,
 	 * we do mode fixup here in case any mode is unsupported.
 	 */
-	if (ldb->dual)
-		mode->clock = mode->clock > 100000 ? 148500 : 74250;
-	else
-		mode->clock = 74250;
+	printk("%s: mode->clock %lu\n", __func__, mode->clock);
+//	if (ldb->dual)
+//		mode->clock = mode->clock > 100000 ? 148500 : 74250;
+//	else
+//		mode->clock = 74250;
 
 	return 0;
 }
