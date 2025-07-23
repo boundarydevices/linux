@@ -6,3 +6,4 @@ obj-$(CONFIG_TYPEC_MUX_PI3USB30532)	+= pi3usb30532.o
 obj-$(CONFIG_TYPEC_MUX_INTEL_PMC)	+= intel_pmc_mux.o
 obj-$(CONFIG_TYPEC_MUX_NB7VPQ904M)	+= nb7vpq904m.o
 obj-$(CONFIG_TYPEC_MUX_IT5205)         	+= it5205fn.o
+obj-$(CONFIG_TYPEC_MUX_DP_SELECTOR)	+= usb_dp_selector.o
