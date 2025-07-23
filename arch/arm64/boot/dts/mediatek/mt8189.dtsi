@@ -270,6 +270,7 @@
 		#size-cells = <2>;
 		compatible = "simple-bus";
 		ranges;
+		dma-ranges = <0x0 0x0 0x0 0x0 0x10 0x0>;
 
 		performance: performance-controller@108d68 {
 			compatible = "mediatek,cpufreq-hw";
