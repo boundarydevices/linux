@@ -366,6 +366,22 @@
 			#clock-cells = <1>;
 		};
 
+		usb_dp_selector: usb-dp-selector@10011018 {
+			compatible = "mediatek,usb_dp_selector";
+			reg = <0 0x10011018 0 0x4>;
+			reg-names = "usb_dp_reg";
+			mediatek,uds-ver = <3>;
+			status = "disabled";
+		};
+
+		usb_dp_selector_p3: usb-dp-selector@10011034 {
+			compatible = "mediatek,usb_dp_selector";
+			reg = <0 0x10011034 0 0x4>;
+			reg-names = "usb_dp_reg";
+			mediatek,uds-ver = <4>;
+			status = "disabled";
+		};
+
 		emicfg_ao_mem_clk: syscon@10270000 {
 			compatible = "mediatek,mt8189-emicfg_ao_mem", "syscon";
 			reg = <0 0x10270000 0 0x1000>;
