@@ -503,6 +503,7 @@
 				      "aud_mst_ck_peri",
 				      "aud_intbus_ck_peri";
 			mediatek,apmixedsys = <&apmixedsys_clk>;
+			mediatek,topckgen = <&topckgen_clk>;
 			status = "disabled";
 		};
 
