@@ -15,6 +15,7 @@
 #include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/usb/pd.h>
 #include <dt-bindings/pinctrl/mt8189-pinfunc.h>
+#include <dt-bindings/mfd/mt6375.h>
 #include "mt6359.dtsi"
 
 / {
@@ -645,6 +646,22 @@
 		};
 	};
 
+	rt1715_int_pins: rt1715-int-pins {
+		pins-int {
+			pinmux = <PINMUX_GPIO8__FUNC_GPIO8>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	mt6375_int_pins: mt6375-int-pins {
+		pins-int {
+			pinmux = <PINMUX_GPIO9__FUNC_GPIO9>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
 	wifi_pcie_default_pins: wifi-pcie-default-pins {
 		pins-wcn-3v3-en {
 			pinmux = <PINMUX_GPIO75__FUNC_GPIO75>;
@@ -962,7 +979,6 @@
 	pinctrl-0 = <&usb0_default_pins>;
 	wakeup-source;
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	role-switch-default-mode = "peripheral";
 };
 
 &xhci1 {
@@ -979,7 +995,6 @@
 
 &xhci3 {
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	vbus-supply = <&usb_p3_vbus>;
 	wakeup-source;
 	status = "okay";
 };
@@ -1017,12 +1032,71 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c4_pins>;
 	status = "okay";
+
+	mt6375@34 {
+		compatible = "mediatek,mt6375";
+		reg = <0x34>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&mt6375_int_pins>;
+		interrupts-extended = <&pio 9 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-controller;
+		#interrupt-cells = <1>;
+		wakeup-source;
+		status = "okay";
+
+		mt6375_tcpc: mt6375-tcpc {
+			compatible = "mediatek,mt6375-tcpc";
+			interrupts = <MT6375_PD_EVT>;
+
+			usb_con_p0: connector {
+				compatible = "usb-c-connector";
+				label = "USB-C";
+				data-role = "dual";
+				power-role = "dual";
+				try-power-role = "sink";
+				source-pdos = <PDO_FIXED(5000, 500, PDO_FIXED_DUAL_ROLE |
+							 PDO_FIXED_USB_COMM |
+							 PDO_FIXED_DATA_SWAP)>;
+				sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+						       PDO_FIXED_USB_COMM |
+						       PDO_FIXED_DATA_SWAP)>;
+				op-sink-microwatt = <10000000>;
+			};
+
+			port {};
+		};
+	};
 };
 
 &i2c5{
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c5_pins>;
 	status = "okay";
+
+	rt1715_p3: rt1715@4e {
+		compatible = "richtek,rt1715";
+		reg = <0x4e>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&rt1715_int_pins>;
+		interrupts-extended = <&pio 8 IRQ_TYPE_LEVEL_LOW>;
+		vbus-supply = <&usb_p3_vbus>;
+		status = "okay";
+
+		usb_con_p3: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "dual";
+			power-role = "dual";
+			try-power-role = "sink";
+			source-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			op-sink-microwatt = <10000000>;
+		};
+
+		port {};
+	};
 };
 
 &i2c6{
@@ -1043,6 +1117,72 @@
 	status = "okay";
 };
 
+/* port0 usb typec mux start */
+&usb_con_p0 {
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			tcpc_ssusb_mux_ep_p0: endpoint {
+				remote-endpoint = <&ssusb_mux_ep_p0>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			tcpc_ssusb_ep_p0: endpoint {
+				remote-endpoint = <&ssusb_ep_p0>;
+			};
+		};
+	};
+};
+
+&usb_dp_selector {
+	orientation-switch;
+	mode-switch;
+	status = "okay";
+
+	port {
+		ssusb_mux_ep_p0: endpoint {
+			remote-endpoint = <&tcpc_ssusb_mux_ep_p0>;
+		};
+	};
+};
+
+&ssusb {
+	port {
+		ssusb_ep_p0: endpoint {
+			remote-endpoint = <&tcpc_ssusb_ep_p0>;
+		};
+	};
+};
+/* port0 usb typec mux end */
+
+/* port3 rt1715 typec mux start */
+&usb_con_p3 {
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			tcpc_ssusb_mux_ep_p3: endpoint {
+				remote-endpoint = <&ssusb_mux_ep_p3>;
+			};
+		};
+	};
+};
+
+&usb_dp_selector_p3 {
+	orientation-switch;
+	status = "okay";
+	port {
+		ssusb_mux_ep_p3: endpoint {
+			remote-endpoint = <&tcpc_ssusb_mux_ep_p3>;
+		};
+	};
+};
+/* port3 rt1715 typec mux end */
 
 &eth {
 	phy-mode ="rgmii-rxid";
