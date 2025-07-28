@@ -25,6 +25,7 @@ properties:
           - mediatek,mt2701-disp-ovl
           - mediatek,mt8173-disp-ovl
           - mediatek,mt8183-disp-ovl
+          - mediatek,mt8189-disp-ovl
           - mediatek,mt8192-disp-ovl
           - mediatek,mt8195-mdp3-ovl
       - items:
