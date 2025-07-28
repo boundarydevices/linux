@@ -44,6 +44,7 @@ struct startek_panel {
 
 	struct gpio_desc *reset_gpio;
 	struct gpio_desc *enable_gpio;
+	struct gpio_desc *lcmen_gpio;
 	struct regulator *iovcc_supply;
 	struct regulator *pp3300_supply;
 
@@ -237,6 +238,7 @@ static int startek_panel_unprepare_power(struct drm_panel *panel)
 	mdelay(15);
 	gpiod_set_value(startek->enable_gpio, 0);
 	mdelay(3);
+	gpiod_set_value(startek->lcmen_gpio, 0);
 	if (startek->iovcc_supply)
 		regulator_disable(startek->iovcc_supply);
 	if (startek->pp3300_supply)
@@ -278,6 +280,7 @@ static int startek_panel_prepare_power(struct drm_panel *panel)
 		return 0;
 
 	gpiod_set_value(startek->reset_gpio, 0);
+	gpiod_set_value(startek->lcmen_gpio, 0);
 	gpiod_set_value(startek->enable_gpio, 0);
 	mdelay(1);
 
@@ -298,8 +301,10 @@ static int startek_panel_prepare_power(struct drm_panel *panel)
 	}
 	mdelay(10);
 
-	gpiod_set_value(startek->enable_gpio, 1);
+	gpiod_set_value(startek->lcmen_gpio, 1);
 	mdelay(15);
+	gpiod_set_value(startek->enable_gpio, 1);
+	mdelay(10);
 	gpiod_set_value(startek->reset_gpio, 1);
 	mdelay(10);
 
@@ -393,12 +398,18 @@ static int startek_panel_add(struct startek_panel *startek)
 	int ret;
 
 	startek->iovcc_supply = devm_regulator_get(dev, "iovcc");
-	if (IS_ERR(startek->iovcc_supply))
+	if (IS_ERR(startek->iovcc_supply)) {
+		ret = PTR_ERR(startek->iovcc_supply);
+		dev_err(dev, "cannot get iovcc %d\n", ret);
 		return PTR_ERR(startek->iovcc_supply);
+	}
 
 	startek->pp3300_supply = devm_regulator_get(dev, "pp3300");
-	if (IS_ERR(startek->pp3300_supply))
+	if (IS_ERR(startek->pp3300_supply)) {
+		ret = PTR_ERR(startek->pp3300_supply);
+		dev_err(dev, "cannot get pp3300 %d\n", ret);
 		return PTR_ERR(startek->pp3300_supply);
+	}
 
 	startek->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
 	if (IS_ERR(startek->reset_gpio)) {
@@ -411,6 +422,13 @@ static int startek_panel_add(struct startek_panel *startek)
 	if (IS_ERR(startek->enable_gpio)) {
 		ret = PTR_ERR(startek->enable_gpio);
 		dev_err(dev, "cannot get dcdc-en-gpio %d\n", ret);
+		return ret;
+	}
+
+	startek->lcmen_gpio = devm_gpiod_get_optional(dev, "lcmen", GPIOD_OUT_LOW);
+	if (IS_ERR(startek->lcmen_gpio)) {
+		ret = PTR_ERR(startek->lcmen_gpio);
+		dev_err(dev, "cannot get lcmen-gpio %d\n", ret);
 		return ret;
 	}
 
