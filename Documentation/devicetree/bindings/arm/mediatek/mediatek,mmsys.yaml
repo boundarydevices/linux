@@ -35,6 +35,7 @@ properties:
               - mediatek,mt8188-vdosys1
               - mediatek,mt8188-vppsys0
               - mediatek,mt8188-vppsys1
+              - mediatek,mt8189-mmsys
               - mediatek,mt8192-mmsys
               - mediatek,mt8195-vdosys1
               - mediatek,mt8195-vppsys0
