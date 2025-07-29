@@ -642,12 +642,14 @@
 		#address-cells = <0>;
 		#size-cells = <1>;
 
-		ethphy: ethernet-phy@7 {
-			reg = <7>;
+		ethphy: ethernet-phy@6 {
+			reg = <6>;
+			max-speed = <100>;
 			interrupts-extended = GPIRQ_ENET_PHY;
 			ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
 			ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
 			ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+			ti,clk-output-sel = <DP83867_CLK_O_SEL_CHN_A_TCLK>;
 		};
 	};
 };
