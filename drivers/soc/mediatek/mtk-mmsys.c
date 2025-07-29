@@ -13,6 +13,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset-controller.h>
 #include <linux/soc/mediatek/mtk-mmsys.h>
+#include <linux/pm_runtime.h>
 
 #include "mtk-mmsys.h"
 #include "mt8167-mmsys.h"
@@ -20,6 +21,7 @@
 #include "mt8183-mmsys.h"
 #include "mt8186-mmsys.h"
 #include "mt8188-mmsys.h"
+#include "mt8189-mmsys.h"
 #include "mt8192-mmsys.h"
 #include "mt8195-mmsys.h"
 #include "mt8365-mmsys.h"
@@ -128,6 +130,14 @@ static const struct mtk_mmsys_driver_data mt8192_mmsys_driver_data = {
 	.routes = mmsys_mt8192_routing_table,
 	.num_routes = ARRAY_SIZE(mmsys_mt8192_routing_table),
 	.sw0_rst_offset = MT8186_MMSYS_SW0_RST_B,
+	.num_resets = 32,
+};
+
+static const struct mtk_mmsys_driver_data mt8189_mmsys_driver_data = {
+	.clk_driver = "clk-mt8189-mmsys",
+	.routes = mmsys_mt8189_routing_table,
+	.num_routes = ARRAY_SIZE(mmsys_mt8189_routing_table),
+	.sw0_rst_offset = MT8189_MMSYS_SW0_RST_B,
 	.num_resets = 32,
 };
 
@@ -574,6 +584,9 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	}
 	mmsys->drm_pdev = drm;
 
+	if (of_property_present(dev->of_node, "power-domains"))
+		pm_runtime_enable(dev);
+
 out_probe_done:
 	return 0;
 }
@@ -602,6 +615,7 @@ static const struct of_device_id of_match_mtk_mmsys[] = {
 	{ .compatible = "mediatek,mt8188-vdosys1", .data = &mt8188_vdosys1_driver_data },
 	{ .compatible = "mediatek,mt8188-vppsys0", .data = &mt8188_vppsys0_driver_data },
 	{ .compatible = "mediatek,mt8188-vppsys1", .data = &mt8188_vppsys1_driver_data },
+	{ .compatible = "mediatek,mt8189-mmsys", .data = &mt8189_mmsys_driver_data },
 	{ .compatible = "mediatek,mt8192-mmsys", .data = &mt8192_mmsys_driver_data },
 	/* "mediatek,mt8195-mmsys" compatible is deprecated */
 	{ .compatible = "mediatek,mt8195-mmsys", .data = &mt8195_vdosys0_driver_data },
