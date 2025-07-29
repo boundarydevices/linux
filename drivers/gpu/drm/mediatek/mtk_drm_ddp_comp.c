@@ -497,6 +497,8 @@ static const struct mtk_ddp_comp_match mtk_ddp_matches[DDP_COMPONENT_DRM_ID_MAX]
 	[DDP_COMPONENT_UFOE]		= { MTK_DISP_UFOE,		0, &ddp_ufoe },
 	[DDP_COMPONENT_WDMA0]		= { MTK_DISP_WDMA,		0, NULL },
 	[DDP_COMPONENT_WDMA1]		= { MTK_DISP_WDMA,		1, NULL },
+	[DDP_COMPONENT_COMP0_OUT_CB4]	= { MTK_DISP_VIRTUAL,		-1, NULL },
+	[DDP_COMPONENT_COMP0_OUT_CB5]	= { MTK_DISP_VIRTUAL,		-1, NULL },
 };
 
 static bool mtk_drm_find_comp_in_ddp(struct device *dev,
@@ -551,6 +553,11 @@ int mtk_ddp_comp_get_id(struct device_node *node,
 	}
 
 	return -EINVAL;
+}
+
+enum mtk_ddp_comp_type mtk_ddp_comp_get_type(unsigned int comp_id)
+{
+	return mtk_ddp_matches[comp_id].type;
 }
 
 unsigned int mtk_drm_find_possible_crtc_by_comp(struct drm_device *drm,

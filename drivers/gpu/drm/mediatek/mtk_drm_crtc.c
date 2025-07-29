@@ -1375,14 +1375,15 @@ int mtk_drm_crtc_create(struct drm_device *drm_dev,
 		/* Not all drm components have a DTS device node, such as ovl_adaptor,
 		 * which is the drm bring up sub driver
 		 */
-		if (!node && comp_id != DDP_COMPONENT_DRM_OVL_ADAPTOR) {
+		if (!node && comp_id != DDP_COMPONENT_DRM_OVL_ADAPTOR &&
+		    (mtk_ddp_comp_get_type(comp_id) != MTK_DISP_VIRTUAL)) {
 			dev_info(dev,
 				"Not creating crtc %d because component %d is disabled or missing\n",
 				crtc_i, comp_id);
 			return 0;
 		}
 
-		if (!comp->dev) {
+		if (!comp->dev && (mtk_ddp_comp_get_type(comp_id) != MTK_DISP_VIRTUAL)) {
 			dev_err(dev, "Component %pOF not initialized\n", node);
 			return -ENODEV;
 		}
@@ -1448,6 +1449,9 @@ int mtk_drm_crtc_create(struct drm_device *drm_dev,
 		struct mtk_ddp_comp *comp;
 
 		comp = &priv->ddp_comp[comp_id];
+		if (mtk_ddp_comp_get_type(comp_id) == MTK_DISP_VIRTUAL)
+			comp->id = comp_id;
+
 		mtk_crtc->ddp_comp[i] = comp;
 
 		if (comp->funcs) {
