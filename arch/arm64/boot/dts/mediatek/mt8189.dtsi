@@ -34,6 +34,10 @@
 		i2c8 = &i2c8;
 		gce0 = &gce0;
 		gce1 = &gce1;
+		ovl0 = &disp_ovl0_4l;
+		ovl1 = &disp_ovl1_4l;
+		rdma0 = &disp_rdma0;
+		rdma1 = &disp_rdma1;
 	};
 
 	cpus {
@@ -1534,6 +1538,52 @@
 					<208 3 26 1>,<209 3 27 1>;
 		};
 
+		disp_pwm0: disp-pwm0@1100e000 {
+			compatible = "mediatek,mt8183-disp-pwm";
+			reg = <0 0x1100e000 0 0x1000>;
+			interrupts = <GIC_SPI 471 IRQ_TYPE_LEVEL_HIGH 0>;
+			#pwm-cells = <2>;
+			clocks = <&pericfg_ao_clk  CLK_PERAO_DISP_PWM0>,
+				 <&topckgen_clk CLK_TOP_DISP_PWM_SEL>,
+				 <&topckgen_clk CLK_TOP_OSC_D4>;
+			clock-names = "main", "mm", "pwm_src";
+		};
+
+		disp_pwm1: disp-pwm1@1100f000 {
+			compatible = "mediatek,mt8183-disp-pwm";
+			reg = <0 0x1100f000 0 0x1000>;
+			interrupts = <GIC_SPI 470 IRQ_TYPE_LEVEL_HIGH 0>;
+			#pwm-cells = <2>;
+			clocks = <&pericfg_ao_clk  CLK_PERAO_DISP_PWM1>,
+				 <&topckgen_clk CLK_TOP_DISP_PWM_SEL>,
+				 <&topckgen_clk CLK_TOP_OSC_D4>;
+			clock-names = "main", "mm", "pwm_src";
+		};
+
+		dsi0: dsi@14016000 {
+			compatible = "mediatek,mt8188-dsi";
+			reg = <0 0x14016000 0 0x1000>, <0 0x14000000 0 0x1000>;
+			interrupts = <GIC_SPI 326 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_DISP>;
+			phys = <&mipi_tx_config0>;
+			phy-names = "dphy";
+			clocks = <&dispsys_config_clk CLK_MMSYS_0_DISP_DSI0>,
+				 <&dispsys_config_clk CLK_MMSYS_1_DISP_DSI0>,
+				 <&mipi_tx_config0>;
+			clock-names = "engine", "digital", "hs";
+		};
+
+		mipi_tx_config0: mipi-tx-config0@11b40000 {
+			compatible = "mediatek,mt8183-mipi-tx";
+			reg = <0 0x11b40000 0 0x1000>;
+			clocks = <&clk26m>;
+			#clock-cells = <0>;
+			#phy-cells = <0>;
+			clock-output-names = "mipi_tx0_pll";
+			#dispsys-sel-offset = <0x170 0x174>;
+			status = "disabled";
+		};
+
 		watchdog: watchdog@1c00a000 {
 			compatible = "mediatek,mt6589-wdt";
 			reg = <0 0x1c00a000 0 0x100>;
@@ -2218,5 +2268,75 @@
 			};
 		};
 
+		dispsys_config: dispsys-config@14000000 {
+			compatible = "mediatek,mt8189-mmsys", "syscon";
+			reg = <0 0x14000000 0 0x1000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			#clock-cells = <1>;
+			clocks = <&dispsys_config_clk CLK_MM_DISP_MUTEX0>,
+				 <&dispsys_config_clk CLK_MM_DIPSYS_CONFIG>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_DISP>;
+			mboxes = <&gce0 0 CMDQ_THR_PRIO_HIGHEST>,
+				 <&gce0 1 CMDQ_THR_PRIO_HIGHEST>;
+
+			gce-subsys = <&gce0 0x14000000 SUBSYS_1400XXXX>,
+				     <&gce0 0x14010000 SUBSYS_1401XXXX>,
+				     <&gce0 0x14020000 SUBSYS_1402XXXX>;
+
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0 0x1000>;
+		};
+
+		mutex0: disp-mutex0@14001000 {
+			compatible = "mediatek,mt8189-disp-mutex";
+			reg = <0 0x14001000 0 0x1000>;
+			interrupts = <GIC_SPI 332 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&dispsys_config_clk CLK_MM_DISP_MUTEX0>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0x1000 0x1000>;
+			mediatek,gce-events = <CMDQ_EVENT_DISPSYS_DISP_MUTEX0_ENG_EVENT_0>,
+					      <CMDQ_EVENT_DISPSYS_DISP_MUTEX0_ENG_EVENT_1>;
+		};
+
+		disp_ovl0_4l: disp-ovl0-4l@14002000 {
+			compatible = "mediatek,mt8189-disp-ovl";
+			reg = <0 0x14002000 0 0x1000>;
+			interrupts = <GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&mm_iommu M4U_L0_P1_DISP_OVL0_4L_RDMA0>,
+				<&mm_iommu M4U_L0_P0_DISP_OVL0_4L_HDR>;
+			clocks = <&dispsys_config_clk CLK_MM_DISP_OVL0_4L>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0x2000 0x1000>;
+		};
+
+		disp_ovl1_4l: disp-ovl1-4l@14003000 {
+			compatible = "mediatek,mt8189-disp-ovl";
+			reg = <0 0x14003000 0 0x1000>;
+			interrupts = <GIC_SPI 304 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&mm_iommu M4U_L1_P1_DISP_OVL1_4L_RDMA0>,
+				<&mm_iommu M4U_L1_P0_DISP_OVL1_4L_HDR>;
+			clocks = <&dispsys_config_clk CLK_MM_DISP_OVL1_4L>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0x3000 0x1000>;
+		};
+
+		disp_rdma0: disp-rdma0@14006000 {
+			compatible = "mediatek,mt8195-disp-rdma";
+			reg = <0 0x14006000 0 0x1000>;
+			interrupts = <GIC_SPI 308 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&dispsys_config_clk CLK_MM_DISP_RDMA0>;
+			mediatek,larb = <&smi_larb0>;
+			mediatek,smi-id = <0>;
+			iommus = <&mm_iommu M4U_L0_P5_DISP_RDMA0>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0x6000 0x1000>;
+		};
+
+		disp_rdma1: disp-rdma1@14007000 {
+			compatible = "mediatek,mt8195-disp-rdma";
+			reg = <0 0x14007000 0 0x1000>;
+			interrupts = <GIC_SPI 309 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&dispsys_config_clk CLK_MM_DISP_RDMA1>;
+			mediatek,larb = <&smi_larb1>;
+			mediatek,smi-id = <1>;
+			iommus = <&mm_iommu M4U_L1_P5_DISP_RDMA1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0x7000 0x1000>;
+		};
 	};
 };

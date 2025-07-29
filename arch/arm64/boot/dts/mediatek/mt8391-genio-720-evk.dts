@@ -26,6 +26,15 @@
 		serial0 = &uart0;
 	};
 
+	backlight_lcd0: backlight-lcd0 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm0 0 500000>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+		status = "okay";
+	};
+
 	chosen {
 		stdout-path = "serial0:921600n8";
 	};
@@ -150,6 +159,24 @@
 		#sound-dai-cells = <0>;
 		num-channels = <2>;
 		wakeup-delay-ms = <100>;
+	};
+
+	dsi0_pp3300: dsi0-pp3300 {
+		compatible = "regulator-fixed";
+		regulator-name = "lcm2_3v3_en";
+		enable-active-high;
+		gpio = <&pio 24 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&dsi0_pp3300_pins_default>;
+	};
+
+	dsi0_iovcc: dsi0-iovcc {
+		compatible = "regulator-fixed";
+		regulator-name = "lcm1_1v8_en";
+		enable-active-high;
+		gpio = <&pio 58 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&dsi0_iovcc_pins_default>;
 	};
 };
 
@@ -328,6 +355,48 @@
 
 &watchdog {
 	/delete-property/ mediatek,disable-extrst;
+};
+
+&dsi0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	panel@0 {
+		compatible = "startek,kd070fhfid078";
+		reg = <0>;
+		reset-gpios = <&pio 25 0>;
+		lcmen-gpios = <&pio 87 0>;
+		enable-gpios = <&pio 13 0>;
+		pp3300-supply = <&dsi0_pp3300>;
+		iovcc-supply = <&dsi0_iovcc>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel0_pins_default>;
+		backlight = <&backlight_lcd0>;
+		status = "okay";
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&dsi_out>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			dsi_out: endpoint {
+				remote-endpoint = <&panel_in>;
+			};
+		};
+	};
+};
+
+&mipi_tx_config0 {
+	status = "okay";
+};
+
+&disp_pwm0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&disp_pwm0_pin_default>;
 };
 
 &pio {
@@ -578,6 +647,36 @@
 		pins-wcn-3v3-en {
 			pinmux = <PINMUX_GPIO75__FUNC_GPIO75>;
 			output-high;
+		};
+	};
+
+	disp_pwm0_pin_default: disp-pwm0-pin-default {
+		pins1 {
+			pinmux = <PINMUX_GPIO29__FUNC_DISP_PWM0>;
+			output-high;
+		};
+	};
+
+	panel0_pins_default: panel0-pins-default {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO87__FUNC_GPIO87>,
+				 <PINMUX_GPIO13__FUNC_GPIO13>,
+				 <PINMUX_GPIO25__FUNC_GPIO25>;
+			output-high;
+		};
+	};
+
+	dsi0_pp3300_pins_default: dsi0-pp3300-pins-default {
+		panel-en {
+			pinmux = <PINMUX_GPIO24__FUNC_GPIO24>;
+			output-low;
+		};
+	};
+
+	dsi0_iovcc_pins_default: dsi0-iovcc-pins-default {
+		panel-en {
+			pinmux = <PINMUX_GPIO58__FUNC_GPIO58>;
+			output-low;
 		};
 	};
 
@@ -929,7 +1028,7 @@
 &i2c3{
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c3_pins>;
-	status = "okay";
+	status = "disabled";
 };
 
 &i2c4{
