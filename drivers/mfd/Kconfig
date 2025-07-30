@@ -984,6 +984,16 @@ config MFD_MT6370
 	  This driver can also be built as a module. If so, the module
 	  will be called "mt6370".
 
+config MFD_MT6375
+	tristate "MediaTek MT6375 PMIC support"
+	depends on OF && I2C
+	select REGMAP_I2C
+	help
+	  Say yes here to add support for MediaTek MT6375 PMIC. This is
+	  a Power Management IC. This driver provides common support for
+	  accessing the device; additional drivers must be enabled in order
+	  to use the functionality of the device.
+
 config MFD_MT6397
 	tristate "MediaTek MT6397 PMIC Support"
 	select MFD_CORE
