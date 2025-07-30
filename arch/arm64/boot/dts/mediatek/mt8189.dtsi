@@ -54,6 +54,7 @@
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
 			performance-domains = <&performance 0>;
+			cpu-idle-states = <&cpuoff_l>;
 			#cooling-cells = <2>;
 		};
 
@@ -65,6 +66,7 @@
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
 			performance-domains = <&performance 0>;
+			cpu-idle-states = <&cpuoff_l>;
 			#cooling-cells = <2>;
 		};
 
@@ -76,6 +78,7 @@
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
 			performance-domains = <&performance 0>;
+			cpu-idle-states = <&cpuoff_l>;
 			#cooling-cells = <2>;
 		};
 
@@ -87,6 +90,7 @@
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
 			performance-domains = <&performance 0>;
+			cpu-idle-states = <&cpuoff_l>;
 			#cooling-cells = <2>;
 		};
 
@@ -98,6 +102,7 @@
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
 			performance-domains = <&performance 0>;
+			cpu-idle-states = <&cpuoff_l>;
 			#cooling-cells = <2>;
 		};
 
@@ -109,6 +114,7 @@
 			clock-frequency = <2000000000>;
 			capacity-dmips-mhz = <282>;
 			performance-domains = <&performance 0>;
+			cpu-idle-states = <&cpuoff_l>;
 			#cooling-cells = <2>;
 		};
 
@@ -120,6 +126,7 @@
 			clock-frequency = <2600000000>;
 			capacity-dmips-mhz = <1024>;
 			performance-domains = <&performance 1>;
+			cpu-idle-states = <&cpuoff_b>;
 			#cooling-cells = <2>;
 		};
 
@@ -131,6 +138,7 @@
 			clock-frequency = <2600000000>;
 			capacity-dmips-mhz = <1024>;
 			performance-domains = <&performance 1>;
+			cpu-idle-states = <&cpuoff_b>;
 			#cooling-cells = <2>;
 		};
 
@@ -167,6 +175,27 @@
 				core7 {
 					cpu = <&cpu7>;
 				};
+			};
+		};
+
+		idle-states {
+			entry-method = "arm,psci";
+			cpuoff_l: cpuoff-l {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x00010000>;
+				local-timer-stop;
+				entry-latency-us = <25>;
+				exit-latency-us = <57>;
+				min-residency-us = <5700>;
+			};
+
+			cpuoff_b: cpuoff-b {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x00010000>;
+				local-timer-stop;
+				entry-latency-us = <35>;
+				exit-latency-us = <82>;
+				min-residency-us = <1890>;
 			};
 		};
 	};
