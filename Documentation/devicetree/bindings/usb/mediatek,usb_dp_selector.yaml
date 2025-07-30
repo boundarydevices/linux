@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/usb/mediatek,usb_dp_selector.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek DP/USB selector
+
+maintainers:
+  - Chris Chen <chris-qj.chen@mediatek.com>
+
+properties:
+  compatible:
+      const: mediatek,usb_dp_selector
+
+  reg:
+    maxItems: 1
+
+  reg-names:
+    maxItems: 1
+
+  mediatek,uds-ver:
+    description: Register map version
+    $ref: /schemas/types.yaml#/definitions/uint32
+
+  mode-switch:
+    description: Flag the port as possible handle of altmode switching
+    type: boolean
+
+  orientation-switch:
+    description: Flag the port as possible handler of orientation switching
+    type: boolean
+
+  port:
+    $ref: /schemas/graph.yaml#/properties/port
+    description:
+      A port node to link the usb_dp_selector to a TypeC controller for the purpose of
+      handling altmode muxing and orientation switching.
+
+required:
+  - compatible
+  - reg
+  - orientation-switch
+  - port
+
+additionalProperties: false
+
+examples:
+  - |
+    usb_dp_selector: usb-dp-selector@10011018 {
+      compatible = "mediatek,usb_dp_selector";
+      reg = <0x10011018 0x4>;
+      reg-names = "usb_dp_reg";
+      mediatek,uds-ver = <3>;
+      orientation-switch;
+      mode-switch;
+      status = "okay";
+
+      port {
+        ssusb_mux_ep_p0: endpoint {
+          remote-endpoint = <&tcpc_ssusb_mux_ep_p0>;
+        };
+      };
+    };
+...
