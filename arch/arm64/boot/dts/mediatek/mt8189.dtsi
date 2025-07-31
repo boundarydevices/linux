@@ -563,6 +563,66 @@
 			status = "disabled";
 		};
 
+		sspm: sspm@1c300000 {
+			compatible = "mediatek,sspm";
+			reg = <0 0x1c300000 0 0x2c000>,
+			      <0 0x1c340000 0 0x10000>,
+			      <0 0x1c380000 0 0x80>;
+
+			reg-names = "sspm_base",
+				    "cfgreg",
+				    "mbox_share";
+
+			interrupts = <GIC_SPI 508 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupt-names = "ipc";
+			memory-region = <&sspm_resv_mem>;
+			sspm-res-ram-start = <0x0>;
+			sspm-res-ram-size = <0x110000>; /* 1M + 64K */
+
+			sspm-share-region-base = <0x24000>; /* 144K */
+			sspm-share-region-size = <0x8000>; /* 32K */
+			status = "disabled";
+		};
+
+		ssram@1c350000 {
+			compatible = "mmio-sram";
+			reg = <0x0 0x1c350000 0x0 0x80>;
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x0 0x1c350000 0x80>;
+
+			scmi_tx_shmem: tiny-mbox@0 {
+				compatible = "arm,scmi-shmem";
+				reg = <0x0 0x80>;
+			};
+		};
+
+		ssram@1c360000 {
+			compatible = "mmio-sram";
+			reg = <0x0 0x1c360000 0x0 0x80>;
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x0 0x1c360000 0x80>;
+
+			scmi_rx_shmem: tiny-mbox@1 {
+				compatible = "arm,scmi-shmem";
+				reg = <0x0 0x80>;
+			};
+		};
+
+		tinysys_mbox: tinysys-mbox@1c351000 {
+			compatible = "mediatek,tinysys_mbox";
+			reg = <0 0x1c351000 0 0x1000>,
+			      <0 0x1c361000 0 0x1000>;
+			/* for profiling */
+			shmem = <&scmi_tx_shmem>, <&scmi_rx_shmem>;
+			interrupts = <GIC_SPI 509 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 510 IRQ_TYPE_LEVEL_HIGH 0>;
+			#mbox-cells = <1>;
+		};
+
 		ssusb: usb0@11201000 {
 			compatible = "mediatek,mtu3";
 			reg = <0 0x11201000 0 0x2e00>,
