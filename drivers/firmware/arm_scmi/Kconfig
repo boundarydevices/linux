@@ -193,4 +193,14 @@ config ARM_SCMI_POWER_CONTROL
 	  called scmi_power_control. Note this may needed early in boot to catch
 	  early shutdown/reboot SCMI requests.
 
+config MTK_TINYSYS_SCMI
+	tristate "Specify TINYSYS SCMI Interface Support"
+	depends on ARM_SCMI_PROTOCOL || (COMPILE_TEST && OF)
+	default y
+	help
+	  TINYSYS SCMI is for MediaTek in-house power protocol
+	  Set Y to enable this feature.
+          Set N to disable this feature.
+	  If unsure, set N to stay with legancy feature.
+
 endmenu
