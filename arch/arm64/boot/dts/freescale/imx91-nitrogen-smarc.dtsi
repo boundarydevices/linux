@@ -460,12 +460,15 @@
 	pinctrl-2 = <&pinctrl_usdhc3>;
 	mmc-pwrseq = <&usdhc3_pwrseq>;
 	pinctrl-assert-gpios = <&pcal6534 2 GPIO_ACTIVE_HIGH>;
+	max-frequency = <133333333>;
 	bus-width = <4>;
 	keep-power-in-suspend;
 	non-removable;
 	wakeup-source;
 	pm-ignore-notify;
-	fsl,sdio-async-interrupt-enabled;
+	voltage-ranges = <1800 1800>;
+	fsl,tuning-start-tap = <20>;
+	fsl,tuning-step= <2>;
 	vmmc-supply = <&reg_wlan_vmmc>;
 	vqmmc-1-8-v;
 	vqmmc-supply = <&reg_vref_1v8>;
@@ -713,12 +716,12 @@
 
 	pinctrl_usdhc3: usdhc3grp {
 		fsl,pins = <
-			MX91_PAD_SD3_CLK__USDHC3_CLK				0x15fe
-			MX91_PAD_SD3_CMD__USDHC3_CMD				0x13fe
-			MX91_PAD_SD3_DATA0__USDHC3_DATA0			0x13fe
-			MX91_PAD_SD3_DATA1__USDHC3_DATA1			0x13fe
-			MX91_PAD_SD3_DATA2__USDHC3_DATA2			0x13fe
-			MX91_PAD_SD3_DATA3__USDHC3_DATA3			0x13fe
+			MX91_PAD_SD3_CLK__USDHC3_CLK				0x1582
+			MX91_PAD_SD3_CMD__USDHC3_CMD				0x1382
+			MX91_PAD_SD3_DATA0__USDHC3_DATA0			0x1382
+			MX91_PAD_SD3_DATA1__USDHC3_DATA1			0x1382
+			MX91_PAD_SD3_DATA2__USDHC3_DATA2			0x1382
+			MX91_PAD_SD3_DATA3__USDHC3_DATA3			0x1382
 			MX91_PAD_PDM_BIT_STREAM1__GPIO1_IO10			0x31e
 		>;
 	};
