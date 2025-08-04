@@ -1,0 +1,21 @@
+
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC.
+ */
+
+/dts-v1/;
+
+#include "imx8mm-nitrogen_smarc.dts"
+#include "imx8mm-nitrogen_smarc-som-r30.dtsi"
+
+/ {
+	model = "Boundary Nitrogen8M Mini SMARC REV.30 board";
+	compatible = "boundary,imx8mm-nitrogen_smarc", "fsl,imx8mm";
+
+	aliases {
+		rtc0 = &rv3028;
+		rtc1 = &rv3028_som;
+		rtc2 = &snvs_rtc;
+	};
+};

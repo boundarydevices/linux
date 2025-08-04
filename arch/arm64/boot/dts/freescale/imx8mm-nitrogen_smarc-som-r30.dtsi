@@ -1,0 +1,55 @@
+
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC.
+ */
+
+/ {
+	reg_vref_1v8_clock: regulator-vref-wifi {
+		compatible = "regulator-fixed-clock";
+		clocks = <&rv3028_som>;
+		regulator-always-on;
+		regulator-name = "vref-wifi-1v8-clock";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+};
+
+&i2cmux9546_som {
+	i2c1d: i2c1@3 {
+		/* RTC_SOM */
+		clock-frequency = <100000>;
+		reg = <3>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		rv3028_som: rtc_som@52 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_rv3028_som>;
+			backup-switchover-dsm;
+			#clock-cells = <0>;
+			compatible = "microcrystal,rv3028";
+			reg = <0x52>;
+			interrupts-extended = <&gpio1 0 IRQ_TYPE_LEVEL_LOW>;
+			wakeup-source;
+		};
+	};
+};
+
+&iomuxc {
+	pinctrl_rv3028_som: rv3028_somgrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO00_GPIO1_IO0	0x140
+		>;
+	};
+
+	pinctrl_reg_wlan_vmmc: reg-wlan-vmmcgrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_SAI2_RXFS_GPIO4_IO21	0x100
+		>;
+	};
+};
+
+&usdhc3 {
+	vqmmc-supply = <&reg_vref_1v8_clock>;
+};
