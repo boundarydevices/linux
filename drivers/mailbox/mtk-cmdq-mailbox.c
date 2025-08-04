@@ -917,6 +917,12 @@ static int cmdq_probe(struct platform_device *pdev)
 		return err;
 	}
 
+	err = devm_mbox_controller_register(dev, &cmdq->mbox);
+	if (err < 0) {
+		dev_err(dev, "failed to register mailbox: %d\n", err);
+		return err;
+	}
+
 	return 0;
 }
 
