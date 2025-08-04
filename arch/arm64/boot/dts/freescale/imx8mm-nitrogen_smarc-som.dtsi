@@ -3,6 +3,7 @@
  * Copyright 2023 Boundary Devices
  */
 
+#include "imx8mm.dtsi"
 #include <dt-bindings/phy/phy-imx8-pcie.h>
 #include <dt-bindings/usb/pd.h>
 
@@ -237,7 +238,7 @@
 		};
 	};
 
-	i2cmux9546@71 {
+	i2cmux9546_som: i2cmux9546@71 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_pca9546>;
 		compatible = "nxp,pca9546";
