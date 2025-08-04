@@ -451,6 +451,7 @@ struct ap1302_device {
 	} debugfs;
 
 	struct regulator *supply;
+	bool hw_inited;
 };
 
 static inline struct ap1302_device *to_ap1302(struct v4l2_subdev *sd)
@@ -2687,6 +2688,8 @@ static int ap1302_hw_init(struct ap1302_device *ap1302)
 	unsigned int retries;
 	int ret;
 
+	ap1302->hw_inited = false;
+
 	/* Request and validate the firmware. */
 	ret = ap1302_request_firmware(ap1302);
 	if (ret)
@@ -2730,6 +2733,8 @@ static int ap1302_hw_init(struct ap1302_device *ap1302)
 		goto error_power_sensors;
 	}
 
+	ap1302->hw_inited = true;
+
 	return 0;
 
 error_power:
@@ -2746,6 +2751,7 @@ static void ap1302_hw_cleanup(struct ap1302_device *ap1302)
 {
 	ap1302_power_off(ap1302);
 	ap1302_power_off_sensors(ap1302);
+	ap1302->hw_inited = false;
 }
 
 /* -----------------------------------------------------------------------------
@@ -2955,8 +2961,12 @@ static int ap1302_suspend(struct device *dev)
 
 	dev_dbg(dev, "ap1302 suspend\n");
 
-	ap1302_hw_cleanup(ap1302);
-	release_firmware(ap1302->fw);
+	mutex_lock(&ap1302->lock);
+	if (ap1302->hw_inited) {
+		ap1302_hw_cleanup(ap1302);
+		release_firmware(ap1302->fw);
+	}
+	mutex_unlock(&ap1302->lock);
 
 	return 0;
 }
