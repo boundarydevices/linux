@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/arm/mediatek/mediatek,sspm.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek mt8196 SSPM core
+
+maintainers:
+  - Hailong Fan <hailong.fan@mediatek.com>
+
+description:
+    The MediaTek SSPM(Secure System Power Manager) controller manages SoC power and operates within the secure domain.
+
+properties:
+  compatible:
+    const: mediatek,sspm
+
+  reg:
+    minItems: 3
+    maxItems: 3
+
+  reg-names:
+    items:
+      - const: sspm_base
+      - const: cfgreg
+      - const: mbox_share
+
+  interrupts:
+    minItems: 1
+    description: IPI interrupt
+
+  memory-region:
+    items:
+      - description: Memory shared by SSPM features.
+
+required:
+  - compatible
+  - reg
+  - reg-names
+
+additionalProperties: false
+
+examples:
+  - |
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        sspm: sspm@1c300000 {
+            compatible = "mediatek,sspm";
+            reg = <0 0x1c300000 0 0x2c000>,
+                  <0 0x1c340000 0 0x10000>,
+                  <0 0x1c380000 0 0x80>;
+
+            reg-names = "sspm_base",
+                        "cfgreg",
+                        "mbox_share";
+
+            interrupts = <0 508 4>;
+            memory-region = <&sspm_resv_mem>;
+        };
+    };
