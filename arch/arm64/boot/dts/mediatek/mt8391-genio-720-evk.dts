@@ -800,16 +800,6 @@
 			input-enable;
 			bias-pull-down;
 		};
-		pins-cmd3-dat {
-			pinmux = <PINMUX_GPIO113__FUNC_GPIO113>;
-			input-enable;
-			bias-pull-down;
-		};
-		pins-cmd4-dat {
-			pinmux = <PINMUX_GPIO114__FUNC_GPIO114>;
-			input-enable;
-			bias-pull-down;
-		};
 	};
 
 	aud_gpio_ap_dmic_on: aud-gpio-ap-dmic-on {
@@ -820,16 +810,6 @@
 		};
 		pins-cmd2-dat {
 			pinmux = <PINMUX_GPIO112__FUNC_DMIC0_DAT0>;
-			input-schmitt-enable;
-			bias-disable;
-		};
-		pins-cmd3-dat {
-			pinmux = <PINMUX_GPIO113__FUNC_DMIC1_CLK>;
-			input-schmitt-enable;
-			bias-disable;
-		};
-		pins-cmd4-dat {
-			pinmux = <PINMUX_GPIO114__FUNC_DMIC1_DAT0>;
 			input-schmitt-enable;
 			bias-disable;
 		};
