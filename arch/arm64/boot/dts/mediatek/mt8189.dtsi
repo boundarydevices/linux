@@ -2537,5 +2537,437 @@
 			iommus = <&mm_iommu M4U_L1_P5_DISP_RDMA1>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0x7000 0x1000>;
 		};
+
+		mipi_csi0: mipi-csi0@11f50000 {
+			compatible = "mediatek,mt8189-csi-rx";
+			reg = <0 0x11f50000 0 0x4000>;
+			phy-type = <PHY_TYPE_DPHY>;
+			status = "disabled";
+			num-lanes = <4>;
+			#phy-cells = <1>;
+			mediatek,csi-port = "0";
+		};
+
+		mipi_csi1: mipi-csi1@11f54000 {
+			compatible = "mediatek,mt8189-csi-rx";
+			reg = <0 0x11f54000 0 0x4000>;
+			phy-type = <PHY_TYPE_DPHY>;
+			status = "disabled";
+			num-lanes = <2>;
+			#phy-cells = <1>;
+			mediatek,csi-port = "1";
+		};
+
+		seninf_top: seninf-top@1a004000 {
+			compatible = "mediatek,mt8189-seninf-core";
+			reg = <0 0x1a004000 0 0x8000>;
+			reg-names = "base";
+			interrupts = <GIC_SPI 316 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&camsys_main_clk CLK_CAM_M_SENINF>,
+				 <&topckgen_clk CLK_TOP_SENINF_SEL>,
+				 <&topckgen_clk CLK_TOP_SENINF1_SEL>,
+				 <&vlp_cksys_clk CLK_VLP_CK_CAMTG0_SEL>,
+				 <&vlp_cksys_clk CLK_VLP_CK_CAMTG1_SEL>,
+				 <&vlp_cksys_clk CLK_VLP_CK_CAMTG2_SEL>,
+				 <&topckgen_clk CLK_TOP_F26M_CK_D2>,
+				 <&topckgen_clk CLK_TOP_UNIVPLL_192M_D8>,
+				 <&topckgen_clk CLK_TOP_UNIVPLL_D6_D8>,
+				 <&topckgen_clk CLK_TOP_UNIVPLL_192M_D4>,
+				 <&topckgen_clk CLK_TOP_TCK_26M_MX9>,
+				 <&topckgen_clk CLK_TOP_UNIVPLL_192M_D16>,
+				 <&topckgen_clk CLK_TOP_UNIVPLL_192M_D32>;
+			clock-names = "CAMSYS_SENINF_CGPDN",
+				      "TOP_MUX_SENINF",
+				      "TOP_MUX_SENINF1",
+				      "TOP_MUX_CAMTG",
+				      "TOP_MUX_CAMTG1",
+				      "TOP_MUX_CAMTG2",
+				      "TOP_F26M_CK_D2",
+				      "TOP_UNIVP_192M_D8",
+				      "TOP_UNIVPLL_D6_D8",
+				      "TOP_UNIVP_192M_D4",
+				      "TOP_CLK26M",
+				      "TOP_UNIVP_192M_D16",
+				      "TOP_UNIVP_192M_D32";
+
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>,
+					<&scpsys MT8189_POWER_DOMAIN_CSI_RX>;
+
+			seninf_csi_port_0: seninf-csi-port-0 {
+				compatible = "mediatek,mt8189-seninf";
+				mediatek,csi-port = "0";
+				phys = <&mipi_csi0 PHY_TYPE_DPHY>;
+				phy-names = "csi0";
+				status = "disabled";
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+					};
+
+					port@1 {
+						reg = <1>;
+						seninf0_camsv2_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv2_seninf0_endpoint>;
+						};
+					};
+
+					port@2 {
+						reg = <2>;
+						seninf0_camsv3_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv3_seninf0_endpoint>;
+						};
+					};
+
+					port@3 {
+						reg = <3>;
+						seninf0_camsv4_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv4_seninf0_endpoint>;
+						};
+					};
+
+					port@4 {
+						reg = <4>;
+						seninf0_camsv5_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv5_seninf0_endpoint>;
+						};
+					};
+
+					port@5 {
+						reg = <5>;
+						seninf0_camsv6_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv6_seninf0_endpoint>;
+						};
+					};
+
+					port@6 {
+						reg = <6>;
+						seninf0_camsv7_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv7_seninf0_endpoint>;
+						};
+					};
+				};
+			};
+
+			seninf_csi_port_1: seninf-csi-port-1 {
+				compatible = "mediatek,mt8189-seninf";
+				mediatek,csi-port = "1";
+				phys = <&mipi_csi1 PHY_TYPE_DPHY>;
+				phy-names = "csi1";
+				status = "disabled";
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+					};
+
+					port@1 {
+						reg = <1>;
+						seninf1_camsv2_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv2_seninf1_endpoint>;
+						};
+					};
+
+					port@2 {
+						reg = <2>;
+						seninf1_camsv3_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv3_seninf1_endpoint>;
+						};
+					};
+
+					port@3 {
+						reg = <3>;
+						seninf1_camsv4_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv4_seninf1_endpoint>;
+						};
+					};
+
+					port@4 {
+						reg = <4>;
+						seninf1_camsv5_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv5_seninf1_endpoint>;
+						};
+					};
+
+					port@5 {
+						reg = <5>;
+						seninf1_camsv6_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv6_seninf1_endpoint>;
+						};
+					};
+
+					port@6 {
+						reg = <6>;
+						seninf1_camsv7_endpoint: endpoint {
+							remote-endpoint =
+								<&camsv7_seninf1_endpoint>;
+						};
+					};
+				};
+			};
+		};
+
+		camsv2: camsv2@1a092000 {
+			compatible = "mediatek,mt8189-camsv";
+			reg = <0 0x1a092000 0 0x1000>;
+			interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH 0>;
+			mediatek,cammux-id = <2>;
+			clocks = <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAM>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAMTG>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSV1>,
+				 <&camsys_main_clk CLK_CAM_M_LARB13>,
+				 <&camsys_main_clk CLK_CAM_M_CAM2MM_GALS>,
+				 <&topckgen_clk CLK_TOP_CAMTM_SEL>;
+			clock-names = "CAMSYS_CAM_CGPDN",
+				      "CAMSYS_CAMTG_CGPDN",
+				      "CAMSYS_CAMSV_CGPDN",
+				      "CAMSYS_LARB_CGPDN",
+				      "CAMSYS_MAIN_CAM2MM_GALS_CGPDN",
+				      "TOPCKGEN_TOP_MUX_CAMTM";
+			iommus = <&mm_iommu M4U_L13_P6_CAMSV_4>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv2_seninf0_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf0_camsv2_endpoint>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					camsv2_seninf1_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf1_camsv2_endpoint>;
+					};
+				};
+			};
+		};
+
+		camsv3: camsv3@1a093000 {
+			compatible = "mediatek,mt8189-camsv";
+			reg = <0 0x1a093000 0 0x1000>;
+			interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH 0>;
+			mediatek,cammux-id = <3>;
+			clocks = <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAM>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAMTG>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSV1>,
+				 <&camsys_main_clk CLK_CAM_M_LARB13>,
+				 <&camsys_main_clk CLK_CAM_M_CAM2MM_GALS>,
+				 <&topckgen_clk CLK_TOP_CAMTM_SEL>;
+			clock-names = "CAMSYS_CAM_CGPDN",
+				      "CAMSYS_CAMTG_CGPDN",
+				      "CAMSYS_CAMSV_CGPDN",
+				      "CAMSYS_LARB_CGPDN",
+				      "CAMSYS_MAIN_CAM2MM_GALS_CGPDN",
+				      "TOPCKGEN_TOP_MUX_CAMTM";
+			iommus = <&mm_iommu M4U_L13_P6_CAMSV_4>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv3_seninf0_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf0_camsv3_endpoint>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					camsv3_seninf1_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf1_camsv3_endpoint>;
+					};
+				};
+			};
+		};
+
+		camsv4: camsv4@1a094000 {
+			compatible = "mediatek,mt8189-camsv";
+			reg = <0 0x1a094000 0 0x1000>;
+			interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH 0>;
+			mediatek,cammux-id = <4>;
+			clocks = <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAM>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAMTG>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSV2>,
+				 <&camsys_main_clk CLK_CAM_M_LARB13>,
+				 <&camsys_main_clk CLK_CAM_M_CAM2MM_GALS>,
+				 <&topckgen_clk CLK_TOP_CAMTM_SEL>;
+			clock-names = "CAMSYS_CAM_CGPDN",
+				      "CAMSYS_CAMTG_CGPDN",
+				      "CAMSYS_CAMSV_CGPDN",
+				      "CAMSYS_LARB_CGPDN",
+				      "CAMSYS_MAIN_CAM2MM_GALS_CGPDN",
+				      "TOPCKGEN_TOP_MUX_CAMTM";
+			iommus = <&mm_iommu M4U_L13_P7_CAMSV_5>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv4_seninf0_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf0_camsv4_endpoint>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					camsv4_seninf1_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf1_camsv4_endpoint>;
+					};
+				};
+			};
+		};
+
+		camsv5: camsv5@1a095000 {
+			compatible = "mediatek,mt8189-camsv";
+			reg = <0 0x1a095000 0 0x1000>;
+			interrupts = <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH 0>;
+			mediatek,cammux-id = <5>;
+			clocks = <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAM>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAMTG>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSV2>,
+				 <&camsys_main_clk CLK_CAM_M_LARB13>,
+				 <&camsys_main_clk CLK_CAM_M_CAM2MM_GALS>,
+				 <&topckgen_clk CLK_TOP_CAMTM_SEL>;
+			clock-names = "CAMSYS_CAM_CGPDN",
+				      "CAMSYS_CAMTG_CGPDN",
+				      "CAMSYS_CAMSV_CGPDN",
+				      "CAMSYS_LARB_CGPDN",
+				      "CAMSYS_MAIN_CAM2MM_GALS_CGPDN",
+				      "TOPCKGEN_TOP_MUX_CAMTM";
+			iommus = <&mm_iommu M4U_L13_P7_CAMSV_5>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv5_seninf0_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf0_camsv5_endpoint>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					camsv5_seninf1_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf1_camsv5_endpoint>;
+					};
+				};
+			};
+		};
+
+		camsv6: camsv6@1a096000 {
+			compatible = "mediatek,mt8189-camsv";
+			reg = <0 0x1a096000 0 0x1000>;
+			interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH 0>;
+			mediatek,cammux-id = <6>;
+			clocks = <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAM>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAMTG>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSV3>,
+				 <&camsys_main_clk CLK_CAM_M_LARB13>,
+				 <&camsys_main_clk CLK_CAM_M_CAM2MM_GALS>,
+				 <&topckgen_clk CLK_TOP_CAMTM_SEL>;
+			clock-names = "CAMSYS_CAM_CGPDN",
+				      "CAMSYS_CAMTG_CGPDN",
+				      "CAMSYS_CAMSV_CGPDN",
+				      "CAMSYS_LARB_CGPDN",
+				      "CAMSYS_MAIN_CAM2MM_GALS_CGPDN",
+				      "TOPCKGEN_TOP_MUX_CAMTM";
+			iommus = <&mm_iommu M4U_L13_P8_CAMSV_6>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv6_seninf0_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf0_camsv6_endpoint>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					camsv6_seninf1_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf1_camsv6_endpoint>;
+					};
+				};
+			};
+		};
+
+		camsv7: camsv7@1a097000 {
+			compatible = "mediatek,mt8189-camsv";
+			reg = <0 0x1a097000 0 0x1000>;
+			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH 0>;
+			mediatek,cammux-id = <7>;
+			clocks = <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAM>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAMTG>,
+				 <&camsys_main_clk CLK_CAM_M_CAMSV3>,
+				 <&camsys_main_clk CLK_CAM_M_LARB13>,
+				 <&camsys_main_clk CLK_CAM_M_CAM2MM_GALS>,
+				 <&topckgen_clk CLK_TOP_CAMTM_SEL>;
+			clock-names = "CAMSYS_CAM_CGPDN",
+				      "CAMSYS_CAMTG_CGPDN",
+				      "CAMSYS_CAMSV_CGPDN",
+				      "CAMSYS_LARB_CGPDN",
+				      "CAMSYS_MAIN_CAM2MM_GALS_CGPDN",
+				      "TOPCKGEN_TOP_MUX_CAMTM";
+			iommus = <&mm_iommu M4U_L13_P8_CAMSV_6>;
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv7_seninf0_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf0_camsv7_endpoint>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					camsv7_seninf1_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf1_camsv7_endpoint>;
+					};
+				};
+			};
+		};
 	};
 };
