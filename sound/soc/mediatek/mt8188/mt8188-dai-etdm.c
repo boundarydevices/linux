@@ -141,9 +141,7 @@ static int get_etdm_fs_timing(unsigned int rate)
 
 static unsigned int get_etdm_ch_fixup(unsigned int channels)
 {
-	if (channels > 16)
-		return 24;
-	else if (channels > 8)
+	if (channels > 8)
 		return 16;
 	else if (channels > 4)
 		return 8;
