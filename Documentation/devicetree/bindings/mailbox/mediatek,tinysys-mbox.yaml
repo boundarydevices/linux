@@ -1,0 +1,88 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mailbox/mediatek,tinysys-mbox.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek TinySys mailbox controller
+
+maintainers:
+  - Hailong Fan <Hailong.Fan@mediatek.com>
+
+description: |
+  The MediaTek tinysys-mbox Inter-Processor Communication (IPC) enables the SoC
+  to communicate with the Tiny System (tinysys) by passing messages through
+  multiple mailbox channels. The MediaTek tinysys-mbox IPC also provides the
+  ability for one processor to signal the other processor using interrupts.
+  This mailbox controller is typically used as a communication mechanism
+  between the main processor and tinysys subsystems, and is often managed
+  under the SCMI (System Control and Management Interface) framework.
+
+properties:
+  compatible:
+    const: mediatek,tinysys_mbox
+
+  reg:
+    minItems: 2
+    maxItems: 2
+
+  mboxes:
+    minItems: 1
+    maxItems: 8
+
+  shmem:
+    minItems: 2
+    maxItems: 2
+    description: |
+      References to the shared memory regions used for SCMI message
+      transmission (TX) and reception (RX).
+
+  interrupts:
+    minItems: 2
+    maxItems: 2
+
+  "#mbox-cells":
+    const: 1
+
+required:
+  - compatible
+  - reg
+  - shmem
+  - interrupts
+  - "#mbox-cells"
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+    #include <dt-bindings/interrupt-controller/irq.h>
+
+    tinysys_mbox: tinysys-mbox@1c351000 {
+        compatible = "mediatek,tinysys_mbox";
+        reg = <0x1c351000 0x1000>,
+              <0x1c361000 0x1000>;
+        shmem = <&scmi_tx_shmem>, <&scmi_rx_shmem>;
+        interrupts = <0 509 4>,
+                     <0 510 4>;
+        #mbox-cells = <1>;
+    };
+
+    scmi_tx_shmem: scmi-tx-shmem@0 {
+        compatible = "arm,scmi-shmem";
+        reg = <0x0 0x80>;
+    };
+
+    scmi_rx_shmem: scmi-rx-shmem@1 {
+        compatible = "arm,scmi-shmem";
+        reg = <0x0 0x80>;
+    };
+
+    firmware {
+        scmi: scmi {
+            compatible = "arm,scmi";
+            mboxes = <&tinysys_mbox 0>, <&tinysys_mbox 1>;
+            shmem = <&scmi_tx_shmem>, <&scmi_rx_shmem>;
+            mbox-names = "tx", "rx";
+        };
+    };
