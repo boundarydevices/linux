@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+# Copyright (c) 2023 MediaTek, BayLibre
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/phy/mediatek,mt8189-csi-rx.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek Sensor Interface MIPI CSI CD-PHY
+
+maintainers:
+  - Rongdong Wang <rongdong.wang@mediatek.com>
+
+description:
+  The SENINF CD-PHY is a set of CD-PHY connected to the SENINF CSI-2
+  receivers. The number of PHYs depends on the SoC model.
+  Depending on the SoC model, each PHYs can be either CD-PHY or D-PHY only
+  capable.
+
+properties:
+  compatible:
+    enum:
+      - mediatek,mt8189-csi-rx
+
+  reg:
+    maxItems: 1
+
+  phy-type:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum: [10, 11]
+    description:
+      If the PHY doesn't support mode selection then this set the operating mode.
+      See include/dt-bindings/phy/phy.h for constants.
+
+  num-lanes:
+    enum: [1, 2, 3, 4]
+    description:
+      In CPHY mode, num-lanes can be 1, 2, or 3; in DPHY mode, num-lanes can be
+      1, 2, or 4.
+
+  '#phy-cells':
+    enum: [0, 1]
+    description: |
+      If the PHY doesn't support mode selection then #phy-cells must be 0 and
+      PHY mode is described using phy-type property.
+      If the PHY supports mode selection, then #phy-cells must be 1 and mode
+      is set in the PHY cells. Supported modes are:
+        - PHY_TYPE_DPHY
+        - PHY_TYPE_CPHY
+      See include/dt-bindings/phy/phy.h for constants.
+
+  mediatek,csi-port:
+    $ref: /schemas/types.yaml#/definitions/string
+    enum:
+      - "0"
+      - "1"
+      - "0A"
+      - "0B"
+      - "1A"
+      - "1B"
+
+required:
+  - compatible
+  - reg
+  - phy-type
+  - num-lanes
+  - '#phy-cells'
+  - mediatek,csi-port
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/phy/phy.h>
+    soc {
+      #address-cells = <2>;
+      #size-cells = <2>;
+
+      mipi_csi0: mipi-csi0@11f50000 {
+        compatible = "mediatek,mt8189-csi-rx";
+        reg = <0 0x11f50000 0 0x4000>;
+        phy-type = <PHY_TYPE_DPHY>;
+        status = "disabled";
+        num-lanes = <4>;
+        #phy-cells = <1>;
+        mediatek,csi-port = "0";
+      };
+
+      mipi_csi1: mipi-csi1@11f54000 {
+        compatible = "mediatek,mt8189-csi-rx";
+        reg = <0 0x11f54000 0 0x4000>;
+        phy-type = <PHY_TYPE_DPHY>;
+        status = "disabled";
+        num-lanes = <2>;
+        #phy-cells = <1>;
+        mediatek,csi-port = "1A";
+      };
+    };
+...
