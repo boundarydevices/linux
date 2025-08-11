@@ -419,6 +419,32 @@
 		};
 	};
 
+	uart2_pins: uart2-pins {
+		pins {
+			pinmux = <PINMUX_GPIO35__FUNC_UTXD2>,
+				 <PINMUX_GPIO36__FUNC_URXD2>;
+			bias-pull-up;
+		};
+
+		rtscts-pins {
+			pinmux = <PINMUX_GPIO16__FUNC_UCTS2>,
+				 <PINMUX_GPIO17__FUNC_URTS2>;
+		};
+	};
+
+	uart3_pins: uart3-pins {
+		pins {
+			pinmux = <PINMUX_GPIO37__FUNC_UTXD3>,
+				 <PINMUX_GPIO38__FUNC_URXD3>;
+			bias-pull-up;
+		};
+
+		rtscts-pins {
+			pinmux = <PINMUX_GPIO14__FUNC_UCTS3>,
+				 <PINMUX_GPIO15__FUNC_URTS3>;
+		};
+	};
+
 	mmc0_pins_default: mmc0default {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO156__FUNC_MSDC0_DAT7>,
@@ -970,6 +996,18 @@
 
 &uart1 {
 	pinctrl-0 = <&uart1_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&uart2 {
+	pinctrl-0 = <&uart2_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&uart3 {
+	pinctrl-0 = <&uart3_pins>;
 	pinctrl-names = "default";
 	status = "okay";
 };
