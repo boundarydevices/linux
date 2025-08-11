@@ -1,0 +1,203 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+# Copyright (c) 2023 MediaTek, BayLibre
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/media/mediatek,mt8189-seninf-core.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek Sensor Interface 6S
+
+maintainers:
+  - Rongdong Wang <rongdong.wang@mediatek.com>
+  - Andy Hsieh <andy.hsieh@mediatek.com>
+
+description:
+  The ISP6S SENINF is the CSI-2 interface found in multiple MediaTek SoCs.
+  It can support up to two physical CSI-2 input ports, configured in DPHY
+  (2 or 4 data lanes) or CPHY depending on the soc. On the output side,
+  SENINF can be connected to CAMSV instance. CAMSV is used to bypass
+  the internal ISP processing in order to connect either an external
+  ISP, or a sensor (RAW, YUV).
+
+properties:
+  compatible:
+    enum:
+      - mediatek,mt8189-seninf-core
+
+  reg:
+    maxItems: 1
+
+  reg-names:
+    items:
+    - const: base
+
+  interrupts:
+    maxItems: 1
+
+  clocks:
+    items:
+      - description: Camsys seninf cgpdn clock
+      - description: Top mux seninf clock
+      - description: Top mux seninf clock
+      - description: Top mux camtg clock
+      - description: Top mux camtg1 clock
+      - description: Top mux camtg2 clock
+      - description: Top f26m clock D2
+      - description: Top univp 192m D8
+      - description: Top univpll D6 D8
+      - description: Top univp 192m D4
+      - description: Top clock 26m
+      - description: Top univp 192m D16
+      - description: Top univp 192m D32
+
+  clock-names:
+    items:
+    - const: CAMSYS_SENINF_CGPDN
+    - const: TOP_MUX_SENINF
+    - const: TOP_MUX_SENINF1
+    - const: TOP_MUX_CAMTG
+    - const: TOP_MUX_CAMTG1
+    - const: TOP_MUX_CAMTG2
+    - const: TOP_F26M_CK_D2
+    - const: TOP_UNIVP_192M_D8
+    - const: TOP_UNIVPLL_D6_D8
+    - const: TOP_UNIVP_192M_D4
+    - const: TOP_CLK26M
+    - const: TOP_UNIVP_192M_D16
+    - const: TOP_UNIVP_192M_D32
+
+  power-domains:
+    maxItems: 2
+
+  seninf_csi_port_0:
+    type: object
+    properties:
+      compatible:
+        const: mediatek,mt8189-seninf
+      csi-port:
+        enum: ["0", "0A"]
+      phys:
+        maxItems: 1
+      phy-names:
+        items:
+          - const: csi0
+      status:
+        enum: ["okay", "disabled"]
+      ports:
+        $ref: /schemas/graph.yaml#/properties/ports
+    required:
+      - compatible
+      - csi-port
+      - phys
+      - phy-names
+      - ports
+
+  seninf_csi_port_1:
+    type: object
+    properties:
+      compatible:
+        const: mediatek,mt8189-seninf
+      csi-port:
+        enum: ["1", "1A"]
+      phys:
+        maxItems: 1
+      phy-names:
+        items:
+          - const: csi1
+      status:
+        enum: ["okay", "disabled"]
+      ports:
+        $ref: /schemas/graph.yaml#/properties/ports
+    required:
+      - compatible
+      - csi-port
+      - phys
+      - phy-names
+      - ports
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clocks
+  - clock-names
+  - power-domains
+  - seninf_csi_port_0
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/mediatek,mt8189-clk.h>
+    #include <dt-bindings/interrupt-controller/irq.h>
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+    #include <dt-bindings/phy/phy.h>
+    #include <dt-bindings/power/mediatek,mt8189-power.h>
+
+    soc {
+          #address-cells = <2>;
+          #size-cells = <2>;
+
+          seninf_top: seninf_top@1a004000 {
+            compatible = "mediatek,mt8189-seninf-core";
+            reg = <0 0x1a004000 0 0x8000>;
+            reg-names = "base";
+            interrupts = <GIC_SPI 316 IRQ_TYPE_LEVEL_HIGH 0>;
+            clocks = <&camsys_main_clk CLK_CAM_M_SENINF>,
+                      <&topckgen_clk CLK_TOP_SENINF_SEL>,
+                      <&topckgen_clk CLK_TOP_SENINF1_SEL>,
+                      <&vlp_cksys_clk CLK_VLP_CK_CAMTG0_SEL>,
+                      <&vlp_cksys_clk CLK_VLP_CK_CAMTG1_SEL>,
+                      <&vlp_cksys_clk CLK_VLP_CK_CAMTG2_SEL>,
+                      <&topckgen_clk CLK_TOP_F26M_CK_D2>,
+                      <&topckgen_clk CLK_TOP_UNIVPLL_192M_D8>,
+                      <&topckgen_clk CLK_TOP_UNIVPLL_D6_D8>,
+                      <&topckgen_clk CLK_TOP_UNIVPLL_192M_D4>,
+                      <&topckgen_clk CLK_TOP_TCK_26M_MX9>,
+                      <&topckgen_clk CLK_TOP_UNIVPLL_192M_D16>,
+                      <&topckgen_clk CLK_TOP_UNIVPLL_192M_D32>;
+            clock-names = "CAMSYS_SENINF_CGPDN",
+                      "TOP_MUX_SENINF",
+                      "TOP_MUX_SENINF1",
+                      "TOP_MUX_CAMTG",
+                      "TOP_MUX_CAMTG1",
+                      "TOP_MUX_CAMTG2",
+                      "TOP_F26M_CK_D2",
+                      "TOP_UNIVP_192M_D8",
+                      "TOP_UNIVPLL_D6_D8",
+                      "TOP_UNIVP_192M_D4",
+                      "TOP_CLK26M",
+                      "TOP_UNIVP_192M_D16",
+                      "TOP_UNIVP_192M_D32";
+
+            power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>,
+                      <&scpsys MT8189_POWER_DOMAIN_CSI_RX>;
+
+            seninf_csi_port_0: seninf_csi_port_0 {
+              compatible = "mediatek,mt8189-seninf";
+              csi-port = "0";
+              phys = <&mipi_csi0 PHY_TYPE_DPHY>;
+              phy-names = "csi0";
+              status = "disabled";
+
+              ports {
+                    #address-cells = <1>;
+                    #size-cells = <0>;
+
+                    port@0 {
+                          reg = <0>;
+                    };
+
+                    port@1 {
+                        reg = <1>;
+                        seninf0_camsv2_endpoint: endpoint {
+                          remote-endpoint =
+                          <&camsv2_seninf0_endpoint>;
+                        };
+                    };
+              };
+            };
+          };
+        };
+
+...
