@@ -1,0 +1,124 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+# Copyright (c) 2023 MediaTek, BayLibre
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/media/mediatek,mt8189-camsv.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek CAMSV 6s
+
+maintainers:
+  - Rongdong Wang <rongdong.wang@mediatek.com>
+  - Andy Hsieh <andy.hsieh@mediatek.com>
+
+description:
+  The CAMSV is a set of DMA engines connected to the SENINF CSI-2
+  receivers. The number of CAMSVs depends on the SoC model.
+
+properties:
+  compatible:
+    const: mediatek,mt8189-camsv
+
+  reg:
+    items:
+      - description: camsv base
+
+  interrupts:
+    maxItems: 1
+
+  mediatek,cammux-id:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: CAMSV mux id
+
+  power-domains:
+    maxItems: 1
+
+  clocks:
+    items:
+      - description: Camsys cam cgpdn
+      - description: Camsys camtg cgpdn
+      - description: Camsys camsv cgpdn
+      - description: Camsys larb13 cgpdn
+      - description: Camsys main cam2mm gals cgpdn
+      - description: Topckgen top mux camtm
+
+  clock-names:
+    items:
+      - const: CAMSYS_CAM_CGPDN
+      - const: CAMSYS_CAMTG_CGPDN
+      - pattern: ^CAMSYS_CAMSV[1-3]_CGPDN$
+      - const: CAMSYS_LARB13_CGPDN
+      - const: CAMSYS_MAIN_CAM2MM_GALS_CGPDN
+      - const: TOPCKGEN_TOP_MUX_CAMTM
+
+  iommus:
+    maxItems: 1
+
+  ports:
+    $ref: /schemas/graph.yaml#/properties/ports
+    patternProperties:
+      "^port@[01]$":
+        $ref: /schemas/graph.yaml#/properties/port
+        description: connection point for camsv
+    required:
+      - port@0
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - mediatek,cammux-id
+  - clocks
+  - clock-names
+  - iommus
+  - power-domains
+  - ports
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+    #include <dt-bindings/interrupt-controller/irq.h>
+    #include <dt-bindings/clock/mediatek,mt8189-clk.h>
+    #include <dt-bindings/memory/mediatek,mt8189-memory-port.h>
+    #include <dt-bindings/power/mediatek,mt8189-power.h>
+
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        camsv2: camsv2@1a092000 {
+          compatible = "mediatek,mt8189-camsv";
+          reg = <0 0x1a092000 0 0x1000>;
+          interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH 0>;
+          mediatek,cammux-id = <2>;
+          clocks = <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAM>,
+                   <&camsys_main_clk CLK_CAM_M_CAMSYS_MAIN_CAMTG>,
+                   <&camsys_main_clk CLK_CAM_M_CAMSV1>,
+                   <&camsys_main_clk CLK_CAM_M_LARB13>,
+                   <&camsys_main_clk CLK_CAM_M_CAM2MM_GALS>,
+                   <&topckgen_clk CLK_TOP_CAMTM_SEL>;
+          clock-names = "CAMSYS_CAM_CGPDN",
+                        "CAMSYS_CAMTG_CGPDN",
+                        "CAMSYS_CAMSV1_CGPDN",
+                        "CAMSYS_LARB13_CGPDN",
+                        "CAMSYS_MAIN_CAM2MM_GALS_CGPDN",
+                        "TOPCKGEN_TOP_MUX_CAMTM";
+          iommus = <&mm_iommu M4U_L13_P6_CAMSV_4>;
+          power-domains = <&scpsys MT8189_POWER_DOMAIN_CAM_MAIN>;
+
+          ports {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            port@0 {
+              reg = <0>;
+              camsv2_seninf0_endpoint: endpoint {
+                remote-endpoint =
+                      <&seninf0_camsv2_endpoint>;
+              };
+            };
+          };
+        };
+      };
+...
