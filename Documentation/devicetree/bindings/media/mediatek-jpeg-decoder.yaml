@@ -23,6 +23,7 @@ properties:
           - enum:
               - mediatek,mt7623-jpgdec
               - mediatek,mt8188-jpgdec
+              - mediatek,mt8189-jpgdec
           - const: mediatek,mt2701-jpgdec
 
   reg:
