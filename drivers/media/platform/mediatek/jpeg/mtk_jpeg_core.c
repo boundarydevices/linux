@@ -1204,7 +1204,7 @@ static void mtk_jpeg_dec_device_run(void *priv)
 	spin_lock_irqsave(&jpeg->hw_lock, flags);
 	mtk_jpeg_dec_reset(jpeg->reg_base);
 	mtk_jpeg_dec_set_config(jpeg->reg_base,
-				jpeg->support_34bit,
+				jpeg->variant->support_34bit,
 				&jpeg_src_buf->dec_param,
 				jpeg_src_buf->bs_size,
 				&bs,
@@ -1523,13 +1523,6 @@ static int mtk_jpeg_probe(struct platform_device *pdev)
 	jpeg->dev = &pdev->dev;
 	jpeg->variant = of_device_get_match_data(jpeg->dev);
 
-	ret = of_property_read_u32(pdev->dev.of_node, "mediatek,34bits", &jpeg->support_34bit);
-	if (ret != 0) {
-		dev_info(&pdev->dev, "default for 32bits");
-		jpeg->support_34bit = 0;
-	}
-	dev_info(&pdev->dev, "use 34bits: %d", jpeg->support_34bit);
-
 	platform_set_drvdata(pdev, jpeg);
 
 	ret = devm_of_platform_populate(&pdev->dev);
@@ -1602,7 +1595,7 @@ static int mtk_jpeg_probe(struct platform_device *pdev)
 		goto err_vfd_jpeg_register;
 	}
 
-	if (jpeg->support_34bit) {
+	if (jpeg->variant->support_34bit) {
 		ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(34));
 		if (ret)
 			dev_info(&pdev->dev, "34-bit DMA enable failed\n");
@@ -1826,7 +1819,7 @@ static irqreturn_t mtk_jpeg_enc_irq(int irq, void *priv)
 		goto enc_end;
 
 	result_size = mtk_jpeg_enc_get_file_size(jpeg->reg_base,
-		jpeg->support_34bit);
+		jpeg->variant->support_34bit);
 	v4l2_dbg(2, debug, &jpeg->v4l2_dev, "reult size = %d", result_size);
 	vb2_set_plane_payload(&dst_buf->vb2_buf, 0, result_size);
 
@@ -2016,7 +2009,7 @@ retry_select:
 	ctx->total_frame_num++;
 	mtk_jpeg_dec_reset(comp_jpeg[hw_id]->reg_base);
 	mtk_jpeg_dec_set_config(comp_jpeg[hw_id]->reg_base,
-				jpeg->support_34bit,
+				jpeg->variant->support_34bit,
 				&jpeg_src_buf->dec_param,
 				jpeg_src_buf->bs_size,
 				&bs,
