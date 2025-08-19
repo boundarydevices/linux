@@ -200,6 +200,11 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&dsi0_iovcc_pins_default>;
 	};
+
+	mtk_fsource: mtk-fsource {
+		compatible = "regulator-output";
+		vout-supply = <&mt6359_vefuse_ldo_reg>;
+	};
 };
 
 &mt6359_vmodem_buck_reg {
