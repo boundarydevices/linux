@@ -477,9 +477,9 @@
 		compatible = "tchip,ilitek";
 		reg = <0x41>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_dsi_gt911>;
-		interrupts-extended = <&gpio4 17 IRQ_TYPE_EDGE_RISING>;
-		touch,irq-gpio = <&gpio4 17 GPIO_ACTIVE_HIGH>;
+		pinctrl-0 = <&pinctrl_ts_mipi>;
+		interrupts-extended = <&gpio3 20 IRQ_TYPE_EDGE_RISING>;
+		touch,irq-gpio = <&gpio3 20 GPIO_ACTIVE_HIGH>;
 		touch,reset-gpio = <&gpio4 22 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
@@ -488,7 +488,7 @@
 		compatible = "edt,ft5x06-ts";
 		interrupts-extended = <&gpio4 17 IRQ_TYPE_EDGE_FALLING>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_dsi_gt911>;
+		pinctrl-0 = <&pinctrl_ts_lvds>;
 		reg = <0x38>;
 		wakeup-gpios = <&gpio4 17 GPIO_ACTIVE_LOW>;
 		status = "disabled";
@@ -646,7 +646,6 @@
 			MX93_PAD_SD2_DATA2__GPIO3_IO05		0x31e /* REV2 */
 			MX93_PAD_SD2_DATA3__GPIO3_IO06		0x31e /* REV3 */
 			MX93_PAD_SD2_RESET_B__GPIO3_IO07	0x31e /* REV4 */
-			MX93_PAD_SD3_CLK__GPIO3_IO20		0x31e /* TP_INT */
 			MX93_PAD_SD3_DATA3__GPIO3_IO25		0x31e /* XS_LCD_PWR_EN_N */
 			MX93_PAD_CCM_CLKO1__GPIO3_IO26		0x31e /* GPIO26 */
 			MX93_PAD_CCM_CLKO2__GPIO3_IO27		0x31e /* GPIO27 */
@@ -795,7 +794,14 @@
 		>;
 	};
 
-	pinctrl_ts_dsi_gt911: ts-dsi-gt911grp {
+	pinctrl_ts_mipi: ts-mipigrp {
+		fsl,pins = <
+			MX93_PAD_SD3_CLK__GPIO3_IO20				0x31e /* TP_INT */
+			MX93_PAD_ENET2_RX_CTL__GPIO4_IO22			0x31e /* TP_RST */
+		>;
+	};
+
+	pinctrl_ts_lvds: ts-lvdsgrp {
 		fsl,pins = <
 			MX93_PAD_ENET2_TD2__GPIO4_IO17				0x31e /* PCAP_INT */
 			MX93_PAD_ENET2_RX_CTL__GPIO4_IO22			0x31e /* TP_RST */
