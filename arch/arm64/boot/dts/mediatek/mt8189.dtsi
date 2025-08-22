@@ -580,7 +580,7 @@
 				 <&pericfg_ao_clk CLK_PERAO_SSUSB0_F>,
 				 <&pericfg_ao_clk CLK_PERAO_SSUSB0_REF>,
 				 <&pericfg_ao_clk CLK_PERAO_SSUSB0_FRMCNT>;
-			clock-names = "host_ck",
+			clock-names = "xhci_ck",
 				      "sys_ck",
 				      "mcu_ck",
 				      "dma_ck",
@@ -590,7 +590,7 @@
 			#size-cells = <2>;
 			ranges;
 			dr_mode = "otg";
-			mediatek,syscon-wakeup = <&pericfg_ao_clk 0x214 106>;
+			mediatek,syscon-wakeup = <&pericfg_ao_clk 0x214 103>;
 			usb-role-switch;
 			xhci0: xhci0@11200000 {
 				compatible = "mediatek,mtk-xhci";
@@ -599,8 +599,16 @@
 				interrupts = <GIC_SPI 385 IRQ_TYPE_LEVEL_HIGH 0>;
 				assigned-clocks = <&topckgen_clk CLK_TOP_USB_XHCI_P0_SEL>;
 				assigned-clock-parents = <&topckgen_clk CLK_TOP_UNIVPLL_D5_D4>;
-				clocks = <&pericfg_ao_clk CLK_PERAO_SSUSB0_XHCI>;
-				clock-names = "xhci_ck";
+				clocks = <&pericfg_ao_clk CLK_PERAO_SSUSB0_XHCI>,
+					 <&pericfg_ao_clk CLK_PERAO_SSUSB0_SYS>,
+					 <&pericfg_ao_clk CLK_PERAO_SSUSB0_H>,
+					 <&pericfg_ao_clk CLK_PERAO_SSUSB0_F>,
+					 <&pericfg_ao_clk CLK_PERAO_SSUSB0_REF>;
+				clock-names = "xhci_ck",
+					      "sys_ck",
+					      "mcu_ck",
+					      "dma_ck",
+					      "ref_ck";
 			};
 		};
 
