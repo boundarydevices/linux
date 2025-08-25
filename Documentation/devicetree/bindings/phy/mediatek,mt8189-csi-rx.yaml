@@ -57,6 +57,8 @@ properties:
       - "0B"
       - "1A"
       - "1B"
+    description: |
+      CSI port selection. Valid values are "0", "1", "0A", "0B", "1A", "1B".
 
 required:
   - compatible
