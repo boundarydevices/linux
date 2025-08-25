@@ -17,6 +17,7 @@
 #include <linux/pm_opp.h>
 #include <linux/regulator/consumer.h>
 #include <linux/nvmem-consumer.h>
+#include <linux/string.h>
 
 #include <linux/ioport.h>
 #include <linux/io.h>
@@ -54,6 +55,10 @@ static const char * const clk_names[] = {
 
 static const char * const set_reg_names[] = {
 	SET_REG_KEYS_NAMES
+};
+
+static const char * const engine_names[] = {
+	ISP_ENGING_NAMES
 };
 
 struct mtk_seninf_plat_data {
@@ -776,6 +781,7 @@ static int __seninf_set_routing(struct v4l2_subdev *sd,
 				struct v4l2_subdev_krouting *routing)
 {
 	int ret;
+	struct seninf_ctx *ctx = sd_to_ctx(sd);
 
 	ret = v4l2_subdev_routing_validate(sd, routing, V4L2_SUBDEV_ROUTING_NO_SOURCE_STREAM_MIX);
 	if (ret)
@@ -858,8 +864,8 @@ static int mtk_seninf_init_cfg(struct v4l2_subdev *sd,
 		route->sink_stream = 0;
 		route->source_pad = 1 + i;
 		route->source_stream = 0;
+		routes[i].flags = V4L2_SUBDEV_ROUTE_FL_ACTIVE;
 	}
-	routes[0].flags = V4L2_SUBDEV_ROUTE_FL_ACTIVE;
 
 	return __seninf_set_routing(sd, sd_state, &routing);
 }
@@ -881,6 +887,8 @@ static int mtk_seninf_set_fmt(struct v4l2_subdev *sd,
 	char sink_format_changed = 0;
 	u32 other_pad, other_stream;
 	int ret;
+
+	dev_info(ctx->dev, "%s: pad %d, which %d\n", __func__, fmt->pad, fmt->which);
 
 	if (fmt->pad < PAD_SINK || fmt->pad >= PAD_MAXCNT)
 		return -EINVAL;
@@ -931,7 +939,7 @@ static int mtk_seninf_set_fmt(struct v4l2_subdev *sd,
 		if (sink_format_changed && !ctx->is_test_model)
 			mtk_seninf_get_vcinfo(ctx);
 
-		dev_info(ctx->dev,
+		dev_dbg(ctx->dev,
 			 "s_fmt pad %d code/res 0x%x/%dx%d which %d=> 0x%x/%dx%d\n",
 			 fmt->pad,
 			 fmt->format.code,
@@ -1541,12 +1549,30 @@ static const struct v4l2_subdev_ops seninf_subdev_ops = {
 	.pad	= &seninf_subdev_pad_ops,
 };
 
+static unsigned int get_engine_id(struct seninf_ctx *ctx, const char *subdev_name)
+{
+	int i, engine_idx;
+
+	for (i = 0; i < ISP_ENGINE_COUNT; i++) {
+		dev_dbg(ctx->dev, "%s subdev name %s, engine name %s",
+			 __func__, subdev_name, engine_names[i]);
+		if (strstr(subdev_name, engine_names[i])) {
+			engine_idx = i + 2;
+			return engine_idx;
+		}
+	}
+
+	return 255;
+}
+
 static int seninf_link_setup(struct media_entity *entity,
 			     const struct media_pad *local,
 			     const struct media_pad *remote, u32 flags)
 {
 	struct v4l2_subdev *sd;
 	struct seninf_ctx *ctx;
+	unsigned int camtg;
+	int ret = 0;
 
 	sd = media_entity_to_v4l2_subdev(entity);
 	if (!sd)
@@ -1565,12 +1591,34 @@ static int seninf_link_setup(struct media_entity *entity,
 					 "%s enable link w/o vc_info pad idex %d\n",
 					 __func__, local->index);
 			}
+
+			/*
+			 * Set seninf cam mux(camtg) for seninf
+			 * seninf_cam_mux2 => camsv2
+			 * seninf_cam_mux3 => camsv3
+			 * seninf_cam_mux4 => camsv4
+			 * seninf_cam_mux5 => camsv5
+			 * seninf_cam_mux6 => camsv6
+			 * seninf_cam_mux7 => camsv7
+			 */
+			camtg = get_engine_id(ctx, ctx->engine_sd->entity.name);
+			if (camtg == 255) {
+				dev_err(ctx->dev, "%s get_engine_id failed\n", __func__);
+				return -EINVAL;
+			}
+			dev_info(ctx->dev, "%s current camtg %d", __func__, camtg);
+
+			ret = mtk_cam_seninf_set_camtg(ctx, local->index, camtg);
+			if (ret) {
+				dev_err(ctx->dev, "%s set camtg fail\n", __func__);
+				return ret;
+			}
+
 			dev_dbg(ctx->dev, "%s link setup: %s -> %s  engine_pad_idx %d\n",
 				 __func__,
 				 sd->entity.name,
 				 ctx->engine_sd->entity.name,
 				 ctx->engine_pad_idx);
-
 		} else {
 			ctx->engine_sd = NULL;
 		}
@@ -1591,7 +1639,11 @@ static int seninf_link_setup(struct media_entity *entity,
 		}
 	}
 
-	dev_dbg(ctx->dev, "%s link setup flags: %x\n", __func__, flags);
+	dev_dbg(ctx->dev, "%s link setup flags: %x local_pad_idx %d remote_pad_idx %d\n",
+		__func__,
+		flags,
+		local->index,
+		remote->index);
 
 	return 0;
 }
@@ -1608,7 +1660,7 @@ static int seninf_notifier_bound(struct v4l2_async_notifier *notifier,
 	struct seninf_ctx *ctx = notifier_to_ctx(notifier);
 	struct media_entity *sd_entity = &sd->entity;
 	int ret;
-	unsigned int i;
+	unsigned int i, j;
 
 	dev_info(ctx->dev, "%s start bound %s\n", __func__, sd->entity.name);
 
@@ -1624,13 +1676,15 @@ static int seninf_notifier_bound(struct v4l2_async_notifier *notifier,
 			return -EINVAL;
 		}
 
-		ret = media_create_pad_link(&ctx->subdev.entity, 1,
-					    sd_entity, i, 0);
-		if (ret) {
-			dev_err(ctx->dev,
-				"failed to create link for %s\n",
-				sd->entity.name);
-			return ret;
+		for (j = PAD_SRC_GENERAL0; j < PAD_MAXCNT; j++) {
+			ret = media_create_pad_link(&ctx->subdev.entity, j,
+						    sd_entity, i, 0);
+			if (ret) {
+				dev_err(ctx->dev,
+					"failed to create link for %s\n",
+					sd->entity.name);
+				return ret;
+			}
 		}
 
 		ret = v4l2_device_register_subdev_nodes(ctx->subdev.v4l2_dev);
@@ -2005,7 +2059,9 @@ static int seninf_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&ctx->list_cam_mux);
 
 	ctx->open_refcnt = 0;
+	ctx->streaming_counter = 0;
 	mutex_init(&ctx->mutex);
+	mutex_init(&ctx->streaming_protect);
 
 	ret = get_csi_port(dev, &port);
 	if (ret) {

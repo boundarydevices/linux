@@ -334,19 +334,12 @@ int mtk_seninf_get_vcinfo(struct seninf_ctx *ctx)
 			vc->out_pad = PAD_SRC_GENERAL0;
 			break;
 		default:
-			if (vc->dt == 0x2a || vc->dt == 0x2b ||
-			    vc->dt == 0x2c) {
-				vc->out_pad = PAD_SRC_GENERAL0;
-				vc->feature = VC_GENERAL_DATA_MIN_NUM;
-				vc->group = grp++;
-			} else if (vc->dt == 0x1e) {
-				vc->out_pad = PAD_SRC_GENERAL0;
-				vc->feature = VC_GENERAL_DATA_MIN_NUM;
-			} else {
-				dev_info(ctx->dev, "unknown desc %d, dt 0x%x\n",
-					desc, vc->dt);
-				continue;
-			}
+			dev_info(ctx->dev, "%s set vc info when dt 0x%x\n",
+				 __func__,
+				 vc->dt);
+			vc->out_pad = PAD_SRC_GENERAL0 + vc->vc;
+			vc->feature = VC_GENERAL_DATA_MIN_NUM;
+
 			break;
 		}
 
@@ -534,10 +527,8 @@ int mtk_seninf_set_pixelmode(struct v4l2_subdev *sd,
 	return 0;
 }
 
-int _mtk_seninf_set_camtg(struct v4l2_subdev *sd, int pad_id, int camtg, bool disable_last)
+int mtk_cam_seninf_set_camtg(struct seninf_ctx *ctx, unsigned int pad_id, unsigned int camtg)
 {
-	int vc_en, old_camtg;
-	struct seninf_ctx *ctx = container_of(sd, struct seninf_ctx, subdev);
 	struct seninf_vc *vc;
 
 	if (pad_id < PAD_SRC_GENERAL0 || pad_id >= PAD_MAXCNT)
@@ -552,9 +543,3 @@ int _mtk_seninf_set_camtg(struct v4l2_subdev *sd, int pad_id, int camtg, bool di
 
 	return 0;
 }
-
-int mtk_cam_seninf_set_camtg(struct v4l2_subdev *sd, int pad_id, int camtg)
-{
-	return _mtk_seninf_set_camtg(sd, pad_id, camtg, true);
-}
-EXPORT_SYMBOL(mtk_cam_seninf_set_camtg);

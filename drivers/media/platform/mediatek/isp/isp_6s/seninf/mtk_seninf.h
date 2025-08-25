@@ -10,6 +10,7 @@
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-fwnode.h>
+#include <media/v4l2-device.h>
 
 #include <linux/kernel.h>
 #include <linux/phy/phy.h>
@@ -48,7 +49,7 @@
 }
 
 #define SENINF_VC_ROUTING
-#define SENINF_VC_COUNT 1
+#define SENINF_VC_COUNT 4
 
 #define SENINF_VC_MAXCNT 4
 /* seninf mux/cam_mux pixel mode
@@ -82,6 +83,9 @@ enum VC_FEATURE {
 enum {
 	PAD_SINK = 0,
 	PAD_SRC_GENERAL0,
+	PAD_SRC_GENERAL1,
+	PAD_SRC_GENERAL2,
+	PAD_SRC_GENERAL3,
 	PAD_MAXCNT,
 	PAD_ERR = 0xffff,
 };
@@ -103,6 +107,16 @@ enum CSI_PORT {
 	"0B", \
 	"1A", \
 	"1B", \
+
+#define ISP_ENGING_NAMES \
+	"camsv2", \
+	"camsv3", \
+	"camsv4", \
+	"camsv5", \
+	"camsv6", \
+	"camsv7", \
+
+#define ISP_ENGINE_COUNT 6
 
 enum SENINF_PHY_VER_ENUM {
 	SENINF_PHY_2_1,
@@ -405,6 +419,10 @@ struct seninf_ctx {
 	unsigned int ecc_err_corrected_flag;
 	unsigned int fifo_overrun_flag;
 	unsigned int size_err_flag;
+
+	/* Serdes case */
+	unsigned int streaming_counter;
+	struct mutex streaming_protect;
 };
 
 /* defined in phy-mtk-mipi-csi-2-1.c */

@@ -25,8 +25,7 @@ int mtk_seninf_get_vcinfo(struct seninf_ctx *ctx);
 int mtk_seninf_is_vc_enabled(struct seninf_ctx *ctx,
 			     struct seninf_vc *vc);
 
-int _mtk_seninf_set_camtg(struct v4l2_subdev *sd, int pad_id, int camtg, bool disable_last);
-int mtk_cam_seninf_set_camtg(struct v4l2_subdev *sd, int pad_id, int camtg);
+int mtk_cam_seninf_set_camtg(struct seninf_ctx *ctx, unsigned int pad_id, unsigned int camtg);
 
 int mtk_seninf_is_di_enabled(struct seninf_ctx *ctx, u8 ch, u8 dt);
 
