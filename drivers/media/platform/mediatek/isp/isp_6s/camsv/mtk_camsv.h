@@ -20,6 +20,8 @@
 #include <media/videobuf2-v4l2.h>
 #include <soc/mediatek/smi.h>
 
+#include "../seninf/mtk_seninf.h"
+
 #define IMG_MAX_WIDTH			5376
 #define IMG_MAX_HEIGHT			4032
 #define IMG_DEF_WIDTH			1920
@@ -124,7 +126,9 @@ struct mtk_cam_video_device {
  * @stream_count: Number of streaming video nodes
  * @sequence: Buffer sequence number
  * @op_lock: Serializes driver's VB2 callback operations.
- *
+ * @irqlock: Protects the buffer list.
+ * @buf_list: List head for the buffer list.
+ * @hw_functions: Hardware specific functions.
  */
 struct mtk_cam_dev {
 	struct device *dev;
@@ -171,6 +175,7 @@ struct mtk_cam_conf {
 struct mtk_cam_hw_functions {
 	void (*mtk_cam_setup)(struct mtk_cam_dev *cam_dev, u32 width,
 			      u32 height, u32 bpl, u32 mbus_fmt);
+	void (*mtk_cam_reset)(struct mtk_cam_dev *cam_dev);
 	void (*mtk_cam_update_buffers_add)(struct mtk_cam_dev *cam_dev,
 					   struct mtk_cam_dev_buffer *buf);
 	void (*mtk_cam_cmos_vf_hw_enable)(struct mtk_cam_dev *cam_dev,

@@ -8,8 +8,6 @@
 
 #include "mtk_camsv.h"
 
-extern void mtk_cam_seninf_set_camtg(struct v4l2_subdev *sd, int pad_id, int camtg);
-
 static inline struct mtk_cam_dev *to_mtk_cam_dev(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct mtk_cam_dev, subdev);
@@ -54,18 +52,39 @@ static int mtk_cam_cio_stream_on(struct mtk_cam_dev *cam)
 		cam->seninf_sd = media_entity_to_v4l2_subdev(cam->seninf->entity);
 	}
 
-	dev_dbg(dev, "%s stram on seninf: %s\n", __func__, cam->seninf_sd->entity.name);
-
-	mtk_cam_seninf_set_camtg(cam->seninf_sd, MTK_CAM_CIO_SENINF_VC_PAD, cam->cammux_id);
-
-	/* Seninf must stream on first */
-	ret = v4l2_subdev_call(cam->seninf_sd, video, s_stream, 1);
-	if (ret) {
-		dev_err(dev, "failed to stream on %s:%d\n",
-			cam->seninf_sd->entity.name, ret);
-		return ret;
+	if (cam->seninf_sd == NULL) {
+		dev_err(dev, "%s: No SENINF subdev found\n", __func__);
+		return -ENOLINK;
 	}
 
+	seninf_ctx = container_of(cam->seninf_sd, struct seninf_ctx, subdev);
+
+	dev_dbg(dev, "%s stram on seninf: %s streaming_counter: %d\n",
+		__func__,
+		cam->seninf_sd->entity.name,
+		seninf_ctx->streaming_counter);
+
+	mutex_lock(&seninf_ctx->streaming_protect);
+	if (seninf_ctx->streaming_counter == 0) {
+		/* Start streaming of the whole pipeline now*/
+		ret = media_pipeline_start(cam->subdev.entity.pads,
+					   &cam->pipeline);
+		if (ret) {
+			dev_err(dev, "failed to start pipeline:%d\n", ret);
+			return ret;
+		}
+
+		/* Seninf must stream on first */
+		ret = v4l2_subdev_call(cam->seninf_sd, video, s_stream, 1);
+		if (ret) {
+			dev_err(dev, "failed to stream on %s:%d\n",
+				cam->seninf_sd->entity.name, ret);
+			return ret;
+		}
+	}
+
+	seninf_ctx->streaming_counter++;
+	mutex_unlock(&seninf_ctx->streaming_protect);
 	cam->streaming = true;
 
 	return 0;
@@ -75,15 +94,25 @@ static int mtk_cam_cio_stream_off(struct mtk_cam_dev *cam)
 {
 	struct device *dev = cam->dev;
 	struct v4l2_subdev *seninf;
+	struct seninf_ctx *seninf_ctx;
 	int ret;
 
 	if (cam->seninf_sd) {
-		ret = v4l2_subdev_call(cam->seninf_sd, video, s_stream, 0);
-		if (ret) {
-			dev_err(dev, "failed to stream off %s:%d\n",
-				cam->seninf_sd->entity.name, ret);
-			return ret;
+		seninf_ctx = container_of(cam->seninf_sd, struct seninf_ctx, subdev);
+
+		mutex_lock(&seninf_ctx->streaming_protect);
+		if (seninf_ctx->streaming_counter == 1) {
+			ret = v4l2_subdev_call(cam->seninf_sd, video, s_stream, 0);
+			if (ret) {
+				dev_err(dev, "failed to stream off %s:%d\n",
+					cam->seninf_sd->entity.name, ret);
+				return ret;
+			}
+
+			media_pipeline_stop(cam->subdev.entity.pads);
 		}
+		seninf_ctx->streaming_counter--;
+		mutex_unlock(&seninf_ctx->streaming_protect);
 	}
 
 	cam->streaming = false;

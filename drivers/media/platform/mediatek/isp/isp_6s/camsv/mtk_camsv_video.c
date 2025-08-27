@@ -390,14 +390,6 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	if (ret < 0)
 		goto fail_unlock;
 
-	/* Start streaming of the whole pipeline now*/
-	ret = media_pipeline_start(vdev->vdev.entity.pads,
-					&cam->pipeline);
-	if (ret) {
-		dev_err(dev, "failed to start pipeline:%d\n", ret);
-		goto fail_unlock;
-	}
-
 	/* Media links are fixed after media_pipeline_start */
 	cam->stream_count++;
 
@@ -422,18 +414,18 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 
 	/* Stream on the sub-device */
 	ret = v4l2_subdev_call(&cam->subdev, video, s_stream, 1);
-	if (ret)
-		goto fail_no_stream;
+	if (ret) {
+		dev_err(dev, "%s failed to stream on %s: %d\n",
+			__func__, cam->subdev.name, ret);
+		return ret;
+	}
 
 	return 0;
 
 fail_no_buffer:
+	mutex_lock(&cam->op_lock);
 	v4l2_subdev_call(&cam->subdev, video, s_stream, 0);
 
-fail_no_stream:
-	cam->stream_count--;
-	if (cam->stream_count == 0)
-		media_pipeline_stop(vdev->vdev.entity.pads);
 fail_unlock:
 	mutex_unlock(&cam->op_lock);
 	mtk_cam_vb2_return_all_buffers(cam, VB2_BUF_STATE_QUEUED);
@@ -444,15 +436,21 @@ fail_unlock:
 static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 {
 	struct mtk_cam_dev *cam = vb2_get_drv_priv(vq);
-	struct mtk_cam_video_device *vdev =
-		vb2_queue_to_mtk_cam_video_device(vq);
+	int ret;
 
 	/* Disable CMOS and VF */
 	mtk_cam_cmos_vf_enable(cam, false, false);
 
+	(*cam->hw_functions->mtk_cam_reset)(cam);
+
 	mutex_lock(&cam->op_lock);
 
-	v4l2_subdev_call(&cam->subdev, video, s_stream, 0);
+	ret = v4l2_subdev_call(&cam->subdev, video, s_stream, 0);
+	if (ret) {
+		dev_err(cam->dev, "%s failed to stream off %s: %d\n",
+			__func__, cam->subdev.name, ret);
+		return;
+	}
 
 	mtk_cam_vb2_return_all_buffers(cam, VB2_BUF_STATE_ERROR);
 	cam->stream_count--;
@@ -463,7 +461,6 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 
 	mutex_unlock(&cam->op_lock);
 
-	media_pipeline_stop(vdev->vdev.entity.pads);
 	pm_runtime_put_autosuspend(cam->dev);
 }
 

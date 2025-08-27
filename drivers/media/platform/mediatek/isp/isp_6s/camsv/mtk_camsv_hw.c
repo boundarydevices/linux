@@ -90,15 +90,13 @@ static void mtk_camsv_update_buffers_add(struct mtk_cam_dev *cam_dev,
 				struct mtk_cam_dev_buffer *buf)
 {
 	mtk_camsv_write(cam_dev, CAMSV_IMGO_BASE_ADDR, buf->daddr);
-
 	mtk_camsv_write(cam_dev, CAMSV_IMGO_FBC, 0x11U);
 
-	dev_dbg(cam_dev->dev, "%s enque imgo base addr: 0x%llx imgo_ctl2: 0x%llx camsv_imgo_fbc: 0x%llx line: %d\n",
+	dev_dbg(cam_dev->dev, "%s enque imgo base addr: 0x%llx imgo_ctl2: 0x%llx camsv_imgo_fbc: 0x%llx\n",
 		 __func__,
-		 buf->daddr,
+		 mtk_camsv_read(cam_dev, CAMSV_IMGO_BASE_ADDR),
 		 mtk_camsv_read(cam_dev, CAMSV_FBC_IMGO_CTL2),
-		 mtk_camsv_read(cam_dev, CAMSV_IMGO_FBC),
-		 __LINE__);
+		 mtk_camsv_read(cam_dev, CAMSV_IMGO_FBC));
 }
 
 static void mtk_camsv_cmos_vf_hw_enable(struct mtk_cam_dev *cam_dev, bool pak_en)
@@ -149,6 +147,7 @@ static void mtk_camsv_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h, u32 bpl,
 	const u32 mask = CAMSV_IMGO_RST_TRIG | CAMSV_IMGO_RST_ST;
 	u32 val;
 	int ret;
+	unsigned long flags = 0;
 
 	fmt_to_sparams(mbus_fmt, &sparams);
 
@@ -158,7 +157,7 @@ static void mtk_camsv_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h, u32 bpl,
 		return;
 	}
 
-	spin_lock_irq(&cam_dev->irqlock);
+	spin_lock_irqsave(&cam_dev->irqlock, flags);
 
 	mtk_camsv_write(cam_dev, CAMSV_TG_SEN_MODE, conf->tg_sen_mode);
 
@@ -188,9 +187,8 @@ static void mtk_camsv_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h, u32 bpl,
 	mtk_camsv_write(cam_dev, CAMSV_FMT_SEL, sparams.fmt_sel);
 	mtk_camsv_write(cam_dev, CAMSV_PAK, sparams.pak);
 
-	/* Reset Frame Header */
-	if (conf->enableFH)
-		mtk_camsv_write(cam_dev, CAMSV_DMA_FH_EN, 0x0U);
+	/* Disable frame header since the default value on different chips varies */
+	mtk_camsv_write(cam_dev, CAMSV_DMA_FH_EN, 0x0U);
 
 	mtk_camsv_write(cam_dev, CAMSV_DMA_RSV1,
 			mtk_camsv_read(cam_dev, CAMSV_DMA_RSV1) & 0x7fffffff);
@@ -235,8 +233,25 @@ static void mtk_camsv_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h, u32 bpl,
 			mtk_camsv_read(cam_dev, CAMSV_DCIF_SET) &
 			     ~CAMSV_DCIF_SET_MASK_DB_LOAD);
 
-	spin_unlock_irq(&cam_dev->irqlock);
+	spin_unlock_irqrestore(&cam_dev->irqlock, flags);
 	pm_runtime_put_autosuspend(cam_dev->dev);
+}
+
+static void mtk_camsv_reset(struct mtk_cam_dev *cam_dev)
+{
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&cam_dev->irqlock, flags);
+
+	/* Disable camsv interrupt*/
+	mtk_camsv_write(cam_dev, CAMSV_INT_EN, 0x0U);
+
+	/* Disable IMGO */
+	mtk_camsv_write(cam_dev, CAMSV_MODULE_EN,
+			mtk_camsv_read(cam_dev, CAMSV_MODULE_EN) &
+			     ~CAMSV_MODULE_EN_IMGO_EN);
+
+	spin_unlock_irqrestore(&cam_dev->irqlock, flags);
 }
 
 static irqreturn_t isp_irq_camsv(int irq, void *data)
@@ -246,7 +261,7 @@ static irqreturn_t isp_irq_camsv(int irq, void *data)
 	unsigned long flags = 0;
 	unsigned int irq_status, imgo_addr, imgo_ctl1, imgo_ctl2;
 
-	spin_lock(&cam_dev->irqlock);
+	spin_lock_irqsave(&cam_dev->irqlock, flags);
 
 	irq_status = mtk_camsv_read(cam_dev, CAMSV_INT_STATUS);
 
@@ -307,7 +322,7 @@ static irqreturn_t isp_irq_camsv(int irq, void *data)
 	if (irq_status & CAMSV_IRQ_IMGO_DROP)
 		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_IMGO_DROP\n", __func__);
 
-	spin_unlock(&cam_dev->irqlock);
+	spin_unlock_irqrestore(&cam_dev->irqlock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -315,9 +330,9 @@ static irqreturn_t isp_irq_camsv(int irq, void *data)
 static int mtk_camsv_runtime_suspend(struct device *dev)
 {
 	struct mtk_cam_dev *cam_dev = dev_get_drvdata(dev);
-	struct vb2_queue *vbq = &cam_dev->vdev.vbq;
 
-	if (vb2_is_streaming(vbq)) {
+	if (cam_dev->streaming) {
+		mtk_camsv_reset(cam_dev);
 		mutex_lock(&cam_dev->op_lock);
 		v4l2_subdev_call(&cam_dev->subdev, video, s_stream, 0);
 		mutex_unlock(&cam_dev->op_lock);
@@ -358,9 +373,9 @@ static int mtk_camsv_runtime_resume(struct device *dev)
 		else
 			dev_err(cam_dev->dev, "No buffer to add\n");
 
-		mtk_camsv_cmos_vf_hw_enable(cam_dev, vdev->fmtinfo->packed);
-
 		spin_unlock_irqrestore(&cam_dev->irqlock, flags);
+
+		mtk_camsv_cmos_vf_hw_enable(cam_dev, vdev->fmtinfo->packed);
 
 		/* Stream on the sub-device */
 		mutex_lock(&cam_dev->op_lock);
@@ -392,6 +407,7 @@ fail_no_stream:
 
 static struct mtk_cam_hw_functions mtk_camsv_hw_functions = {
 	.mtk_cam_setup = mtk_camsv_setup,
+	.mtk_cam_reset = mtk_camsv_reset,
 	.mtk_cam_update_buffers_add = mtk_camsv_update_buffers_add,
 	.mtk_cam_cmos_vf_hw_enable = mtk_camsv_cmos_vf_hw_enable,
 	.mtk_cam_cmos_vf_hw_disable = mtk_camsv_cmos_vf_hw_disable,
