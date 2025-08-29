@@ -1354,6 +1354,7 @@ static int panel_common_dsi_probe(struct mipi_dsi_device *dsi)
 	if (err) {
 		struct panel_common *panel = dev_get_drvdata(&dsi->dev);
 
+		sn65_remove(&panel->sn65);
 		drm_panel_remove(&panel->base);
 	}
 
