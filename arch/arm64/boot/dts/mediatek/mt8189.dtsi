@@ -40,6 +40,7 @@
 		rdma1 = &disp_rdma1;
 		mmc0 = &mmc0;
 		mmc1 = &mmc1;
+		mmc2 = &mmc2;
 	};
 
 	cpus {
@@ -826,6 +827,22 @@
 				<&pericfg_ao_clk CLK_PERAO_MSDC1_MST_F>;
 			clock-names = "source", "bus_clk", "source_cg", "hclk",
 					"pclk_cg", "axi_cg";
+			status = "disabled";
+		};
+
+		mmc2: mmc@11250000 {
+			compatible = "mediatek,mt8196-mmc";
+			reg = <0 0x11250000 0 0x1000>,
+			      <0 0x11f70000 0 0x1000>;
+			interrupts = <GIC_SPI 389 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&topckgen_clk CLK_TOP_MSDC30_2_SEL>,
+				<&topckgen_clk CLK_TOP_MSDC_MACRO_2P_SEL>,
+				<&pericfg_ao_clk CLK_PERAO_MSDC2_H>,
+				<&pericfg_ao_clk CLK_PERAO_MSDC2>,
+				<&pericfg_ao_clk CLK_PERAO_MSDC2_MST_F>,
+				<&pericfg_ao_clk CLK_PERAO_MSDC2_SLV_H>;
+			clock-names = "source", "bus_clk", "hclk", "source_cg",
+					"pclk_cg", "sys_cg";
 			status = "disabled";
 		};
 
