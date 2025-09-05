@@ -139,7 +139,8 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		enable-active-high;
-		regulator-always-on;
+		startup-delay-us = <200000>;
+		gpio = <&pio 49 0>;	/* chip SYSRST */
 	};
 
 	sdio_fixed_3v3: regulator-4 {
@@ -567,6 +568,58 @@
 			pinmux = <PINMUX_GPIO169__FUNC_MSDC1_CLK>;
 			drive-strength = <MTK_DRIVE_8mA>;
 			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+	};
+
+	mmc2_pins_default: mmc2default {
+		pins-clk {
+			pinmux = <PINMUX_GPIO175__FUNC_MSDC2_CLK>;
+			drive-strength = <MTK_DRIVE_4mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO176__FUNC_MSDC2_DAT0>,
+				<PINMUX_GPIO177__FUNC_MSDC2_DAT1>,
+				<PINMUX_GPIO178__FUNC_MSDC2_DAT2>,
+				<PINMUX_GPIO179__FUNC_MSDC2_DAT3>,
+				<PINMUX_GPIO174__FUNC_MSDC2_CMD>;
+			input-enable;
+			drive-strength = <MTK_DRIVE_4mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+
+		pins-wifichip-wcn-3v3-en {
+			pinmux = <PINMUX_GPIO75__FUNC_GPIO75>,
+				<PINMUX_GPIO79__FUNC_GPIO79>;
+			output-high;
+		};
+	};
+
+	mmc2_pins_uhs: mmc2uhs {
+		pins-clk {
+			pinmux = <PINMUX_GPIO175__FUNC_MSDC2_CLK>;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO176__FUNC_MSDC2_DAT0>,
+				<PINMUX_GPIO177__FUNC_MSDC2_DAT1>,
+				<PINMUX_GPIO178__FUNC_MSDC2_DAT2>,
+				<PINMUX_GPIO179__FUNC_MSDC2_DAT3>,
+				<PINMUX_GPIO174__FUNC_MSDC2_CMD>;
+			input-enable;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+	};
+
+	mmc2_pins_eint: dat1-eint {
+		pins-dat1 {
+			pinmux = <PINMUX_GPIO177__FUNC_GPIO177>;
+			input-enable;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 		};
 	};
 
@@ -1063,6 +1116,30 @@
 
 &mt6359_vsim1_ldo_reg {
 	regulator-enable-ramp-delay = <480>;
+};
+
+&mmc2 {
+	status = "okay";
+	interrupts-extended = <&gic GIC_SPI 389 IRQ_TYPE_LEVEL_HIGH 0>,
+			      <&pio 177 IRQ_TYPE_LEVEL_LOW>;
+	interrupt-names = "sdio", "sdio_wakeup";
+	pinctrl-names = "default", "state_uhs", "state_eint";
+	pinctrl-0 = <&mmc2_pins_default>;
+	pinctrl-1 = <&mmc2_pins_uhs>;
+	pinctrl-2 = <&mmc2_pins_eint>;
+	bus-width = <4>;
+	max-frequency = <200000000>;
+	cap-sd-highspeed;
+	sd-uhs-sdr104;
+	keep-power-in-suspend;
+	wakeup-source;
+	cap-sdio-irq;
+	mediatek,disable-single-burst;
+	no-mmc;
+	no-sd;
+	non-removable;
+	vmmc-supply = <&sdio_fixed_3v3>;
+	vqmmc-supply = <&sdio_fixed_1v8>;
 };
 
 &nor_flash {
