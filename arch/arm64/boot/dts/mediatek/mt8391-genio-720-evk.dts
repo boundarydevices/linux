@@ -37,6 +37,15 @@
 		status = "okay";
 	};
 
+	backlight_lcd1: backlight-lcd1 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm1 0 500000>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+		status = "disabled";
+	};
+
 	chosen {
 		stdout-path = "serial0:921600n8";
 	};
@@ -206,6 +215,24 @@
 	mtk_fsource: mtk-fsource {
 		compatible = "regulator-output";
 		vout-supply = <&mt6359_vefuse_ldo_reg>;
+	};
+
+	edp_panel_fixed_3v3: edp-panel-fixed-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "edp_panel_3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		status = "disabled";
+	};
+
+	edp_panel_fixed_12v: edp-panel-fixed-12v {
+		compatible = "regulator-fixed";
+		regulator-name = "edp_backlight_12v";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		enable-active-high;
+		status = "disabled";
 	};
 };
 
