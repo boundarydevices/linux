@@ -381,9 +381,17 @@ static enum mtk_ddp_comp_id mt8189_mtk_ddp_ext[] = {
 	DDP_COMPONENT_DVO0,
 };
 
+static const unsigned int mt8189_mtk_ddp_ext_routes_0[] = {
+	DDP_COMPONENT_DVO0
+};
+
+static const unsigned int mt8189_mtk_ddp_ext_routes_1[] = {
+	DDP_COMPONENT_DSI0
+};
+
 static const struct mtk_drm_route mt8189_mtk_ddp_ext_routes[] = {
-	{1, DDP_COMPONENT_DVO0},
-	{1, DDP_COMPONENT_DP_INTF0},
+	{1, 0, ARRAY_SIZE(mt8189_mtk_ddp_ext_routes_0), mt8189_mtk_ddp_ext_routes_0},
+	{1, 0, ARRAY_SIZE(mt8189_mtk_ddp_ext_routes_1), mt8189_mtk_ddp_ext_routes_1}
 };
 
 static const struct mtk_mmsys_driver_data mt2701_mmsys_driver_data = {
@@ -503,6 +511,8 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 static const struct mtk_mmsys_driver_data mt8189_mmsys_driver_data = {
 	.main_path = mt8189_mtk_ddp_main,
 	.main_len = ARRAY_SIZE(mt8189_mtk_ddp_main),
+	.ext_path = mt8189_mtk_ddp_ext,
+	.ext_len = ARRAY_SIZE(mt8189_mtk_ddp_ext),
 	.mmsys_dev_num = 1,
 };
 
@@ -1048,6 +1058,10 @@ static const struct of_device_id mtk_ddp_comp_dt_ids[] = {
 	  .data = (void *)MTK_DPI },
 	{ .compatible = "mediatek,mt8188-dp-intf",
 	  .data = (void *)MTK_DP_INTF },
+	{ .compatible = "mediatek,mt8189-dp-dvo",
+	  .data = (void *)MTK_DVO },
+	{ .compatible = "mediatek,mt8189-edp-dvo",
+	  .data = (void *)MTK_DVO },
 	{ .compatible = "mediatek,mt8192-dpi",
 	  .data = (void *)MTK_DPI },
 	{ .compatible = "mediatek,mt8195-dpi",
@@ -1172,8 +1186,8 @@ static int mtk_drm_probe(struct platform_device *pdev)
 		    comp_type == MTK_DISP_RDMA ||
 		    comp_type == MTK_DP_INTF ||
 		    comp_type == MTK_DPI ||
-		    comp_type == MTK_DVO ||
-		    comp_type == MTK_DSI) {
+		    comp_type == MTK_DSI ||
+		    comp_type == MTK_DVO) {
 			if (!drm_comp_add_list[comp_id]) {
 				dev_info(dev, "Adding component match for %pOF\n",
 					 node);
@@ -1285,6 +1299,7 @@ static struct platform_driver * const mtk_drm_drivers[] = {
 	&mtk_disp_ovl_driver,
 	&mtk_disp_rdma_driver,
 	&mtk_dpi_driver,
+	&mtk_dvo_driver,
 	&mtk_drm_platform_driver,
 	&mtk_dsi_driver,
 	&mtk_ethdr_driver,
