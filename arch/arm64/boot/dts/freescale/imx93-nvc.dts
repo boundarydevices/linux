@@ -308,7 +308,7 @@
 	dr_mode = "host";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usb2>;
-	pinctrl-assert-gpios = <&gpio2 28 GPIO_ACTIVE_HIGH>;
+	pinctrl-assert-gpios = <&gpio2 28 GPIO_ACTIVE_LOW>;
 	disable-over-current;
 	vbus-supply = <&reg_usb2_vbus>;
 	status = "okay";
@@ -381,8 +381,8 @@
 			MX93_PAD_GPIO_IO23__GPIO2_IO23		0x31e /* USB0_EN_OC */
 			MX93_PAD_GPIO_IO24__GPIO2_IO24		0x31e /* USB0_INT */
 			MX93_PAD_GPIO_IO25__GPIO2_IO25		0x31e /* A_WAKE */
-			MX93_PAD_GPIO_IO26__GPIO2_IO26		0x31e /* nRESET_BLE */
-			MX93_PAD_GPIO_IO29__GPIO2_IO29		0x31e /* CH-INT */
+			MX93_PAD_GPIO_IO26__GPIO2_IO26		0x51e /* nRESET_BLE */
+			MX93_PAD_GPIO_IO29__GPIO2_IO29		0x51e /* CH-INT */
 			MX93_PAD_SD2_CLK__GPIO3_IO01		0x31e /* REV0 */
 			MX93_PAD_SD2_CMD__GPIO3_IO02		0x31e /* REV1 */
 			MX93_PAD_SD2_DATA0__GPIO3_IO03		0x31e /* REV2 */
@@ -507,8 +507,8 @@
 
 	pinctrl_usb2: usb2grp {
 		fsl,pins = <
-			MX93_PAD_GPIO_IO27__GPIO2_IO27		0x31e /* mPCIe W_DISABLE# */
-			MX93_PAD_GPIO_IO28__GPIO2_IO28		0x31e /* mPCIe PERST# */
+			MX93_PAD_GPIO_IO27__GPIO2_IO27		0x51e /* mPCIe W_DISABLE# */
+			MX93_PAD_GPIO_IO28__GPIO2_IO28		0x51e /* mPCIe PERST# */
 		>;
 	};
 
