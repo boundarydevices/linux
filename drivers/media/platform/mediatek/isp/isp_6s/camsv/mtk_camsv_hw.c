@@ -291,34 +291,34 @@ static irqreturn_t isp_irq_camsv(int irq, void *data)
 		dev_dbg(cam_dev->dev, "%s CAMSV_IRQ_SW_PASS1_DON\n", __func__);
 		cam_dev->sequence++;
 
+		if (cam_dev->buf_curr) {
+			dev_dbg(cam_dev->dev, "%s vb2_buffer_done buffer address: %llx sequence: %d\n",
+					__func__, cam_dev->buf_curr->daddr, cam_dev->sequence);
+			cam_dev->buf_curr->v4l2_buf.sequence = cam_dev->sequence;
+			cam_dev->buf_curr->v4l2_buf.vb2_buf.timestamp = ktime_get_ns();
+			vb2_buffer_done(&cam_dev->buf_curr->v4l2_buf.vb2_buf,
+					VB2_BUF_STATE_DONE);
+			cam_dev->buf_curr = NULL;
+		} else {
+			dev_err(cam_dev->dev, "%s buf_curr is NULL\n", __func__);
+		}
+	}
+	if (irq_status & CAMSV_IRQ_TG_SOF_INT)
+		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_TG_SOF_INT\n", __func__);
+	if (irq_status & CAMSV_IRQ_PASS1_DON) {
+		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_PASS1_DON\n", __func__);
 		buf = list_first_entry_or_null(&cam_dev->buf_list,
 						struct mtk_cam_dev_buffer,
 						list);
-		if (buf) {
-			dev_dbg(cam_dev->dev, "%s vb2_buffer_done buffer address: %llx sequence: %d\n",
-					__func__, buf->daddr, cam_dev->sequence);
-			buf->v4l2_buf.sequence = cam_dev->sequence;
-			buf->v4l2_buf.vb2_buf.timestamp = ktime_get_ns();
-			vb2_buffer_done(&buf->v4l2_buf.vb2_buf,
-					VB2_BUF_STATE_DONE);
+		if (!cam_dev->buf_curr && buf) {
+			(*cam_dev->hw_functions->mtk_cam_update_buffers_add)
+						(cam_dev, buf);
 			list_del(&buf->list);
+			cam_dev->buf_curr = buf;
 		} else {
 			dev_err(cam_dev->dev, "%s buf_list is empty\n", __func__);
 		}
 	}
-	if (irq_status & CAMSV_IRQ_TG_SOF_INT) {
-		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_TG_SOF_INT\n", __func__);
-		buf = list_first_entry_or_null(&cam_dev->buf_list,
-					       struct mtk_cam_dev_buffer,
-					       list);
-		if (buf)
-			(*cam_dev->hw_functions->mtk_cam_update_buffers_add)
-						(cam_dev, buf);
-		else
-			dev_err(cam_dev->dev, "%s buf_list is empty\n", __func__);
-	}
-	if (irq_status & CAMSV_IRQ_PASS1_DON)
-		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_PASS1_DON\n", __func__);
 	if (irq_status & CAMSV_IRQ_IMGO_DROP)
 		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_IMGO_DROP\n", __func__);
 
@@ -365,13 +365,20 @@ static int mtk_camsv_runtime_resume(struct device *dev)
 				fmt->plane_fmt[0].bytesperline, vdev->fmtinfo->code);
 
 		spin_lock_irqsave(&cam_dev->irqlock, flags);
-		buf = list_last_entry(&cam_dev->buf_list,
-				      struct mtk_cam_dev_buffer,
-				      list);
-		if (buf)
-			mtk_camsv_update_buffers_add(cam_dev, buf);
-		else
-			dev_err(cam_dev->dev, "No buffer to add\n");
+		if (cam_dev->buf_curr) {
+			mtk_camsv_update_buffers_add(cam_dev, cam_dev->buf_curr);
+		} else {
+			buf = list_last_entry(&cam_dev->buf_list,
+					      struct mtk_cam_dev_buffer,
+					      list);
+			if (buf) {
+				mtk_camsv_update_buffers_add(cam_dev, buf);
+				list_del(&buf->list);
+				cam_dev->buf_curr = buf;
+			} else {
+				dev_err(cam_dev->dev, "No buffer to add\n");
+			}
+		}
 
 		spin_unlock_irqrestore(&cam_dev->irqlock, flags);
 

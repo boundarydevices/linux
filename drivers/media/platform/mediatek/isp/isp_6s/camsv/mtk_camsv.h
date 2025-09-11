@@ -157,6 +157,7 @@ struct mtk_cam_dev {
 	spinlock_t irqlock;
 
 	struct list_head buf_list;
+	struct mtk_cam_dev_buffer *buf_curr;
 
 	struct mtk_cam_hw_functions *hw_functions;
 };

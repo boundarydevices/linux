@@ -299,6 +299,11 @@ static void mtk_cam_vb2_return_all_buffers(struct mtk_cam_dev *cam,
 	unsigned long flags = 0;
 
 	spin_lock_irqsave(&cam->irqlock, flags);
+	if (cam->buf_curr) {
+		list_add_tail(&cam->buf_curr->list, &cam->buf_list);
+		cam->buf_curr = NULL;
+	}
+
 	list_for_each_entry_safe(buf, buf_prev, &cam->buf_list, list) {
 		buf->daddr = 0ULL;
 		list_del(&buf->list);
@@ -384,8 +389,23 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	/* Enable CMOS and VF */
 	mtk_cam_cmos_vf_enable(cam, true, vdev->fmtinfo->packed);
 
-	mutex_lock(&cam->op_lock);
+	/* update first buffer address */
+	/* added the buffer into the tracking list */
+	spin_lock_irqsave(&cam->irqlock, flags);
+	cam->buf_curr = NULL;
+	if (!list_empty(&cam->buf_list)) {
+		buf = list_first_entry_or_null(&cam->buf_list,
+					       struct mtk_cam_dev_buffer,
+					       list);
+		(*cam->hw_functions->mtk_cam_update_buffers_add)(cam, buf);
+		list_del(&buf->list);
+		cam->buf_curr = buf;
+	} else {
+		dev_err(dev, "%s buf_list is empty\n", __func__);
+	}
+	spin_unlock_irqrestore(&cam->irqlock, flags);
 
+	mutex_lock(&cam->op_lock);
 	ret = mtk_cam_verify_format(cam);
 	if (ret < 0)
 		goto fail_unlock;
@@ -395,23 +415,6 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 
 	cam->sequence = (unsigned int)-1;
 
-	mutex_unlock(&cam->op_lock);
-
-	/* update first buffer address */
-	/* added the buffer into the tracking list */
-	spin_lock_irqsave(&cam->irqlock, flags);
-	if (!list_empty(&cam->buf_list)) {
-		dev_info(dev, "%s: update first buffer address: buf_list is not empty\n",
-			 __func__);
-		buf = list_first_entry_or_null(&cam->buf_list,
-					       struct mtk_cam_dev_buffer,
-					       list);
-		(*cam->hw_functions->mtk_cam_update_buffers_add)(cam, buf);
-	} else {
-		dev_info(dev, "%s buf_list is empty\n", __func__);
-	}
-	spin_unlock_irqrestore(&cam->irqlock, flags);
-
 	/* Stream on the sub-device */
 	ret = v4l2_subdev_call(&cam->subdev, video, s_stream, 1);
 	if (ret) {
@@ -419,12 +422,9 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 			__func__, cam->subdev.name, ret);
 		return ret;
 	}
+	mutex_unlock(&cam->op_lock);
 
 	return 0;
-
-fail_no_buffer:
-	mutex_lock(&cam->op_lock);
-	v4l2_subdev_call(&cam->subdev, video, s_stream, 0);
 
 fail_unlock:
 	mutex_unlock(&cam->op_lock);
