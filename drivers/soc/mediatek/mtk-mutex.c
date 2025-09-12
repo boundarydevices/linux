@@ -1342,8 +1342,16 @@ int mtk_mutex_enable_by_cmdq(struct mtk_mutex *mutex, void *pkt)
 
 	WARN_ON(&mtx->mutex[mutex->id] != mutex);
 
+	if (mtx->cmdq_reg.subsys == CMDQ_SUBSYS_INVALID) {
+		cmdq_pkt_write_value_addr(cmdq_pkt,
+					  mtx->cmdq_reg.pa_base +
+					  DISP_REG_MUTEX_EN(mutex->id),
+					  1, U32_MAX);
+		return 0;
+	}
+
 	if (!mtx->cmdq_reg.size) {
-		dev_err(mtx->dev, "mediatek,gce-client-reg hasn't been set");
+		dev_dbg(mtx->dev, "mediatek,gce-client-reg hasn't been set");
 		return -ENODEV;
 	}
 
