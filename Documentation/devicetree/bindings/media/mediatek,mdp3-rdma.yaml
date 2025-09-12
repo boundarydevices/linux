@@ -24,6 +24,7 @@ properties:
       - enum:
           - mediatek,mt8183-mdp3-rdma
           - mediatek,mt8188-mdp3-rdma
+          - mediatek,mt8189-mdp3-rdma
           - mediatek,mt8195-mdp3-rdma
           - mediatek,mt8195-vdo1-rdma
       - items:
@@ -113,6 +114,23 @@ allOf:
 
       required:
         - mboxes
+        - mediatek,gce-events
+
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: mediatek,mt8189-mdp3-rdma
+
+    then:
+      properties:
+        clocks:
+          maxItems: 1
+
+        mboxes:
+          minItems: 3
+
+      required:
         - mediatek,gce-events
 
   - if:
