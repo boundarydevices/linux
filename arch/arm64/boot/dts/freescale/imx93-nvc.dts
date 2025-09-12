@@ -124,9 +124,11 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <7>;
 			interrupts-extended = <&gpio4 20 IRQ_TYPE_LEVEL_LOW>;
+			/* We reset in u-boot so no need to reset here.
 			reset-gpios =<&gpio4 21 GPIO_ACTIVE_LOW>;
 			reset-assert-us = <25>;
 			reset-deassert-us = <60000>;
+			*/
 			ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_25_NS>;
 			ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
 			ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
