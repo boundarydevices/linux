@@ -17,6 +17,8 @@
 #define CMDQ_THR_SPR_IDX2		2
 #define CMDQ_THR_SPR_IDX3		3
 
+#define CMDQ_SUBSYS_INVALID            (U8_MAX)
+
 #define CMDQ_GPR_IDX			32
 #define CMDQ_TPR_IDX			56
 #define CMDQ_CPR_IDX			0x8000
@@ -103,6 +105,7 @@ struct cmdq_operand {
 
 struct cmdq_client_reg {
 	u8 subsys;
+	phys_addr_t pa_base;
 	u16 offset;
 	u16 size;
 };
