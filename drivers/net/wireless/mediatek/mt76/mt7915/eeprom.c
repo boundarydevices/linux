@@ -2,13 +2,8 @@
 /* Copyright (C) 2020 MediaTek Inc. */
 
 #include <linux/firmware.h>
-#include <linux/moduleparam.h>
 #include "mt7915.h"
 #include "eeprom.h"
-
-static bool enable_6ghz;
-module_param(enable_6ghz, bool, 0644);
-MODULE_PARM_DESC(enable_6ghz, "Enable 6 GHz instead of 5 GHz on hardware that supports both");
 
 static int mt7915_eeprom_load_precal(struct mt7915_dev *dev)
 {
@@ -169,20 +164,8 @@ static void mt7915_eeprom_parse_band_config(struct mt7915_phy *phy)
 			phy->mt76->cap.has_6ghz = true;
 			return;
 		case MT_EE_V2_BAND_SEL_5GHZ_6GHZ:
-			if (enable_6ghz) {
-				phy->mt76->cap.has_6ghz = true;
-				u8p_replace_bits(&eeprom[MT_EE_WIFI_CONF + band],
-						 MT_EE_V2_BAND_SEL_6GHZ,
-						 MT_EE_WIFI_CONF0_BAND_SEL);
-			} else {
-				phy->mt76->cap.has_5ghz = true;
-				u8p_replace_bits(&eeprom[MT_EE_WIFI_CONF + band],
-						 MT_EE_V2_BAND_SEL_5GHZ,
-						 MT_EE_WIFI_CONF0_BAND_SEL);
-			}
-			/* force to buffer mode */
-			dev->flash_mode = true;
-
+			phy->mt76->cap.has_5ghz = true;
+			phy->mt76->cap.has_6ghz = true;
 			return;
 		default:
 			phy->mt76->cap.has_2ghz = true;
