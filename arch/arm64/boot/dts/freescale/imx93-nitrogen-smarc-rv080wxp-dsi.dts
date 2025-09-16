@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR MIT)
+/*
+ * Example to use a Simple native DSI (MIPI) display.
+ *
+ * Copyright 2024 Boundary Devices
+ */
+
+/dts-v1/;
+
+#include "imx93-nitrogen-smarc.dts"
+
+/ {
+	model = "Boundary Devices Nitrogen93 SMARC DSI rjy,rv080wxp";
+	compatible = "fsl,imx93-nitrogen-smarc", "fsl,imx93";
+
+};
+
+/delete-node/ &panel_dsi;
+
+/delete-node/ &dsi0_sn65dsi84;
+
+&dsi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	panel-dsi@0 {
+		compatible = "rjy,rv080wxp-300-31", "ilitek,ili9881c";
+		reg = <0>;
+		power-supply = <&reg_vref_5v0>;
+
+		backlight = <&dsi_backlight>;
+		reset-gpios = <&pcal6534 17 GPIO_ACTIVE_LOW>; /* P2_1 LCD0_VDD_EN */
+
+		port {
+			panel_in: endpoint {
+				 remote-endpoint = <&dsi_out>;
+			};
+		};
+	};
+
+	ports {
+		port@1 {
+			reg = <1>;
+
+			dsi_out: endpoint {
+				remote-endpoint = <&panel_in>;
+			};
+		};
+	};
+};
