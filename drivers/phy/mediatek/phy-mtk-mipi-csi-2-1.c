@@ -745,12 +745,10 @@ static struct phy *mtk_mipi_cdphy_xlate(struct device *dev,
 		switch (args->args[0]) {
 		case PHY_TYPE_DPHY:
 			priv->mode = DPHY;
-			priv->is_4d1c = 1;
 			priv->is_cphy = 0;
 			break;
 		case PHY_TYPE_CPHY:
 			priv->mode = CPHY;
-			priv->is_4d1c = 0;
 			priv->is_cphy = 1;
 			break;
 		default:
@@ -763,7 +761,6 @@ static struct phy *mtk_mipi_cdphy_xlate(struct device *dev,
 			return ERR_PTR(-EINVAL);
 		}
 		priv->mode = CPHY;
-		priv->is_4d1c = 0;
 		priv->is_cphy = 1;
 	} else if (priv->type == DPHY) {
 		if (args->args_count != 1) {
@@ -771,7 +768,6 @@ static struct phy *mtk_mipi_cdphy_xlate(struct device *dev,
 			return ERR_PTR(-EINVAL);
 		}
 		priv->mode = DPHY;
-		priv->is_4d1c = 1;
 		priv->is_cphy = 0;
 	} else {
 		if (args->args_count) {
@@ -779,7 +775,6 @@ static struct phy *mtk_mipi_cdphy_xlate(struct device *dev,
 			return ERR_PTR(-EINVAL);
 		}
 		priv->mode = DPHY;
-		priv->is_4d1c = 1;
 		priv->is_cphy = 0;
 	}
 
