@@ -1,0 +1,69 @@
+
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Ezurio LLC
+ */
+
+#include "imx8mp-nitrogen_smarc.dts"
+
+/ {
+	model = "Ezurio Nitrogen8MP SMARC + rv080wxp-dsi";
+	compatible = "ezurio,imx8mp-nitrogen-smarc", "fsl,imx8mp";
+
+	aliases {
+		/delete-property/ mipi_to_lvds;
+		/delete-property/ t_mipi;
+	};
+};
+
+&backlight_mipi {
+	/delete-property/ display;
+	status = "okay";
+};
+
+&iomuxc {
+	pinctrl_mipi_lcd: mipi-lcdgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI1_RXD1__GPIO4_IO03	0x100
+		>;
+	};
+};
+
+&lcdif1 {
+	status = "okay";
+};
+
+&lcdif2 {
+	status = "disabled";
+};
+
+
+&lcdif3 {
+	status = "disabled";
+};
+
+&ldb_phy {
+	status = "disabled";
+};
+
+&mipi_dsi {
+	// samsung,esc-clock-frequency = <10000000>;
+	status = "okay";
+	/delete-node/ panel@0;
+
+	mipi_fb: panel-dsi@0 {
+		compatible = "rjy,rv080wxp-300-31", "ilitek,ili9881c";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_mipi_lcd>;
+
+		reg = <0>;
+		power-supply = <&reg_vref_5v0>;
+
+		backlight = <&backlight_mipi>;
+		reset-gpios = <&gpio4 3 GPIO_ACTIVE_LOW>; /* LCD0_VDD_EN */
+	};
+};
+
+&ts_mipi_goodix {
+	status = "okay";
+};
