@@ -674,13 +674,13 @@
 };
 
 &usb3_phy0 {
-	fsl,phy-tx-preemp-amp-tune = <2>;
+	fsl,phy-tx-preemp-amp-tune-microamp = <2>;
 	status = "okay";
 	vbus-supply = <&reg_usb_otg1_vbus>;
 };
 
 &usb3_phy1 {
-	fsl,phy-tx-preemp-amp-tune = <2>;
+	fsl,phy-tx-preemp-amp-tune-microamp = <2>;
 	status = "okay";
 	vbus-supply = <&reg_usb_otg2_vbus>;
 };
