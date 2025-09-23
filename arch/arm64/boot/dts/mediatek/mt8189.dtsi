@@ -1900,6 +1900,7 @@
 		dp_tx: dp-tx@11b60000 {
 			status = "disabled";
 			compatible = "mediatek,mt8189-dp-tx";
+			#sound-dai-cells = <0>;
 			power-domains = <&scpsys MT8189_POWER_DOMAIN_DP_TX>,
 							<&scpsys MT8189_POWER_DOMAIN_SSUSB>;
 			power-domain-names = "pd_dp_tx",

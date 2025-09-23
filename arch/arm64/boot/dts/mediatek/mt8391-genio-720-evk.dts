@@ -1660,6 +1660,15 @@
 			sound-dai = <&pmic 0>, <&accdet>, <&amic_codec>;
 		};
 	};
+
+	dai-link-2 {
+		link-name = "TDM_DPTX_BE";
+		status = "disabled";
+
+		codec {
+			sound-dai = <&dp_tx>;
+		};
+	};
 };
 
 &gpu {
