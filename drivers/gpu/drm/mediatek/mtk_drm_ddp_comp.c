@@ -166,11 +166,6 @@ static void mtk_dither_config(struct device *dev, unsigned int w,
 			      DITHER_ENGINE_EN, cmdq_pkt);
 }
 
-static const struct mtk_ddp_comp_funcs ddp_dvo = {
-	.start = mtk_dvo_start,
-	.stop = mtk_dvo_stop,
-};
-
 static void mtk_dither_start(struct device *dev)
 {
 	struct mtk_ddp_comp_dev *priv = dev_get_drvdata(dev);
@@ -328,6 +323,12 @@ static const struct mtk_ddp_comp_funcs ddp_dsi = {
 	.start = mtk_dsi_ddp_start,
 	.stop = mtk_dsi_ddp_stop,
 	.encoder_index = mtk_dsi_encoder_index,
+};
+
+static const struct mtk_ddp_comp_funcs ddp_dvo = {
+	.start = mtk_dvo_start,
+	.stop = mtk_dvo_stop,
+	.encoder_index = mtk_dvo_encoder_index,
 };
 
 static const struct mtk_ddp_comp_funcs ddp_gamma = {

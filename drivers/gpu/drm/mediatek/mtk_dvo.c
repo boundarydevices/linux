@@ -559,7 +559,7 @@ static int mtk_dvo_bridge_attach(struct drm_bridge *bridge,
 	int ret = 0;
 
 	ret = drm_bridge_attach(bridge->encoder, dvo->next_bridge,
-							&dvo->bridge, 1);
+				&dvo->bridge, 1);
 	if (ret)
 		dev_err(dvo->dev, " Failed to call attach ret = %d\n", ret);
 
@@ -639,6 +639,15 @@ void mtk_dvo_stop(struct device *dev)
 	mtk_dvo_power_off(dvo);
 }
 
+int mtk_dvo_encoder_index(struct device *dev)
+{
+	struct mtk_dvo *dvo = dev_get_drvdata(dev);
+	int encoder_index = drm_encoder_index(&dvo->encoder);
+
+	dev_dbg(dev, "encoder index:%d", encoder_index);
+	return encoder_index;
+}
+
 static int mtk_dvo_bind(struct device *dev, struct device *master, void *data)
 {
 	struct mtk_dvo *dvo = dev_get_drvdata(dev);
@@ -661,13 +670,15 @@ static int mtk_dvo_bind(struct device *dev, struct device *master, void *data)
 	if (ret)
 		goto err_cleanup;
 
-	dvo->connector = drm_bridge_connector_init(drm_dev, &dvo->encoder);
-	if (IS_ERR(dvo->connector)) {
-		dev_err(dev, "Unable to create bridge connector\n");
-		ret = PTR_ERR(dvo->connector);
-		goto err_cleanup;
+	if (!dvo->conf->is_dp) {
+		dvo->connector = drm_bridge_connector_init(drm_dev, &dvo->encoder);
+		if (IS_ERR(dvo->connector)) {
+			dev_err(dev, "Unable to create bridge connector\n");
+			ret = PTR_ERR(dvo->connector);
+			goto err_cleanup;
+		}
+		drm_connector_attach_encoder(dvo->connector, &dvo->encoder);
 	}
-	drm_connector_attach_encoder(dvo->connector, &dvo->encoder);
 
 	return 0;
 
@@ -780,7 +791,6 @@ static int mtk_dvo_probe(struct platform_device *pdev)
 	if (IS_ERR(dvo->pixel_clk))
 		return dev_err_probe(dev, PTR_ERR(dvo->pixel_clk),
 				     "Failed to get pixel clock\n");
-
 
 	dvo->tvd_clk = devm_clk_get(dev, "pll");
 	if (IS_ERR(dvo->tvd_clk))

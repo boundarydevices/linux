@@ -30,9 +30,6 @@ void mtk_ccorr_config(struct device *dev, unsigned int w,
 void mtk_ccorr_start(struct device *dev);
 void mtk_ccorr_stop(struct device *dev);
 
-void mtk_dvo_start(struct device *dev);
-void mtk_dvo_stop(struct device *dev);
-
 void mtk_color_bypass_shadow(struct device *dev);
 int mtk_color_clk_enable(struct device *dev);
 void mtk_color_clk_disable(struct device *dev);
@@ -54,6 +51,10 @@ bool mtk_dpi_check_output_to_lvds(struct device *dev);
 void mtk_dsi_ddp_start(struct device *dev);
 void mtk_dsi_ddp_stop(struct device *dev);
 int mtk_dsi_encoder_index(struct device *dev);
+
+void mtk_dvo_start(struct device *dev);
+void mtk_dvo_stop(struct device *dev);
+int mtk_dvo_encoder_index(struct device *dev);
 
 int mtk_gamma_clk_enable(struct device *dev);
 void mtk_gamma_clk_disable(struct device *dev);
