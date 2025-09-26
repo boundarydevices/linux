@@ -479,6 +479,7 @@ static const struct mtk_ddp_comp_match mtk_ddp_matches[DDP_COMPONENT_DRM_ID_MAX]
 	[DDP_COMPONENT_DSI2]		= { MTK_DSI,			2, &ddp_dsi },
 	[DDP_COMPONENT_DSI3]		= { MTK_DSI,			3, &ddp_dsi },
 	[DDP_COMPONENT_DVO0]		= { MTK_DVO,			0, &ddp_dvo },
+	[DDP_COMPONENT_DVO1]		= { MTK_DVO,			1, &ddp_dvo },
 	[DDP_COMPONENT_GAMMA0]		= { MTK_DISP_GAMMA,		0, &ddp_gamma },
 	[DDP_COMPONENT_GAMMA1]		= { MTK_DISP_GAMMA,		1, &ddp_gamma },
 	[DDP_COMPONENT_MERGE0]		= { MTK_DISP_MERGE,		0, &ddp_merge },
@@ -599,14 +600,14 @@ unsigned int mtk_drm_find_possible_crtc_by_comp(struct drm_device *drm,
 		if (private_all[i]->is_sub_pipe) {
 			if (mtk_drm_find_comp_in_ddp(dev, private_all[i]->data->main_subpipe_path,
 				private_all[i]->data->main_subpipe_len, private_all[i]->ddp_comp))
-				ret |= BIT(2);
+				ret |= BIT(private_all[i]->data->mmsys_dev_num);
 
 			for (j = 0; j < private_all[i]->data->conn_subpipe_routes_num; j++)
 				if (mtk_drm_find_comp_in_ddp(dev,
 					private_all[i]->data->conn_subpipe_routes[j].route_ddp,
 					private_all[i]->data->conn_subpipe_routes[j].route_len,
 					private_all[i]->ddp_comp))
-					ret |= BIT(2);
+					ret |= BIT(private_all[i]->data->mmsys_dev_num);
 		}
 	}
 

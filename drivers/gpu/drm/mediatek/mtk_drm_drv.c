@@ -374,24 +374,23 @@ static enum mtk_ddp_comp_id mt8189_mtk_ddp_main[] = {
 	DDP_COMPONENT_DSI0,
 };
 
-static enum mtk_ddp_comp_id mt8189_mtk_ddp_ext[] = {
+static enum mtk_ddp_comp_id mt8189_mtk_ddp_main_subpipe[] = {
 	DDP_COMPONENT_OVL1,
 	DDP_COMPONENT_RDMA1,
 	DDP_COMPONENT_COMP0_OUT_CB5,
-	DDP_COMPONENT_DVO0,
 };
 
-static const unsigned int mt8189_mtk_ddp_ext_routes_0[] = {
+static const unsigned int mt8189_mtk_ddp_main_subpipe_route0[] = {
 	DDP_COMPONENT_DVO0
 };
 
-static const unsigned int mt8189_mtk_ddp_ext_routes_1[] = {
-	DDP_COMPONENT_DSI0
+static const unsigned int mt8189_mtk_ddp_main_subpipe_route1[] = {
+	DDP_COMPONENT_DVO1
 };
 
-static const struct mtk_drm_route mt8189_mtk_ddp_ext_routes[] = {
-	{1, 0, ARRAY_SIZE(mt8189_mtk_ddp_ext_routes_0), mt8189_mtk_ddp_ext_routes_0},
-	{1, 0, ARRAY_SIZE(mt8189_mtk_ddp_ext_routes_1), mt8189_mtk_ddp_ext_routes_1}
+static const struct mtk_drm_route mt8189_mtk_ddp_subpipe_routes[] = {
+	{0, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_subpipe_route0), mt8189_mtk_ddp_main_subpipe_route0},
+	{0, 1, ARRAY_SIZE(mt8189_mtk_ddp_main_subpipe_route1), mt8189_mtk_ddp_main_subpipe_route1}
 };
 
 static const struct mtk_mmsys_driver_data mt2701_mmsys_driver_data = {
@@ -511,8 +510,10 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 static const struct mtk_mmsys_driver_data mt8189_mmsys_driver_data = {
 	.main_path = mt8189_mtk_ddp_main,
 	.main_len = ARRAY_SIZE(mt8189_mtk_ddp_main),
-	.ext_path = mt8189_mtk_ddp_ext,
-	.ext_len = ARRAY_SIZE(mt8189_mtk_ddp_ext),
+	.main_subpipe_path = mt8189_mtk_ddp_main_subpipe,
+	.main_subpipe_len = ARRAY_SIZE(mt8189_mtk_ddp_main_subpipe),
+	.conn_subpipe_routes = mt8189_mtk_ddp_subpipe_routes,
+	.conn_subpipe_routes_num = ARRAY_SIZE(mt8189_mtk_ddp_subpipe_routes),
 	.mmsys_dev_num = 1,
 };
 
@@ -611,8 +612,8 @@ static bool mtk_drm_get_all_drm_priv(struct device *dev)
 		}
 		if (all_drm_priv[0] && !all_drm_priv[0]->is_dual_pipe
 			&& drm_dev_priv && drm_dev_priv->data->main_subpipe_len) {
-			all_drm_priv[2] = drm_dev_priv;
-			all_drm_priv[2]->is_sub_pipe = true;
+			all_drm_priv[drm_priv->data->mmsys_dev_num] = drm_dev_priv;
+			all_drm_priv[drm_priv->data->mmsys_dev_num]->is_sub_pipe = true;
 			priv_cnt++;
 		}
 	}
