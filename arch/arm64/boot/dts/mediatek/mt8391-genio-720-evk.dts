@@ -142,6 +142,22 @@
 		regulator-always-on;
 	};
 
+	can_clk: can-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "can-clk";
+	};
+
+	can_5v: can-5v {
+		compatible = "regulator-fixed";
+		regulator-name = "can_5v";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 57 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
 	sdio_fixed_1v8: regulator-3 {
 		compatible = "regulator-fixed";
 		regulator-name = "sdio_io";
@@ -1117,7 +1133,26 @@
 			bias-disable;
 		};
 	};
+
 	/* AUDIO GPIO standardization end */
+	spi0_pins: spi0-pins {
+		pins-spi-bus {
+			pinmux = <PINMUX_GPIO69__FUNC_SPIM0_CSB>,
+				<PINMUX_GPIO70__FUNC_SPIM0_CLK>,
+				<PINMUX_GPIO71__FUNC_SPIM0_MO>,
+				<PINMUX_GPIO72__FUNC_SPIM0_MI>;
+				drive-strength = <MTK_DRIVE_6mA>;
+		};
+		pin-can-rst {
+			pinmux = <PINMUX_GPIO82__FUNC_GPIO82>;
+			output-high;
+		};
+
+		pin-can-standby {
+			pinmux = <PINMUX_GPIO45__FUNC_GPIO45>;
+			output-low;
+		};
+	};
 };
 
 &mmc1 {
@@ -1594,3 +1629,20 @@
 	status = "okay";
 };
 
+&spi0 {
+	pinctrl-0 = <&spi0_pins>;
+	pinctrl-names = "default";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	can0: can0@0 {
+		compatible = "microchip,mcp2518fd";
+		reg = <0>;
+		clocks = <&can_clk>;
+		spi-max-frequency = <10000000>;
+		interrupts-extended = <&pio 76 IRQ_TYPE_LEVEL_LOW>;
+		vdd-supply = <&can_5v>;
+		xceiver-supply = <&can_5v>;
+	};
+};
