@@ -1277,6 +1277,11 @@ ssize_t mtk_seninf_show_status(struct device *dev,
 
 		for (i = 0; i < ctx->vcinfo.cnt; i++) {
 			vc = &ctx->vcinfo.vc[i];
+
+			if (vc->mux >= SENINF_MUX_NUM ||
+			    vc->cam >= _seninf_ops->cam_mux_num)
+				continue;
+
 			pmux = ctx->reg_if_mux[vc->mux];
 			pcammux = ctx->reg_if_cam_mux;
 
