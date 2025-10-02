@@ -973,6 +973,58 @@
 		};
 	};
 
+	aud_gpio_i2sin1_off: aud-gpio-i2sin1-off {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO18__FUNC_GPIO18>;
+			input-enable;
+			bias-pull-down;
+		};
+
+		pins-cmd2-dat {
+			pinmux = <PINMUX_GPIO19__FUNC_GPIO19>;
+			input-enable;
+			bias-pull-down;
+		};
+
+		pins-cmd3-dat {
+			pinmux = <PINMUX_GPIO20__FUNC_GPIO20>;
+			input-enable;
+			bias-pull-down;
+		};
+
+		pins-cmd4-dat {
+			pinmux = <PINMUX_GPIO21__FUNC_GPIO21>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	aud_gpio_i2sin1_on: aud-gpio-i2sin1-on {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO18__FUNC_I2SIN1_MCK>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+
+		pins-cmd2-dat {
+			pinmux = <PINMUX_GPIO19__FUNC_I2SIN1_BCK>;
+			input-enable;
+			bias-pull-down;
+		};
+
+		pins-cmd3-dat {
+			pinmux = <PINMUX_GPIO20__FUNC_I2SIN1_LRCK>;
+			input-enable;
+			bias-pull-down;
+		};
+
+		pins-cmd4-dat {
+			pinmux = <PINMUX_GPIO21__FUNC_I2SIN1_DI>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
 	aud_gpio_i2sout0_off: aud-gpio-i2sout0-off {
 		pins-cmd1-dat {
 			pinmux = <PINMUX_GPIO107__FUNC_GPIO107>;
@@ -1607,6 +1659,8 @@
 
 	pinctrl-names = "aud-gpio-i2sin0-off",
 		"aud-gpio-i2sin0-on",
+		"aud-gpio-i2sin1-off",
+		"aud-gpio-i2sin1-on",
 		"aud-gpio-i2sout0-off",
 		"aud-gpio-i2sout0-on",
 		/*dmic*/
@@ -1622,19 +1676,22 @@
 	/* i2s */
 	pinctrl-0 = <&aud_gpio_i2sin0_off>;
 	pinctrl-1 = <&aud_gpio_i2sin0_on>;
-	pinctrl-2 = <&aud_gpio_i2sout0_off>;
-	pinctrl-3 = <&aud_gpio_i2sout0_on>;
+	pinctrl-2 = <&aud_gpio_i2sin1_off>;
+	pinctrl-3 = <&aud_gpio_i2sin1_on>;
+	pinctrl-4 = <&aud_gpio_i2sout0_off>;
+	pinctrl-5 = <&aud_gpio_i2sout0_on>;
 	/* dmic */
-	pinctrl-4 = <&aud_gpio_ap_dmic_off>;
-	pinctrl-5 = <&aud_gpio_ap_dmic_on>;
+	pinctrl-6 = <&aud_gpio_ap_dmic_off>;
+	pinctrl-7 = <&aud_gpio_ap_dmic_on>;
 	/* pcm */
-	pinctrl-6 = <&aud_gpio_pcm_off>;
-	pinctrl-7 = <&aud_gpio_pcm_on>;
+	pinctrl-8 = <&aud_gpio_pcm_off>;
+	pinctrl-9 = <&aud_gpio_pcm_on>;
 	/* pmic */
-	pinctrl-8 = <&aud_gpio_pmic_off>;
-	pinctrl-9 = <&aud_gpio_pmic_on>;
+	pinctrl-10 = <&aud_gpio_pmic_off>;
+	pinctrl-11 = <&aud_gpio_pmic_on>;
 
 	audio-routing = "I2SOUT0", "ETDMOUT_HP_PIN",
+			"I2SIN1", "ETDMIN_SPK_PIN",
 			"I2SIN0", "ETDMIN_HP_PIN",
 			"AP DMIC Capture", "AP_DMIC0_PIN",
 			"AP DMIC Capture", "MIC_BIAS_0",
