@@ -407,6 +407,7 @@
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	cap-sdio-irq;
+	mediatek,disable-single-burst;
 	hs400-ds-delay = <0x12012>;
 	vmmc-supply = <&mmc2_vdd33>;
 	vqmmc-supply = <&mt6357_vcn18_reg>;
