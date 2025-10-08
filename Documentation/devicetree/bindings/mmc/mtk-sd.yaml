@@ -94,6 +94,14 @@ properties:
     minimum: 0
     maximum: 0xffffffff
 
+  mediatek,disable-single-burst:
+    $ref: /schemas/types.yaml#/definitions/flag
+    description:
+      Burst type setting. For some versions of the IP that do not use
+      AHB bus, the burst type need to be switched to INCR.
+      If present, use INCR burst type.
+      If not present, use single burst type.
+
   mediatek,hs200-cmd-int-delay:
     $ref: /schemas/types.yaml#/definitions/uint32
     description:
