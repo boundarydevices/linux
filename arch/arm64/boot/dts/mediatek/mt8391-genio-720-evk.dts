@@ -1181,6 +1181,63 @@
 		spi-max-frequency = <52000000>;
 		spi-rx-bus-width = <2>;
 		spi-tx-bus-width = <2>;
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "nor_bl2";
+				reg = <0x0 0x200000>;
+				read-only;
+			};
+
+			partition@200000 {
+				label = "nor_fip_a";
+				reg = <0x200000 0x200000>;
+				read-only;
+			};
+
+			partition@400000 {
+				label = "nor_fip_b";
+				reg = <0x400000 0x200000>;
+				read-only;
+			};
+
+			partition@600000 {
+				label = "nor_firmware_a";
+				reg = <0x600000 0x200000>;
+				read-only;
+			};
+
+			partition@800000 {
+				label = "nor_nor_firmware_b";
+				reg = <0x800000 0x200000>;
+				read-only;
+			};
+
+			partition@a00000 {
+				label = "nor_dramk";
+				reg = <0xa00000 0x80000>;
+				read-only;
+			};
+
+			partition@a80000 {
+				label = "nor_misc";
+				reg = <0xa80000 0x100000>;
+				read-only;
+			};
+
+			partition@b80000 {
+				label = "nor_bootassets";
+				reg = <0xb80000 0x200000>;
+			};
+
+			partition@d80000 {
+				label = "nor_env";
+				reg = <0xd80000 0x200000>;
+			};
+		};
 	};
 };
 
