@@ -16,5 +16,7 @@ dtbo-$(CONFIG_ARCH_MEDIATEK) += \
 	display-hdmidp.dtbo \
 	display-hdmi.dtbo \
 	display-headless.dtbo \
+	display-hmi-dsi.dtbo \
+	display-hmi-dsihdmi.dtbo \
 
 endif
