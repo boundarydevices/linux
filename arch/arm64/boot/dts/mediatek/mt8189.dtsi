@@ -2659,7 +2659,10 @@
 			reg = <0 0x14002000 0 0x1000>;
 			interrupts = <GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH 0>;
 			iommus = <&mm_iommu M4U_L0_P1_DISP_OVL0_4L_RDMA0>,
-				<&mm_iommu M4U_L0_P0_DISP_OVL0_4L_HDR>;
+				 <&mm_iommu M4U_L1_P2_DISP_OVL0_4L_RDMA1>,
+				 <&mm_iommu M4U_L0_P3_DISP_OVL0_4L_RDMA2>,
+				 <&mm_iommu M4U_L1_P4_DISP_OVL0_4L_RDMA3>,
+				 <&mm_iommu M4U_L0_P0_DISP_OVL0_4L_HDR>;
 			clocks = <&dispsys_config_clk CLK_MM_DISP_OVL0_4L>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0x2000 0x1000>;
 		};
@@ -2669,7 +2672,10 @@
 			reg = <0 0x14003000 0 0x1000>;
 			interrupts = <GIC_SPI 304 IRQ_TYPE_LEVEL_HIGH 0>;
 			iommus = <&mm_iommu M4U_L1_P1_DISP_OVL1_4L_RDMA0>,
-				<&mm_iommu M4U_L1_P0_DISP_OVL1_4L_HDR>;
+				 <&mm_iommu M4U_L0_P2_DISP_OVL1_4L_RDMA1>,
+				 <&mm_iommu M4U_L1_P3_DISP_OVL1_4L_RDMA2>,
+				 <&mm_iommu M4U_L0_P4_DISP_OVL1_4L_RDMA3>,
+				 <&mm_iommu M4U_L1_P0_DISP_OVL1_4L_HDR>;
 			clocks = <&dispsys_config_clk CLK_MM_DISP_OVL1_4L>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1400XXXX 0x3000 0x1000>;
 		};
