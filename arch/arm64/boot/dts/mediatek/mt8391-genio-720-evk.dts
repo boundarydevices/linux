@@ -196,6 +196,27 @@
 		enable-active-high;
 	};
 
+	pins_3v3en: regulator-7 {
+		compatible = "regulator-fixed";
+		regulator-name = "pins_3v3en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pio 79 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	pins_wcn_3v3_en: regulator-8 {
+		compatible = "regulator-fixed";
+		regulator-name = "pins_wcn_3v3_en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pio 75 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+
 	amic_codec: amic-codec {
 		compatible = "dmic-codec";
 		#sound-dai-cells = <0>;
@@ -823,10 +844,6 @@
 			bias-pull-up;
 		};
 
-		pins-3v3en {
-			pinmux = <PINMUX_GPIO79__FUNC_GPIO79>;
-			output-high;
-		};
 	};
 
 	usb0_default_pins: usb0-default-pins {
@@ -848,13 +865,6 @@
 			pinmux = <PINMUX_GPIO9__FUNC_GPIO9>;
 			bias-pull-up;
 			input-enable;
-		};
-	};
-
-	wifi_pcie_default_pins: wifi-pcie-default-pins {
-		pins-wcn-3v3-en {
-			pinmux = <PINMUX_GPIO75__FUNC_GPIO75>;
-			output-high;
 		};
 	};
 
