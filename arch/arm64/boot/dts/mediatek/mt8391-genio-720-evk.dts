@@ -216,6 +216,14 @@
 		regulator-always-on;
 	};
 
+	touch0_fixed_3v3: regulator-7 {
+		compatible = "regulator-fixed";
+		regulator-name = "touch_3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pio 12 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
 
 	amic_codec: amic-codec {
 		compatible = "dmic-codec";
@@ -495,6 +503,19 @@
 };
 
 &pio {
+	touch_pins: touch-pins {
+		pin-irq{
+			pinmux = <PINMUX_GPIO11__FUNC_GPIO11>;
+			input-enable;
+			bias-disable;
+		};
+
+		pin-reset {
+			pinmux = <PINMUX_GPIO10__FUNC_GPIO10>;
+			output-high;
+		};
+	};
+
 	uart0_pins: uart0-pins {
 		pins {
 			pinmux = <PINMUX_GPIO31__FUNC_UTXD0>,
@@ -1439,6 +1460,20 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c6_pins>;
 	status = "okay";
+	clock-frequency = <400000>;
+	/* touch device  */
+	touchscreen@14 {
+		compatible = "goodix,gt9271";
+		reg = <0x14>;
+		interrupt-parent = <&pio>;
+		interrupts-extended = <&pio 11 IRQ_TYPE_EDGE_RISING>;
+		irq-gpios = <&pio 11  GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pio 10 GPIO_ACTIVE_HIGH>;
+		AVDD28-supply = <&touch0_fixed_3v3>;
+		VDDIO-supply = <&mt6359_vio18_ldo_reg>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_pins>;
+	};
 };
 
 &i2c7{
