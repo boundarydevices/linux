@@ -1,0 +1,118 @@
+
+#include "imx8mq-nitrogen8m.dtsi"
+
+/ {
+	model = "MF i.MX8MQ Nitrogen8M";
+};
+
+/delete-node/&hdmi;
+
+&backlight_mipi {
+	status = "okay";
+	pwms = <&pwm3 0 6666666 0>;         /* 150 Hz */
+};
+
+&dcss {
+	status = "okay";
+
+	clocks = <&clk IMX8MQ_CLK_DISP_APB_ROOT>,
+		 <&clk IMX8MQ_CLK_DISP_AXI_ROOT>,
+		 <&clk IMX8MQ_CLK_DISP_RTRM_ROOT>,
+		 <&clk IMX8MQ_CLK_DC_PIXEL>,
+		 <&clk IMX8MQ_CLK_DISP_DTRC>;
+	clock-names = "apb", "axi", "rtrm", "pix", "dtrc";
+	assigned-clocks = <&clk IMX8MQ_CLK_DC_PIXEL>,
+					  <&clk IMX8MQ_VIDEO_PLL1_BYPASS>,
+					  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>,
+					  <&clk IMX8MQ_CLK_DISP_AXI>,
+					  <&clk IMX8MQ_CLK_DISP_APB>,
+					  <&clk IMX8MQ_CLK_DISP_RTRM>;
+	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
+							 <&clk IMX8MQ_VIDEO_PLL1>,
+							 <&clk IMX8MQ_CLK_27M>,
+							 <&clk IMX8MQ_SYS1_PLL_800M>,
+							 <&clk IMX8MQ_SYS1_PLL_800M>,
+							 <&clk IMX8MQ_SYS1_PLL_800M>;
+	assigned-clock-rates = <600000000>, <0>, <0>,
+						   <800000000>,
+						   <25000000>,
+						   <400000000>;
+
+	port {
+		dcss_out: endpoint {
+			remote-endpoint = <&mipi_dsi_in>;
+		};
+	};
+};
+
+&ts_ft5x06 {
+	status = "okay";
+};
+
+&irqsteer {
+	status = "okay";
+};
+
+&lcdif {
+	status = "disabled";
+};
+
+&mipi_dsi {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	panel@0 {
+		compatible = "lts,lts-lcd133";
+		backlight = <&backlight_mipi>;
+		reg = <0>;
+		pinctrl-0 = <&pinctrl_mipi_lcd133_070>;
+		pinctrl-names = "default";
+		reset-gpios = <&gpio3 15 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;
+		dsi-lanes = <4>;
+		video-mode = <0>;
+		width-mm = <192>;
+		height-mm = <120>;
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&mipi_dsi_out>;
+			};
+		};
+	};
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			mipi_dsi_in: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&dcss_out>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			mipi_dsi_out: endpoint {
+				remote-endpoint = <&panel_in>;
+			};
+		};
+	};
+};
+
+&dphy {
+	status = "okay";
+};
+
+&iomuxc {
+	pinctrl_mipi_lcd133_070: mipi_lcd133_070 {
+		fsl,pins = <
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x04
+			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
+		>;
+	};
+};
