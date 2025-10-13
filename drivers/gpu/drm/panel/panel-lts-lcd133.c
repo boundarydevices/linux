@@ -11,12 +11,14 @@
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/delay.h>
+#include <linux/media-bus-format.h>
 #include <linux/regulator/consumer.h>
 
-#include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_panel.h>
+#include <drm/drm_print.h>
 
 #include <video/mipi_display.h>
 #include <video/of_videomode.h>
@@ -101,6 +103,7 @@ static int lts_panel_power_on(struct lts_panel *lts)
 	return ret;
 }
 
+#if 0
 static int lts_panel_power_off(struct lts_panel *lts)
 {
 	int ret=0;
@@ -117,13 +120,6 @@ static int lts_panel_enter_sleep_mode(struct lts_panel *lts)
 {
 	int ret=0;
 	u8 data = 0;
-	int i;
-
-	struct mipi_dsi_msg msg = {
-		.channel = lts->link->channel,
-		.tx_buf = &data,
-		.tx_len = sizeof(data)
-	};
 
 	ret = mipi_dsi_dcs_enter_sleep_mode(lts->link);
 	if(ret) {
@@ -131,26 +127,19 @@ static int lts_panel_enter_sleep_mode(struct lts_panel *lts)
 			      ret);
 		return ret;
 	}
-		
+
 	usleep_range(150*1000,160*1000);
-		
+
 	return ret;
 }
+#endif
 
 static int lts_panel_exit_sleep_mode(struct lts_panel *lts)
 {
 	int ret=0;
-	u8 data = 0;
-	int i;
-
-	struct mipi_dsi_msg msg = {
-		.channel = lts->link->channel,
-		.tx_buf = &data,
-		.tx_len = sizeof(data)
-	};
 
 	dev_warn(&lts->link->dev, "%s\n", __func__);
-	
+
 	ret = mipi_dsi_dcs_exit_sleep_mode(lts->link);
 	if(ret) {
 		DRM_DEV_ERROR(lts->base.dev, "failed to exit sleep mode: %d\n",
@@ -159,14 +148,13 @@ static int lts_panel_exit_sleep_mode(struct lts_panel *lts)
 	}
 
 	usleep_range(300*1000,310*1000);
-		
+
 	return ret;
 }
 
 static int lts_panel_set_display_on(struct lts_panel *lts)
 {
 	int ret=0;
-	u8 data = 0x00;
 
 	dev_warn(&lts->link->dev, "%s\n", __func__);
 
@@ -197,7 +185,6 @@ static int lts_panel_set_display_off(struct lts_panel *lts)
 static int lts_panel_disable(struct drm_panel *panel)
 {
 	struct lts_panel *lts = to_lts_panel(panel);
-	int err;
 
 	if (!lts->enabled)
 		return 0;
@@ -262,7 +249,7 @@ static int lts_panel_prepare(struct drm_panel *panel)
 
 	return 0;
 
-poweroff:
+// poweroff:
 
 	return err;
 }
@@ -288,7 +275,7 @@ static int lts_panel_enable(struct drm_panel *panel)
 	lts->backlight->props.power = FB_BLANK_UNBLANK;
 	ret = backlight_update_status(lts->backlight);
 	if (ret) {
-		DRM_DEV_ERROR(panel->drm->dev,
+		DRM_DEV_ERROR(panel->dev,
 			      "Failed to enable backlight %d\n", ret);
 		return ret;
 	}
@@ -298,12 +285,12 @@ static int lts_panel_enable(struct drm_panel *panel)
 	return 0;
 }
 
-static int lts_panel_get_modes(struct drm_panel *panel)
+static int lts_panel_get_modes(struct drm_panel *panel, struct drm_connector
+			      *connector)
 {
 	struct drm_display_mode *mode;
 	struct lts_panel *lts = to_lts_panel(panel);
 	struct device *dev = &lts->link->dev;
-	struct drm_connector *connector = panel->connector;
 	u32 *bus_flags = &connector->display_info.bus_flags;
 	int ret;
 
@@ -328,16 +315,16 @@ static int lts_panel_get_modes(struct drm_panel *panel)
 	if (lts->vm.flags & DISPLAY_FLAGS_DE_LOW)
 		*bus_flags |= DRM_BUS_FLAG_DE_LOW;
 	if (lts->vm.flags & DISPLAY_FLAGS_PIXDATA_NEGEDGE)
-		*bus_flags |= DRM_BUS_FLAG_PIXDATA_NEGEDGE;
+		*bus_flags |= DRM_BUS_FLAG_PIXDATA_DRIVE_NEGEDGE;
 	if (lts->vm.flags & DISPLAY_FLAGS_PIXDATA_POSEDGE)
-		*bus_flags |= DRM_BUS_FLAG_PIXDATA_POSEDGE;
+		*bus_flags |= DRM_BUS_FLAG_PIXDATA_DRIVE_POSEDGE;
 
 	ret = drm_display_info_set_bus_formats(&connector->display_info,
 			lts_bus_formats, ARRAY_SIZE(lts_bus_formats));
 	if (ret)
 		return ret;
 
-	drm_mode_probed_add(panel->connector, mode);
+	drm_mode_probed_add(connector, mode);
 
 	return 1;
 
@@ -391,20 +378,15 @@ static int lts_panel_add(struct lts_panel *lts)
 	of_property_read_u32(np, "panel-height-mm", &lts->height_mm);
 	of_property_read_u32(np, "panel-bpc", &lts->bpc);
 
-	drm_panel_init(&lts->base);
+	drm_panel_init(&lts->base, dev, &lts_panel_funcs,
+		       DRM_MODE_CONNECTOR_DSI);
+
 	lts->base.funcs = &lts_panel_funcs;
 	lts->base.dev = &lts->link->dev;
 
-	err = drm_panel_add(&lts->base);
-	if (err < 0)
-		goto put_backlight;
+	drm_panel_add(&lts->base);
 
 	return 0;
-
-put_backlight:
-	put_device(&lts->backlight->dev);
-
-	return err;
 }
 
 static void lts_panel_del(struct lts_panel *lts)
@@ -502,7 +484,7 @@ static int lts_panel_probe(struct mipi_dsi_device *dsi)
 	return ret;
 }
 
-static int lts_panel_remove(struct mipi_dsi_device *dsi)
+static void lts_panel_remove(struct mipi_dsi_device *dsi)
 {
 	struct lts_panel *lts = mipi_dsi_get_drvdata(dsi);
 	int err;
@@ -516,10 +498,8 @@ static int lts_panel_remove(struct mipi_dsi_device *dsi)
 		DRM_DEV_ERROR(&dsi->dev, "failed to detach from DSI host: %d\n",
 			      err);
 
-	drm_panel_detach(&lts->base);
+	drm_panel_remove(&lts->base);
 	lts_panel_del(lts);
-
-	return 0;
 }
 
 static void lts_panel_shutdown(struct mipi_dsi_device *dsi)
