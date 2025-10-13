@@ -148,6 +148,7 @@
 #define INT_ID_PORT_WIDTH_6		BIT(19)
 #define CFG_IFA_MASTER_IN_ATF		BIT(20)
 #define SECURE_BANK_ENABLE		BIT(21)
+#define DL_WITH_MULTI_LARB		BIT(22)
 
 #define MTK_IOMMU_HAS_FLAG_MASK(pdata, _x, mask)	\
 				((((pdata)->flags) & (mask)) == (_x))
@@ -925,6 +926,7 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 	struct device_link *link;
 	struct device *larbdev;
 	unsigned int larbid, larbidx, i;
+	unsigned long larbid_msk = 0;
 
 	if (!fwspec || fwspec->ops != &mtk_iommu_ops)
 		return ERR_PTR(-ENODEV); /* Not a iommu client device */
@@ -945,32 +947,51 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 	} else if (MTK_IOMMU_IS_TYPE(data->plat_data, MTK_IOMMU_TYPE_MM)) {
 		/*
 		 * Link the consumer device with the smi-larb device(supplier).
-		 * The device that connects with each a larb is a independent HW.
-		 * All the ports in each a device should be in the same larbs.
+		 * w/DL_WITH_MULTI_LARB: the master may connect with multi larbs,
+		 * we should create device link with each larb.
+		 * w/o DL_WITH_MULTI_LARB: the master must connect with one larb,
+		 * otherwise fail.
 		 */
 		larbid = MTK_M4U_TO_LARB(fwspec->ids[0]);
 		if (larbid >= MTK_LARB_NR_MAX)
 			return ERR_PTR(-EINVAL);
 
+		larbid_msk |= BIT(larbid);
+
 		for (i = 1; i < fwspec->num_ids; i++) {
 			larbidx = MTK_M4U_TO_LARB(fwspec->ids[i]);
-			if (larbid != larbidx) {
+			if (MTK_IOMMU_HAS_FLAG(data->plat_data, DL_WITH_MULTI_LARB))
+				larbid_msk |= BIT(larbidx);
+			else if (larbid != larbidx) {
 				dev_err(dev, "Can only use one larb. Fail@larb%d-%d.\n",
-					larbid, larbidx);
+						larbid, larbidx);
 				return ERR_PTR(-EINVAL);
 			}
 		}
-		larbdev = data->larb_imu[larbid].dev;
-		if (!larbdev)
-			return ERR_PTR(-EINVAL);
 
-		link = device_link_add(dev, larbdev,
-				       DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-		if (!link)
-			dev_err(dev, "Unable to link %s\n", dev_name(larbdev));
+		for_each_set_bit(larbid, &larbid_msk, 32) {
+			larbdev = data->larb_imu[larbid].dev;
+			if (!larbdev)
+				return ERR_PTR(-EINVAL);
 
+			link = device_link_add(dev, larbdev,
+					DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
+			if (!link) {
+				dev_err(dev, "Unable to link %s\n", dev_name(larbdev));
+				goto link_remove;
+			}
+		}
 	}
+
 	return &data->iommu;
+
+link_remove:
+	for_each_set_bit(i, &larbid_msk, larbid) {
+		larbdev = data->larb_imu[i].dev;
+		device_link_remove(dev, larbdev);
+	}
+
+	return ERR_PTR(-ENODEV);
 }
 
 static void mtk_iommu_release_device(struct device *dev)
@@ -979,13 +1000,20 @@ static void mtk_iommu_release_device(struct device *dev)
 	struct mtk_iommu_data *data;
 	struct list_head *head;
 	struct device *larbdev;
-	unsigned int larbid;
+	unsigned int larbid, i;
+	unsigned long larbid_msk = 0;
 
 	data = dev_iommu_priv_get(dev);
 	if (MTK_IOMMU_IS_TYPE(data->plat_data, MTK_IOMMU_TYPE_MM)) {
-		larbid = MTK_M4U_TO_LARB(fwspec->ids[0]);
-		larbdev = data->larb_imu[larbid].dev;
-		device_link_remove(dev, larbdev);
+		for (i = 0; i < fwspec->num_ids; i++) {
+			larbid = MTK_M4U_TO_LARB(fwspec->ids[i]);
+			larbid_msk |= BIT(larbid);
+		}
+
+		for_each_set_bit(larbid, &larbid_msk, 32) {
+			larbdev = data->larb_imu[larbid].dev;
+			device_link_remove(dev, larbdev);
+		}
 	} else if (MTK_IOMMU_IS_TYPE(data->plat_data, MTK_IOMMU_TYPE_APU)) {
 		head = data->hw_list;
 		for_each_m4u(data, head)
@@ -1888,7 +1916,7 @@ static const struct mtk_iommu_plat_data mt8189_data_mm = {
 	.m4u_plat	= M4U_MT8189,
 	.flags		= HAS_BCLK | HAS_SUB_COMM_3BITS | OUT_ORDER_WR_EN |
 			  WR_THROT_EN | IOVA_34_EN | MTK_IOMMU_TYPE_MM |
-			  PGTABLE_PA_35_EN,
+			  PGTABLE_PA_35_EN | DL_WITH_MULTI_LARB,
 	.hw_list	= &m4ulist,
 	.inv_sel_reg	= REG_MMU_INV_SEL_GEN2,
 	.banks_num	= 5,
