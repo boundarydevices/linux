@@ -371,7 +371,19 @@ static enum mtk_ddp_comp_id mt8189_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL0,
 	DDP_COMPONENT_RDMA0,
 	DDP_COMPONENT_COMP0_OUT_CB4,
-	DDP_COMPONENT_DSI0,
+};
+
+static const unsigned int mt8189_mtk_ddp_main_routes_0[] = {
+	DDP_COMPONENT_DSI0
+};
+
+static const unsigned int mt8189_mtk_ddp_main_routes_1[] = {
+	DDP_COMPONENT_DVO0
+};
+
+static const struct mtk_drm_route mt8189_mtk_ddp_main_routes[] = {
+	{0, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_routes_0), mt8189_mtk_ddp_main_routes_0},
+	{0, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_routes_1), mt8189_mtk_ddp_main_routes_1}
 };
 
 static enum mtk_ddp_comp_id mt8189_mtk_ddp_main_subpipe[] = {
@@ -389,8 +401,8 @@ static const unsigned int mt8189_mtk_ddp_main_subpipe_route1[] = {
 };
 
 static const struct mtk_drm_route mt8189_mtk_ddp_subpipe_routes[] = {
-	{0, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_subpipe_route0), mt8189_mtk_ddp_main_subpipe_route0},
-	{0, 1, ARRAY_SIZE(mt8189_mtk_ddp_main_subpipe_route1), mt8189_mtk_ddp_main_subpipe_route1}
+	{1, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_subpipe_route0), mt8189_mtk_ddp_main_subpipe_route0},
+	{1, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_subpipe_route1), mt8189_mtk_ddp_main_subpipe_route1}
 };
 
 static const struct mtk_mmsys_driver_data mt2701_mmsys_driver_data = {
@@ -512,6 +524,8 @@ static const struct mtk_mmsys_driver_data mt8189_mmsys_driver_data = {
 	.main_len = ARRAY_SIZE(mt8189_mtk_ddp_main),
 	.main_subpipe_path = mt8189_mtk_ddp_main_subpipe,
 	.main_subpipe_len = ARRAY_SIZE(mt8189_mtk_ddp_main_subpipe),
+	.conn_routes = mt8189_mtk_ddp_main_routes,
+	.conn_routes_num = ARRAY_SIZE(mt8189_mtk_ddp_main_routes),
 	.conn_subpipe_routes = mt8189_mtk_ddp_subpipe_routes,
 	.conn_subpipe_routes_num = ARRAY_SIZE(mt8189_mtk_ddp_subpipe_routes),
 	.mmsys_dev_num = 1,
