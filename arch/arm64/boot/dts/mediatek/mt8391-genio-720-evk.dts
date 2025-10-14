@@ -461,7 +461,7 @@
 };
 
 &dsi0 {
-	status = "okay";
+	status = "disabled";
 	#address-cells = <1>;
 	#size-cells = <0>;
 
@@ -476,7 +476,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&panel0_pins_default>;
 		backlight = <&backlight_lcd0>;
-		status = "okay";
+		status = "disabled";
 		port {
 			panel_in: endpoint {
 				remote-endpoint = <&dsi_out>;
@@ -494,7 +494,7 @@
 };
 
 &mipi_tx_config0 {
-	status = "okay";
+	status = "disabled";
 };
 
 &disp_pwm0 {
