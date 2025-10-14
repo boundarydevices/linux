@@ -296,6 +296,9 @@ static int mdp_probe(struct platform_device *pdev)
 		goto err_destroy_job_wq;
 	}
 
+	if (mdp->mdp_data->mdp_alg_plat)
+		goto scp_comm_unused;
+
 	mdp->scp = scp_get(pdev);
 	if (!mdp->scp) {
 		mm_pdev = __get_pdev_by_id(pdev, NULL, MDP_INFRA_SCP);
@@ -310,6 +313,7 @@ static int mdp_probe(struct platform_device *pdev)
 	mdp->rproc_handle = scp_get_rproc(mdp->scp);
 	dev_dbg(&pdev->dev, "MDP rproc_handle: %pK", mdp->rproc_handle);
 
+scp_comm_unused:
 	mutex_init(&mdp->vpu_lock);
 	mutex_init(&mdp->m2m_lock);
 	mutex_init(&mdp->cap_lock);

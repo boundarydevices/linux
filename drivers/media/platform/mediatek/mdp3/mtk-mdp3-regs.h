@@ -23,10 +23,13 @@
 	 ((PLANE) << 21) | ((HF) << 19) | ((VF) << 18) | ((BITS) << 8) |\
 	 ((GROUP) << 6) | ((SWAP) << 5) | ((ID) << 0))
 
-#define MDP_COLOR_IS_COMPRESS(c)        ((0x20000000 & (c)) >> 29)
+#define MDP_COLOR_IS_COMPRESS(c)	((0x20000000 & (c)) >> 29)
+#define MDP_COLOR_IS_AFBC(c)		(((0x60000000 & (c)) >> 29) == 1)
+#define MDP_COLOR_IS_HYFBC(c)		(((0x60000000 & (c)) >> 29) == 2)
 #define MDP_COLOR_IS_10BIT_PACKED(c)	((0x08000000 & (c)) >> 27)
 #define MDP_COLOR_IS_10BIT_LOOSE(c)	(((0x0c000000 & (c)) >> 26) == 1)
 #define MDP_COLOR_IS_10BIT_TILE(c)	(((0x0c000000 & (c)) >> 26) == 3)
+#define MDP_COLOR_IS_10BIT_JUMP(c)	((0x04000000 & (c)) >> 26)
 #define MDP_COLOR_IS_UFP(c)		((0x02000000 & (c)) >> 25)
 #define MDP_COLOR_IS_INTERLACED(c)	((0x01000000 & (c)) >> 24)
 #define MDP_COLOR_IS_BLOCK_MODE(c)	((0x00800000 & (c)) >> 23)
@@ -37,10 +40,21 @@
 #define MDP_COLOR_GET_GROUP(c)		((0x000000c0 & (c)) >>  6)
 #define MDP_COLOR_IS_SWAPPED(c)		((0x00000020 & (c)) >>  5)
 #define MDP_COLOR_GET_UNIQUE_ID(c)	((0x0000001f & (c)) >>  0)
-#define MDP_COLOR_GET_HW_FORMAT(c)	((0x0000001f & (c)) >>  0)
 
 #define MDP_COLOR_IS_RGB(c)		(MDP_COLOR_GET_GROUP(c) == 0)
 #define MDP_COLOR_IS_YUV(c)		(MDP_COLOR_GET_GROUP(c) == 1)
+#define MDP_COLOR_IS_YUV444(c)		(!MDP_COLOR_GET_H_SUBSAMPLE(c) && \
+					 !MDP_COLOR_GET_V_SUBSAMPLE(c))
+#define MDP_COLOR_IS_YUV422(c)		(MDP_COLOR_GET_H_SUBSAMPLE(c) && \
+					 !MDP_COLOR_GET_V_SUBSAMPLE(c))
+#define MDP_COLOR_IS_YUV420(c)		(MDP_COLOR_GET_H_SUBSAMPLE(c) && \
+					 MDP_COLOR_GET_V_SUBSAMPLE(c))
+#define MDP_COLOR_IS_AUO(c)		(MDP_COLOR_IS_10BIT_JUMP(c))
+#define MDP_COLOR_IS_ALPHA(c)		(MDP_COLOR_GET_UNIQUE_ID(c) == 2 || \
+					 MDP_COLOR_GET_UNIQUE_ID(c) == 3)
+#define MDP_COLOR_IS_ARGB(c)		(MDP_COLOR_IS_ALPHA(c))
+#define MDP_COLOR_IS_AFBC_ARGB(c)	(MDP_COLOR_IS_AFBC(c) && MDP_COLOR_IS_ARGB(c))
+#define MDP_COLOR_IS_AFBC_YUV(c)	(MDP_COLOR_IS_AFBC(c) && MDP_COLOR_IS_YUV(c))
 
 enum mdp_color {
 	MDP_COLOR_UNKNOWN	= 0,
@@ -183,6 +197,16 @@ enum mdp_color {
 	MDP_COLOR_NV61_10L	= MDP_COLOR(0, 0, 1, 0, 2, 1, 0, 10,  1, 1, 13),
 	MDP_COLOR_YV12_10L	= MDP_COLOR(0, 0, 1, 0, 3, 1, 1, 10,  1, 1, 8),
 	MDP_COLOR_I420_10L	= MDP_COLOR(0, 0, 1, 0, 3, 1, 1, 10,  1, 0, 8),
+
+	/* Compression formats */
+	MDP_COLOR_RGBA8888_AFBC	= MDP_COLOR(1, 0, 0, 0, 1, 0, 0, 32, 0, 1, 2),
+	MDP_COLOR_RGBA1010102_AFBC = MDP_COLOR(1, 1, 0, 0, 1, 0, 0, 32, 0, 1, 2),
+	MDP_COLOR_YUV420_AFBC	= MDP_COLOR(1, 0, 0, 0, 1, 1, 1, 12, 1, 0, 12),
+	MDP_COLOR_YUV420_10P_AFBC = MDP_COLOR(1, 1, 0, 0, 1, 1, 1, 16, 1, 0, 12),
+	/* HyFBC format YUV420, align size 32x16 */
+	MDP_COLOR_NV12_HYFBC	= MDP_COLOR(2, 0, 0, 0, 1, 1, 1, 12, 1, 0, 12),
+	/* HyFBC format YUV420 10bit, align size 32x16 */
+	MDP_COLOR_P010_HYFBC	= MDP_COLOR(2, 1, 0, 0, 1, 1, 1, 18, 1, 0, 12),
 };
 
 static inline bool MDP_COLOR_IS_UV_COPLANE(enum mdp_color c)
@@ -358,6 +382,7 @@ struct mdp_frameparam {
 };
 
 struct mdp_dev;
+struct mtk_mdp_driver_data;
 
 const struct mdp_format *mdp_find_fmt(const struct mtk_mdp_driver_data *mdp_data,
 					     u32 pixelformat, u32 type);

@@ -17,6 +17,7 @@ struct platform_device *mdp_get_plat_device(struct platform_device *pdev);
 enum mdp_cmdq_user {
 	MDP_CMDQ_USER_M2M = 0,
 	MDP_CMDQ_USER_CAP,
+	MDP_CMDQ_USER_ALG,
 	MDP_CMDQ_USER_MAX,
 };
 
@@ -49,6 +50,9 @@ struct mdp_cmdq_cmd {
 
 struct mdp_dev;
 
+int mdp_cmdq_pkt_create(struct cmdq_client *client, struct cmdq_pkt *pkt,
+			size_t size);
+void mdp_cmdq_pkt_destroy(struct cmdq_pkt *pkt);
 int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param);
 
 #endif  /* __MTK_MDP3_CMDQ_H__ */

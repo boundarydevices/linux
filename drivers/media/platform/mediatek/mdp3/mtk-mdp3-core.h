@@ -12,6 +12,7 @@
 #include <linux/soc/mediatek/mtk-hdmirx-intf.h>
 #include <linux/soc/mediatek/mtk-mmsys.h>
 #include <linux/soc/mediatek/mtk-mutex.h>
+#include "mtk-mdp3-alg.h"
 #include "mtk-mdp3-comp.h"
 #include "mtk-mdp3-vpu.h"
 
@@ -95,6 +96,7 @@ struct mtk_mdp_driver_data {
 	unsigned int pipe_info_len;
 	const struct v4l2_rect *pp_criteria;
 	const u8 pp_used;
+	const enum mdp_alg_platform mdp_alg_plat;
 };
 
 struct mdp_mm_subsys {

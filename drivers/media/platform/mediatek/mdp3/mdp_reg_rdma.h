@@ -12,12 +12,14 @@
 #define MDP_RDMA_CON                    0x020
 #define MDP_RDMA_GMCIF_CON              0x028
 #define MDP_RDMA_SRC_CON                0x030
+#define MDP_RDMA_COMP_CON               0x038
 #define MDP_RDMA_MF_BKGD_SIZE_IN_BYTE   0x060
 #define MDP_RDMA_MF_BKGD_SIZE_IN_PXL    0x068
 #define MDP_RDMA_MF_SRC_SIZE            0x070
 #define MDP_RDMA_MF_CLIP_SIZE           0x078
 #define MDP_RDMA_MF_OFFSET_1            0x080
 #define MDP_RDMA_SF_BKGD_SIZE_IN_BYTE   0x090
+#define MDP_RDMA_MF_BKGD_H_SIZE_IN_PXL  0x098
 #define MDP_RDMA_SRC_END_0              0x100
 #define MDP_RDMA_SRC_END_1              0x108
 #define MDP_RDMA_SRC_END_2              0x110
@@ -45,6 +47,7 @@
 #define MDP_RDMA_SRC_BASE_2             0xf10
 #define MDP_RDMA_UFO_DEC_LENGTH_BASE_Y  0xf20
 #define MDP_RDMA_UFO_DEC_LENGTH_BASE_C  0xf28
+#define MDP_RDMA_AFBC_PAYLOAD_OST       0xf50
 
 /* MASK */
 #define MDP_RDMA_EN_MASK                    0x00000001

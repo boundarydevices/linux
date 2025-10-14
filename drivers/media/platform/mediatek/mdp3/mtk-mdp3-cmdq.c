@@ -504,8 +504,8 @@ static int mdp_path_config(struct mdp_dev *mdp, struct mdp_cmdq_cmd *cmd,
 	return 0;
 }
 
-static int mdp_cmdq_pkt_create(struct cmdq_client *client, struct cmdq_pkt *pkt,
-			       size_t size)
+int mdp_cmdq_pkt_create(struct cmdq_client *client, struct cmdq_pkt *pkt,
+			size_t size)
 {
 	struct device *dev;
 	dma_addr_t dma_addr;
@@ -531,7 +531,7 @@ static int mdp_cmdq_pkt_create(struct cmdq_client *client, struct cmdq_pkt *pkt,
 	return 0;
 }
 
-static void mdp_cmdq_pkt_destroy(struct cmdq_pkt *pkt)
+void mdp_cmdq_pkt_destroy(struct cmdq_pkt *pkt)
 {
 	struct cmdq_client *client = (struct cmdq_client *)pkt->cl;
 

@@ -8,6 +8,7 @@
 #define __MTK_MDP3_M2M_H__
 
 #include <media/v4l2-ctrls.h>
+#include "mtk-mdp3-alg.h"
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-vpu.h"
 #include "mtk-mdp3-regs.h"
@@ -38,10 +39,12 @@ struct mdp_m2m_ctx {
 	struct mdp_frameparam		curr_param;
 	/* synchronization protect for mdp m2m context */
 	struct mutex			ctx_lock;
+	struct mdp_alg_tile_cache tile_cache[MDP_ALG_MAX_PIPE];
 };
 
 int mdp_m2m_device_register(struct mdp_dev *mdp);
 void mdp_m2m_device_unregister(struct mdp_dev *mdp);
 void mdp_m2m_job_finish(struct mdp_m2m_ctx *ctx);
+void mdp_m2m_process_done(void *priv, int vb_state);
 
 #endif  /* __MTK_MDP3_M2M_H__ */

@@ -48,7 +48,7 @@ static inline bool mdp_m2m_ctx_is_state_set(struct mdp_m2m_ctx *ctx, u32 mask)
 	return ((atomic_read(&ctx->curr_param.state) & mask) == mask);
 }
 
-static void mdp_m2m_process_done(void *priv, int vb_state)
+void mdp_m2m_process_done(void *priv, int vb_state)
 {
 	struct mdp_m2m_ctx *ctx = priv;
 	struct vb2_v4l2_buffer *src_vbuf, *dst_vbuf;
@@ -99,6 +99,13 @@ static void mdp_m2m_device_run(void *priv)
 
 	if (mdp_check_pp_enable(ctx->mdp_dev, frame))
 		param.type = MDP_STREAM_TYPE_DUAL_BITBLT;
+
+	if (ctx->mdp_dev->mdp_data->mdp_alg_plat) {
+		ret = mdp_alg_process(ctx, &param);
+		if (ret)
+			goto worker_end;
+		return;
+	}
 
 	ret = mdp_vpu_process(&ctx->mdp_dev->vpu, &param, MDP_VPU_UID_M2M);
 	if (ret) {
@@ -173,6 +180,9 @@ static int mdp_m2m_start_streaming(struct vb2_queue *q, unsigned int count)
 			return ret;
 		}
 	}
+
+	if (ctx->mdp_dev->mdp_data->mdp_alg_plat)
+		return 0;
 
 	if (!mdp_m2m_ctx_is_state_set(ctx, MDP_VPU_INIT)) {
 		ret = mdp_vpu_get_locked(ctx->mdp_dev);

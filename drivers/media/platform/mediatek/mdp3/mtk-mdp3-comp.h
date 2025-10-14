@@ -214,6 +214,7 @@ struct mdp_comp_data {
 };
 
 struct mdp_comp_ops;
+struct mdp_alg_comp_ops;
 
 struct mdp_comp {
 	struct mdp_dev			*mdp_dev;
@@ -229,6 +230,7 @@ struct mdp_comp {
 	u32				alias_id;
 	s32				gce_event[MDP_GCE_EVENT_MAX];
 	const struct mdp_comp_ops	*ops;
+	const struct mdp_alg_comp_ops	*alg_ops;
 };
 
 struct mdp_comp_ctx {

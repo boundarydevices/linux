@@ -5,10 +5,9 @@
  */
 
 #include "mtk-img-ipi.h"
+#include "mtk-mdp3-alg.h"
 #include "mtk-mdp3-cfg.h"
 #include "mtk-mdp3-core.h"
-#include "mtk-mdp3-comp.h"
-#include "mtk-mdp3-regs.h"
 
 enum mt8183_mdp_comp_id {
 	/* ISP */

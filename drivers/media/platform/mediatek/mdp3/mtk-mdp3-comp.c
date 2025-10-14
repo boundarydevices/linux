@@ -8,6 +8,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/pm_runtime.h>
+#include "mtk-mdp3-alg.h"
 #include "mtk-mdp3-capture.h"
 #include "mtk-mdp3-cfg.h"
 #include "mtk-mdp3-comp.h"
@@ -2010,7 +2011,10 @@ static int mdp_comp_init(struct mdp_dev *mdp, struct device_node *node,
 	comp->type = mdp->mdp_data->comp_data[id].match.type;
 	comp->inner_id = mdp->mdp_data->comp_data[id].match.inner_id;
 	comp->alias_id = mdp->mdp_data->comp_data[id].match.alias_id;
-	comp->ops = mdp_comp_ops[comp->type];
+	if (mdp->mdp_data->mdp_alg_plat)
+		comp->alg_ops = mdp_alg_ops[comp->type];
+	else
+		comp->ops = mdp_comp_ops[comp->type];
 	__mdp_comp_init(mdp, node, comp);
 
 	comp->clk_num = mdp->mdp_data->comp_data[id].info.clk_num;

@@ -32,6 +32,18 @@ struct img_region {
 	s32 bottom;
 } __packed;
 
+struct img_rect {
+	u32 left;
+	u32 top;
+	u32 width;
+	u32 height;
+} __packed;
+
+struct img_frame {
+	u32 width;
+	u32 height;
+} __packed;
+
 struct img_offset {
 	s32 left;
 	s32 top;
@@ -48,6 +60,20 @@ struct img_mux {
 struct img_mmsys_ctrl {
 	struct img_mux sets[IMG_MAX_COMPONENTS * 2];
 	u32 num_sets;
+} __packed;
+
+struct tile_region {
+	u16 xs;
+	u16 xe;
+	u16 ys;
+	u16 ye;
+} __packed;
+
+struct tile_offset {
+	u32 x;
+	u32 y;
+	u32 x_sub;
+	u32 y_sub;
 } __packed;
 
 #endif  /* __MTK_MDP3_TYPE_H__ */
