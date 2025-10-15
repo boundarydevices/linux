@@ -71,7 +71,7 @@ static int mtk_cam_cio_stream_on(struct mtk_cam_dev *cam)
 					   &cam->pipeline);
 		if (ret) {
 			dev_err(dev, "failed to start pipeline:%d\n", ret);
-			return ret;
+			goto err_unlock;
 		}
 
 		/* Seninf must stream on first */
@@ -79,7 +79,7 @@ static int mtk_cam_cio_stream_on(struct mtk_cam_dev *cam)
 		if (ret) {
 			dev_err(dev, "failed to stream on %s:%d\n",
 				cam->seninf_sd->entity.name, ret);
-			return ret;
+			goto err_stop_pipeline;
 		}
 	}
 
@@ -88,6 +88,12 @@ static int mtk_cam_cio_stream_on(struct mtk_cam_dev *cam)
 	cam->streaming = true;
 
 	return 0;
+
+err_stop_pipeline:
+	media_pipeline_stop(cam->subdev.entity.pads);
+err_unlock:
+	mutex_unlock(&seninf_ctx->streaming_protect);
+	return ret;
 }
 
 static int mtk_cam_cio_stream_off(struct mtk_cam_dev *cam)

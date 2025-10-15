@@ -410,9 +410,6 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	if (ret < 0)
 		goto fail_unlock;
 
-	/* Media links are fixed after media_pipeline_start */
-	cam->stream_count++;
-
 	cam->sequence = (unsigned int)-1;
 
 	/* Stream on the sub-device */
@@ -420,8 +417,12 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	if (ret) {
 		dev_err(dev, "%s failed to stream on %s: %d\n",
 			__func__, cam->subdev.name, ret);
-		return ret;
+		goto fail_unlock;
 	}
+
+	/* Media links are fixed after media_pipeline_start */
+	cam->stream_count++;
+
 	mutex_unlock(&cam->op_lock);
 
 	return 0;
@@ -429,6 +430,8 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 fail_unlock:
 	mutex_unlock(&cam->op_lock);
 	mtk_cam_vb2_return_all_buffers(cam, VB2_BUF_STATE_QUEUED);
+	mtk_cam_cmos_vf_enable(cam, false, false);
+	pm_runtime_put_autosuspend(cam->dev);
 
 	return ret;
 }
