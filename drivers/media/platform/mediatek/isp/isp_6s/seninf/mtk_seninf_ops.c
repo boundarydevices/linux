@@ -1338,6 +1338,9 @@ ssize_t mtk_seninf_show_status(struct device *dev,
 						meter.line_time_in_us);
 			}
 		}
+
+		/* clear seninf csi2 irq status */
+		SENINF_WRITE_REG(csi2, SENINF_CSI2_IRQ_STATUS, 0xffffffff);
 	}
 
 	mutex_unlock(&core->mutex);
