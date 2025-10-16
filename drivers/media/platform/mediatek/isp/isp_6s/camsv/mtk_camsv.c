@@ -160,7 +160,7 @@ mtk_cam_get_pad_format(struct mtk_cam_dev *cam,
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &cam->formats[pad];
 	default:
-		return NULL;
+		return ERR_PTR(-EINVAL);
 	}
 }
 
@@ -186,6 +186,8 @@ static int mtk_cam_init_cfg(struct v4l2_subdev *sd,
 
 	for (i = 0; i < sd->entity.num_pads; i++) {
 		format = mtk_cam_get_pad_format(cam, sd_state, i, which);
+		if (IS_ERR(format))
+			return PTR_ERR(format);
 		*format = def_format;
 	}
 
@@ -209,9 +211,14 @@ static int mtk_cam_get_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_subdev_format *fmt)
 {
 	struct mtk_cam_dev *cam = to_mtk_cam_dev(sd);
+	struct v4l2_mbus_framefmt *format;
 
-	fmt->format = *mtk_cam_get_pad_format(cam, sd_state, fmt->pad,
-					      fmt->which);
+	format = mtk_cam_get_pad_format(cam, sd_state, fmt->pad,
+					fmt->which);
+	if (IS_ERR(format))
+		return PTR_ERR(format);
+
+	fmt->format = *format;
 
 	return 0;
 }
@@ -240,6 +247,9 @@ static int mtk_cam_set_fmt(struct v4l2_subdev *sd,
 		fmt->format.code = mtk_cam_mbus_formats[0];
 
 	format = mtk_cam_get_pad_format(cam, sd_state, fmt->pad, fmt->which);
+	if (IS_ERR(format))
+		return PTR_ERR(format);
+
 	format->width = fmt->format.width;
 	format->height = fmt->format.height;
 	format->code = fmt->format.code;
@@ -249,6 +259,9 @@ static int mtk_cam_set_fmt(struct v4l2_subdev *sd,
 	/* Propagate the format to the source pad. */
 	format = mtk_cam_get_pad_format(cam, sd_state, MTK_CAM_CIO_PAD_VIDEO,
 					fmt->which);
+	if (IS_ERR(format))
+		return PTR_ERR(format);
+
 	format->width = fmt->format.width;
 	format->height = fmt->format.height;
 	format->code = fmt->format.code;
