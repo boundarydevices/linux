@@ -131,7 +131,7 @@ mtk_cam_format_info_by_fourcc(u32 fourcc)
 			return info;
 	}
 
-	return NULL;
+	return ERR_PTR(-EINVAL);
 }
 
 static const struct mtk_cam_format_info *
@@ -177,7 +177,7 @@ static void calc_bpl_size_pix_mp(const struct mtk_cam_format_info *fmtinfo,
 	}
 }
 
-static void mtk_cam_dev_load_default_fmt(struct mtk_cam_dev *cam)
+static int mtk_cam_dev_load_default_fmt(struct mtk_cam_dev *cam)
 {
 	struct mtk_cam_video_device *vdev = &cam->vdev;
 	struct v4l2_pix_format_mplane *fmt = &vdev->format;
@@ -194,8 +194,13 @@ static void mtk_cam_dev_load_default_fmt(struct mtk_cam_dev *cam)
 	fmt->xfer_func = V4L2_XFER_FUNC_DEFAULT;
 
 	vdev->fmtinfo = mtk_cam_format_info_by_fourcc(fmt->pixelformat);
-
+	if (IS_ERR(vdev->fmtinfo)) {
+		dev_err(cam->dev, "invalid format 0x%x\n", fmt->pixelformat);
+		return PTR_ERR(vdev->fmtinfo);
+	}
 	calc_bpl_size_pix_mp(vdev->fmtinfo, fmt);
+
+	return 0;
 }
 
 /* -----------------------------------------------------------------------------
@@ -565,6 +570,11 @@ static int mtk_cam_vidioc_try_fmt(struct file *file, void *fh,
 	pix_mp->num_planes = cam->conf->enableFH ? 2 : 1;
 
 	fmtinfo = mtk_cam_format_info_by_fourcc(pix_mp->pixelformat);
+	if (IS_ERR(fmtinfo)) {
+		dev_err(cam->dev, "invalid format 0x%x\n", pix_mp->pixelformat);
+		return PTR_ERR(fmtinfo);
+	}
+
 	calc_bpl_size_pix_mp(fmtinfo, pix_mp);
 
 	/* Constant format fields */
@@ -596,6 +606,10 @@ static int mtk_cam_vidioc_s_fmt(struct file *file, void *fh,
 	vdev->format = f->fmt.pix_mp;
 	vdev->fmtinfo =
 		mtk_cam_format_info_by_fourcc(f->fmt.pix_mp.pixelformat);
+	if (IS_ERR(vdev->fmtinfo)) {
+		dev_err(cam->dev, "invalid format 0x%x\n", f->fmt.pix_mp.pixelformat);
+		return PTR_ERR(vdev->fmtinfo);
+	}
 
 	return 0;
 }
@@ -711,7 +725,11 @@ int mtk_cam_video_register(struct mtk_cam_dev *cam)
 	cam_vdev->desc = &video_stream;
 
 	/* Initialize mtk_cam_video_device */
-	mtk_cam_dev_load_default_fmt(cam);
+	ret = mtk_cam_dev_load_default_fmt(cam);
+	if (ret) {
+		dev_err(dev, "failed to load default format:%d\n", ret);
+		return ret;
+	}
 
 	cam->subdev_pads[MTK_CAM_CIO_PAD_VIDEO].flags = MEDIA_PAD_FL_SOURCE;
 
