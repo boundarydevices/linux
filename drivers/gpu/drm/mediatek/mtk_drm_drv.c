@@ -529,6 +529,7 @@ static const struct mtk_mmsys_driver_data mt8189_mmsys_driver_data = {
 	.conn_subpipe_routes = mt8189_mtk_ddp_subpipe_routes,
 	.conn_subpipe_routes_num = ARRAY_SIZE(mt8189_mtk_ddp_subpipe_routes),
 	.mmsys_dev_num = 1,
+	.default_sec_mode = true,/* The default register status is secure mode*/
 };
 
 static const struct of_device_id mtk_drm_of_ids[] = {

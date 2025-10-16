@@ -15,6 +15,11 @@
 #define MTK_MAX_BPC	10
 #define MTK_MIN_BPC	3
 
+enum DISP_ATF_CMD {
+	DISP_ATF_CMD_CONFIG_DISP_CONFIG, /* For display master to disable secure */
+	DISP_ATF_CMD_COUNT,
+};
+
 void mtk_drm_crtc_commit(struct drm_crtc *crtc);
 int mtk_drm_crtc_create(struct drm_device *drm_dev,
 			const unsigned int *path,
