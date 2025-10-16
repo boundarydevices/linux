@@ -193,8 +193,8 @@ enum {
 	CLK_TOP_CLK26M,
 	CLK_TOP_UNIVP_192M_D16,
 	CLK_TOP_UNIVP_192M_D32,
-	CLK_MAXCNT,
 	CLK_TOP_CAMTM,
+	CLK_MAXCNT,
 };
 
 #define SENINF_CLK_NAMES \
@@ -211,6 +211,7 @@ enum {
 	"TOP_CLK26M", \
 	"TOP_UNIVP_192M_D16", \
 	"TOP_UNIVP_192M_D32", \
+	"TOP_CAMTM", \
 
 struct seninf_mux {
 	struct list_head list;
