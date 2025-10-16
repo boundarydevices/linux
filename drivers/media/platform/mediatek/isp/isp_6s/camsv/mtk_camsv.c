@@ -307,7 +307,7 @@ static int camsv_link_setup(struct media_entity *entity,
 			     const struct media_pad *remote, u32 flags)
 {
 	struct v4l2_subdev *sd;
-	struct mtk_cam_dev *cam = to_mtk_cam_dev(sd);
+	struct mtk_cam_dev *cam;
 
 	sd = media_entity_to_v4l2_subdev(entity);
 	if (!sd)
