@@ -835,7 +835,7 @@ int mtk_seninf_set_test_model(struct seninf_ctx *ctx, int mux, int cam_mux,
 	void __iomem *seninf;
 	void __iomem *seninf_tg;
 
-	intf = mux % 5; /* testmdl by platform seninf */
+	intf = mux % _seninf_ops->seninf_num; /* testmdl by platform seninf */
 
 	seninf = ctx->reg_if_ctrl[intf];
 	seninf_tg = ctx->reg_if_tg[intf];
