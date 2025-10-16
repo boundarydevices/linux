@@ -216,7 +216,7 @@
 		regulator-always-on;
 	};
 
-	touch0_fixed_3v3: regulator-7 {
+	touch0_fixed_3v3: regulator-9 {
 		compatible = "regulator-fixed";
 		regulator-name = "touch_3v3";
 		regulator-min-microvolt = <3300000>;
