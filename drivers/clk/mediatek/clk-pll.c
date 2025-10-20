@@ -37,6 +37,13 @@ int mtk_pll_is_prepared(struct clk_hw *hw)
 	return (readl(pll->en_addr) & BIT(pll->data->pll_en_bit)) != 0;
 }
 
+int mtk_pll_setclr_is_prepared(struct clk_hw *hw)
+{
+	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
+
+	return (readl(pll->en_addr) & pll->en_msk) != 0;
+}
+
 static unsigned long __mtk_pll_recalc_rate(struct mtk_clk_pll *pll, u32 fin,
 		u32 pcw, int postdiv)
 {
@@ -273,10 +280,70 @@ void mtk_pll_unprepare(struct clk_hw *hw)
 	writel(r, pll->pwr_addr);
 }
 
+#define MAX_PLL_SETCLR_RSTB_RETRY 20
+static int mtk_pll_setclr_prepare(struct clk_hw *hw)
+{
+	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
+	int rstb_retries = 0;
+
+	writel(pll->en_msk, pll->en_set_addr);
+
+	__mtk_pll_tuner_enable(pll);
+
+	udelay(20);
+
+	if (pll->data->flags & HAVE_RST_BAR) {
+		while ((!(readl(pll->rstb_addr) & pll->rstb_msk)) &&
+				rstb_retries < MAX_PLL_SETCLR_RSTB_RETRY) {
+			writel(pll->rstb_msk, pll->rstb_set_addr);
+			rstb_retries += 1;
+			udelay(1);
+		}
+		if (rstb_retries == MAX_PLL_SETCLR_RSTB_RETRY)
+			pr_err("PLL RSTB SET fail, rstb: (0x%lx = 0x%x), msk: %x\n",
+			       (unsigned long)pll->rstb_addr,
+			       readl(pll->rstb_addr), pll->rstb_msk);
+	}
+
+	return 0;
+}
+
+static void mtk_pll_setclr_unprepare(struct clk_hw *hw)
+{
+	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
+	int rstb_retries = 0;
+
+	if (pll->data->flags & HAVE_RST_BAR) {
+		while ((readl(pll->rstb_addr) & pll->rstb_msk) &&
+				rstb_retries < MAX_PLL_SETCLR_RSTB_RETRY) {
+			writel(pll->rstb_msk, pll->rstb_clr_addr);
+			rstb_retries += 1;
+			udelay(1);
+		}
+		if (rstb_retries == MAX_PLL_SETCLR_RSTB_RETRY)
+			pr_err("PLL RSTB CLR fail, rstb: (0x%lx = 0x%x), msk: %x\n",
+			       (unsigned long)pll->rstb_addr,
+			       readl(pll->rstb_addr), pll->rstb_msk);
+	}
+
+	__mtk_pll_tuner_disable(pll);
+
+	writel(pll->en_msk, pll->en_clr_addr);
+}
+
 const struct clk_ops mtk_pll_ops = {
 	.is_prepared	= mtk_pll_is_prepared,
 	.prepare	= mtk_pll_prepare,
 	.unprepare	= mtk_pll_unprepare,
+	.recalc_rate	= mtk_pll_recalc_rate,
+	.round_rate	= mtk_pll_round_rate,
+	.set_rate	= mtk_pll_set_rate,
+};
+
+static const struct clk_ops mtk_pll_setclr_ops = {
+	.is_prepared	= mtk_pll_setclr_is_prepared,
+	.prepare	= mtk_pll_setclr_prepare,
+	.unprepare	= mtk_pll_setclr_unprepare,
 	.recalc_rate	= mtk_pll_recalc_rate,
 	.round_rate	= mtk_pll_round_rate,
 	.set_rate	= mtk_pll_set_rate,
@@ -303,16 +370,33 @@ struct clk_hw *mtk_clk_register_pll_ops(struct mtk_clk_pll *pll,
 		pll->tuner_addr = base + data->tuner_reg;
 	if (data->tuner_en_reg || data->tuner_en_bit)
 		pll->tuner_en_addr = base + data->tuner_en_reg;
-	if (data->en_reg)
-		pll->en_addr = base + data->en_reg;
-	else
-		pll->en_addr = pll->base_addr + REG_CON0;
+	if (data->pll_setclr) {
+		pll->en_addr = base + data->pll_setclr->en_ofs;
+		pll->en_set_addr = base + data->pll_setclr->en_set_ofs;
+		pll->en_clr_addr = base + data->pll_setclr->en_clr_ofs;
+		pll->en_msk = BIT(data->en_setclr_bit);
+		if ((data->flags & HAVE_RST_BAR) == HAVE_RST_BAR) {
+			pll->rstb_addr = base + data->pll_setclr->rstb_ofs;
+			pll->rstb_set_addr = base + data->pll_setclr->rstb_set_ofs;
+			pll->rstb_clr_addr = base + data->pll_setclr->rstb_clr_ofs;
+			pll->rstb_msk = BIT(data->rstb_setclr_bit);
+		}
+	} else {
+		if (data->en_reg)
+			pll->en_addr = base + data->en_reg;
+		else
+			pll->en_addr = pll->base_addr + REG_CON0;
+	}
 	pll->hw.init = &init;
 	pll->data = data;
 
 	init.name = data->name;
 	init.flags = (data->flags & PLL_AO) ? CLK_IS_CRITICAL : 0;
-	init.ops = pll_ops;
+	if (data->pll_setclr)
+		init.ops = &mtk_pll_setclr_ops;
+	else
+		init.ops = pll_ops;
+
 	if (data->parent_name)
 		init.parent_names = &data->parent_name;
 	else

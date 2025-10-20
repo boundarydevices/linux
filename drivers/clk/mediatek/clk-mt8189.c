@@ -3069,6 +3069,7 @@ static void __iomem *plls_base[PLL_SYS_NUM];
 		.name = _name,						\
 		.reg = _reg,						\
 		.pll_setclr = &(_pll_setclr),				\
+		.en_setclr_bit = _en_setclr_bit,			\
 		.flags = (_flags | PLL_CFLAGS),				\
 		.fmax = MT8189_PLL_FMAX,				\
 		.fmin = MT8189_PLL_FMIN,				\

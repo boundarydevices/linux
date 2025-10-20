@@ -58,6 +58,8 @@ struct mtk_pll_data {
 	const char *parent_name;
 	u32 en_reg;
 	u8 pll_en_bit; /* Assume 0, indicates BIT(0) by default */
+	uint8_t en_setclr_bit;
+	uint8_t rstb_setclr_bit;
 };
 
 /*
@@ -77,7 +79,15 @@ struct mtk_clk_pll {
 	void __iomem	*pcw_addr;
 	void __iomem	*pcw_chg_addr;
 	void __iomem	*en_addr;
+	void __iomem	*en_set_addr;
+	void __iomem	*en_clr_addr;
+	void __iomem	*rstb_addr;
+	void __iomem	*rstb_set_addr;
+	void __iomem	*rstb_clr_addr;
 	const struct mtk_pll_data *data;
+	unsigned int	en_msk;
+	unsigned int	rstb_msk;
+	unsigned int	flags;
 };
 
 int mtk_clk_register_plls(struct device_node *node,
