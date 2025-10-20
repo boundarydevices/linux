@@ -46,6 +46,7 @@ enum alg_orientation {
 
 enum mdp_alg_platform {
 	MDP_ALG_NOSUPPPORT = 0,
+	MDP_ALG_MT8189,
 };
 
 enum mdp_alg_mux_type {

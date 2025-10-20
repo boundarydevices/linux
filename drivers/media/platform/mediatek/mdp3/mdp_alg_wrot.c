@@ -81,6 +81,11 @@ struct check_buf_param {
 	u32 uv_buf_usage;
 };
 
+static const struct wrot_data mt8189_wrot_data = {
+	.fifo = 512,
+	.tile_width = 512,
+	.sram_size = 512 * 1024,
+};
 
 /* filt_h, filt_v, uv_xsel, uv_ysel */
 static const u32 uv_table[2][4][2][4] = {
@@ -189,6 +194,8 @@ static inline struct wrot_frame_data *wrot_frm_data(struct mdp_alg_path_tp *path
 static inline const struct wrot_data *get_private_data(struct mdp_alg_task *task)
 {
 	switch (task->mdp->mdp_data->mdp_alg_plat) {
+	case MDP_ALG_MT8189:
+		return &mt8189_wrot_data;
 	default:
 		return 0;
 	}

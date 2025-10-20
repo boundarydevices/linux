@@ -18,6 +18,37 @@ struct tp_map {
 	struct tp_node n[MDP_ALG_MAX_OUTPUTS];
 };
 
+static const struct tp_map mt8189_path_map[TP_PATH_MAX][MDP_ALG_MAX_PATH_NODES] = {
+	[TP_PATH_NO_PQ_P0] = {
+		{MDP_COMP_RDMA0, {
+			{MDP_COMP_RSZ2, {
+				{MDP_MUX_MT8189_BYP0_MOUT_EN, 0x1, MDP_MUX_MOUT},
+				{MDP_MUX_MT8189_RSZ2_SEL_IN, 0x1, MDP_MUX_SELIN},
+			}},
+		}},
+		{MDP_COMP_RSZ2, {
+			{MDP_COMP_WROT2, {
+			}},
+		}},
+		{MDP_COMP_WROT2, {
+		}},
+	},
+	[TP_PATH_NO_PQ_P1] = {
+		{MDP_COMP_RDMA1, {
+			{MDP_COMP_RSZ3, {
+				{MDP_MUX_MT8189_BYP1_MOUT_EN, 0x1, MDP_MUX_MOUT},
+				{MDP_MUX_MT8189_RSZ3_SEL_IN, 0x1, MDP_MUX_SELIN},
+			}},
+		}},
+		{MDP_COMP_RSZ3, {
+			{MDP_COMP_WROT3, {
+			}},
+		}},
+		{MDP_COMP_WROT3, {
+		}},
+	},
+};
+
 static int tp_parse_path(struct mdp_dev *mdp, struct mdp_alg_path_tp *p,
 			 const struct tp_map *map)
 {
@@ -108,9 +139,38 @@ static int tp_parse_path(struct mdp_dev *mdp, struct mdp_alg_path_tp *p,
 	return 0;
 }
 
+static int tp_select_path_mt8189(struct mdp_alg_task *task)
+{
+	struct mdp_alg_frame_config *cfg = &task->cfg;
+	struct mdp_alg_path_tp *p = &cfg->path[TP_PATH_NO_PQ_P0];
+	int ret;
+
+	ret = tp_parse_path(task->mdp, p, mt8189_path_map[TP_PATH_NO_PQ_P0]);
+	if (ret)
+		return ret;
+	p->path_id = TP_PATH_NO_PQ_P0;
+	p->mmsys_idx = TP_PATH_NO_PQ_P0;
+	p->mutex_idx = TP_PATH_NO_PQ_P0;
+
+	if (cfg->param->type == MDP_STREAM_TYPE_DUAL_BITBLT) {
+		p = &cfg->path[TP_PATH_NO_PQ_P1];
+		ret = tp_parse_path(task->mdp, p, mt8189_path_map[TP_PATH_NO_PQ_P1]);
+		if (ret)
+			return ret;
+		p->path_id = TP_PATH_NO_PQ_P1;
+		p->mmsys_idx = TP_PATH_NO_PQ_P0;
+		p->mutex_idx = TP_PATH_NO_PQ_P1;
+		cfg->dual = true;
+	}
+
+	return ret;
+}
+
 int mdp_alg_tp_select_path(struct mdp_alg_task *task)
 {
 	switch (task->mdp->mdp_data->mdp_alg_plat) {
+	case MDP_ALG_MT8189:
+		return tp_select_path_mt8189(task);
 	default:
 		return -EINVAL;
 	}

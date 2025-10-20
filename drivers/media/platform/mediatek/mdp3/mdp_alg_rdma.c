@@ -15,6 +15,11 @@ struct rdma_data {
 	u8 rb_swap;	/* version for rb channel swap behavior */
 };
 
+static const struct rdma_data mt8189_rdma_data = {
+	.tile_width = 640,
+	.rb_swap = 2,
+};
+
 struct rdma_frame_data {
 	u8 enable_ufo;
 	u8 hw_fmt;
@@ -49,6 +54,8 @@ static inline struct rdma_frame_data *rdma_frm_data(struct mdp_alg_path_tp *path
 static inline const struct rdma_data *get_private_data(struct mdp_alg_task *task)
 {
 	switch (task->mdp->mdp_data->mdp_alg_plat) {
+	case MDP_ALG_MT8189:
+		return &mt8189_rdma_data;
 	default:
 		return 0;
 	}

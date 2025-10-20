@@ -24,6 +24,10 @@ struct rsz_data {
 	bool wrot_pending;
 };
 
+static const struct rsz_data mt8189_rsz_data = {
+	.tile_width = 516,
+};
+
 struct rsz_cal_in {
 	u32 in_width;
 	u32 in_height;
@@ -108,6 +112,8 @@ static inline struct rsz_frame_data *rsz_frm_data(struct mdp_alg_path_tp *path, 
 static inline const struct rsz_data *get_private_data(struct mdp_alg_task *task)
 {
 	switch (task->mdp->mdp_data->mdp_alg_plat) {
+	case MDP_ALG_MT8189:
+		return &mt8189_rsz_data;
 	default:
 		return 0;
 	}
