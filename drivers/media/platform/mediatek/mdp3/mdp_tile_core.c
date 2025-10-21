@@ -5713,8 +5713,6 @@ static enum mdp_tile_msg tile_check_x_end_pos_with_flag(struct tile_reg_map *reg
 				/* diff view to check min last xs */
 				if (f->min_in_pos_xs < f->min_last_input_xs_pos)
 					return T_TILE_X_DIR_NOT_END_TOGETHER_ERROR;
-				else
-					return T_TILE_X_DIR_NOT_END_TOGETHER_ERROR;
 			} else {
 				oob_x = f->min_in_pos_xs < f->in_pos_xs;
 				if (!hor_no && oob_x)
@@ -5726,8 +5724,6 @@ static enum mdp_tile_msg tile_check_x_end_pos_with_flag(struct tile_reg_map *reg
 
 				/* diff view to check max last xe */
 				if (f->valid_h_no && f->max_last_input_xe_pos < xe)
-					return T_TILE_X_DIR_NOT_END_TOGETHER_ERROR;
-				else
 					return T_TILE_X_DIR_NOT_END_TOGETHER_ERROR;
 			}
 		}
@@ -5786,8 +5782,6 @@ static enum mdp_tile_msg tile_check_y_end_pos_with_flag(struct tile_reg_map *reg
 				/* diff view to check min last ye */
 				oob_y = f->max_last_input_ye_pos < f->max_in_pos_ye;
 				if (f->valid_v_no && oob_y)
-					return T_TILE_Y_DIR_NOT_END_TOGETHER_ERROR;
-				else
 					return T_TILE_Y_DIR_NOT_END_TOGETHER_ERROR;
 			}
 		}
