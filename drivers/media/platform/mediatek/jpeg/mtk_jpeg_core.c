@@ -620,6 +620,7 @@ static int mtk_jpeg_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 	struct vb2_queue *vq;
 	struct vb2_buffer *vb;
 	struct mtk_jpeg_src_buf *jpeg_src_buf;
+	struct mtk_jpeg_q_data *q_data = NULL;
 
 	if (buf->type != V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
 		goto end;
@@ -630,10 +631,19 @@ static int mtk_jpeg_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 		return -EINVAL;
 	}
 
-	vb = vq->bufs[buf->index];
-	jpeg_src_buf = mtk_jpeg_vb2_to_srcbuf(vb);
-	jpeg_src_buf->bs_size = buf->m.planes[0].bytesused;
-
+	if (strcmp((const char *)ctx->jpeg->variant->dev_name, "mtk-jpeg-dec") == 0) {
+		vb = vq->bufs[buf->index];
+		jpeg_src_buf = mtk_jpeg_vb2_to_srcbuf(vb);
+		if (IS_ERR_OR_NULL(jpeg_src_buf))
+			dev_info(ctx->jpeg->dev, "jpeg_src_buf null\n");
+		else {
+			jpeg_src_buf->bs_size = buf->m.planes[0].bytesused;
+			if (V4L2_TYPE_IS_OUTPUT(buf->type) && jpeg_src_buf->bs_size == 0) {
+				q_data = mtk_jpeg_get_q_data(ctx, buf->type);
+				jpeg_src_buf->bs_size = q_data->pix_mp.plane_fmt[0].sizeimage;
+			}
+		}
+	}
 end:
 	return v4l2_m2m_qbuf(file, fh->m2m_ctx, buf);
 }
