@@ -25,6 +25,7 @@ properties:
       - items:
           - enum:
               - mediatek,mt8365-lvds-tx
+              - mediatek,mt8189-lvds-tx
   reg:
     maxItems: 1
 
