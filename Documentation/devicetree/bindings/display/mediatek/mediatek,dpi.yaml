@@ -27,6 +27,7 @@ properties:
           - mediatek,mt8188-dp-intf
           - mediatek,mt8189-dp-dvo
           - mediatek,mt8189-edp-dvo
+          - mediatek,mt8189-lvds-dvo
           - mediatek,mt8192-dpi
           - mediatek,mt8195-dp-intf
           - mediatek,mt8195-dpi
