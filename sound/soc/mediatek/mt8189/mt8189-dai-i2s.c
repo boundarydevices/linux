@@ -127,6 +127,15 @@ enum {
 	ETDM_SLAVE_SEL_ETDMOUT3_SLAVE = 15,
 };
 
+enum {
+	MTK_DAI_ETDM_FORMAT_I2S = 0,
+	MTK_DAI_ETDM_FORMAT_LJ,
+	MTK_DAI_ETDM_FORMAT_RJ,
+	MTK_DAI_ETDM_FORMAT_EIAJ,
+	MTK_DAI_ETDM_FORMAT_DSPA,
+	MTK_DAI_ETDM_FORMAT_DSPB,
+};
+
 struct mtk_afe_i2s_priv {
 	int id;
 	int rate; /* for determine which apll to use */
@@ -144,6 +153,7 @@ struct mtk_afe_i2s_priv {
 	int ip_mode;
 	int slave_mode;
 	int lpbk_mode;
+	unsigned int format;
 };
 
 static unsigned int get_etdm_wlen(snd_pcm_format_t format)
@@ -1278,6 +1288,7 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 	struct mt8189_afe_private *afe_priv = afe->platform_priv;
 	struct mtk_afe_i2s_priv *i2s_priv = afe_priv->dai_priv[i2s_id];
 
+	bool slave_mode = false;
 	unsigned int rate = params_rate(params);
 	snd_pcm_format_t format = params_format(params);
 
@@ -1286,10 +1297,12 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 	dev_dbg(afe->dev, "%s(), id %d, rate %d, format %d\n",
 		__func__, i2s_id, rate, format);
 
-	if (i2s_priv)
+	if (i2s_priv) {
 		i2s_priv->rate = rate;
-	else
+		slave_mode = i2s_priv->slave_mode;
+	} else {
 		return -EINVAL;
+	}
 
 	switch (i2s_id) {
 	case MT8189_DAI_I2S_IN0:
@@ -1336,7 +1349,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 
 		/* 5:  TDM Mode */
 		regmap_update_bits(afe->regmap, ETDM_IN0_CON0,
-				   REG_FMT_MASK_SFT, 0x0 << REG_FMT_SFT);
+				   REG_FMT_MASK_SFT, i2s_priv->format << REG_FMT_SFT);
+
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_IN0_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x1 << REG_SLAVE_MODE_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_IN0_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x0 << REG_SLAVE_MODE_SFT);
+		}
 
 		/* APLL */
 		regmap_update_bits(afe->regmap, ETDM_IN0_CON0,
@@ -1351,10 +1374,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 				   get_etdm_wlen(format) << REG_WORD_LENGTH_SFT);
 
 		/* ---etdm cowork --- */
-		regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
-				   ETDM_IN0_SLAVE_SEL_MASK_SFT,
-				   ETDM_SLAVE_SEL_ETDMOUT0_MASTER
-				   << ETDM_IN0_SLAVE_SEL_SFT);
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
+					   ETDM_IN0_SLAVE_SEL_MASK_SFT,
+					   ETDM_SLAVE_SEL_ETDMIN0_SLAVE
+					   << ETDM_IN0_SLAVE_SEL_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
+					   ETDM_IN0_SLAVE_SEL_MASK_SFT,
+					   ETDM_SLAVE_SEL_ETDMIN0_MASTER
+					   << ETDM_IN0_SLAVE_SEL_SFT);
+		}
 		break;
 	case MT8189_DAI_I2S_IN1:
 		/* ---etdm in --- */
@@ -1400,7 +1430,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 
 		/* 5:  TDM Mode */
 		regmap_update_bits(afe->regmap, ETDM_IN1_CON0,
-				   REG_FMT_MASK_SFT, 0x0 << REG_FMT_SFT);
+				   REG_FMT_MASK_SFT, i2s_priv->format << REG_FMT_SFT);
+
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_IN1_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x1 << REG_SLAVE_MODE_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_IN1_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x0 << REG_SLAVE_MODE_SFT);
+		}
 
 		/* APLL */
 		regmap_update_bits(afe->regmap, ETDM_IN1_CON0,
@@ -1415,10 +1455,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 				   get_etdm_wlen(format) << REG_WORD_LENGTH_SFT);
 
 		/* ---etdm cowork --- */
-		regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON1,
-				   ETDM_IN1_SLAVE_SEL_MASK_SFT,
-				   ETDM_SLAVE_SEL_ETDMOUT1_MASTER
-				   << ETDM_IN1_SLAVE_SEL_SFT);
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON1,
+					   ETDM_IN1_SLAVE_SEL_MASK_SFT,
+					   ETDM_SLAVE_SEL_ETDMIN1_SLAVE
+					   << ETDM_IN1_SLAVE_SEL_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON1,
+					   ETDM_IN1_SLAVE_SEL_MASK_SFT,
+					   ETDM_SLAVE_SEL_ETDMIN1_MASTER
+					   << ETDM_IN1_SLAVE_SEL_SFT);
+		}
 		break;
 	case MT8189_DAI_I2S_OUT0:
 		/* ---etdm out --- */
@@ -1442,7 +1489,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 				   get_etdm_inconn_rate(rate) << OUT_REG_RELATCH_EN_SEL_SFT);
 		/* 5:  TDM Mode */
 		regmap_update_bits(afe->regmap, ETDM_OUT0_CON0,
-				   OUT_REG_FMT_MASK_SFT, 0x0 << OUT_REG_FMT_SFT);
+				   OUT_REG_FMT_MASK_SFT, i2s_priv->format << OUT_REG_FMT_SFT);
+
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_OUT0_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x1 << REG_SLAVE_MODE_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_OUT0_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x0 << REG_SLAVE_MODE_SFT);
+		}
 
 		/* APLL */
 		regmap_update_bits(afe->regmap, ETDM_OUT0_CON0,
@@ -1457,10 +1514,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 				   get_etdm_wlen(format) << OUT_REG_WORD_LENGTH_SFT);
 
 		/* ---etdm cowork --- */
-		regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
-				   ETDM_OUT0_SLAVE_SEL_MASK_SFT,
-				   ETDM_SLAVE_SEL_ETDMIN0_MASTER
-				   << ETDM_OUT0_SLAVE_SEL_SFT);
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
+					   ETDM_OUT0_SLAVE_SEL_MASK_SFT,
+					   ETDM_SLAVE_SEL_ETDMOUT0_SLAVE
+					   << ETDM_OUT0_SLAVE_SEL_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
+					   ETDM_OUT0_SLAVE_SEL_MASK_SFT,
+					   ETDM_SLAVE_SEL_ETDMOUT0_MASTER
+					   << ETDM_OUT0_SLAVE_SEL_SFT);
+		}
 		break;
 	case MT8189_DAI_I2S_OUT1:
 		/* ---etdm out --- */
@@ -1484,7 +1548,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 				   get_etdm_inconn_rate(rate) << OUT_REG_RELATCH_EN_SEL_SFT);
 		/* 5:  TDM Mode */
 		regmap_update_bits(afe->regmap, ETDM_OUT1_CON0,
-				   OUT_REG_FMT_MASK_SFT, 0x0 << OUT_REG_FMT_SFT);
+				   OUT_REG_FMT_MASK_SFT, i2s_priv->format << OUT_REG_FMT_SFT);
+
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_OUT1_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x1 << REG_SLAVE_MODE_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_OUT1_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x0 << REG_SLAVE_MODE_SFT);
+		}
 
 		/* APLL */
 		regmap_update_bits(afe->regmap, ETDM_OUT1_CON0,
@@ -1499,10 +1573,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 				   get_etdm_wlen(format) << OUT_REG_WORD_LENGTH_SFT);
 
 		/* ---etdm cowork --- */
-		regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
-				   ETDM_OUT1_SLAVE_SEL_MASK_SFT,
-				   ETDM_SLAVE_SEL_ETDMIN1_MASTER
-				   << ETDM_OUT1_SLAVE_SEL_SFT);
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
+					   ETDM_OUT1_SLAVE_SEL_MASK_SFT,
+					   ETDM_SLAVE_SEL_ETDMOUT1_SLAVE
+					   << ETDM_OUT1_SLAVE_SEL_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
+					   ETDM_OUT1_SLAVE_SEL_MASK_SFT,
+					   ETDM_SLAVE_SEL_ETDMOUT1_MASTER
+					   << ETDM_OUT1_SLAVE_SEL_SFT);
+		}
 		break;
 	case MT8189_DAI_I2S_OUT4:
 		/* ---etdm out --- */
@@ -1526,7 +1607,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 				   get_etdm_inconn_rate(rate) << OUT_REG_RELATCH_EN_SEL_SFT);
 		/* 5:  TDM Mode */
 		regmap_update_bits(afe->regmap, ETDM_OUT4_CON0,
-				   OUT_REG_FMT_MASK_SFT, 0x0 << OUT_REG_FMT_SFT);
+				   OUT_REG_FMT_MASK_SFT, i2s_priv->format << OUT_REG_FMT_SFT);
+
+		if (slave_mode) {
+			regmap_update_bits(afe->regmap, ETDM_OUT4_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x1 << REG_SLAVE_MODE_SFT);
+		} else {
+			regmap_update_bits(afe->regmap, ETDM_OUT4_CON0,
+					   REG_SLAVE_MODE_MASK_SFT,
+					   0x0 << REG_SLAVE_MODE_SFT);
+		}
 
 		/* APLL */
 		regmap_update_bits(afe->regmap, ETDM_OUT4_CON0,
@@ -1605,9 +1696,57 @@ static int mtk_dai_i2s_set_sysclk(struct snd_soc_dai *dai,
 	return 0;
 }
 
+static int mtk_dai_i2s_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
+{
+	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
+	struct mt8189_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_afe_i2s_priv *i2s_priv;
+
+	if (dai->id >= MT8189_DAI_NUM || dai->id < 0)
+		return -EINVAL;
+	i2s_priv = afe_priv->dai_priv[dai->id];
+
+	if (!i2s_priv)
+		return -EINVAL;
+
+	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	case SND_SOC_DAIFMT_I2S:
+		i2s_priv->format = MTK_DAI_ETDM_FORMAT_I2S;
+		break;
+	case SND_SOC_DAIFMT_LEFT_J:
+		i2s_priv->format = MTK_DAI_ETDM_FORMAT_LJ;
+		break;
+	case SND_SOC_DAIFMT_RIGHT_J:
+		i2s_priv->format = MTK_DAI_ETDM_FORMAT_RJ;
+		break;
+	case SND_SOC_DAIFMT_DSP_A:
+		i2s_priv->format = MTK_DAI_ETDM_FORMAT_DSPA;
+		break;
+	case SND_SOC_DAIFMT_DSP_B:
+		i2s_priv->format = MTK_DAI_ETDM_FORMAT_DSPB;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	switch (fmt & SND_SOC_DAIFMT_CLOCK_PROVIDER_MASK) {
+	case SND_SOC_DAIFMT_BC_FC:
+		i2s_priv->slave_mode = true;
+		break;
+	case SND_SOC_DAIFMT_BP_FP:
+		i2s_priv->slave_mode = false;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static const struct snd_soc_dai_ops mtk_dai_i2s_ops = {
 	.hw_params = mtk_dai_i2s_hw_params,
 	.set_sysclk = mtk_dai_i2s_set_sysclk,
+	.set_fmt = mtk_dai_i2s_set_fmt,
 };
 
 /* dai driver */
