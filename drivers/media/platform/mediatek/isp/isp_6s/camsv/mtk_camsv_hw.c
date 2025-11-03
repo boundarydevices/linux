@@ -323,14 +323,14 @@ static irqreturn_t isp_irq_camsv_thread(int irq, void *data)
 static int mtk_camsv_runtime_suspend(struct device *dev)
 {
 	struct mtk_cam_dev *cam_dev = dev_get_drvdata(dev);
+	struct mtk_cam_video_device *vdev = &cam_dev->vdev;
+	struct vb2_queue *vbq = &vdev->vbq;
 
-	if (cam_dev->streaming) {
-		mtk_camsv_reset(cam_dev);
+	if (vb2_is_streaming(vbq)) {
 		mutex_lock(&cam_dev->op_lock);
 		v4l2_subdev_call(&cam_dev->subdev, video, s_stream, 0);
 		mutex_unlock(&cam_dev->op_lock);
 	}
-	dev_info(dev, "%s clk bulk disable unprepare\n", __func__);
 	clk_bulk_disable_unprepare(cam_dev->num_clks, cam_dev->clks);
 
 	return 0;
@@ -346,7 +346,6 @@ static int mtk_camsv_runtime_resume(struct device *dev)
 	int ret;
 	unsigned long flags = 0;
 
-	dev_info(dev, "%s clk bulk prepare enable\n", __func__);
 	ret = clk_bulk_prepare_enable(cam_dev->num_clks, cam_dev->clks);
 	if (ret) {
 		dev_err(dev, "failed to enable clock:%d\n", ret);
@@ -361,21 +360,17 @@ static int mtk_camsv_runtime_resume(struct device *dev)
 		if (cam_dev->buf_curr) {
 			mtk_camsv_update_buffers_add(cam_dev, cam_dev->buf_curr);
 		} else {
-			buf = list_last_entry(&cam_dev->buf_list,
-					      struct mtk_cam_dev_buffer,
-					      list);
+			buf = list_first_entry_or_null(&cam_dev->buf_list,
+						       struct mtk_cam_dev_buffer,
+						       list);
 			if (buf) {
 				mtk_camsv_update_buffers_add(cam_dev, buf);
 				list_del(&buf->list);
 				cam_dev->buf_curr = buf;
-			} else {
-				dev_err(cam_dev->dev, "No buffer to add\n");
 			}
 		}
 
 		spin_unlock_irqrestore(&cam_dev->irqlock, flags);
-
-		mtk_camsv_cmos_vf_hw_enable(cam_dev, vdev->fmtinfo->packed);
 
 		/* Stream on the sub-device */
 		mutex_lock(&cam_dev->op_lock);

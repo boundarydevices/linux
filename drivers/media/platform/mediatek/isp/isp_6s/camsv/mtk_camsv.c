@@ -39,6 +39,7 @@ static const u32 mtk_cam_mbus_formats[] = {
 static int mtk_cam_cio_stream_on(struct mtk_cam_dev *cam)
 {
 	struct device *dev = cam->dev;
+	struct mtk_cam_video_device *vdev = &cam->vdev;
 	struct seninf_ctx *seninf_ctx;
 	int ret;
 
@@ -63,6 +64,8 @@ static int mtk_cam_cio_stream_on(struct mtk_cam_dev *cam)
 		__func__,
 		cam->seninf_sd->entity.name,
 		seninf_ctx->streaming_counter);
+
+	(*cam->hw_functions->mtk_cam_cmos_vf_hw_enable)(cam, vdev->fmtinfo->packed);
 
 	mutex_lock(&seninf_ctx->streaming_protect);
 	if (seninf_ctx->streaming_counter == 0) {
@@ -93,6 +96,7 @@ err_stop_pipeline:
 	media_pipeline_stop(cam->subdev.entity.pads);
 err_unlock:
 	mutex_unlock(&seninf_ctx->streaming_protect);
+	(*cam->hw_functions->mtk_cam_cmos_vf_hw_disable)(cam, false);
 	return ret;
 }
 
@@ -102,6 +106,9 @@ static int mtk_cam_cio_stream_off(struct mtk_cam_dev *cam)
 	struct v4l2_subdev *seninf;
 	struct seninf_ctx *seninf_ctx;
 	int ret;
+
+	(*cam->hw_functions->mtk_cam_cmos_vf_hw_disable)(cam, false);
+	(*cam->hw_functions->mtk_cam_reset)(cam);
 
 	if (cam->seninf_sd) {
 		seninf_ctx = container_of(cam->seninf_sd, struct seninf_ctx, subdev);

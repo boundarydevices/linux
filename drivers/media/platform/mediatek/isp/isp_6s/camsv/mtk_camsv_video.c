@@ -317,28 +317,6 @@ static void mtk_cam_vb2_return_all_buffers(struct mtk_cam_dev *cam,
 	spin_unlock_irqrestore(&cam->irqlock, flags);
 }
 
-static void mtk_cam_cmos_vf_enable(struct mtk_cam_dev *cam_dev,
-				   bool enable, bool pak_en)
-{
-	struct device *dev = cam_dev->dev;
-	unsigned long flags = 0;
-
-	if (pm_runtime_get_sync(dev) < 0) {
-		dev_err(dev, "failed to get pm_runtime\n");
-		goto out;
-	}
-	dev_info(dev, "%s: pm runtime get sync\n", __func__);
-
-	spin_lock_irqsave(&cam_dev->irqlock, flags);
-	if (enable)
-		(*cam_dev->hw_functions->mtk_cam_cmos_vf_hw_enable)(cam_dev, pak_en);
-	else
-		(*cam_dev->hw_functions->mtk_cam_cmos_vf_hw_disable)(cam_dev, pak_en);
-	spin_unlock_irqrestore(&cam_dev->irqlock, flags);
-out:
-	pm_runtime_put_autosuspend(dev);
-}
-
 static int mtk_cam_verify_format(struct mtk_cam_dev *cam)
 {
 	struct mtk_cam_video_device *vdev = &cam->vdev;
@@ -391,9 +369,6 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	(*cam->hw_functions->mtk_cam_setup)(cam, fmt->width, fmt->height,
 			fmt->plane_fmt[0].bytesperline, vdev->fmtinfo->code);
 
-	/* Enable CMOS and VF */
-	mtk_cam_cmos_vf_enable(cam, true, vdev->fmtinfo->packed);
-
 	/* update first buffer address */
 	/* added the buffer into the tracking list */
 	spin_lock_irqsave(&cam->irqlock, flags);
@@ -432,7 +407,6 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 fail_unlock:
 	mutex_unlock(&cam->op_lock);
 	mtk_cam_vb2_return_all_buffers(cam, VB2_BUF_STATE_QUEUED);
-	mtk_cam_cmos_vf_enable(cam, false, false);
 	pm_runtime_put_autosuspend(cam->dev);
 
 	return ret;
@@ -443,13 +417,7 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	struct mtk_cam_dev *cam = vb2_get_drv_priv(vq);
 	int ret;
 
-	/* Disable CMOS and VF */
-	mtk_cam_cmos_vf_enable(cam, false, false);
-
-	(*cam->hw_functions->mtk_cam_reset)(cam);
-
 	mutex_lock(&cam->op_lock);
-
 	ret = v4l2_subdev_call(&cam->subdev, video, s_stream, 0);
 	if (ret) {
 		dev_err(cam->dev, "%s failed to stream off %s: %d\n",

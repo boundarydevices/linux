@@ -2113,7 +2113,7 @@ err_free_handler:
 	return ret;
 }
 
-static int runtime_suspend(struct device *dev)
+static int seninf_pm_suspend(struct device *dev)
 {
 	int i;
 	struct seninf_ctx *ctx = dev_get_drvdata(dev);
@@ -2139,7 +2139,7 @@ static int runtime_suspend(struct device *dev)
 	return 0;
 }
 
-static int runtime_resume(struct device *dev)
+static int seninf_pm_resume(struct device *dev)
 {
 	u32 i;
 	int ret;
@@ -2175,7 +2175,9 @@ static int runtime_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops pm_ops = {
-	SET_RUNTIME_PM_OPS(runtime_suspend, runtime_resume, NULL)
+	SET_RUNTIME_PM_OPS(seninf_pm_suspend, seninf_pm_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+				pm_runtime_force_resume)
 };
 
 static int seninf_remove(struct platform_device *pdev)
