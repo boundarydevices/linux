@@ -425,9 +425,6 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 		goto fail_unlock;
 	}
 
-	/* Media links are fixed after media_pipeline_start */
-	cam->stream_count++;
-
 	mutex_unlock(&cam->op_lock);
 
 	return 0;
@@ -461,14 +458,7 @@ static void mtk_cam_vb2_stop_streaming(struct vb2_queue *vq)
 	}
 
 	mtk_cam_vb2_return_all_buffers(cam, VB2_BUF_STATE_ERROR);
-	cam->stream_count--;
-	if (cam->stream_count) {
-		mutex_unlock(&cam->op_lock);
-		return;
-	}
-
 	mutex_unlock(&cam->op_lock);
-
 	pm_runtime_put_autosuspend(cam->dev);
 }
 

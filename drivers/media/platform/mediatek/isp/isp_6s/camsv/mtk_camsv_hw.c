@@ -380,12 +380,6 @@ static int mtk_camsv_runtime_resume(struct device *dev)
 		/* Stream on the sub-device */
 		mutex_lock(&cam_dev->op_lock);
 		ret = v4l2_subdev_call(&cam_dev->subdev, video, s_stream, 1);
-
-		if (ret) {
-			cam_dev->stream_count--;
-			if (cam_dev->stream_count == 0)
-				media_pipeline_stop(vdev->vdev.entity.pads);
-		}
 		mutex_unlock(&cam_dev->op_lock);
 
 		if (ret)

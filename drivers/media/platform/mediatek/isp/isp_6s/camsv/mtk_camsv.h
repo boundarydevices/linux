@@ -134,7 +134,6 @@ struct mtk_cam_video_device {
  * @vdev: The video device node.
  * @seninf: Pointer to the seninf pad.
  * @streaming: Indicate the overall streaming status is on or off.
- * @stream_count: Number of streaming video nodes
  * @sequence: Buffer sequence number
  * @op_lock: Serializes driver's VB2 callback operations.
  * @irqlock: Protects the buffer list.
@@ -160,7 +159,6 @@ struct mtk_cam_dev {
 	struct media_pad *seninf;
 	struct v4l2_subdev *seninf_sd;
 	unsigned int streaming;
-	unsigned int stream_count;
 	unsigned int sequence;
 	unsigned int cammux_id;
 
