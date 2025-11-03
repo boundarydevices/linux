@@ -259,70 +259,63 @@ static irqreturn_t isp_irq_camsv(int irq, void *data)
 	struct mtk_cam_dev *cam_dev = (struct mtk_cam_dev *)data;
 	struct mtk_cam_dev_buffer *buf;
 	unsigned long flags = 0;
-	unsigned int irq_status, imgo_addr, imgo_ctl1, imgo_ctl2;
+	unsigned int irq_status;
 
 	spin_lock_irqsave(&cam_dev->irqlock, flags);
 
-	irq_status = mtk_camsv_read(cam_dev, CAMSV_INT_STATUS);
-
-	imgo_addr = mtk_camsv_read(cam_dev, CAMSV_IMGO_BASE_ADDR);
-	imgo_ctl1 = mtk_camsv_read(cam_dev, CAMSV_FBC_IMGO_CTL1);
-	imgo_ctl2 = mtk_camsv_read(cam_dev, CAMSV_FBC_IMGO_CTL2);
-
-	dev_dbg(cam_dev->dev, "irq status 0x%x imgo 0x%x imgo_ctl1 0x%x imgo_ctl2 0x%x imgo_xsize 0x%x imgo_ysize 0x%x img_stride 0x%x\n",
-		 irq_status,
-		 imgo_addr,
-		 imgo_ctl1,
-		 imgo_ctl2,
-		 mtk_camsv_read(cam_dev, CAMSV_IMGO_XSIZE),
-		 mtk_camsv_read(cam_dev, CAMSV_IMGO_YSIZE),
-		 mtk_camsv_read(cam_dev, CAMSV_IMGO_STRIDE));
-
-	if (irq_status & INT_ST_MASK_CAMSV_ERR) {
-		dev_err(cam_dev->dev, "irq error 0x%x\n",
-			(unsigned int)(irq_status & INT_ST_MASK_CAMSV_ERR));
-		if (irq_status & CAMSV_IRQ_IMGO_ERR)
-			dev_err(cam_dev->dev, "imgo error 0x%x\n",
-				mtk_camsv_read(cam_dev, CAMSV_IMGO_ERR_STAT));
-	}
+	irq_status = cam_dev->irq_info.irq_status = mtk_camsv_read(cam_dev, CAMSV_INT_STATUS);
+	cam_dev->irq_info.imgo_base_addr = mtk_camsv_read(cam_dev, CAMSV_IMGO_BASE_ADDR);
+	cam_dev->irq_info.imgo_ctl1 = mtk_camsv_read(cam_dev, CAMSV_FBC_IMGO_CTL1);
+	cam_dev->irq_info.imgo_ctl2 = mtk_camsv_read(cam_dev, CAMSV_FBC_IMGO_CTL2);
+	cam_dev->irq_info.imgo_xsize = mtk_camsv_read(cam_dev, CAMSV_IMGO_XSIZE);
+	cam_dev->irq_info.imgo_ysize = mtk_camsv_read(cam_dev, CAMSV_IMGO_YSIZE);
+	cam_dev->irq_info.imgo_stride = mtk_camsv_read(cam_dev, CAMSV_IMGO_STRIDE);
+	cam_dev->irq_info.imgo_error = mtk_camsv_read(cam_dev, CAMSV_IMGO_ERR_STAT);
 
 	/* De-queue frame */
 	if (irq_status & CAMSV_IRQ_SW_PASS1_DON) {
-		dev_dbg(cam_dev->dev, "%s CAMSV_IRQ_SW_PASS1_DON\n", __func__);
 		cam_dev->sequence++;
 
 		if (cam_dev->buf_curr) {
-			dev_dbg(cam_dev->dev, "%s vb2_buffer_done buffer address: %llx sequence: %d\n",
-					__func__, cam_dev->buf_curr->daddr, cam_dev->sequence);
 			cam_dev->buf_curr->v4l2_buf.sequence = cam_dev->sequence;
 			cam_dev->buf_curr->v4l2_buf.vb2_buf.timestamp = ktime_get_ns();
 			vb2_buffer_done(&cam_dev->buf_curr->v4l2_buf.vb2_buf,
 					VB2_BUF_STATE_DONE);
 			cam_dev->buf_curr = NULL;
-		} else {
-			dev_err(cam_dev->dev, "%s buf_curr is NULL\n", __func__);
 		}
 	}
-	if (irq_status & CAMSV_IRQ_TG_SOF_INT)
-		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_TG_SOF_INT\n", __func__);
+
 	if (irq_status & CAMSV_IRQ_PASS1_DON) {
-		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_PASS1_DON\n", __func__);
 		buf = list_first_entry_or_null(&cam_dev->buf_list,
 						struct mtk_cam_dev_buffer,
 						list);
 		if (!cam_dev->buf_curr && buf) {
-			(*cam_dev->hw_functions->mtk_cam_update_buffers_add)
-						(cam_dev, buf);
+			mtk_camsv_update_buffers_add(cam_dev, buf);
 			list_del(&buf->list);
 			cam_dev->buf_curr = buf;
-		} else {
-			dev_err(cam_dev->dev, "%s buf_list is empty\n", __func__);
 		}
 	}
-	if (irq_status & CAMSV_IRQ_IMGO_DROP)
-		dev_dbg(cam_dev->dev, "%s: CAMSV_IRQ_IMGO_DROP\n", __func__);
 
 	spin_unlock_irqrestore(&cam_dev->irqlock, flags);
+
+	return IRQ_WAKE_THREAD;
+}
+
+static irqreturn_t isp_irq_camsv_thread(int irq, void *data)
+{
+	struct mtk_cam_dev *cam_dev = (struct mtk_cam_dev *)data;
+	struct mtk_cam_irq_info *irq_info = &cam_dev->irq_info;
+
+	dev_dbg(cam_dev->dev, "seq %u irq_stat 0x%x imgo baddr 0x%x ctl 0x%x/0x%x xysize 0x%x/0x%x stride 0x%x error 0x%x\n",
+		cam_dev->sequence,
+		irq_info->irq_status,
+		irq_info->imgo_base_addr,
+		irq_info->imgo_ctl1,
+		irq_info->imgo_ctl2,
+		irq_info->imgo_xsize,
+		irq_info->imgo_ysize,
+		irq_info->imgo_stride,
+		irq_info->imgo_error);
 
 	return IRQ_HANDLED;
 }
@@ -475,7 +468,7 @@ static int mtk_camsv_probe(struct platform_device *pdev)
 	}
 
 	cam_dev->irq = platform_get_irq(pdev, 0);
-	ret = devm_request_threaded_irq(dev, cam_dev->irq, NULL, isp_irq_camsv,
+	ret = devm_request_threaded_irq(dev, cam_dev->irq, isp_irq_camsv, isp_irq_camsv_thread,
 					IRQF_SHARED | IRQF_ONESHOT,
 					dev_name(dev), cam_dev);
 	if (ret) {

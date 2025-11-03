@@ -57,6 +57,17 @@ struct mtk_cam_sparams {
 	u32 imgo_stride;
 };
 
+struct mtk_cam_irq_info {
+	u32 irq_status;
+	u32 imgo_base_addr;
+	u32 imgo_ctl1;
+	u32 imgo_ctl2;
+	u32 imgo_xsize;
+	u32 imgo_ysize;
+	u32 imgo_stride;
+	u32 imgo_error;
+};
+
 /*
  * struct mtk_cam_vdev_desc - MTK camera device descriptor
  *
@@ -160,6 +171,7 @@ struct mtk_cam_dev {
 	struct mtk_cam_dev_buffer *buf_curr;
 
 	struct mtk_cam_hw_functions *hw_functions;
+	struct mtk_cam_irq_info irq_info;
 };
 
 struct mtk_cam_conf {
