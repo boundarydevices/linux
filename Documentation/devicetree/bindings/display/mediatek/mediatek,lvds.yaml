@@ -1,0 +1,117 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+# Copyright (c) 2025 MediaTek
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/mediatek/mediatek,lvds.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek Low-Voltage Differential Signaling (LVDS) Encoder
+
+maintainers:
+  - Chun-Kuang Hu <chunkuang.hu@kernel.org>
+  - Philipp Zabel <p.zabel@pengutronix.de>
+  - Chunfeng Yun <chunfeng.yun@mediatek.com>
+
+description: |
+  The MediaTek LVDS function block is a sink of the display subsystem
+  and can drive up to four differential pairs of 8-bit parallel
+  output to the LVDS PHY.
+
+properties:
+  $nodename:
+    pattern: "^lvds@[0-9a-f]+$"
+
+  compatible:
+    oneOf:
+      - items:
+          - enum:
+              - mediatek,mt8189-lvds
+              - mediatek,mt8365-lvds
+
+  reg:
+    maxItems: 1
+
+  clocks:
+    items:
+      - description: pixel clock
+      - description: digital to analog interface clock tree synthesis with different phase
+      - description: digital to analog interface clock
+
+  clock-names:
+    items:
+      - const: pixel
+      - const: clkts
+      - const: clkdig
+
+  phys:
+    maxItems: 1
+
+  phy-names:
+    items:
+      - const: lvds
+
+  ports:
+    $ref: /schemas/graph.yaml#/properties/ports
+
+    properties:
+      port@0:
+        $ref: /schemas/graph.yaml#/properties/port
+        description: Input node to receive pixel data.
+
+      port@1:
+        $ref: /schemas/graph.yaml#/properties/port
+        description: LVDS output node to panel.
+
+    required:
+      - port@0
+      - port@1
+
+required:
+  - compatible
+  - reg
+  - clocks
+  - clock-names
+  - phys
+  - phy-names
+  - ports
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/mediatek,mt8365-clk.h>
+    soc {
+        #address-cells = <2>;
+        #size-cells = <2>;
+
+        lvds: lvds@14019200 {
+            compatible = "mediatek,mt8365-lvds";
+            reg = <0 0x14019200 0 0x100>;
+            clocks = <&mmsys CLK_MM_LVDSTX_PXL>,
+                <&mmsys CLK_MM_LVDSTX_CTS>,
+                <&topckgen CLK_TOP_LVDSTX_CLKDIG_EN>;
+            clock-names = "pixel", "clkts", "clkdig";
+            phys = <&lvds_tx>;
+            phy-names = "lvds";
+
+            ports {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                port@0 {
+                    reg = <0>;
+                    lvds_in: endpoint {
+                        remote-endpoint = <&dpi_out>;
+                    };
+                };
+                port@1 {
+                    reg = <1>;
+                    lvds_out: endpoint {
+                        remote-endpoint = <&lvds_panel_in>;
+                    };
+                };
+            };
+        };
+    };
+
+...
