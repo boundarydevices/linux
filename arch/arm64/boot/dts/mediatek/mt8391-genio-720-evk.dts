@@ -311,9 +311,8 @@
 	regulator-always-on;
 	regulator-min-microvolt = <400000>;
 	regulator-max-microvolt = <1193750>;
-	regulator-ramp-delay = <7500>;
-	regulator-enable-ramp-delay = <200>;
-	regulator-allowed-modes = <0 1 2>;
+	regulator-coupled-with = <&mt6359_vsram_proc1_ldo_reg>;
+	regulator-coupled-max-spread = <6250>;
 };
 
 &mt6359_vproc2_buck_reg{
@@ -353,9 +352,8 @@
 	regulator-name = "vsram_gpu";
 	regulator-min-microvolt = <500000>;
 	regulator-max-microvolt = <1293750>;
-	regulator-ramp-delay = <7500>;
-	regulator-enable-ramp-delay = <240>;
-	regulator-always-on;
+	regulator-coupled-with = <&mt6359_vproc1_buck_reg>;
+	regulator-coupled-max-spread = <6250>;
 };
 
 &spmi {
