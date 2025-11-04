@@ -308,7 +308,6 @@
 &mt6359_vproc1_buck_reg{
 	/* The name "vgpu" is required by mtk-regulator-coupler */
 	regulator-name = "vgpu";
-	regulator-always-on;
 	regulator-min-microvolt = <400000>;
 	regulator-max-microvolt = <1193750>;
 	regulator-coupled-with = <&mt6359_vsram_proc1_ldo_reg>;
@@ -348,6 +347,7 @@
 };
 
 &mt6359_vsram_proc1_ldo_reg{
+	/delete-property/ regulator-always-on;
 	/* The name "vsram_gpu" is required by mtk-regulator-coupler */
 	regulator-name = "vsram_gpu";
 	regulator-min-microvolt = <500000>;
@@ -1670,9 +1670,7 @@
 };
 
 &gpu {
-	supply-names = "mali", "sram";
 	mali-supply = <&mt6359_vproc1_buck_reg>;
-	sram-supply = <&mt6359_vsram_proc1_ldo_reg>;
 	status = "okay";
 };
 
