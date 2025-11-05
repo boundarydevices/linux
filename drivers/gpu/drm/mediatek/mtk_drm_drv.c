@@ -381,9 +381,14 @@ static const unsigned int mt8189_mtk_ddp_main_routes_1[] = {
 	DDP_COMPONENT_DVO0
 };
 
+static const unsigned int mt8189_mtk_ddp_main_routes_2[] = {
+	DDP_COMPONENT_DVO2
+};
+
 static const struct mtk_drm_route mt8189_mtk_ddp_main_routes[] = {
 	{0, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_routes_0), mt8189_mtk_ddp_main_routes_0},
-	{0, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_routes_1), mt8189_mtk_ddp_main_routes_1}
+	{0, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_routes_1), mt8189_mtk_ddp_main_routes_1},
+	{0, 0, ARRAY_SIZE(mt8189_mtk_ddp_main_routes_2), mt8189_mtk_ddp_main_routes_2}
 };
 
 static enum mtk_ddp_comp_id mt8189_mtk_ddp_main_subpipe[] = {
@@ -1077,6 +1082,8 @@ static const struct of_device_id mtk_ddp_comp_dt_ids[] = {
 	{ .compatible = "mediatek,mt8189-dp-dvo",
 	  .data = (void *)MTK_DVO },
 	{ .compatible = "mediatek,mt8189-edp-dvo",
+	  .data = (void *)MTK_DVO },
+	{ .compatible = "mediatek,mt8189-lvds-dvo",
 	  .data = (void *)MTK_DVO },
 	{ .compatible = "mediatek,mt8192-dpi",
 	  .data = (void *)MTK_DPI },

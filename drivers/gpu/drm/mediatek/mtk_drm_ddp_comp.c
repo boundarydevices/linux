@@ -480,6 +480,7 @@ static const struct mtk_ddp_comp_match mtk_ddp_matches[DDP_COMPONENT_DRM_ID_MAX]
 	[DDP_COMPONENT_DSI3]		= { MTK_DSI,			3, &ddp_dsi },
 	[DDP_COMPONENT_DVO0]		= { MTK_DVO,			0, &ddp_dvo },
 	[DDP_COMPONENT_DVO1]		= { MTK_DVO,			1, &ddp_dvo },
+	[DDP_COMPONENT_DVO2]		= { MTK_DVO,			2, &ddp_dvo },
 	[DDP_COMPONENT_GAMMA0]		= { MTK_DISP_GAMMA,		0, &ddp_gamma },
 	[DDP_COMPONENT_GAMMA1]		= { MTK_DISP_GAMMA,		1, &ddp_gamma },
 	[DDP_COMPONENT_MERGE0]		= { MTK_DISP_MERGE,		0, &ddp_merge },
