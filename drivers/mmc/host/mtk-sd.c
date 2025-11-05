@@ -205,6 +205,7 @@
 /* SDC_STS mask */
 #define SDC_STS_SDCBUSY         BIT(0)	/* RW */
 #define SDC_STS_CMDBUSY         BIT(1)	/* RW */
+#define SDC_STS_SPM_RSRELEASE   BIT(3)	/* W1C */
 #define SDC_STS_SWR_COMPL       BIT(31)	/* RW */
 
 /* SDC_ADV_CFG0 mask */
@@ -3303,6 +3304,7 @@ static int __maybe_unused msdc_runtime_suspend(struct device *dev)
 
 		__msdc_enable_sdio_irq(host, 0);
 	}
+	sdr_set_bits(host->base + SDC_STS, SDC_STS_SPM_RSRELEASE);
 	msdc_gate_clock(host);
 
 	if (host->dvfsrc_vcore_power && host->req_vcore) {
