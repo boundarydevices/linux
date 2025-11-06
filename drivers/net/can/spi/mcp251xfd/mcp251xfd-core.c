@@ -2223,9 +2223,78 @@ static int __maybe_unused mcp251xfd_runtime_resume(struct device *device)
 	return mcp251xfd_clks_and_vdd_enable(priv);
 }
 
+static int __maybe_unused mcp251xfd_suspend(struct device *device)
+{
+	const struct mcp251xfd_priv *priv = dev_get_drvdata(device);
+	int err = 0;
+	u32 osc = 0;
+	struct net_device *net = priv->ndev;
+
+	if (!netif_running(net))
+		return 0;
+
+	/* Disable Low power mode for MCP2518FD */
+	if (priv->devtype_data.model == MCP251XFD_MODEL_MCP2518FD) {
+		err = regmap_read(priv->map_reg, MCP251XFD_REG_OSC, &osc);
+		if (err)
+			return err;
+		osc &= ~MCP251XFD_REG_OSC_LPMEN;
+		err = regmap_write(priv->map_reg, MCP251XFD_REG_OSC, osc);
+		if (err)
+			return err;
+	}
+
+	/* Enter sleep mode when suspend */
+	err = mcp251xfd_chip_set_mode(priv, MCP251XFD_REG_CON_MODE_SLEEP);
+	if (err) {
+		netdev_err(priv->ndev,
+			   "Failed to enter sleep mode when entering suspend.\n");
+		return err;
+	}
+
+	return err;
+}
+
+static int __maybe_unused mcp251xfd_resume(struct device *device)
+{
+	const struct mcp251xfd_priv *priv = dev_get_drvdata(device);
+	int err = 0;
+	u32 osc = 0;
+	struct net_device *net = priv->ndev;
+
+	if (!netif_running(net))
+		return 0;
+
+	/* Set OSCDIS to exit sleep mode */
+	err = regmap_read(priv->map_reg, MCP251XFD_REG_OSC, &osc);
+	if (err)
+		return err;
+	osc &= ~MCP251XFD_REG_OSC_OSCDIS;
+	err = regmap_write(priv->map_reg, MCP251XFD_REG_OSC, osc);
+	if (err)
+		return err;
+
+	mcp251xfd_chip_wait_for_osc_ready(priv, MCP251XFD_REG_OSC_OSCRDY, MCP251XFD_REG_OSC_OSCRDY);
+
+	err = mcp251xfd_register_check_rx_int(priv);
+	if (err)
+		return err;
+
+	err = mcp251xfd_chip_set_normal_mode(priv);
+	if (err) {
+		netdev_err(priv->ndev,
+			   "Failed to exit sleep mode when resuming.\n");
+		return err;
+	}
+
+	return 0;
+}
+
 static const struct dev_pm_ops mcp251xfd_pm_ops = {
 	SET_RUNTIME_PM_OPS(mcp251xfd_runtime_suspend,
 			   mcp251xfd_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(mcp251xfd_suspend,
+				mcp251xfd_resume)
 };
 
 static struct spi_driver mcp251xfd_driver = {
