@@ -1230,10 +1230,19 @@
 			pinmux = <PINMUX_GPIO82__FUNC_GPIO82>;
 			output-high;
 		};
+	};
 
+	can0_default_pins: can0-default-pins {
 		pin-can-standby {
 			pinmux = <PINMUX_GPIO45__FUNC_GPIO45>;
 			output-low;
+		};
+	};
+
+	can0_sleep_pins: can0-sleep-pins {
+		pin-can-standby {
+			pinmux = <PINMUX_GPIO45__FUNC_GPIO45>;
+			output-high;
 		};
 	};
 };
@@ -1758,5 +1767,8 @@
 		interrupts-extended = <&pio 76 IRQ_TYPE_LEVEL_LOW>;
 		vdd-supply = <&can_5v>;
 		xceiver-supply = <&can_5v>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&can0_default_pins>;
+		pinctrl-1 = <&can0_sleep_pins>;
 	};
 };
