@@ -101,9 +101,35 @@
 #define RG_LVDSTX_VPLL_FS_EN		BIT(11)
 #define RG_LVDSTX_VPLL_RST_DLY		(0x3 << 12)
 
+struct mtk_lvds_tx_clk {
+	uint64_t fin;
+	uint64_t fref;
+	uint64_t fvco;
+	uint64_t fpll;
+	uint64_t pixclk;
+	uint32_t rg_lvdstx_pll_prediv;
+	uint32_t rg_lvdstx_pll_sdm_pcw;
+
+	uint32_t rg_lvdstx_vpll_txdiv2;
+	uint32_t rg_lvdstx_vpll_txdiv1;
+	uint32_t rg_lvdstx_vpll_txmuxdiv2;
+	uint32_t rg_lvdstx_pll_postdiv;
+
+	uint32_t htt;
+	uint32_t vtt;
+	uint32_t fps;
+};
+
+struct mtk_lvds_phy_driver_data {
+	int bused_mipi_pad;
+	struct mtk_lvds_tx_clk *clk;
+};
+
 struct mtk_lvds_tx {
 	struct device *dev;
 	void __iomem *regs;
+	void __iomem *mipi_tx_regs;
+	const struct mtk_lvds_phy_driver_data *driver_data;
 };
 
 #endif /* _PHY_MTK_LVDS_H */
