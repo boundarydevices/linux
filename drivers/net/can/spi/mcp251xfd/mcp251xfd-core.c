@@ -18,6 +18,7 @@
 #include <linux/device.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/property.h>
 
@@ -2252,6 +2253,12 @@ static int __maybe_unused mcp251xfd_suspend(struct device *device)
 		return err;
 	}
 
+	err = pinctrl_pm_select_sleep_state(device);
+	if (err) {
+		netdev_info(priv->ndev, "could not select pin sleep state\n");
+		return err;
+	}
+
 	return err;
 }
 
@@ -2264,6 +2271,12 @@ static int __maybe_unused mcp251xfd_resume(struct device *device)
 
 	if (!netif_running(net))
 		return 0;
+
+	err = pinctrl_pm_select_default_state(device);
+	if (err) {
+		netdev_info(priv->ndev, "could not select pin default state\n");
+		return err;
+	}
 
 	/* Set OSCDIS to exit sleep mode */
 	err = regmap_read(priv->map_reg, MCP251XFD_REG_OSC, &osc);
