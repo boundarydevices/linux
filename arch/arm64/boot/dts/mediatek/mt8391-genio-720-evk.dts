@@ -1724,6 +1724,11 @@
 			sound-dai = <&dp_tx>;
 		};
 	};
+
+	dai-link-3 {
+		link-name = "I2SIN1_BE";
+		status = "disabled";
+	};
 };
 
 &gpu {
