@@ -7770,6 +7770,15 @@ int stmmac_suspend(struct device *dev)
 		pinctrl_pm_select_sleep_state(priv->device);
 	}
 
+	if (priv->plat->phy_addr < 0) {
+		dev_warn(&ndev->dev, "Invalid PHY address: %d\n", priv->plat->phy_addr);
+	} else {
+		if (priv->mii->irq[priv->plat->phy_addr] > 0 && !priv->plat->pmt) {
+			enable_irq_wake(priv->mii->irq[priv->plat->phy_addr]);
+			disable_irq(priv->mii->irq[priv->plat->phy_addr]);
+		}
+	}
+
 	mutex_unlock(&priv->lock);
 
 	rtnl_lock();
@@ -7865,6 +7874,15 @@ int stmmac_resume(struct device *dev)
 		/* reset the phy so that it's ready */
 		if (priv->mii)
 			stmmac_mdio_reset(priv->mii);
+	}
+
+	if (priv->plat->phy_addr < 0) {
+		dev_warn(&ndev->dev, "Invalid PHY address: %d\n", priv->plat->phy_addr);
+	} else {
+		if (priv->mii->irq[priv->plat->phy_addr] > 0 && !priv->plat->pmt) {
+			disable_irq_wake(priv->mii->irq[priv->plat->phy_addr]);
+			enable_irq(priv->mii->irq[priv->plat->phy_addr]);
+		}
 	}
 
 	if (!(priv->plat->flags & STMMAC_FLAG_SERDES_UP_AFTER_PHY_LINKUP) &&
