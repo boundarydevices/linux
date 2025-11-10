@@ -828,6 +828,11 @@
 				 <PINMUX_GPIO134__FUNC_GPIO134>;
 			output-high;
 		};
+
+		wol-pins {
+			pinmux = <PINMUX_GPIO136__FUNC_GPIO136>;
+			bias-disable;
+		};
 	};
 
 	eth_sleep_pins: eth-sleep-pins {
@@ -1632,6 +1637,8 @@
 		phy: phy@0{
 			compatible = "ethernet-phy-idc0ff.0421";
 			reg = <0>;
+			interrupt-parent = <&pio>;
+			interrupts = <136 IRQ_TYPE_LEVEL_LOW>;
 		};
 	};
 };
