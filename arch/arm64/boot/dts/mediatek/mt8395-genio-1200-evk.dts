@@ -133,6 +133,13 @@
 		default-brightness-level = <576>;
 	};
 
+	can_clk: can-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "can-clk";
+	};
+
 	edp_panel_fixed_3v3: edp-panel-fixed-3v3 {
 		compatible = "regulator-fixed";
 		regulator-name = "edp_panel_3v3";
@@ -1145,6 +1152,11 @@
 				 <PINMUX_GPIO139__FUNC_SPIM1_MI>;
 			bias-disable;
 		};
+
+		pwr {
+			pinmux = <PINMUX_GPIO64__FUNC_GPIO64>;
+			output-high;
+		};
 	};
 
 	spi2_pins: spi-pins {
@@ -1243,6 +1255,25 @@
 	memory-region = <&scp_mem>;
 	status = "okay";
 	firmware-name = "mediatek/mt8195/scp.img";
+};
+
+&spi1 {
+	pinctrl-0 = <&spi1_pins>;
+	pinctrl-names = "default";
+	mediatek,pad-select = <0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	can0: can@0 {
+		compatible = "microchip,mcp2518fd";
+		reg = <0>;
+		clocks = <&can_clk>;
+		spi-max-frequency = <10000000>;
+		interrupts-extended = <&pio 16 IRQ_TYPE_LEVEL_LOW>;
+		vdd-supply = <&mt6359_vcn33_2_bt_ldo_reg>;
+		xceiver-supply = <&mt6359_vcn33_2_bt_ldo_reg>;
+	};
 };
 
 &spi2 {
