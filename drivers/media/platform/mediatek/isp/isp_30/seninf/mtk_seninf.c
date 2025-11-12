@@ -1302,6 +1302,7 @@ static int mtk_seninf_v4l2_register(struct mtk_seninf *priv)
 	/* Initialize & register subdev. */
 	v4l2_subdev_init(sd, &seninf_subdev_ops);
 	sd->dev = dev;
+	sd->fwnode = dev_fwnode(dev);
 	sd->entity.function = MEDIA_ENT_F_VID_IF_BRIDGE;
 	sd->entity.ops = &seninf_media_ops;
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS
