@@ -3141,7 +3141,6 @@
 			compatible = "mediatek,mt8189-mdp-mutex";
 			reg = <0 0x1f001000 0 0x1000>;
 			clocks = <&mdpsys_config_clk CLK_MDP_MUTEX0>;
-			power-domains = <&scpsys MT8189_POWER_DOMAIN_MDP0>;
 		};
 
 		dma-controller@1f003000 {
