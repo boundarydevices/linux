@@ -141,10 +141,9 @@ static int config_path_clk_ctrl(struct mdp_alg_task *task, u32 pipe, bool clear)
 	int ret, i;
 
 	mutex = task->mdp->mm_subsys[path->mmsys_idx].mdp_mutex[path->mutex_idx];
+
 	if (clear)
 		mtk_mutex_unprepare(mutex);
-	else
-		mtk_mutex_prepare(mutex);
 
 	for (i = 0; i < path->node_cnt; i++) {
 		struct mdp_comp *comp = path->nodes[i].comp;
@@ -154,6 +153,9 @@ static int config_path_clk_ctrl(struct mdp_alg_task *task, u32 pipe, bool clear)
 		else
 			mdp_comp_clock_on(dev, comp);
 	}
+
+	if (!clear)
+		mtk_mutex_prepare(mutex);
 
 	return 0;
 }
