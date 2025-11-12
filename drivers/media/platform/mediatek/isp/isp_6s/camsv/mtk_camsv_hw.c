@@ -28,28 +28,34 @@ static const struct mtk_cam_conf camsv_conf = {
 	.enableFH = false, /* Frame Header disabled */
 };
 
-static void fmt_to_sparams(u32 mbus_fmt, struct mtk_cam_sparams *sparams)
+static void fmt_to_sparams(struct mtk_cam_format_info *fmtinfo, struct mtk_cam_sparams *sparams)
 {
-	switch (mbus_fmt) {
+	switch (fmtinfo->code) {
 	case MEDIA_BUS_FMT_SBGGR12_1X12:
 	case MEDIA_BUS_FMT_SGBRG12_1X12:
 	case MEDIA_BUS_FMT_SGRBG12_1X12:
 	case MEDIA_BUS_FMT_SRGGB12_1X12:
 		sparams->w_factor = 1;
-		sparams->module_en_pak = 0x8; /* Select the source from TGB or PAK to FBC */
-		sparams->fmt_sel = 0x2; /* TG format select */
-		sparams->pak = 0x22; /* pake_mode & pak_dbl_mode */
-		sparams->imgo_stride = 0x0; /* stride setting */
+		/* Select the source from TGB or PAK to FBC */
+		sparams->module_en_pak = (fmtinfo->packed) ? 0x4 : 0x8;
+		/* TG format select */
+		sparams->fmt_sel = 0x2;
+		/* pake_mode & pak_dbl_mode */
+		sparams->pak = (fmtinfo->packed) ? 0x2a : 0x22;
+		/* stride setting */
+		sparams->imgo_stride = 0x0;
+		sparams->pak_con = (fmtinfo->packed) ? 0xe0000 : 0x0;
 		break;
 	case MEDIA_BUS_FMT_SBGGR10_1X10:
 	case MEDIA_BUS_FMT_SGBRG10_1X10:
 	case MEDIA_BUS_FMT_SGRBG10_1X10:
 	case MEDIA_BUS_FMT_SRGGB10_1X10:
 		sparams->w_factor = 1;
-		sparams->module_en_pak = 0x8;
+		sparams->module_en_pak = (fmtinfo->packed) ? 0x4 : 0x8;
 		sparams->fmt_sel = 0x1;
-		sparams->pak = 0x21;
+		sparams->pak = (fmtinfo->packed) ? 0x29 : 0x21;
 		sparams->imgo_stride = 0x0;
+		sparams->pak_con = (fmtinfo->packed) ? 0xe0000 : 0x0;
 		break;
 	case MEDIA_BUS_FMT_SBGGR8_1X8:
 	case MEDIA_BUS_FMT_SGBRG8_1X8:
@@ -60,6 +66,7 @@ static void fmt_to_sparams(u32 mbus_fmt, struct mtk_cam_sparams *sparams)
 		sparams->fmt_sel = 0x0;
 		sparams->pak = 0x20;
 		sparams->imgo_stride = 0x0;
+		sparams->pak_con = 0x0;
 		break;
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 	case MEDIA_BUS_FMT_VYUY8_1X16:
@@ -70,6 +77,7 @@ static void fmt_to_sparams(u32 mbus_fmt, struct mtk_cam_sparams *sparams)
 		sparams->fmt_sel = 0x3;
 		sparams->pak = 0x0;
 		sparams->imgo_stride = 0x08010000;
+		sparams->pak_con = 0x0;
 		break;
 	default:
 		break;
@@ -84,6 +92,21 @@ static u32 mtk_camsv_read(struct mtk_cam_dev *priv, u32 reg)
 static void mtk_camsv_write(struct mtk_cam_dev *priv, u32 reg, u32 value)
 {
 	writel(value, priv->regs + reg);
+}
+
+static unsigned char mtk_camsv_get_pixel_mode(struct mtk_cam_dev *cam_dev)
+{
+	u32 tg_sen_mode = cam_dev->conf->tg_sen_mode;
+
+	/*
+	 * CamSV {tg_sen_mode[13], tg_sen_mode[1]}
+	 *  00: 1 pix mode
+	 *  01: 2 pix mode
+	 *  10: 4 pix mode
+	 *  11: 8 pix mode
+	 */
+	return ((!!(tg_sen_mode & CAMSV_TG_SEN_MODE_DBL_DATA_BUS1)) << 1) |
+		(!!(tg_sen_mode & CAMSV_TG_SEN_MODE_DBL_DATA_BUS));
 }
 
 static void mtk_camsv_update_buffers_add(struct mtk_cam_dev *cam_dev,
@@ -138,8 +161,7 @@ static void mtk_camsv_cmos_vf_hw_disable(struct mtk_cam_dev *cam_dev, bool pak_e
 			     ~CAMSV_TG_VF_CON_VFDATA_EN);
 }
 
-static void mtk_camsv_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h, u32 bpl,
-		     u32 mbus_fmt)
+static void mtk_camsv_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h, u32 bpl)
 {
 	const struct mtk_cam_conf *conf = cam_dev->conf;
 	u32 int_en = INT_ST_MASK_CAMSV;
@@ -149,7 +171,7 @@ static void mtk_camsv_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h, u32 bpl,
 	int ret;
 	unsigned long flags = 0;
 
-	fmt_to_sparams(mbus_fmt, &sparams);
+	fmt_to_sparams(cam_dev->vdev.fmtinfo, &sparams);
 
 	dev_info(cam_dev->dev, "%s power on camsv\n", __func__);
 	if (pm_runtime_get_sync(cam_dev->dev) < 0) {
@@ -186,6 +208,7 @@ static void mtk_camsv_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h, u32 bpl,
 	mtk_camsv_write(cam_dev, CAMSV_MODULE_EN, conf->module_en | sparams.module_en_pak);
 	mtk_camsv_write(cam_dev, CAMSV_FMT_SEL, sparams.fmt_sel);
 	mtk_camsv_write(cam_dev, CAMSV_PAK, sparams.pak);
+	mtk_camsv_write(cam_dev, CAMSV_PAK_CON, sparams.pak_con);
 
 	/* Disable frame header since the default value on different chips varies */
 	mtk_camsv_write(cam_dev, CAMSV_DMA_FH_EN, 0x0U);
@@ -354,7 +377,7 @@ static int mtk_camsv_runtime_resume(struct device *dev)
 
 	if (vb2_is_streaming(vbq)) {
 		mtk_camsv_setup(cam_dev, fmt->width, fmt->height,
-				fmt->plane_fmt[0].bytesperline, vdev->fmtinfo->code);
+				fmt->plane_fmt[0].bytesperline);
 
 		spin_lock_irqsave(&cam_dev->irqlock, flags);
 		if (cam_dev->buf_curr) {
@@ -400,6 +423,7 @@ static struct mtk_cam_hw_functions mtk_camsv_hw_functions = {
 	.mtk_cam_update_buffers_add = mtk_camsv_update_buffers_add,
 	.mtk_cam_cmos_vf_hw_enable = mtk_camsv_cmos_vf_hw_enable,
 	.mtk_cam_cmos_vf_hw_disable = mtk_camsv_cmos_vf_hw_disable,
+	.mtk_cam_get_pixel_mode = mtk_camsv_get_pixel_mode,
 };
 
 static int mtk_camsv_probe(struct platform_device *pdev)

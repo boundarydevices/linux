@@ -36,45 +36,45 @@ to_mtk_cam_dev_buffer(struct vb2_buffer *buf)
 
 static const struct mtk_cam_format_info mtk_cam_format_info[] = {
 	{
-		.fourcc = V4L2_PIX_FMT_SBGGR12,
+		.fourcc = V4L2_PIX_FMT_MTISP_SBGGR12,
 		.code = MEDIA_BUS_FMT_SBGGR12_1X12,
-		.packed = false,
-		.bpp = 16,
+		.packed = true,
+		.bpp = 12,
 	}, {
-		.fourcc = V4L2_PIX_FMT_SGBRG12,
+		.fourcc = V4L2_PIX_FMT_MTISP_SGBRG12,
 		.code = MEDIA_BUS_FMT_SGBRG12_1X12,
-		.packed = false,
-		.bpp = 16,
+		.packed = true,
+		.bpp = 12,
 	}, {
-		.fourcc = V4L2_PIX_FMT_SGRBG12,
+		.fourcc = V4L2_PIX_FMT_MTISP_SGRBG12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
-		.packed = false,
-		.bpp = 16,
+		.packed = true,
+		.bpp = 12,
 	}, {
-		.fourcc = V4L2_PIX_FMT_SRGGB12,
+		.fourcc = V4L2_PIX_FMT_MTISP_SRGGB12,
 		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
-		.packed = false,
-		.bpp = 16,
+		.packed = true,
+		.bpp = 12,
 	}, {
-		.fourcc = V4L2_PIX_FMT_SBGGR10,
+		.fourcc = V4L2_PIX_FMT_MTISP_SBGGR10,
 		.code = MEDIA_BUS_FMT_SBGGR10_1X10,
-		.packed = false,
-		.bpp = 16,
+		.packed = true,
+		.bpp = 10,
 	}, {
-		.fourcc = V4L2_PIX_FMT_SGBRG10,
+		.fourcc = V4L2_PIX_FMT_MTISP_SGBRG10,
 		.code = MEDIA_BUS_FMT_SGBRG10_1X10,
-		.packed = false,
-		.bpp = 16,
+		.packed = true,
+		.bpp = 10,
 	}, {
-		.fourcc = V4L2_PIX_FMT_SGRBG10,
+		.fourcc = V4L2_PIX_FMT_MTISP_SGRBG10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
-		.packed = false,
-		.bpp = 16,
+		.packed = true,
+		.bpp = 10,
 	}, {
-		.fourcc = V4L2_PIX_FMT_SRGGB10,
+		.fourcc = V4L2_PIX_FMT_MTISP_SRGGB10,
 		.code = MEDIA_BUS_FMT_SRGGB10_1X10,
-		.packed = false,
-		.bpp = 16,
+		.packed = true,
+		.bpp = 10,
 	}, {
 		.fourcc = V4L2_PIX_FMT_SBGGR8,
 		.code = MEDIA_BUS_FMT_SBGGR8_1X8,
@@ -164,12 +164,14 @@ static bool mtk_cam_dev_find_fmt(const struct mtk_cam_vdev_desc *desc,
 }
 
 static void calc_bpl_size_pix_mp(const struct mtk_cam_format_info *fmtinfo,
-				 struct v4l2_pix_format_mplane *pix_mp)
+				 struct v4l2_pix_format_mplane *pix_mp,
+				 unsigned char camsv_pix_mode)
 {
 	unsigned int bpl;
 	unsigned int i;
 
-	bpl = ALIGN(DIV_ROUND_UP(pix_mp->width * fmtinfo->bpp, 8), 2);
+	bpl = ALIGN(DIV_ROUND_UP(pix_mp->width * fmtinfo->bpp, 8),
+		    2 << camsv_pix_mode);
 
 	for (i = 0; i < pix_mp->num_planes; ++i) {
 		pix_mp->plane_fmt[i].bytesperline = bpl;
@@ -198,7 +200,8 @@ static int mtk_cam_dev_load_default_fmt(struct mtk_cam_dev *cam)
 		dev_err(cam->dev, "invalid format 0x%x\n", fmt->pixelformat);
 		return PTR_ERR(vdev->fmtinfo);
 	}
-	calc_bpl_size_pix_mp(vdev->fmtinfo, fmt);
+	calc_bpl_size_pix_mp(vdev->fmtinfo, fmt,
+			     (*cam->hw_functions->mtk_cam_get_pixel_mode)(cam));
 
 	return 0;
 }
@@ -367,7 +370,7 @@ static int mtk_cam_vb2_start_streaming(struct vb2_queue *vq,
 	}
 
 	(*cam->hw_functions->mtk_cam_setup)(cam, fmt->width, fmt->height,
-			fmt->plane_fmt[0].bytesperline, vdev->fmtinfo->code);
+			fmt->plane_fmt[0].bytesperline);
 
 	/* update first buffer address */
 	/* added the buffer into the tracking list */
@@ -533,7 +536,8 @@ static int mtk_cam_vidioc_try_fmt(struct file *file, void *fh,
 		return PTR_ERR(fmtinfo);
 	}
 
-	calc_bpl_size_pix_mp(fmtinfo, pix_mp);
+	calc_bpl_size_pix_mp(fmtinfo, pix_mp,
+			     (*cam->hw_functions->mtk_cam_get_pixel_mode)(cam));
 
 	/* Constant format fields */
 	pix_mp->colorspace = V4L2_COLORSPACE_SRGB;
@@ -627,14 +631,14 @@ static const struct v4l2_file_operations mtk_cam_v4l2_fops = {
 
 static const u32 stream_out_fmts[] = {
 	/* The 1st entry is the default image format */
-	V4L2_PIX_FMT_SGRBG12,
-	V4L2_PIX_FMT_SBGGR12,
-	V4L2_PIX_FMT_SGBRG12,
-	V4L2_PIX_FMT_SRGGB12,
-	V4L2_PIX_FMT_SGRBG10,
-	V4L2_PIX_FMT_SBGGR10,
-	V4L2_PIX_FMT_SGBRG10,
-	V4L2_PIX_FMT_SRGGB10,
+	V4L2_PIX_FMT_MTISP_SGRBG12,
+	V4L2_PIX_FMT_MTISP_SBGGR12,
+	V4L2_PIX_FMT_MTISP_SGBRG12,
+	V4L2_PIX_FMT_MTISP_SRGGB12,
+	V4L2_PIX_FMT_MTISP_SGRBG10,
+	V4L2_PIX_FMT_MTISP_SBGGR10,
+	V4L2_PIX_FMT_MTISP_SGBRG10,
+	V4L2_PIX_FMT_MTISP_SRGGB10,
 	V4L2_PIX_FMT_SBGGR8,
 	V4L2_PIX_FMT_SGBRG8,
 	V4L2_PIX_FMT_SGRBG8,

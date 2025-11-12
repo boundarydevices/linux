@@ -55,6 +55,7 @@ struct mtk_cam_sparams {
 	u32 fmt_sel;
 	u32 pak;
 	u32 imgo_stride;
+	u32 pak_con;
 };
 
 struct mtk_cam_irq_info {
@@ -185,7 +186,7 @@ struct mtk_cam_conf {
 
 struct mtk_cam_hw_functions {
 	void (*mtk_cam_setup)(struct mtk_cam_dev *cam_dev, u32 width,
-			      u32 height, u32 bpl, u32 mbus_fmt);
+			      u32 height, u32 bpl);
 	void (*mtk_cam_reset)(struct mtk_cam_dev *cam_dev);
 	void (*mtk_cam_update_buffers_add)(struct mtk_cam_dev *cam_dev,
 					   struct mtk_cam_dev_buffer *buf);
@@ -193,6 +194,7 @@ struct mtk_cam_hw_functions {
 					  bool pak_en);
 	void (*mtk_cam_cmos_vf_hw_disable)(struct mtk_cam_dev *cam_dev,
 					   bool pak_en);
+	unsigned char (*mtk_cam_get_pixel_mode)(struct mtk_cam_dev *cam_dev);
 };
 
 int mtk_cam_dev_init(struct mtk_cam_dev *cam_dev);

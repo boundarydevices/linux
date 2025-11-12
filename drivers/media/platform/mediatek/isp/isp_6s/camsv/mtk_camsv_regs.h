@@ -13,6 +13,7 @@
 #define CAMSV_FMT_SEL				0x0014
 #define CAMSV_SW_CTL				0x0020
 #define CAMSV_PAK				0x004c
+#define CAMSV_PAK_CON				0x02d0
 
 #define CAMSV_TG_SEN_MODE			0x0130
 #define CAMSV_TG_VF_CON				0x0134
@@ -63,6 +64,10 @@
 #define CAMSV_IMGO_RST_TRIG			BIT(0)
 #define CAMSV_IMGO_RST_ST			BIT(1)
 #define CAMSV_SW_RST				BIT(2)
+
+/* CAMSV_TG_SEN_MODE bits */
+#define CAMSV_TG_SEN_MODE_DBL_DATA_BUS		BIT(1)
+#define CAMSV_TG_SEN_MODE_DBL_DATA_BUS1		BIT(13)
 
 /* IRQ BITS */
 #define CAMSV_IRQ_VS1				BIT(0)
