@@ -2729,7 +2729,6 @@
 			compatible = "mediatek,mt8189-seninf-core";
 			reg = <0 0x1a004000 0 0x8000>;
 			reg-names = "base";
-			interrupts = <GIC_SPI 316 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&camsys_main_clk CLK_CAM_M_SENINF>,
 				 <&topckgen_clk CLK_TOP_SENINF_SEL>,
 				 <&topckgen_clk CLK_TOP_SENINF1_SEL>,
