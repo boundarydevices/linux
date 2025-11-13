@@ -597,19 +597,18 @@ static int seninf_core_probe(struct platform_device *pdev)
 		return PTR_ERR(core->reg_if);
 
 	spin_lock_init(&core->spinlock_irq);
-	irq = platform_get_irq(pdev, 0);
-	if (!irq) {
-		dev_err(dev, "failed to get irq\n");
-		return -ENODEV;
+	irq = platform_get_irq_optional(pdev, 0);
+	if (irq < 0) {
+		dev_dbg(dev, "No irq resource\n");
+	} else {
+		ret = devm_request_irq(dev, irq, mtk_irq_seninf, 0,
+				       dev_name(dev), core);
+		if (ret) {
+			dev_err(dev, "failed to request irq=%d\n", irq);
+			return ret;
+		}
+		dev_dbg(dev, "registered irq=%d\n", irq);
 	}
-
-	ret = devm_request_irq(dev, irq, mtk_irq_seninf, 0,
-			       dev_name(dev), core);
-	if (ret) {
-		dev_err(dev, "failed to request irq=%d\n", irq);
-		return ret;
-	}
-	dev_dbg(dev, "registered irq=%d\n", irq);
 
 	for (i = 0; i < CLK_MAXCNT; i++) {
 		core->clk[i] = devm_clk_get(dev, clk_names[i]);
