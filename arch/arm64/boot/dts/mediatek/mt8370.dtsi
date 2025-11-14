@@ -1746,6 +1746,21 @@
 			status = "disabled";
 		};
 
+		pwm: pwm@10048000 {
+			compatible = "mediatek,mt8188-pwm";
+			reg = <0 0x10048000 0 0x1000>;
+			#pwm-cells = <2>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_PWM_HCLK>,
+				 <&infracfg_ao CLK_INFRA_AO_PWM>,
+				 <&infracfg_ao CLK_INFRA_AO_PWM1>,
+				 <&infracfg_ao CLK_INFRA_AO_PWM2>,
+				 <&infracfg_ao CLK_INFRA_AO_PWM3>,
+				 <&infracfg_ao CLK_INFRA_AO_PWM4>;
+			clock-names = "top", "main", "pwm1", "pwm2", "pwm3",
+				      "pwm4";
+			status = "disabled";
+		};
+
 		spi1: spi@11010000 {
 			compatible = "mediatek,mt8188-spi-ipm", "mediatek,spi-ipm";
 			#address-cells = <1>;
