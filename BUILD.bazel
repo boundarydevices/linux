@@ -1486,6 +1486,7 @@ kernel_build(
         "mediatek/mt8390-tungsten-smarc.dtb",
         "mediatek/mt83x0-tungsten-smarc-android.dtb",
         "mediatek/mt83x0-tungsten-smarc-android-dsi-tm070jdhg30.dtb",
+        "mediatek/mt8390-tungsten-smarc-hmi.dtb",
     ],
     outs = [
         "arch/arm64/boot/dts/mediatek/mt8365-evk.dtb",
@@ -1500,6 +1501,7 @@ kernel_build(
         "arch/arm64/boot/dts/mediatek/mt8390-tungsten-smarc.dtb",
         "arch/arm64/boot/dts/mediatek/mt83x0-tungsten-smarc-android.dtb",
         "arch/arm64/boot/dts/mediatek/mt83x0-tungsten-smarc-android-dsi-tm070jdhg30.dtb",
+        "arch/arm64/boot/dts/mediatek/mt8390-tungsten-smarc-hmi.dtb",
         "modules.builtin",
         "modules.builtin.modinfo",
     ],
