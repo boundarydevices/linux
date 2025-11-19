@@ -16,6 +16,7 @@
 #include <linux/workqueue.h>
 #include <linux/sched/clock.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/mailbox_controller.h>
 #include <linux/mailbox/mtk-cmdq-mailbox.h>
 #include <linux/of.h>
@@ -120,14 +121,10 @@ static inline u32 cmdq_reg_revert_addr(u32 addr, struct gce_plat *pdata)
 
 static void cmdq_sw_ddr_enable(struct cmdq *cmdq, bool enable)
 {
-	WARN_ON(clk_bulk_enable(cmdq->pdata->gce_num, cmdq->clocks));
-
 	if (enable)
 		writel(GCE_DDR_EN | GCE_CTRL_BY_SW, cmdq->base + GCE_GCTL_VALUE);
 	else
 		writel(GCE_CTRL_BY_SW, cmdq->base + GCE_GCTL_VALUE);
-
-	clk_bulk_disable(cmdq->pdata->gce_num, cmdq->clocks);
 }
 
 u8 cmdq_get_shift_pa(struct mbox_chan *chan)
@@ -559,6 +556,15 @@ static irqreturn_t cmdq_irq_handler(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
+static int cmdq_runtime_suspend(struct device *dev)
+{
+	struct cmdq *cmdq = dev_get_drvdata(dev);
+
+	clk_bulk_disable_unprepare(cmdq->pdata->gce_num, cmdq->clocks);
+	pm_runtime_put_sync(dev);
+	return 0;
+}
+
 static int cmdq_suspend(struct device *dev)
 {
 	struct cmdq *cmdq = dev_get_drvdata(dev);
@@ -583,6 +589,7 @@ static int cmdq_suspend(struct device *dev)
 		cmdq_sw_ddr_enable(cmdq, false);
 
 	clk_bulk_disable_unprepare(cmdq->pdata->gce_num, cmdq->clocks);
+	pm_runtime_put_sync(dev);
 
 	return 0;
 }
@@ -591,6 +598,7 @@ static int cmdq_resume(struct device *dev)
 {
 	struct cmdq *cmdq = dev_get_drvdata(dev);
 
+	pm_runtime_get_sync(dev);
 	WARN_ON(clk_bulk_prepare_enable(cmdq->pdata->gce_num, cmdq->clocks));
 	cmdq->suspended = false;
 
@@ -607,7 +615,12 @@ static int cmdq_remove(struct platform_device *pdev)
 	if (cmdq->pdata->sw_ddr_en)
 		cmdq_sw_ddr_enable(cmdq, false);
 
+	if (!IS_ENABLED(CONFIG_PM))
+		cmdq_runtime_suspend(&pdev->dev);
+
 	clk_bulk_disable_unprepare(cmdq->pdata->gce_num, cmdq->clocks);
+	pm_runtime_disable(&pdev->dev);
+
 	return 0;
 }
 
@@ -895,17 +908,13 @@ static int cmdq_probe(struct platform_device *pdev)
 		INIT_WORK(&cmdq->thread[i].timeout_work, cmdq_thread_handle_timeout_work);
 	}
 
-	err = devm_mbox_controller_register(dev, &cmdq->mbox);
-	if (err < 0) {
-		dev_err(dev, "failed to register mailbox: %d\n", err);
-		return err;
-	}
-
 	cmdq->timeout_wq = create_singlethread_workqueue("cmdq_timeout_handler");
 
 	platform_set_drvdata(pdev, cmdq);
 
-	WARN_ON(clk_bulk_prepare_enable(cmdq->pdata->gce_num, cmdq->clocks));
+	pm_runtime_enable(dev);
+	pm_runtime_get_sync(dev);
+
 	spin_lock_init(&cmdq->event_lock);
 
 	cmdq_init(cmdq);
@@ -923,12 +932,13 @@ static int cmdq_probe(struct platform_device *pdev)
 		return err;
 	}
 
+	WARN_ON(clk_bulk_prepare_enable(cmdq->pdata->gce_num, cmdq->clocks));
+
 	return 0;
 }
 
 static const struct dev_pm_ops cmdq_pm_ops = {
-	.suspend = cmdq_suspend,
-	.resume = cmdq_resume,
+	SET_SYSTEM_SLEEP_PM_OPS(cmdq_suspend, cmdq_resume)
 };
 
 static const struct gce_plat gce_plat_v2 = {
