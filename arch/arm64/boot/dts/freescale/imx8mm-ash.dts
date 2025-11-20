@@ -14,7 +14,7 @@
 #include "../panel-m101nwwb.dtsi"
 
 / {
-	model = "Boundary Devices i.MX8MMini AltoSHAMM";
+	model = "Boundary Devices i.MX8MMini AltoSHAAM";
 	compatible = "boundary,imx8mm-ash", "fsl,imx8mm";
 
 	aliases {
