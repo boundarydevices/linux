@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2025 Ezurio LLC
+ */
+/dts-v1/;
+#include "mt8188.dtsi"
+#include "mt83x0-tungsten-smarc.dtsi"
+
+/ {
+	model = "Ezurio Tungsten700 SMARC (MT8390)";
+	compatible = "ezurio,mt8390-tungsten-smarc", "mediatek,mt8390",
+		     "mediatek,mt8188";
+};
+
+/delete-node/ &i2c_mux_smarc_gp_usbc;
+
+&ssusb0 {
+    dr_mode = "otg";
+    usb-role-switch;
+    role-switch-default-mode = "peripheral";
+
+    /delete-node/ connector;
+
+    ports {
+
+		port@0 {
+			reg = <0>;
+			usb_hs_ep: endpoint {
+				remote-endpoint = <&usb_hs_ep>;
+			};
+		};
+
+        /delete-node/ port@1;
+    };
+};
