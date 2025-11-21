@@ -60,6 +60,8 @@
 		clocks = <&csi0_mclk>;
 		clock-names = "xclk";
 		reset-gpios = <&gpio2 19 GPIO_ACTIVE_HIGH>;
+		orientation = <2>;
+		rotation = <0>;
 		status = "okay";
 
 		port {
