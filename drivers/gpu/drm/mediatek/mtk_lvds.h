@@ -185,6 +185,8 @@
 
 #define LVDS_MAX_LANE_CNT	8
 
+extern void mtk_lvds_tx_set_timing(struct phy *phy, uint32_t htt, uint32_t vtt, uint32_t fps);
+
 struct mtk_lvds {
 	struct mtk_ddp_comp ddp_comp;
 	struct drm_bridge bridge;

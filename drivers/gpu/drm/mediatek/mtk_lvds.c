@@ -105,6 +105,9 @@ static void mtk_lvds_poweron(struct mtk_lvds *lvds)
 		goto err_disable_pix_gate_clk;
 	}
 
+	mtk_lvds_tx_set_timing(lvds->phy, lvds->mode.htotal, lvds->mode.vtotal,
+		drm_mode_vrefresh(&lvds->mode));
+
 	ret = phy_power_on(lvds->phy);
 	if (ret != 0) {
 		dev_err(lvds->dev, "Failed to power phy: %d\n",
@@ -354,21 +357,21 @@ static int mtk_drm_lvds_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	lvds->pix_clk_gate = devm_clk_get(dev, "pixel");
+	lvds->pix_clk_gate = devm_clk_get_optional(dev, "pixel");
 	if (IS_ERR(lvds->pix_clk_gate)) {
 		ret = PTR_ERR(lvds->pix_clk_gate);
 		dev_err(dev, "Failed to get pixel clock gate: %d\n", ret);
 		return ret;
 	}
 
-	lvds->clkts_clk_gate = devm_clk_get(dev, "clkts");
+	lvds->clkts_clk_gate = devm_clk_get_optional(dev, "clkts");
 	if (IS_ERR(lvds->clkts_clk_gate)) {
 		ret = PTR_ERR(lvds->clkts_clk_gate);
 		dev_err(dev, "Failed to get clkts clock gate: %d\n", ret);
 		return ret;
 	}
 
-	lvds->clkdig = devm_clk_get(dev, "clkdig");
+	lvds->clkdig = devm_clk_get_optional(dev, "clkdig");
 	if (IS_ERR(lvds->clkdig)) {
 		ret = PTR_ERR(lvds->clkdig);
 		dev_err(dev, "Failed to get clkdig clock gate: %d\n", ret);
@@ -409,6 +412,7 @@ static int mtk_drm_lvds_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id mtk_drm_lvds_of_ids[] = {
+	{ .compatible = "mediatek,mt8189-lvds", },
 	{ .compatible = "mediatek,mt8365-lvds", },
 	{}
 };
