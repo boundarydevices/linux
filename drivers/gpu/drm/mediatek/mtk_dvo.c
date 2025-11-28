@@ -86,6 +86,11 @@ struct mtk_dvo_gs_info {
 	u32 dvo_buf_sodi_low;
 };
 
+enum DVO_TYPE {
+	MTK_DVO_TYPE_EDP = 0,
+	MTK_DVO_TYPE_LVDS = 1,
+};
+
 struct mtk_dvo {
 	struct mtk_ddp_comp ddp_comp;
 	struct drm_encoder encoder;
@@ -99,7 +104,10 @@ struct mtk_dvo {
 	struct clk *pixel_clk;
 	struct clk *tvd_clk;
 	struct clk *dvo_clk;
+	struct clk *dvo_parent_clk;
 	struct clk *hf_fdvo_clk;
+	struct clk *sysclk;
+	struct clk *sysclk_cts;
 	struct clk *pclk_src[5];
 	int irq;
 	struct drm_display_mode mode;
@@ -190,6 +198,7 @@ struct mtk_dvo_conf {
 	bool edge_cfg_in_mmsys;
 	bool has_commit;
 	bool is_dp;
+	enum DVO_TYPE type;
 };
 
 static struct mtk_dvo_gs_info mtk_dvo_gs[MTK_DVO_GSL_MAX] = {
@@ -342,9 +351,18 @@ static void mtk_dvo_power_off(struct mtk_dvo *dvo)
 
 	mtk_dvo_disable(dvo);
 
-	clk_disable_unprepare(dvo->engine_clk);
-	clk_disable_unprepare(dvo->tvd_clk);
-	clk_disable_unprepare(dvo->hf_fdvo_clk);
+	if (dvo->conf->type == MTK_DVO_TYPE_LVDS) {
+		clk_disable_unprepare(dvo->sysclk);
+		clk_disable_unprepare(dvo->engine_clk);
+		clk_disable_unprepare(dvo->sysclk_cts);
+		clk_disable_unprepare(dvo->hf_fdvo_clk);
+	} else {
+		clk_disable_unprepare(dvo->pixel_clk);
+		clk_disable_unprepare(dvo->dvo_clk);
+		clk_disable_unprepare(dvo->engine_clk);
+		clk_disable_unprepare(dvo->tvd_clk);
+		clk_disable_unprepare(dvo->hf_fdvo_clk);
+	}
 }
 
 static int mtk_dvo_power_on(struct mtk_dvo *dvo)
@@ -354,38 +372,82 @@ static int mtk_dvo_power_on(struct mtk_dvo *dvo)
 	if (++dvo->refcount != 1)
 		return 0;
 
-	ret = clk_prepare_enable(dvo->hf_fdvo_clk);
-	if (ret) {
-		dev_err(dvo->dev, "Failed to enable hf_fdvo_clk clock: %d\n", ret);
-		goto err_refcount;
+	if (dvo->conf->type == MTK_DVO_TYPE_LVDS) {
+		ret = clk_prepare_enable(dvo->hf_fdvo_clk);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable hf_fdvo_clk lvds clock: %d\n", ret);
+			goto err_refcount;
+		}
+
+		ret = clk_prepare_enable(dvo->sysclk_cts);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable sysclk_cts lvds clock: %d\n", ret);
+			goto err_hf_fdvo_lvds;
+		}
+
+		ret = clk_prepare_enable(dvo->engine_clk);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable engine lvds clock: %d\n", ret);
+			goto err_sysck_cts_lvds;
+		}
+
+		ret = clk_prepare_enable(dvo->sysclk);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable sysclk lvds clock: %d\n", ret);
+			goto err_sysck_lvds;
+		}
+
+		return 0;
+
+err_sysck_lvds:
+		clk_disable_unprepare(dvo->engine_clk);
+err_sysck_cts_lvds:
+		clk_disable_unprepare(dvo->sysclk_cts);
+err_hf_fdvo_lvds:
+		clk_disable_unprepare(dvo->hf_fdvo_clk);
+
+	} else {
+		ret = clk_prepare_enable(dvo->hf_fdvo_clk);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable hf_fdvo_clk clock: %d\n", ret);
+			goto err_refcount;
+		}
+
+		ret = clk_prepare_enable(dvo->tvd_clk);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable tvd_clk clock: %d\n", ret);
+			goto err_hf_fdvo;
+		}
+
+		ret = clk_prepare_enable(dvo->engine_clk);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable engine clock: %d\n", ret);
+			goto err_tvd_clk;
+		}
+
+		ret = clk_prepare_enable(dvo->dvo_clk);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable engine clock: %d\n", ret);
+			goto err_engine_clk;
+		}
+
+		ret = clk_prepare_enable(dvo->pixel_clk);
+		if (ret) {
+			dev_err(dvo->dev, "Failed to enable engine clock: %d\n", ret);
+			goto err_dvo_clk;
+		}
+
+		return 0;
+
+err_dvo_clk:
+		clk_disable_unprepare(dvo->dvo_clk);
+err_engine_clk:
+		clk_disable_unprepare(dvo->engine_clk);
+err_tvd_clk:
+		clk_disable_unprepare(dvo->tvd_clk);
+err_hf_fdvo:
+		clk_disable_unprepare(dvo->hf_fdvo_clk);
 	}
-
-	ret = clk_prepare_enable(dvo->tvd_clk);
-	if (ret) {
-		dev_err(dvo->dev, "Failed to enable tvd_clk clock: %d\n", ret);
-		goto err_refcount;
-	}
-
-	ret = clk_prepare_enable(dvo->engine_clk);
-	if (ret) {
-		dev_err(dvo->dev, "Failed to enable engine clock: %d\n", ret);
-		goto err_refcount;
-	}
-
-	ret = clk_prepare_enable(dvo->dvo_clk);
-	if (ret) {
-		dev_err(dvo->dev, "Failed to enable engine clock: %d\n", ret);
-		goto err_refcount;
-	}
-
-	ret = clk_prepare_enable(dvo->pixel_clk);
-	if (ret) {
-		dev_err(dvo->dev, "Failed to enable engine clock: %d\n", ret);
-		goto err_refcount;
-	}
-
-	return 0;
-
 err_refcount:
 	dvo->refcount--;
 	return ret;
@@ -405,20 +467,29 @@ static int mtk_dvo_set_display_mode(struct mtk_dvo *dvo,
 	drm_display_mode_to_videomode(mode, &vm);
 	pll_rate = vm.pixelclock * factor;
 
-	dev_dbg(dvo->dev, "Want PLL %lu Hz, pixel clock %lu Hz\n",
-			   pll_rate, vm.pixelclock);
+	if (dvo->conf->type == MTK_DVO_TYPE_LVDS) {
+		pll_rate = vm.pixelclock * factor;
 
-	clk_set_rate(dvo->tvd_clk, pll_rate);
-	pll_rate = clk_get_rate(dvo->tvd_clk);
+		dev_dbg(dvo->dev, "[LVDS] Want PLL %lu Hz, pixel clock %lu Hz\n",
+			pll_rate, vm.pixelclock);
+		dev_dbg(dvo->dev,
+			"[LVDS] vm.hactive=%d vm.hfront_porch=%d vm.hback_porch=%d vm.hsync_len=%d\n",
+			vm.hactive, vm.hfront_porch, vm.hback_porch, vm.hsync_len);
+	} else {
+		dev_dbg(dvo->dev, "Want PLL %lu Hz, pixel clock %lu Hz\n", pll_rate, vm.pixelclock);
 
-	/*
-	 * Depending on the IP version, we may output a different amount of
-	 * pixels for each iteration: divide the clock by this number and
-	 * adjust the display porches accordingly.
-	 */
-	vm.pixelclock = pll_rate / factor;
-	vm.pixelclock /= dvo->conf->pixels_per_iter;
-	clk_set_rate(dvo->pixel_clk, vm.pixelclock);
+		clk_set_rate(dvo->tvd_clk, pll_rate);
+		pll_rate = clk_get_rate(dvo->tvd_clk);
+
+		/*
+		 * Depending on the IP version, we may output a different amount of
+		 * pixels for each iteration: divide the clock by this number and
+		 * adjust the display porches accordingly.
+		 */
+		vm.pixelclock = pll_rate / factor;
+		vm.pixelclock /= dvo->conf->pixels_per_iter;
+		clk_set_rate(dvo->pixel_clk, vm.pixelclock);
+	}
 
 	vm.pixelclock = clk_get_rate(dvo->pixel_clk);
 
@@ -648,6 +719,16 @@ int mtk_dvo_encoder_index(struct device *dev)
 	return encoder_index;
 }
 
+bool mtk_dvo_check_output_to_lvds(struct device *dev)
+{
+	struct mtk_dvo *dvo = dev_get_drvdata(dev);
+
+	if (dvo->conf->type == MTK_DVO_TYPE_LVDS)
+		return true;
+	else
+		return false;
+}
+
 static int mtk_dvo_bind(struct device *dev, struct device *master, void *data)
 {
 	struct mtk_dvo *dvo = dev_get_drvdata(dev);
@@ -656,8 +737,12 @@ static int mtk_dvo_bind(struct device *dev, struct device *master, void *data)
 	int ret;
 
 	dvo->mmsys_dev = priv->mmsys_dev;
-	ret = drm_simple_encoder_init(drm_dev, &dvo->encoder,
-				      DRM_MODE_ENCODER_TMDS);
+	if (dvo->conf->type == MTK_DVO_TYPE_LVDS)
+		ret = drm_simple_encoder_init(drm_dev, &dvo->encoder,
+					      DRM_MODE_ENCODER_LVDS);
+	else
+		ret = drm_simple_encoder_init(drm_dev, &dvo->encoder,
+					      DRM_MODE_ENCODER_TMDS);
 	if (ret) {
 		dev_err(dev, "Failed to initialize decoder: %d\n", ret);
 		return ret;
@@ -726,6 +811,7 @@ static const struct mtk_dvo_conf mt8189_conf = {
 	.has_commit = true,
 	.dimension_mask = HFP_MASK,
 	.hvsize_mask = PIC_HSIZE_MASK,
+	.type = MTK_DVO_TYPE_EDP,
 };
 
 static const struct mtk_dvo_conf mt8189_dp_conf = {
@@ -740,6 +826,21 @@ static const struct mtk_dvo_conf mt8189_dp_conf = {
 	.dimension_mask = HFP_MASK,
 	.hvsize_mask = PIC_HSIZE_MASK,
 	.is_dp = true,
+	.type = MTK_DVO_TYPE_EDP,
+};
+
+static const struct mtk_dvo_conf mt8189_lvds_conf = {
+	.cal_factor = mt8196_calculate_factor,
+	.out_np_sel = 0x0, /* LVDS 1P */
+	.reg_h_fre_con = 0xb0,
+	.max_clock_khz = 640000,
+	.output_fmts = mt8196_output_fmts,
+	.num_output_fmts = ARRAY_SIZE(mt8196_output_fmts),
+	.pixels_per_iter = 1,
+	.has_commit = true,
+	.dimension_mask = HFP_MASK,
+	.hvsize_mask = PIC_HSIZE_MASK,
+	.type = MTK_DVO_TYPE_LVDS,
 };
 
 static int mtk_dvo_probe(struct platform_device *pdev)
@@ -797,24 +898,45 @@ static int mtk_dvo_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(dvo->tvd_clk),
 				     "Failed to get tvdpll clock\n");
 
-	dvo->hf_fdvo_clk = devm_clk_get(dev, "hf_fdvo_clk");
-	if (IS_ERR(dvo->hf_fdvo_clk))
-		return dev_err_probe(dev, PTR_ERR(dvo->hf_fdvo_clk),
-				     "Failed to get hf_fdvo_clk clock\n");
-
 	dvo->dvo_clk = devm_clk_get_optional(dev, "dvo_clk");
 	if (IS_ERR(dvo->dvo_clk))
 		return dev_err_probe(dev, PTR_ERR(dvo->dvo_clk),
 				     "Failed to get dvo_clk clock\n");
 
-	/* TODO: TVDPLL_D* are parent clock divisors which needs to be
-	 * set dynamically in the clock framework and not acquired/changed here
-	 */
-	dvo->pclk_src[1] = devm_clk_get_optional(dev, "TVDPLL_D2");
-	dvo->pclk_src[2] = devm_clk_get_optional(dev, "TVDPLL_D4");
-	dvo->pclk_src[3] = devm_clk_get_optional(dev, "TVDPLL_D8");
-	dvo->pclk_src[4] = devm_clk_get_optional(dev, "TVDPLL_D16");
+	if (dvo->conf->type == MTK_DVO_TYPE_LVDS) {
+		dvo->dvo_parent_clk = devm_clk_get(dev, "dvo_pa");
+		if (IS_ERR(dvo->dvo_parent_clk))
+			return dev_err_probe(dev, PTR_ERR(dvo->dvo_parent_clk),
+					     "Failed to get dvo_parent_clk clock\n");
 
+		dvo->hf_fdvo_clk = devm_clk_get(dev, "dvo_sysclk");
+		if (IS_ERR(dvo->hf_fdvo_clk))
+			return dev_err_probe(dev, PTR_ERR(dvo->hf_fdvo_clk),
+					     "Failed to get hf_fdvo_clk clock\n");
+
+		dvo->sysclk = devm_clk_get(dev, "sysclk");
+		if (IS_ERR(dvo->sysclk))
+			return dev_err_probe(dev, PTR_ERR(dvo->sysclk),
+					     "Failed to get sysclk clock\n");
+
+		dvo->sysclk_cts = devm_clk_get(dev, "sysclk_cts");
+		if (IS_ERR(dvo->sysclk_cts))
+			return dev_err_probe(dev, PTR_ERR(dvo->sysclk_cts),
+					     "Failed to get sysclk_cts clock\n");
+	} else {
+		dvo->hf_fdvo_clk = devm_clk_get(dev, "hf_fdvo_clk");
+		if (IS_ERR(dvo->hf_fdvo_clk))
+			return dev_err_probe(dev, PTR_ERR(dvo->hf_fdvo_clk),
+				     "Failed to get hf_fdvo_clk clock\n");
+
+		/* TODO: TVDPLL_D* are parent clock divisors which needs to be
+		 * set dynamically in the clock framework and not acquired/changed here
+		 */
+		dvo->pclk_src[1] = devm_clk_get_optional(dev, "TVDPLL_D2");
+		dvo->pclk_src[2] = devm_clk_get_optional(dev, "TVDPLL_D4");
+		dvo->pclk_src[3] = devm_clk_get_optional(dev, "TVDPLL_D8");
+		dvo->pclk_src[4] = devm_clk_get_optional(dev, "TVDPLL_D16");
+	}
 	dvo->irq = platform_get_irq(pdev, 0);
 	if (dvo->irq < 0)
 		return dvo->irq;
@@ -877,6 +999,7 @@ static void mtk_dvo_remove(struct platform_device *pdev)
 static const struct of_device_id mtk_dvo_of_ids[] = {
 	{ .compatible = "mediatek,mt8189-edp-dvo", .data = &mt8189_conf },
 	{ .compatible = "mediatek,mt8189-dp-dvo", .data = &mt8189_dp_conf },
+	{ .compatible = "mediatek,mt8189-lvds-dvo", .data = &mt8189_lvds_conf },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, mtk_dvo_of_ids);

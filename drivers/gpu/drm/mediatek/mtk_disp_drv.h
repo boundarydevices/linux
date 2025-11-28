@@ -55,6 +55,7 @@ int mtk_dsi_encoder_index(struct device *dev);
 void mtk_dvo_start(struct device *dev);
 void mtk_dvo_stop(struct device *dev);
 int mtk_dvo_encoder_index(struct device *dev);
+bool mtk_dvo_check_output_to_lvds(struct device *dev);
 
 int mtk_gamma_clk_enable(struct device *dev);
 void mtk_gamma_clk_disable(struct device *dev);
