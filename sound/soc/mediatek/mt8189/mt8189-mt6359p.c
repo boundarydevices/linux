@@ -500,14 +500,6 @@ SND_SOC_DAILINK_DEFS(capture_cm1,
 		     DAILINK_COMP_ARRAY(COMP_CPU("UL_CM1")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
-SND_SOC_DAILINK_DEFS(capture_etdm_in0,
-		     DAILINK_COMP_ARRAY(COMP_CPU("UL_ETDM_IN0")),
-		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
-		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
-SND_SOC_DAILINK_DEFS(capture_etdm_in1,
-		     DAILINK_COMP_ARRAY(COMP_CPU("UL_ETDM_IN1")),
-		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
-		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(playback_hdmi,
 		     DAILINK_COMP_ARRAY(COMP_CPU("HDMI")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
@@ -832,24 +824,6 @@ static struct snd_soc_dai_link mt8189_mt6359p_dai_links[] = {
 		.dynamic = 1,
 		.dpcm_capture = 1,
 		SND_SOC_DAILINK_REG(capture24),
-	},
-	{
-		.name = "UL_ETDM_In0_FE",
-		.stream_name = "UL_ETDM_In0 Capture",
-		.trigger = {SND_SOC_DPCM_TRIGGER_PRE,
-			    SND_SOC_DPCM_TRIGGER_PRE},
-		.dynamic = 1,
-		.dpcm_capture = 1,
-		SND_SOC_DAILINK_REG(capture_etdm_in0),
-	},
-	{
-		.name = "UL_ETDM_In1_FE",
-		.stream_name = "UL_ETDM_In1 Capture",
-		.trigger = {SND_SOC_DPCM_TRIGGER_PRE,
-			    SND_SOC_DPCM_TRIGGER_PRE},
-		.dynamic = 1,
-		.dpcm_capture = 1,
-		SND_SOC_DAILINK_REG(capture_etdm_in1),
 	},
 	/* Back End DAI links */
 	{
