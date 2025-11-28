@@ -275,6 +275,16 @@ config DRM_PANEL_KINGDISPLAY_KD097D04
 	  24 bit RGB per pixel. It provides a MIPI DSI interface to
 	  the host and has a built-in LED backlight.
 
+config DRM_PANEL_KOE_TX18D204VM0BAA
+	tristate "KOE TX18D204VM0BAA panel"
+	depends on OF
+	help
+	  Say Y here if you want to enable support for KOE TX18D204VM0BAA
+	  LVDS Panel. The panel has a 1920x1080 resolution and uses
+	  24 bit RGB per pixel. It provides a LVDS interface to
+	  the host. Additionally, it requires an additional PWM for
+	  controlling the backlight brightness.
+
 config DRM_PANEL_LEADTEK_LTK050H3146W
 	tristate "Leadtek LTK050H3146W panel"
 	depends on OF
