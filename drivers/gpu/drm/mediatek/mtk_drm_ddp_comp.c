@@ -329,6 +329,7 @@ static const struct mtk_ddp_comp_funcs ddp_dvo = {
 	.start = mtk_dvo_start,
 	.stop = mtk_dvo_stop,
 	.encoder_index = mtk_dvo_encoder_index,
+	.check_output_to_lvds = mtk_dvo_check_output_to_lvds,
 };
 
 static const struct mtk_ddp_comp_funcs ddp_gamma = {

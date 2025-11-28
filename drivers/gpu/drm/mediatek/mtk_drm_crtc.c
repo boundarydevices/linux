@@ -670,6 +670,7 @@ static void mtk_crtc_ddp_hw_fini(struct mtk_drm_crtc *mtk_crtc)
 	struct drm_crtc *crtc = &mtk_crtc->base;
 	unsigned long flags;
 	int i;
+	bool output_to_lvds = false;
 
 	for (i = 0; i < mtk_crtc->ddp_comp_nr; i++) {
 		mtk_ddp_comp_stop(mtk_crtc->ddp_comp[i]);
@@ -705,6 +706,14 @@ static void mtk_crtc_ddp_hw_fini(struct mtk_drm_crtc *mtk_crtc)
 		if (!mtk_ddp_comp_remove(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 			mtk_mutex_remove_comp(mtk_crtc->mutex,
 					      mtk_crtc->ddp_comp[i]->id);
+	}
+
+	if (mtk_crtc->ddp_comp[i]->funcs->check_output_to_lvds) {
+		struct mtk_ddp_comp_funcs *funcs = mtk_crtc->ddp_comp[i]->funcs;
+
+		output_to_lvds = funcs->check_output_to_lvds(mtk_crtc->ddp_comp[i]->dev);
+		if (output_to_lvds)
+			mtk_mmsys_lvds_deconfig(mtk_crtc->mmsys_dev);
 	}
 
 	if (mtk_crtc->cross_sys_mmsys_dev)
