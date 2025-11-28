@@ -82,6 +82,17 @@
 #define DPI_CLK_SOURCE				BIT(0)
 #define LVDS_SYS_CFG_PXL_CLK			(0x3 << 16)
 
+#define LVDS_SYS_CFG00				0x410
+#define LVDS_CK_ON_STATUS_FOR_DPI		0xe3C
+#define LVDS_ENCODER_FIFO_ENABLE		(0x3 << 16)
+#define LVDS_CK_ON				0x1
+
+enum LVDS_VERSION {
+	NO_LVDS = 0,
+	MTK_LVDS_VERSION_MT8365 = 1,
+	MTK_LVDS_VERSION_MT8189 = 2,
+};
+
 struct mtk_mmsys_routes {
 	u32 from_comp;
 	u32 to_comp;
@@ -131,7 +142,7 @@ struct mtk_mmsys_driver_data {
 	const bool is_vppsys;
 	const u8 vsync_len;
 	const bool need_gce;
-	const bool has_lvds;
+	const enum LVDS_VERSION lvds_ver;
 };
 
 /*

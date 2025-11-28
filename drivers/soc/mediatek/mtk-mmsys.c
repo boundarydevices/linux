@@ -139,6 +139,7 @@ static const struct mtk_mmsys_driver_data mt8189_mmsys_driver_data = {
 	.num_routes = ARRAY_SIZE(mmsys_mt8189_routing_table),
 	.sw0_rst_offset = MT8189_MMSYS_SW0_RST_B,
 	.num_resets = 32,
+	.lvds_ver = MTK_LVDS_VERSION_MT8189,
 };
 
 static const struct mtk_mmsys_driver_data mt8195_vdosys0_driver_data = {
@@ -179,7 +180,7 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 	.clk_driver = "clk-mt8365-mm",
 	.routes = mt8365_mmsys_routing_table,
 	.num_routes = ARRAY_SIZE(mt8365_mmsys_routing_table),
-	.has_lvds = true,
+	.lvds_ver = MTK_LVDS_VERSION_MT8365,
 };
 
 struct mtk_mmsys {
@@ -512,15 +513,41 @@ void mtk_mmsys_lvds_config(struct device *dev)
 {
 	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
 
-	if (!mmsys->data->has_lvds) {
+	if (!mmsys->data->lvds_ver) {
 		dev_warn(dev, "No lvds on this platform. Ignore.\n");
 		return;
 	}
 
-	mtk_mmsys_update_bits(mmsys, MMSYS_LVDS_CFG, DPI_CLK_SOURCE, 0, NULL);
-	mtk_mmsys_update_bits(mmsys, MMSYS_LVDS_CFG, LVDS_SYS_CFG_PXL_CLK, LVDS_SYS_CFG_PXL_CLK, NULL);
+	if (mmsys->data->lvds_ver == MTK_LVDS_VERSION_MT8365) {
+		mtk_mmsys_update_bits(mmsys, MMSYS_LVDS_CFG, DPI_CLK_SOURCE, 0, NULL);
+		mtk_mmsys_update_bits(mmsys, MMSYS_LVDS_CFG, LVDS_SYS_CFG_PXL_CLK,
+				      LVDS_SYS_CFG_PXL_CLK, NULL);
+	} else if (mmsys->data->lvds_ver == MTK_LVDS_VERSION_MT8189) {
+		mtk_mmsys_update_bits(mmsys, LVDS_CK_ON_STATUS_FOR_DPI,
+				      LVDS_CK_ON, LVDS_CK_ON, NULL);
+		mtk_mmsys_update_bits(mmsys, LVDS_SYS_CFG00, LVDS_ENCODER_FIFO_ENABLE,
+				      LVDS_ENCODER_FIFO_ENABLE, NULL);
+	}
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_lvds_config);
+
+void mtk_mmsys_lvds_deconfig(struct device *dev)
+{
+	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
+
+	if (!mmsys->data->lvds_ver) {
+		dev_warn(dev, "No lvds on this platform. Ignore.\n");
+		return;
+	}
+
+	if (mmsys->data->lvds_ver == MTK_LVDS_VERSION_MT8189) {
+		mtk_mmsys_update_bits(mmsys, LVDS_CK_ON_STATUS_FOR_DPI, LVDS_CK_ON,
+				      ~LVDS_CK_ON, NULL);
+		mtk_mmsys_update_bits(mmsys, LVDS_SYS_CFG00, LVDS_ENCODER_FIFO_ENABLE,
+				      ~LVDS_ENCODER_FIFO_ENABLE, NULL);
+	}
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_lvds_deconfig);
 
 static int mtk_mmsys_probe(struct platform_device *pdev)
 {
