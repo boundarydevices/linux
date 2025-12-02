@@ -1624,6 +1624,16 @@
 			#clock-cells = <1>;
 		};
 
+		mminfra {
+			compatible = "mediatek,mt8189-mminfra";
+			clocks = <&mminfra_config_clk CLK_MMINFRA_GCE_D>,
+				 <&mminfra_config_clk CLK_MMINFRA_GCE_M>,
+				 <&mminfra_config_clk CLK_MMINFRA_GCE_26M>;
+			clock-names = "gce_d", "gce_m", "gce_26m";
+			power-domains = <&scpsys MT8189_POWER_DOMAIN_MM_INFRA>;
+			mediatek,mminfra = <&mminfra_config_clk>;
+		};
+
 		smi_disp_common: smi-disp-comm@1e801000 {
 			compatible = "mediatek,mt8189-smi-common",
 				     "mediatek,smi-common", "syscon";
