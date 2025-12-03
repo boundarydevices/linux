@@ -2276,6 +2276,8 @@ static irqreturn_t mtk_dp_hpd_event(int hpd, void *dev)
 			if (!!(mtk_dp_read(mtk_dp, MTK_DP_TRANS_P0_3414) &
 			       HPD_DB_DP_TRANS_P0_MASK))
 				mtk_dp->train_info.cable_plugged_in = true;
+			else if (mtk_dp->hpd_state == connector_status_connected)
+				mtk_dp->train_info.cable_plugged_in = true;
 			else
 				mtk_dp->train_info.cable_plugged_in = false;
 		}
@@ -2520,6 +2522,22 @@ static ssize_t mtk_dp_aux_transfer(struct drm_dp_aux *mtk_aux,
 err:
 	msg->reply = DP_AUX_NATIVE_REPLY_NACK | DP_AUX_I2C_REPLY_NACK;
 	return ret;
+}
+
+static void mtk_dp_swirq_hpd(struct mtk_dp *mtk_dp, u8 conn)
+{
+	mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+			HPD_OVR_EN_DP_TRANS_P0_MASK,
+			HPD_OVR_EN_DP_TRANS_P0_MASK);
+
+	if (conn)
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+			HPD_SET_DP_TRANS_P0_MASK,
+			HPD_SET_DP_TRANS_P0_MASK);
+	else
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+			0,
+			HPD_SET_DP_TRANS_P0_MASK);
 }
 
 static int mtk_dp_poweron(struct mtk_dp *mtk_dp)
@@ -2808,14 +2826,11 @@ static void mtk_dp_bridge_hpd_notify(struct drm_bridge *bridge,
 	if (mtk_dp->bridge.type != DRM_MODE_CONNECTOR_eDP) {
 		if (mtk_dp->hpd_state != status) {
 			if (status == connector_status_disconnected) {
+				mtk_dp_swirq_hpd(mtk_dp, false);
 				train_info->cable_plugged_in = false;
+
 			} else {
-				mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
-					HPD_OVR_EN_DP_TRANS_P0_MASK,
-					HPD_OVR_EN_DP_TRANS_P0_MASK);
-				mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
-					HPD_SET_DP_TRANS_P0_MASK,
-					HPD_SET_DP_TRANS_P0_MASK);
+				mtk_dp_swirq_hpd(mtk_dp, true);
 				train_info->cable_plugged_in = true;
 			}
 			mtk_dp->hpd_state = status;
@@ -3123,6 +3138,8 @@ static int mtk_dp_probe(struct platform_device *pdev)
 			return dev_err_probe(dev, ret, "Failed to add bridge\n");
 	}
 
+	mtk_dp->hpd_state = connector_status_disconnected;
+
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
 
@@ -3148,8 +3165,10 @@ static int mtk_dp_suspend(struct device *dev)
 	struct mtk_dp *mtk_dp = dev_get_drvdata(dev);
 
 	mtk_dp_power_disable(mtk_dp);
-	if (mtk_dp->bridge.type != DRM_MODE_CONNECTOR_eDP)
+	if (mtk_dp->bridge.type != DRM_MODE_CONNECTOR_eDP) {
 		mtk_dp_hwirq_enable(mtk_dp, false);
+		mtk_dp_swirq_hpd(mtk_dp, false);
+	}
 	pm_runtime_put_sync(dev);
 
 	return 0;
@@ -3161,8 +3180,10 @@ static int mtk_dp_resume(struct device *dev)
 
 	pm_runtime_get_sync(dev);
 	mtk_dp_init_port(mtk_dp);
-	if (mtk_dp->bridge.type != DRM_MODE_CONNECTOR_eDP)
+	if (mtk_dp->bridge.type != DRM_MODE_CONNECTOR_eDP) {
 		mtk_dp_hwirq_enable(mtk_dp, true);
+		mtk_dp_swirq_hpd(mtk_dp, true);
+	}
 	mtk_dp_power_enable(mtk_dp);
 
 	return 0;
