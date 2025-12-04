@@ -157,6 +157,7 @@ static int koe_panel_get_modes(struct drm_panel *panel,
 	}
 
 	mode->type |= DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
+	drm_mode_set_name(mode);
 	drm_mode_probed_add(connector, mode);
 
 	connector->display_info.width_mm = koe->desc->width;
