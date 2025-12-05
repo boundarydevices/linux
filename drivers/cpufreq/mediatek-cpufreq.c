@@ -137,6 +137,8 @@ static int mtk_cpufreq_voltage_tracking(struct mtk_cpu_dvfs_info *info,
 				vsram = max(new_vsram,
 					    vproc + soc_data->min_volt_shift);
 
+			vsram = clamp(vsram, soc_data->sram_min_volt,
+					soc_data->sram_max_volt);
 			ret = regulator_set_voltage(sram_reg, vsram,
 						    soc_data->sram_max_volt);
 			if (ret) {
