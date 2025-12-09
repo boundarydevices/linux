@@ -122,10 +122,6 @@ struct img_frameparam {
 
 #define CFG_CHECK(plat, p_id) ((plat) == (p_id))
 
-#define _CFG_OFST(plat, cfg, ofst) ((void *)(&((cfg)->config_##plat) + (ofst)))
-#define CFG_OFST(plat, cfg, ofst) \
-	(IS_ERR_OR_NULL(cfg) ? NULL : _CFG_OFST(plat, cfg, ofst))
-
 #define _CFG_ADDR(plat, cfg, mem) (&((cfg)->config_##plat.mem))
 #define CFG_ADDR(plat, cfg, mem) \
 	(IS_ERR_OR_NULL(cfg) ? NULL : _CFG_ADDR(plat, cfg, mem))

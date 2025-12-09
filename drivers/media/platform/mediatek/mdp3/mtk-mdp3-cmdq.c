@@ -130,30 +130,33 @@ static struct img_config *__get_config_offset(struct mdp_dev *mdp,
 {
 	const int p_id = mdp->mdp_data->mdp_plat_id;
 	struct device *dev = &mdp->pdev->dev;
-	void *cfg_c, *cfg_n;
-	long bound = mdp->vpu.config_size;
+	void *cfg_c;
+	size_t bound = mdp->vpu.config_size;
+	size_t struct_size;
 
 	if (pp_idx >= MDP_PP_MAX)
 		goto err_param;
 
-	if (CFG_CHECK(MT8183, p_id))
-		cfg_c = CFG_OFST(MT8183, param->config, pp_idx);
-	else if (CFG_CHECK(MT8195, p_id))
-		cfg_c = CFG_OFST(MT8195, param->config, pp_idx);
-	else
+	switch (mdp->mdp_data->mdp_plat_id) {
+	case MT8183:
+		struct_size = sizeof(struct img_config_8183);
+		break;
+	case MT8195:
+		struct_size = sizeof(struct img_config_8195);
+		break;
+	default:
 		goto err_param;
-
-	if (CFG_CHECK(MT8183, p_id))
-		cfg_n = CFG_OFST(MT8183, param->config, pp_idx + 1);
-	else if (CFG_CHECK(MT8195, p_id))
-		cfg_n = CFG_OFST(MT8195, param->config, pp_idx + 1);
-	else
-		goto err_param;
-
-	if ((long)cfg_n - (long)param->config > bound) {
-		dev_err(dev, "config offset %ld OOB %ld\n", (long)cfg_n, bound);
-		cfg_c = ERR_PTR(-EFAULT);
 	}
+
+	if ((pp_idx + 1) * struct_size > bound) {
+		dev_err(dev, "pp %d config offset %zu OOB %zu\n", pp_idx, struct_size, bound);
+		goto err_param;
+	}
+
+	if (IS_ERR_OR_NULL(param->config))
+		goto err_param;
+
+	cfg_c = (void *)((u8 *)param->config + (pp_idx * struct_size));
 
 	return (struct img_config *)cfg_c;
 
