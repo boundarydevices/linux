@@ -37,13 +37,17 @@ static int mdp_cap_querycap(struct file *file, void *fh,
 			    struct v4l2_capability *cap)
 {
 	struct video_device *vdev = video_devdata(file);
+	int ret;
 
 	strscpy(cap->driver, MDP_MODULE_NAME, sizeof(cap->driver));
 	strscpy(cap->card, "mdp-capture", sizeof(cap->card));
 	cap->capabilities = V4L2_CAP_DEVICE_CAPS | V4L2_CAP_STREAMING
 		| V4L2_CAP_VIDEO_CAPTURE_MPLANE;
-	snprintf(cap->bus_info, sizeof(cap->bus_info),
+	ret = snprintf(cap->bus_info, sizeof(cap->bus_info),
 		 "platform:%s", vdev->v4l2_dev->name);
+
+	if (ret < 0)
+		return ret;
 
 	return 0;
 }
@@ -810,8 +814,10 @@ int mdp_capture_device_register(struct mdp_dev *mdp)
 	}
 
 	mdp->cap_vdev->v4l2_dev = &mdp->cap_v4l2_dev;
-	snprintf(mdp->cap_vdev->name, sizeof(mdp->cap_vdev->name), "%s:cap",
+	ret = snprintf(mdp->cap_vdev->name, sizeof(mdp->cap_vdev->name), "%s:cap",
 		 MDP_MODULE_NAME);
+	if (ret < 0)
+		return ret;
 	video_set_drvdata(mdp->cap_vdev, mdp);
 
 	ret = video_register_device(mdp->cap_vdev, VFL_TYPE_VIDEO, -1);
