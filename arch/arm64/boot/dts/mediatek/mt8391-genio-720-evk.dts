@@ -458,6 +458,12 @@
 	/delete-property/ mediatek,disable-extrst;
 };
 
+&thermal_zones {
+	soc_max {
+		sustainable-power = <5000>;
+	};
+};
+
 &dsi0 {
 	status = "disabled";
 	#address-cells = <1>;
