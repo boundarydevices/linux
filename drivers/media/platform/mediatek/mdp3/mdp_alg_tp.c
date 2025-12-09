@@ -53,8 +53,8 @@ static int tp_parse_path(struct mdp_dev *mdp, struct mdp_alg_path_tp *p,
 			 const struct tp_map *map)
 {
 	struct device *dev = &mdp->pdev->dev;
-	struct mdp_alg_path_node *prev[2];
-	int cur_id[2];
+	struct mdp_alg_path_node *prev[2] = {0};
+	int cur_id[2] = {0};
 	int i, tile_idx;
 
 	for (i = 0; i < MDP_ALG_MAX_PATH_NODES; i++) {

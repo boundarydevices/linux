@@ -209,7 +209,7 @@ static int wrot_prepare(struct mdp_alg_task *task,
 	struct mdp_alg_frame_config *cfg = &task->cfg;
 	struct img_ipi_frameparam *p = task->cfg.param;
 	struct img_image_buffer *dst_buf = &p->outputs[node->out_idx].buffer;
-	struct img_crop out_crop;
+	struct img_crop out_crop = {0};
 	int i;
 
 	wrot_frm = kzalloc(sizeof(*wrot_frm), GFP_KERNEL);

@@ -1180,7 +1180,7 @@ err_skip_sub_in:
 static enum mdp_tile_msg tile_bwd_comp(struct tile_reg_map *reg_map,
 				       struct func_description *func_param)
 {
-	enum mdp_tile_msg result;
+	enum mdp_tile_msg result = T_OK;
 	int i;
 
 	/* Run normal tile */
@@ -1219,7 +1219,7 @@ err_return:
 static enum mdp_tile_msg tile_bwd_comp_min(struct tile_reg_map *reg_map,
 					   struct func_description *func_param)
 {
-	enum mdp_tile_msg result;
+	enum mdp_tile_msg result = T_OK;
 
 	if (reg_map->backup_x_skip_y)
 		return T_OK;
@@ -1241,7 +1241,7 @@ static enum mdp_tile_msg tile_bwd_comp_min(struct tile_reg_map *reg_map,
 static enum mdp_tile_msg tile_bwd_comp_min_tile(struct tile_reg_map *reg_map,
 						struct func_description *func_param)
 {
-	enum mdp_tile_msg result;
+	enum mdp_tile_msg result = T_OK;
 	int i;
 
 	/* Scheduling backward order */
