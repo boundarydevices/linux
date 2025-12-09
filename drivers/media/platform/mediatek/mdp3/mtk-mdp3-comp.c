@@ -45,7 +45,7 @@ __get_plat_cfg(const struct mdp_comp_ctx *ctx)
 static s64 get_comp_flag(const struct mdp_comp_ctx *ctx)
 {
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
-	u32 rdma0, rsz1;
+	s32 rdma0, rsz1;
 
 	rdma0 = mdp_cfg_get_id_inner(ctx->comp->mdp_dev, MDP_COMP_RDMA0);
 	rsz1 = mdp_cfg_get_id_inner(ctx->comp->mdp_dev, MDP_COMP_RSZ1);
