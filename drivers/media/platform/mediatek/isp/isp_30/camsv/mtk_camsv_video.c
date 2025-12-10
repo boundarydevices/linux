@@ -710,6 +710,21 @@ static const struct mtk_cam_vdev_desc video_stream = {
 		},
 };
 
+static int mtk_cam_video_verify_format(struct mtk_cam_video_device *cam_vdev)
+{
+	int i;
+
+	for (i = 0; i < cam_vdev->desc->num_fmts; i++) {
+		const struct mtk_cam_format_info *info;
+
+		info = mtk_cam_format_info_by_fourcc(cam_vdev->desc->fmts[i]);
+		if (!info)
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
 int mtk_cam_video_register(struct mtk_cam_dev *cam)
 {
 	struct device *dev = cam->dev;
@@ -721,6 +736,12 @@ int mtk_cam_video_register(struct mtk_cam_dev *cam)
 	vb2_dma_contig_set_max_seg_size(cam->dev, DMA_BIT_MASK(32));
 
 	cam_vdev->desc = &video_stream;
+
+	ret = mtk_cam_video_verify_format(cam_vdev);
+	if (ret) {
+		dev_err(cam->dev, "Failed to verify format: %d\n", ret);
+		return ret;
+	}
 
 	/* Initialize mtk_cam_video_device */
 	mtk_cam_dev_load_default_fmt(cam);
