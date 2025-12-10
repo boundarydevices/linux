@@ -451,8 +451,8 @@ static void mtk_seninf_input_setup_csi2_rx(struct mtk_seninf_input *input)
 	mtk_seninf_input_update(input, MIPI_RX_CON24_CSI0, CSI0_BIST_LN3_MUX, lanes[3]);
 }
 
-static void mtk_seninf_input_setup_csi2(struct mtk_seninf_input *input,
-					struct v4l2_subdev_state *state)
+static int mtk_seninf_input_setup_csi2(struct mtk_seninf_input *input,
+				       struct v4l2_subdev_state *state)
 {
 	const struct mtk_seninf_format_info *fmtinfo;
 	const struct v4l2_mbus_framefmt *format;
@@ -460,7 +460,16 @@ static void mtk_seninf_input_setup_csi2(struct mtk_seninf_input *input,
 	unsigned int val = 0;
 
 	format = v4l2_subdev_state_get_stream_format(state, input->pad, 0);
+	if (!format) {
+		dev_err(input->seninf->dev, "Stream format for pad %d is NULL.\n", input->pad);
+		return -EINVAL;
+	}
+
 	fmtinfo = mtk_seninf_format_info(format->code);
+	if (!fmtinfo) {
+		dev_err(input->seninf->dev, "Invalid format info for code %08x.\n", format->code);
+		return -EINVAL;
+	}
 
 	/* Configure timestamp */
 	writel(SENINF_TIMESTAMP_STEP, input->base + SENINF_TG1_TM_STP);
@@ -529,11 +538,13 @@ static void mtk_seninf_input_setup_csi2(struct mtk_seninf_input *input,
 	mtk_seninf_input_update(input, SENINF_CTRL, CSI2_SW_RST, 1);
 	udelay(1);
 	mtk_seninf_input_update(input, SENINF_CTRL, CSI2_SW_RST, 0);
+
+	return 0;
 }
 
-static void mtk_seninf_mux_setup(struct mtk_seninf_mux *mux,
-				 struct mtk_seninf_input *input,
-				 struct v4l2_subdev_state *state)
+static int mtk_seninf_mux_setup(struct mtk_seninf_mux *mux,
+				struct mtk_seninf_input *input,
+				struct v4l2_subdev_state *state)
 {
 	const struct mtk_seninf_format_info *fmtinfo;
 	const struct v4l2_mbus_framefmt *format;
@@ -545,7 +556,16 @@ static void mtk_seninf_mux_setup(struct mtk_seninf_mux *mux,
 	u32 rst_mask;
 
 	format = v4l2_subdev_state_get_stream_format(state, input->pad, 0);
+	if (!format) {
+		dev_err(input->seninf->dev, "Stream format for pad %d is NULL.\n", input->pad);
+		return -EINVAL;
+	}
+
 	fmtinfo = mtk_seninf_format_info(format->code);
+	if (!fmtinfo) {
+		dev_err(input->seninf->dev, "Invalid format info for code %08x.\n", format->code);
+		return -EINVAL;
+	}
 
 	/* Enable mux */
 	mtk_seninf_mux_update(mux, SENINF_MUX_CTRL, SENINF_MUX_EN, 1);
@@ -582,6 +602,8 @@ static void mtk_seninf_mux_setup(struct mtk_seninf_mux *mux,
 
 	/* HQ */
 	mtk_seninf_mux_write(mux, SENINF_MUX_SPARE, 0xc2000);
+
+	return 0;
 }
 
 static void mtk_seninf_top_mux_setup(struct mtk_seninf *priv,
@@ -602,8 +624,8 @@ static void mtk_seninf_top_mux_setup(struct mtk_seninf *priv,
 	writel(0x76541010, priv->base + SENINF_TOP_CAM_MUX_CTRL);
 }
 
-static void seninf_enable_test_pattern(struct mtk_seninf *priv,
-				       struct v4l2_subdev_state *state)
+static int seninf_enable_test_pattern(struct mtk_seninf *priv,
+				      struct v4l2_subdev_state *state)
 {
 	struct mtk_seninf_input *input = &priv->inputs[CSI_PORT_0];
 	struct mtk_seninf_mux *mux = &priv->muxes[0];
@@ -619,7 +641,17 @@ static void seninf_enable_test_pattern(struct mtk_seninf *priv,
 	unsigned int mux_id = mux->mux_id;
 
 	format = v4l2_subdev_state_get_stream_format(state, priv->conf->nb_inputs, 0);
+	if (!format) {
+		dev_err(input->seninf->dev, "Stream format for pad %d is NULL.\n",
+			priv->conf->nb_inputs);
+		return -EINVAL;
+	}
+
 	fmtinfo = mtk_seninf_format_info(format->code);
+	if (!fmtinfo) {
+		dev_err(input->seninf->dev, "Invalid format info for code %08x.\n", format->code);
+		return -EINVAL;
+	}
 
 	mtk_seninf_update(priv, SENINF_TOP_CTRL, MUX_LP_MODE, 0);
 
@@ -701,20 +733,37 @@ static void seninf_enable_test_pattern(struct mtk_seninf *priv,
 	writel(0x76540010, priv->base + SENINF_TOP_CAM_MUX_CTRL);
 
 	dev_dbg(priv->dev, "%s: OK\n", __func__);
+
+	return 0;
 }
 
-static void mtk_seninf_start(struct mtk_seninf *priv,
+static int mtk_seninf_start(struct mtk_seninf *priv,
 			     struct v4l2_subdev_state *state,
 			     struct mtk_seninf_input *input,
 			     struct mtk_seninf_mux *mux)
 {
+	int ret;
+
 	phy_power_on(input->phy);
 
 	mtk_seninf_input_setup_csi2_rx(input);
-	mtk_seninf_input_setup_csi2(input, state);
 
-	mtk_seninf_mux_setup(mux, input, state);
+	ret = mtk_seninf_input_setup_csi2(input, state);
+	if (ret)
+		goto power_off_phy;
+
+	ret = mtk_seninf_mux_setup(mux, input, state);
+	if (ret)
+		goto power_off_phy;
+
 	mtk_seninf_top_mux_setup(priv, input->seninf_id, mux);
+
+	return 0;
+
+power_off_phy:
+	phy_power_off(input->phy);
+
+	return ret;
 }
 
 static void mtk_seninf_stop(struct mtk_seninf *priv,
@@ -856,13 +905,21 @@ static int seninf_s_stream(struct v4l2_subdev *sd, unsigned int source_pad,
 
 	/* If test mode is enabled, just enable the test pattern generator. */
 	if (priv->is_testmode) {
-		seninf_enable_test_pattern(priv, state);
-		ret = 0;
+		ret = seninf_enable_test_pattern(priv, state);
+		if (ret) {
+			dev_err(priv->dev, "Failed to enable test pattern: %d\n", ret);
+			pm_runtime_put(priv->dev);
+		}
 		goto unlock;
 	}
 
 	/* Start the SENINF first and then the source. */
-	mtk_seninf_start(priv, state, input, mux);
+	ret = mtk_seninf_start(priv, state, input, mux);
+	if (ret) {
+		dev_err(priv->dev, "Failed to start SENINF: %d\n", ret);
+		pm_runtime_put(priv->dev);
+		goto unlock;
+	}
 
 	source = input->source_sd;
 	ret = v4l2_subdev_call(source, video, s_stream, 1);
