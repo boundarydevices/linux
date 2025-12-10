@@ -168,9 +168,15 @@ static int mtk_cam_get_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_subdev_format *fmt)
 {
 	struct mtk_cam_dev *cam = to_mtk_cam_dev(sd);
+	struct v4l2_mbus_framefmt *format;
 
-	fmt->format = *mtk_cam_get_pad_format(cam, sd_state, fmt->pad,
-					      fmt->which);
+	format = mtk_cam_get_pad_format(cam, sd_state, fmt->pad,
+					fmt->which);
+
+	if (!format)
+		return -EINVAL;
+
+	fmt->format = *format;
 
 	return 0;
 }
@@ -208,6 +214,9 @@ static int mtk_cam_set_fmt(struct v4l2_subdev *sd,
 	/* Propagate the format to the source pad. */
 	format = mtk_cam_get_pad_format(cam, sd_state, MTK_CAM_CIO_PAD_VIDEO,
 					fmt->which);
+	if (!format)
+		return -EINVAL;
+
 	format->width = fmt->format.width;
 	format->height = fmt->format.height;
 	format->code = fmt->format.code;
