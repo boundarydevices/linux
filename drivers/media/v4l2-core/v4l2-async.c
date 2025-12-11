@@ -705,6 +705,7 @@ __v4l2_async_nf_add_fwnode(struct v4l2_async_notifier *notifier,
 	if (!asc)
 		return ERR_PTR(-ENOMEM);
 
+	INIT_LIST_HEAD(&asc->asc_subdev_entry);
 	asc->notifier = notifier;
 	asc->match.type = V4L2_ASYNC_MATCH_TYPE_FWNODE;
 	asc->match.fwnode = fwnode_handle_get(fwnode);
@@ -747,6 +748,7 @@ __v4l2_async_nf_add_i2c(struct v4l2_async_notifier *notifier, int adapter_id,
 	if (!asc)
 		return ERR_PTR(-ENOMEM);
 
+	INIT_LIST_HEAD(&asc->asc_subdev_entry);
 	asc->notifier = notifier;
 	asc->match.type = V4L2_ASYNC_MATCH_TYPE_I2C;
 	asc->match.i2c.adapter_id = adapter_id;
