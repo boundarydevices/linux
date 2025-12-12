@@ -1292,7 +1292,7 @@ static const struct panel_desc innolux_hk173vb_01b = {
 		.height = 174,
 	},
 	.delay = {
-		.hpd_reliable = 210,
+		.hpd_reliable = 220,
 		.enable = 50,
 		.unprepare = 500,
 	},
