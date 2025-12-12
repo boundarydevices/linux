@@ -33,3 +33,73 @@
         /delete-node/ port@1;
     };
 };
+
+&afe {
+    memory-region = <&afe_dma_mem>;
+    #sound-dai-cells = <0>;
+    mediatek,etdm-in2-cowork-source = <2>;
+    status = "okay";
+};
+
+&i2c_mux_smarc_gp_aud {
+    /delete-node/ codec@1a;
+
+    tac5112: audio-codec@51 {
+        /* U1, TI, XTAC5112IRGER */
+        #sound-dai-cells = <0>;
+        compatible = "ti,tac5112";
+        reg = <0x51>;
+
+        clocks = <&topckgen CLK_TOP_I2SO1>;
+        clock-names = "mclk";
+
+        ti,vref = <0>;  /* 2.75V */
+        ti,micbias-vg = <0>; /* same as Vref */
+        ti,gpios-func = <0>, <1>, <0>; /* Input for GPIO2 (MIC_DETECT) */
+        ti,gpi1-func = <1>; /* Input for GPI1 (HP_DET) */
+
+        ti,gpios-drive = <0>, <0>, <1>; /* GPO1 Drive active low and active High */
+
+        ti,gpa-gpio = <0>; /* GPA using GPIO1 is disabled */
+        ti,gpa-threshold = <75>, <186>; /* GPA Low and High threshold Values */
+
+        avdd-supply = <&VDD_3V3>;
+        iovdd-supply = <&VDD_1V8>;
+	};
+};
+
+&sound {
+	compatible = "mediatek,mt8188-mt6359-evb";
+	mediatek,dai-link =
+		"DL2_FE", "DL3_FE", "DL6_FE", "DL7_FE", "DL8_FE", "DL10_FE", "DL11_FE",
+		"UL1_FE", "UL2_FE", "UL3_FE", "UL4_FE", "UL5_FE", "UL6_FE", "UL8_FE",
+		"UL9_FE", "UL10_FE", "ETDM1_OUT_BE", "ETDM2_IN_BE";
+	mediatek,platform = <&afe>;
+	model = "mt8390-evk";
+	pinctrl-names = "default";
+	pinctrl-0 = <&aud_pins_default>;
+	audio-routing =
+        "Headphone", "OUT1",
+        "Headphone", "OUT2",
+        "Headset Mic", "Mic Bias",
+        "AIN1", "Headset Mic",
+        "AIN2", "Headset Mic";
+
+    status = "okay";
+
+    dai-link-0 {
+        link-name = "ETDM2_IN_BE";
+        codec {
+            sound-dai = <&tac5112>;
+		};
+    };
+
+    dai-link-1 {
+        link-name = "ETDM1_OUT_BE";
+        codec {
+            sound-dai = <&tac5112>;
+		};
+    };
+
+};
+

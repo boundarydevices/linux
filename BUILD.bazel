@@ -1454,6 +1454,7 @@ _MTK_MODULE_OUTS = [
     "sound/soc/codecs/snd-soc-nau8315.ko",
     "sound/soc/codecs/snd-soc-nau8825.ko",
     "sound/soc/codecs/snd-soc-rt5682s.ko",
+    "sound/soc/codecs/snd-soc-tac5x1x.ko",
     "sound/soc/mediatek/common/snd-soc-mtk-common.ko",
     "sound/soc/mediatek/mt8188/mt8188-mt6359.ko",
     "sound/soc/mediatek/mt8188/snd-soc-mt8188-afe.ko",
