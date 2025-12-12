@@ -260,6 +260,35 @@ static unsigned int get_etdm_inconn_rate(unsigned int rate)
 	}
 }
 
+static int get_i2s_id_by_name(struct mtk_base_afe *afe,
+			      const char *name)
+{
+	if (strncmp(name, "I2SIN0", 6) == 0)
+		return MT8189_DAI_I2S_IN0;
+	else if (strncmp(name, "I2SIN1", 6) == 0)
+		return MT8189_DAI_I2S_IN1;
+	else if (strncmp(name, "I2SOUT0", 7) == 0)
+		return MT8189_DAI_I2S_OUT0;
+	else if (strncmp(name, "I2SOUT1", 7) == 0)
+		return MT8189_DAI_I2S_OUT1;
+	else if (strncmp(name, "I2SOUT4", 7) == 0)
+		return MT8189_DAI_I2S_OUT4;
+	else
+		return -EINVAL;
+}
+
+static struct mtk_afe_i2s_priv *get_i2s_priv_by_name(struct mtk_base_afe *afe,
+						     const char *name)
+{
+	struct mt8189_afe_private *afe_priv = afe->platform_priv;
+	int dai_id = get_i2s_id_by_name(afe, name);
+
+	if (dai_id < 0)
+		return NULL;
+
+	return afe_priv->dai_priv[dai_id];
+}
+
 static const int etdm_lpbk_idx_0[] = {
 	0x0, 0x8,
 };
@@ -316,10 +345,15 @@ static int etdm_lpbk_put(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct mtk_afe_i2s_priv *i2s_priv;
 	unsigned int value = ucontrol->value.integer.value[0];
 	unsigned int reg = 0;
 	unsigned int val = 0;
 	unsigned int mask = 0;
+
+	i2s_priv = get_i2s_priv_by_name(afe, kcontrol->id.name);
+	if (i2s_priv)
+		i2s_priv->lpbk_mode = value;
 
 	if (value >= ARRAY_SIZE(etdm_lpbk_idx_0))
 		return -EINVAL;
@@ -392,35 +426,6 @@ static int etdm_ch_num_put(struct snd_kcontrol *kcontrol,
 		i2sout4_priv->ch_num = etdm_ch_num_idx[value];
 
 	return 0;
-}
-
-static int get_i2s_id_by_name(struct mtk_base_afe *afe,
-			      const char *name)
-{
-	if (strncmp(name, "I2SIN0", 6) == 0)
-		return MT8189_DAI_I2S_IN0;
-	else if (strncmp(name, "I2SIN1", 6) == 0)
-		return MT8189_DAI_I2S_IN1;
-	else if (strncmp(name, "I2SOUT0", 7) == 0)
-		return MT8189_DAI_I2S_OUT0;
-	else if (strncmp(name, "I2SOUT1", 7) == 0)
-		return MT8189_DAI_I2S_OUT1;
-	else if (strncmp(name, "I2SOUT4", 7) == 0)
-		return MT8189_DAI_I2S_OUT4;
-	else
-		return -EINVAL;
-}
-
-static struct mtk_afe_i2s_priv *get_i2s_priv_by_name(struct mtk_base_afe *afe,
-						     const char *name)
-{
-	struct mt8189_afe_private *afe_priv = afe->platform_priv;
-	int dai_id = get_i2s_id_by_name(afe, name);
-
-	if (dai_id < 0)
-		return NULL;
-
-	return afe_priv->dai_priv[dai_id];
 }
 
 /*
@@ -1375,10 +1380,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 
 		/* ---etdm cowork --- */
 		if (slave_mode) {
-			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
-					   ETDM_IN0_SLAVE_SEL_MASK_SFT,
-					   ETDM_SLAVE_SEL_ETDMIN0_SLAVE
-					   << ETDM_IN0_SLAVE_SEL_SFT);
+			if (i2s_priv->lpbk_mode) {
+				regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
+						   ETDM_IN0_SLAVE_SEL_MASK_SFT,
+						   ETDM_SLAVE_SEL_ETDMOUT0_MASTER
+						   << ETDM_IN0_SLAVE_SEL_SFT);
+			} else {
+				regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
+						   ETDM_IN0_SLAVE_SEL_MASK_SFT,
+						   ETDM_SLAVE_SEL_ETDMIN0_SLAVE
+						   << ETDM_IN0_SLAVE_SEL_SFT);
+			}
 		} else {
 			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON0,
 					   ETDM_IN0_SLAVE_SEL_MASK_SFT,
@@ -1456,10 +1468,17 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 
 		/* ---etdm cowork --- */
 		if (slave_mode) {
-			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON1,
-					   ETDM_IN1_SLAVE_SEL_MASK_SFT,
-					   ETDM_SLAVE_SEL_ETDMIN1_SLAVE
-					   << ETDM_IN1_SLAVE_SEL_SFT);
+			if (i2s_priv->lpbk_mode) {
+				regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON1,
+						   ETDM_IN1_SLAVE_SEL_MASK_SFT,
+						   ETDM_SLAVE_SEL_ETDMOUT1_MASTER
+						   << ETDM_IN1_SLAVE_SEL_SFT);
+			} else {
+				regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON1,
+						   ETDM_IN1_SLAVE_SEL_MASK_SFT,
+						   ETDM_SLAVE_SEL_ETDMIN1_SLAVE
+						   << ETDM_IN1_SLAVE_SEL_SFT);
+			}
 		} else {
 			regmap_update_bits(afe->regmap, ETDM_0_3_COWORK_CON1,
 					   ETDM_IN1_SLAVE_SEL_MASK_SFT,
