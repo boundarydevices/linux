@@ -1031,10 +1031,11 @@ mt7921_mcu_set_bss_pm(struct mt792x_dev *dev, struct ieee80211_vif *vif,
 	};
 	int err;
 
-	err = mt76_mcu_send_msg(&dev->mt76, MCU_CE_CMD(SET_BSS_ABORT),
-				&req_hdr, sizeof(req_hdr), false);
-	if (err < 0 || !enable)
+	if (!enable) {
+		err = mt76_mcu_send_msg(&dev->mt76, MCU_CE_CMD(SET_BSS_ABORT),
+					&req_hdr, sizeof(req_hdr), false);
 		return err;
+	}
 
 	return mt76_mcu_send_msg(&dev->mt76, MCU_CE_CMD(SET_BSS_CONNECTED),
 				 &req, sizeof(req), false);
