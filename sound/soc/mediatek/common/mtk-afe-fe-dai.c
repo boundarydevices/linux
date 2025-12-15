@@ -463,7 +463,7 @@ int mtk_memif_set_channel(struct mtk_base_afe *afe,
 	struct mtk_base_afe_memif *memif = &afe->memif[id];
 	unsigned int mono;
 
-	dev_info(afe->dev, "%s(), id: %d, channel: %d\n", __func__, id, channel);
+	dev_dbg(afe->dev, "%s(), id: %d, channel: %d\n", __func__, id, channel);
 	mono = memif->data->mono_invert ^ (channel == 1);
 
 	if (memif->data->mono_shift > 0)
@@ -486,7 +486,7 @@ int mtk_memif_set_channel(struct mtk_base_afe *afe,
 				       memif->data->int_odd_flag_shift);
 
 	if (memif->data->ch_num_maskbit) {
-		dev_info(afe->dev, "%s(), set ch num id: %d, channel: %d\n", __func__, id, channel);
+		dev_dbg(afe->dev, "%s(), set ch num id: %d, channel: %d\n", __func__, id, channel);
 		mtk_regmap_update_bits(afe->regmap, memif->data->ch_num_reg,
 				       memif->data->ch_num_maskbit,
 				       channel, memif->data->ch_num_shift);
