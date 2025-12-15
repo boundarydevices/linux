@@ -4370,21 +4370,27 @@ static void mtk_dp_init_property(struct mtk_dp *mtk_dp)
 			"[DPTX] find encoder, found dp_intf[%d] bridge node:%pOF\n",
 			i, bridge->of_node);
 
-		snprintf(result, sizeof(result), "%s%d", dsc_enable, i);
-		prop = mtk_dp_find_property(bridge->encoder,
-					    result, strlen(result));
-		if (prop)
-			mtk_dp->prop_dsc_enable[i] = prop;
-		else
-			dev_err(mtk_dp->dev, "[DPTX] [%d] fail to find property dp_dsc_enable", i);
+		if (snprintf(result, sizeof(result), "%s%d", dsc_enable, i) > 0) {
 
-		snprintf(result, sizeof(result), "%s%d", dsc_cfg, i);
-		prop = mtk_dp_find_property(bridge->encoder,
-					    result, strlen(result));
-		if (prop)
-			mtk_dp->prop_dsc_cfg[i] = prop;
-		else
-			dev_err(mtk_dp->dev, "[DPTX] [%d] fail to find property dp_dsc_cfg", i);
+			prop = mtk_dp_find_property(bridge->encoder,
+						    result, strlen(result));
+
+			if (prop)
+				mtk_dp->prop_dsc_enable[i] = prop;
+			else
+				dev_err(mtk_dp->dev,
+					"[DPTX] [%d] fail to find property dp_dsc_enable", i);
+		}
+
+		if (snprintf(result, sizeof(result), "%s%d", dsc_cfg, i) > 0) {
+			prop = mtk_dp_find_property(bridge->encoder,
+						    result, strlen(result));
+			if (prop)
+				mtk_dp->prop_dsc_cfg[i] = prop;
+			else
+				dev_err(mtk_dp->dev,
+					"[DPTX] [%d] fail to find property dp_dsc_cfg", i);
+		}
 	}
 
 	mtk_dp->init_property = true;
