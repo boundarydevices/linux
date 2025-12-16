@@ -166,8 +166,6 @@ void mdp_video_device_release(struct video_device *vdev)
 	destroy_workqueue(mdp->job_wq);
 	destroy_workqueue(mdp->clock_wq);
 
-	pm_runtime_disable(&mdp->pdev->dev);
-
 	vb2_dma_contig_clear_max_seg_size(&mdp->pdev->dev);
 
 	mdp_comp_destroy(mdp);
