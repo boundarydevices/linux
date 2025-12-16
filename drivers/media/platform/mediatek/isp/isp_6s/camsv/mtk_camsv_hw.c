@@ -346,6 +346,29 @@ static irqreturn_t isp_irq_camsv_thread(int irq, void *data)
 static int mtk_camsv_runtime_suspend(struct device *dev)
 {
 	struct mtk_cam_dev *cam_dev = dev_get_drvdata(dev);
+
+	clk_bulk_disable_unprepare(cam_dev->num_clks, cam_dev->clks);
+
+	return 0;
+}
+
+static int mtk_camsv_runtime_resume(struct device *dev)
+{
+	struct mtk_cam_dev *cam_dev = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_bulk_prepare_enable(cam_dev->num_clks, cam_dev->clks);
+	if (ret) {
+		dev_err(dev, "failed to enable clock:%d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int mtk_camsv_suspend(struct device *dev)
+{
+	struct mtk_cam_dev *cam_dev = dev_get_drvdata(dev);
 	struct mtk_cam_video_device *vdev = &cam_dev->vdev;
 	struct vb2_queue *vbq = &vdev->vbq;
 
@@ -354,12 +377,11 @@ static int mtk_camsv_runtime_suspend(struct device *dev)
 		v4l2_subdev_call(&cam_dev->subdev, video, s_stream, 0);
 		mutex_unlock(&cam_dev->op_lock);
 	}
-	clk_bulk_disable_unprepare(cam_dev->num_clks, cam_dev->clks);
 
-	return 0;
+	return pm_runtime_force_suspend(dev);
 }
 
-static int mtk_camsv_runtime_resume(struct device *dev)
+static int mtk_camsv_resume(struct device *dev)
 {
 	struct mtk_cam_dev *cam_dev = dev_get_drvdata(dev);
 	struct mtk_cam_video_device *vdev = &cam_dev->vdev;
@@ -369,11 +391,9 @@ static int mtk_camsv_runtime_resume(struct device *dev)
 	int ret;
 	unsigned long flags = 0;
 
-	ret = clk_bulk_prepare_enable(cam_dev->num_clks, cam_dev->clks);
-	if (ret) {
-		dev_err(dev, "failed to enable clock:%d\n", ret);
+	ret = pm_runtime_force_resume(dev);
+	if (ret < 0)
 		return ret;
-	}
 
 	if (vb2_is_streaming(vbq)) {
 		mtk_camsv_setup(cam_dev, fmt->width, fmt->height,
@@ -524,8 +544,8 @@ static int mtk_camsv_remove(struct platform_device *pdev)
 }
 
 static const struct dev_pm_ops mtk_camsv_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
+	SET_SYSTEM_SLEEP_PM_OPS(mtk_camsv_suspend,
+				mtk_camsv_resume)
 	SET_RUNTIME_PM_OPS(mtk_camsv_runtime_suspend,
 			   mtk_camsv_runtime_resume, NULL)
 };
