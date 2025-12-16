@@ -159,7 +159,9 @@ void mdp_video_device_release(struct video_device *vdev)
 			cmdq_mbox_destroy(mdp->cmdq_clt[i]);
 
 	mdp_vpu_shared_mem_free(&mdp->vpu);
-	scp_put(mdp->scp);
+
+	if (!mdp->mdp_data->mdp_alg_plat)
+		scp_put(mdp->scp);
 
 	destroy_workqueue(mdp->job_wq);
 	destroy_workqueue(mdp->clock_wq);
