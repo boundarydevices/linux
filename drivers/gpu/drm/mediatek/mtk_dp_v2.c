@@ -6233,7 +6233,7 @@ static int mtk_dp_suspend_v2(struct device *dev)
 	struct mtk_dp *mtk_dp = dev_get_drvdata(dev);
 
 	if (!mtk_dp) {
-		drm_dbg_kms(mtk_dp->drm_dev, "[DPTX] suspend, dp not initial\n");
+		dev_dbg(dev, "[DPTX] suspend, dp not initial\n");
 		return 0;
 	}
 
@@ -6271,7 +6271,7 @@ static int mtk_dp_resume_v2(struct device *dev)
 	int ret = 0;
 
 	if (!mtk_dp) {
-		drm_dbg_kms(mtk_dp->drm_dev, "[DPTX] resume, dp not initial\n");
+		dev_dbg(dev, "[DPTX] resume, dp not initial\n");
 		return 0;
 	}
 
