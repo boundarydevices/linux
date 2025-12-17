@@ -65,4 +65,15 @@ config TYPEC_MUX_DP_SELECTOR
 	  Works with Type-C Port Controller Manager.
 	  If unsure, say N.
 
+config TYPEC_MUX_TS3USBCA4
+	tristate "TI TS3USBCA4 TYPE-C SBU MUX"
+	depends on I2C
+	help
+	  Say Y or M if your system has a Texas Instruments TS3USBCA4
+	  Type-C SBU MUX. This multiplexer is used to switch the
+	  Sideband Use pins of the USB Type-C connector. It
+	  works in conjunction with the Type-C Port PD Controller
+	  Manager to manage the SBU lines for alternate modes such
+	  as DisplayPort.
+
 endmenu
