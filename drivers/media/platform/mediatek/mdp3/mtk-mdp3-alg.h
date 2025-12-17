@@ -19,7 +19,7 @@
 #define MDP_ALG_MAX_OUTPUTS	2
 #define MDP_ALG_MAX_PIPE	2
 #define MDP_ALG_MAX_MUX		6
-#define MDP_ALG_MAX_TILE_NUM	8
+#define MDP_ALG_MAX_TILE_NUM	32
 
 #define has_alg_op(_comp, op) \
 	(_comp->alg_ops && _comp->alg_ops->op)
