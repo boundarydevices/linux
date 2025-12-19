@@ -1712,7 +1712,7 @@ SOC_SINGLE_TLV("Beep Volume", WM8962_BEEP_GENERATOR_1, 4, 15, 0, beep_tlv),
 
 SOC_DOUBLE_R_TLV("Headphone Volume", WM8962_HPOUTL_VOLUME,
 		 WM8962_HPOUTR_VOLUME, 0, 127, 0, out_tlv),
-SOC_DOUBLE_EXT("Headphone Switch", WM8962_PWR_MGMT_2, 1, 0, 1, 1,
+SOC_DOUBLE_EXT("WM Headphone Switch", WM8962_PWR_MGMT_2, 1, 0, 1, 1,
 	       snd_soc_get_volsw, wm8962_put_hp_sw),
 SOC_DOUBLE_R("Headphone ZC Switch", WM8962_HPOUTL_VOLUME, WM8962_HPOUTR_VOLUME,
 	     7, 1, 0),
