@@ -17,6 +17,7 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
+#include <linux/soc/mediatek/mtk-hdmirx-intf.h>
 #include "mt8195-afe-common.h"
 #include "mt8195-afe-clk.h"
 #include "mt8195-reg.h"
@@ -348,6 +349,30 @@ mt8195_afe_paired_memif_clk_enable(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int mt8195_hdmirx_get_audio_rate(void)
+{
+	struct device_node *np;
+	struct device *dev;
+	struct hdmirx_get_info_ops *hdmirx_ops;
+	int rate = 0;
+
+	np = of_find_compatible_node(NULL, NULL, "mediatek,mt8195-hdmirx");
+	if (!np)
+		return 0;
+
+	dev = bus_find_device_by_of_node(&platform_bus_type, np);
+	of_node_put(np);
+
+	if (dev) {
+		hdmirx_ops = (struct hdmirx_get_info_ops *)dev->platform_data;
+		if (hdmirx_ops && hdmirx_ops->get_audio_rate)
+			rate = hdmirx_ops->get_audio_rate(dev);
+		put_device(dev);
+	}
+
+	return rate;
+}
+
 static int mt8195_afe_fe_startup(struct snd_pcm_substream *substream,
 				 struct snd_soc_dai *dai)
 {
@@ -356,10 +381,29 @@ static int mt8195_afe_fe_startup(struct snd_pcm_substream *substream,
 	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
 	int id = asoc_rtd_to_cpu(rtd, 0)->id;
 	int ret = 0;
+	int hdmirx_audio_rate;
 
 	mt8195_afe_paired_memif_clk_prepare(substream, dai, 1);
 
 	ret = mtk_afe_fe_startup(substream, dai);
+
+	if (id == MT8195_AFE_MEMIF_UL1) {
+		hdmirx_audio_rate = mt8195_hdmirx_get_audio_rate();
+
+		if (hdmirx_audio_rate > 0) {
+			dev_dbg(afe->dev, "%s: HDMIRX audio rate is %d\n",
+				 __func__, hdmirx_audio_rate);
+
+			ret = snd_pcm_hw_constraint_minmax(runtime,
+							   SNDRV_PCM_HW_PARAM_RATE,
+							   hdmirx_audio_rate,
+							   hdmirx_audio_rate);
+			if (ret < 0) {
+				dev_err(rtd->dev, "UL1 rate hw_constraint_minmax failed\n");
+				return ret;
+			}
+		}
+	}
 
 	snd_pcm_hw_constraint_step(runtime, 0,
 				   SNDRV_PCM_HW_PARAM_BUFFER_BYTES,
@@ -426,10 +470,23 @@ static int mt8195_afe_fe_trigger(struct snd_pcm_substream *substream, int cmd,
 	int ret = 0;
 	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
 	const struct mt8195_afe_channel_merge *cm = mt8195_afe_found_cm(dai);
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	int id = asoc_rtd_to_cpu(rtd, 0)->id;
+	int hdmirx_audio_rate;
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
+
+		if (id == MT8195_AFE_MEMIF_UL1) {
+			hdmirx_audio_rate = mt8195_hdmirx_get_audio_rate();
+
+			if (hdmirx_audio_rate == 0) {
+				dev_err(afe->dev, "%s: HDMIRX audio unlocked\n", __func__);
+				return -EINVAL;
+			}
+		}
+
 		mt8195_afe_enable_cm(afe, cm, true);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
