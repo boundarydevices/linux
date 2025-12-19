@@ -1533,6 +1533,46 @@ void hdmirx_toprgu_rst(struct MTK_HDMI *myhdmi)
 	w_reg(R_ADR + 0x90, 0x85000000);
 }
 
+static int mtk_hdmirx_get_audio_rate(struct device *dev)
+{
+	struct MTK_HDMI *myhdmi = dev_get_drvdata(dev);
+	int rate = 0;
+
+	if (!myhdmi)
+		return 0;
+
+	if (!myhdmi->power_on || !myhdmi->aud_locked)
+		return 0;
+
+	switch (myhdmi->aud_caps.SampleFreq) {
+	case HDMI2_AUD_FS_32K:
+		rate = 32000;
+		break;
+	case HDMI2_AUD_FS_44K:
+		rate = 44100;
+		break;
+	case HDMI2_AUD_FS_48K:
+		rate = 48000;
+		break;
+	case HDMI2_AUD_FS_88K:
+		rate = 88200;
+		break;
+	case HDMI2_AUD_FS_96K:
+		rate = 96000;
+		break;
+	case HDMI2_AUD_FS_176K:
+		rate = 176400;
+		break;
+	case HDMI2_AUD_FS_192K:
+		rate = 192000;
+		break;
+	default:
+		rate = 0;
+		break;
+	}
+
+	return rate;
+}
 
 int hdmirx_register_capture_driver(struct hdmirx_capture_driver *capture_driver)
 {
@@ -1836,6 +1876,7 @@ hdmirx_probe(struct platform_device *pdev)
 	struct MTK_HDMI *myhdmi = NULL;
 	struct MTK_HDMIRX *hdmirx = NULL;
 	struct nvmem_cell *cell;
+	struct hdmirx_get_info_ops *hdmirx_ops;
 	u32 *pbuf;
 	size_t len;
 	int ret = 0;
@@ -1939,6 +1980,12 @@ hdmirx_probe(struct platform_device *pdev)
 	hdmirx->hdcp_is_rpt = mtk_is_rpt_mode;
 	hdmirx->set_ksv = mtk_rx_set_tx_ksv;
 	myhdmi->rx = hdmirx;
+
+	hdmirx_ops = devm_kzalloc(dev, sizeof(*hdmirx_ops), GFP_KERNEL);
+	if (hdmirx_ops) {
+		hdmirx_ops->get_audio_rate = mtk_hdmirx_get_audio_rate;
+		dev->platform_data = hdmirx_ops;
+	}
 
 	/*   reg io map  */
 	if (hdmirx_dts_mapping(myhdmi, np) == FALSE)
@@ -2098,6 +2145,11 @@ hdmirx_remove(struct platform_device *pdev)
 	if (myhdmi == NULL) {
 		RX_DEF_LOG("[RX] %s, myhdmi is NULL\n", __func__);
 		return -EINVAL;
+	}
+
+	if (dev->platform_data) {
+		devm_kfree(dev, dev->platform_data);
+		dev->platform_data = NULL;
 	}
 
 	uevent_dev_unregister(myhdmi, &myhdmi->switch_data);
