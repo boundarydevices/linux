@@ -25,6 +25,12 @@
 	aliases {
 		serial0 = &uart0;
 		ethernet0 = &eth;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		spi2 = &spi2;
+		spi3 = &spi3;
+		spi4 = &spi4;
+		spi5 = &spi5;
 	};
 
 	chosen {
