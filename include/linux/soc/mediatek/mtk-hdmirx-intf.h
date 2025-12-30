@@ -39,6 +39,10 @@ struct hdmirx_capture_driver {
 	void *priv;
 };
 
+struct hdmirx_get_info_ops {
+	int (*get_audio_rate)(struct device *dev);
+};
+
 #if IS_ENABLED(CONFIG_MTK_HDMI_RX)
 
 extern int hdmirx_register_capture_driver(struct hdmirx_capture_driver *capture_driver);
