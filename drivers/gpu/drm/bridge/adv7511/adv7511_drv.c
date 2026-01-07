@@ -910,14 +910,16 @@ static struct adv7511 *bridge_to_adv7511(struct drm_bridge *bridge)
 	return container_of(bridge, struct adv7511, bridge);
 }
 
-static void adv7511_bridge_enable(struct drm_bridge *bridge)
+static void adv7511_bridge_atomic_enable(struct drm_bridge *bridge,
+					 struct drm_atomic_state *state)
 {
 	struct adv7511 *adv = bridge_to_adv7511(bridge);
 
 	adv7511_power_on(adv);
 }
 
-static void adv7511_bridge_disable(struct drm_bridge *bridge)
+static void adv7511_bridge_atomic_disable(struct drm_bridge *bridge,
+					  struct drm_atomic_state *state)
 {
 	struct adv7511 *adv = bridge_to_adv7511(bridge);
 

@@ -27,12 +27,8 @@
 			};
 		};
 	};
+};
 
-	ports {
-		port {
-			disp_dsi0_out: endpoint {
-				remote-endpoint = <&panel0_in>;
-			};
-		};
-	};
+&disp_dsi0_out {
+	remote-endpoint = <&panel0_in>;
 };

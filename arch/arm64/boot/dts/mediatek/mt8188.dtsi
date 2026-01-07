@@ -24,9 +24,36 @@
 	#size-cells = <2>;
 
 	aliases {
+		dpi1 = &dpi1;
+		dp-intf0 = &dp_intf0;
+		dp-intf1 = &dp_intf1;
+		ethdr0 = &ethdr0;
+		hdmi0 = &hdmi0;
 		gce0 = &gce0;
 		gce1 = &gce1;
+		merge1 = &merge1;
+		merge2 = &merge2;
+		merge3 = &merge3;
+		merge4 = &merge4;
+		merge5 = &merge5;
 		mutex0 = &mutex0;
+		mutex1 = &mutex1;
+		padding0 = &padding0;
+		padding1 = &padding1;
+		padding2 = &padding2;
+		padding3 = &padding3;
+		padding4 = &padding4;
+		padding5 = &padding5;
+		padding6 = &padding6;
+		padding7 = &padding7;
+		vdo1-rdma0 = &vdo1_rdma0;
+		vdo1-rdma1 = &vdo1_rdma1;
+		vdo1-rdma2 = &vdo1_rdma2;
+		vdo1-rdma3 = &vdo1_rdma3;
+		vdo1-rdma4 = &vdo1_rdma4;
+		vdo1-rdma5 = &vdo1_rdma5;
+		vdo1-rdma6 = &vdo1_rdma6;
+		vdo1-rdma7 = &vdo1_rdma7;
 	};
 
 	cpus {
@@ -450,19 +477,19 @@
 
 			trips {
 				cpu_little0_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_little0_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_little0_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -488,19 +515,19 @@
 
 			trips {
 				cpu_little1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_little1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_little1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -526,19 +553,19 @@
 
 			trips {
 				cpu_little2_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_little2_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_little2_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -564,19 +591,19 @@
 
 			trips {
 				cpu_little3_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_little3_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_little3_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -602,19 +629,19 @@
 
 			trips {
 				cpu_big0_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_big0_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_big0_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -636,19 +663,19 @@
 
 			trips {
 				cpu_big1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cpu_big1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cpu_big1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -670,19 +697,19 @@
 
 			trips {
 				apu_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				apu_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				apu_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -696,19 +723,19 @@
 
 			trips {
 				gpu_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				gpu_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				gpu_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -729,19 +756,19 @@
 
 			trips {
 				gpu1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				gpu1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				gpu1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -762,19 +789,19 @@
 
 			trips {
 				soc_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				soc_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				soc_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -788,19 +815,19 @@
 
 			trips {
 				soc1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				soc1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				soc1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -814,19 +841,19 @@
 
 			trips {
 				soc2_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				soc2_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				soc2_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -840,19 +867,19 @@
 
 			trips {
 				cam1_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cam1_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cam1_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -866,19 +893,19 @@
 
 			trips {
 				cam2_alert0: trip-alert0 {
-					temperature = <85000>;
+					temperature = <68000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 
 				cam2_alert1: trip-alert1 {
-					temperature = <95000>;
+					temperature = <85000>;
 					hysteresis = <2000>;
 					type = "hot";
 				};
 
 				cam2_crit: trip-crit {
-					temperature = <100000>;
+					temperature = <115000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -973,6 +1000,27 @@
 					 <PINMUX_GPIO95__FUNC_B0_PWRAP_SPI0_MI>,
 					 <PINMUX_GPIO175__FUNC_B0_SPMI_M_SCL>,
 					 <PINMUX_GPIO176__FUNC_B0_SPMI_M_SDA>;
+			};
+
+			hdmi_pins: hdmi-pins {
+				pins-hotplug {
+					pinmux = <PINMUX_GPIO51__FUNC_I0_HDMITX20_HTPLG>;
+					bias-pull-down;
+				};
+				pins-ddc {
+					pinmux = <PINMUX_GPIO53__FUNC_B1_HDMITX20_SCL>,
+						<PINMUX_GPIO54__FUNC_B1_HDMITX20_SDA>;
+					mediatek,drive-strength-adv = <0>;
+					drive-strength = <MTK_DRIVE_10mA>;
+				};
+				pins-cec {
+					pinmux = <PINMUX_GPIO52__FUNC_B1_HDMITX20_CEC>;
+					bias-disable;
+				};
+				pins-5vctrl {
+					pinmux = <PINMUX_GPIO50__FUNC_B_GPIO50>;
+					output-high;
+				};
 			};
 		};
 
@@ -1099,6 +1147,22 @@
 							#power-domain-cells = <0>;
 						};
 
+						power-domain@MT8188_POWER_DOMAIN_VDEC1 {
+							reg = <MT8188_POWER_DOMAIN_VDEC1>;
+							clocks = <&vdecsys CLK_VDEC2_LARB1>;
+							clock-names = "ss-vdec";
+							mediatek,infracfg = <&infracfg_ao>;
+							#power-domain-cells = <0>;
+						};
+
+						power-domain@MT8188_POWER_DOMAIN_VDEC0 {
+							reg = <MT8188_POWER_DOMAIN_VDEC0>;
+							clocks = <&vdecsys_soc CLK_VDEC1_SOC_LARB1>;
+							clock-names = "ss-vdec";
+							mediatek,infracfg = <&infracfg_ao>;
+							#power-domain-cells = <0>;
+						};
+
 						power-domain@MT8188_POWER_DOMAIN_VDOSYS1 {
 							reg = <MT8188_POWER_DOMAIN_VDOSYS1>;
 							clocks = <&topckgen CLK_TOP_CFGREG_CLOCK_EN_VDO1>,
@@ -1112,7 +1176,50 @@
 							#address-cells = <1>;
 							#size-cells = <0>;
 							#power-domain-cells = <1>;
+
+							power-domain@MT8188_POWER_DOMAIN_HDMI_TX {
+								reg = <MT8188_POWER_DOMAIN_HDMI_TX>;
+								clocks = <&topckgen CLK_TOP_HDMI_APB>,
+									 <&topckgen CLK_TOP_HDCP_24M>;
+								clock-names = "bus", "hdcp";
+								mediatek,infracfg = <&infracfg_ao>;
+								#power-domain-cells = <0>;
+							};
+
+							power-domain@MT8188_POWER_DOMAIN_DP_TX {
+								reg = <MT8188_POWER_DOMAIN_DP_TX>;
+								mediatek,infracfg = <&infracfg_ao>;
+								#power-domain-cells = <0>;
+							};
+
+							power-domain@MT8188_POWER_DOMAIN_EDP_TX {
+								reg = <MT8188_POWER_DOMAIN_EDP_TX>;
+								mediatek,infracfg = <&infracfg_ao>;
+								#power-domain-cells = <0>;
+							};
 						};
+
+						power-domain@MT8188_POWER_DOMAIN_VENC {
+							reg = <MT8188_POWER_DOMAIN_VENC>;
+							clocks = <&vencsys CLK_VENC1_LARB>,
+								 <&vencsys CLK_VENC1_VENC>,
+								 <&vencsys CLK_VENC1_GALS>,
+								 <&vencsys CLK_VENC1_GALS_SRAM>;
+							clock-names = "ss-ve1-larb", "ss-ve1-core",
+								      "ss-ve1-gals", "ss-ve1-sram";
+							mediatek,infracfg = <&infracfg_ao>;
+							#power-domain-cells = <0>;
+						};
+
+						power-domain@MT8188_POWER_DOMAIN_WPE {
+							reg = <MT8188_POWER_DOMAIN_WPE>;
+							clocks = <&wpesys CLK_WPE_TOP_SMI_LARB7>,
+								 <&wpesys CLK_WPE_TOP_SMI_LARB7_PCLK_EN>;
+							clock-names = "ss-wpe-l7", "ss-wpe-l7pce";
+							mediatek,infracfg = <&infracfg_ao>;
+							#power-domain-cells = <0>;
+						};
+
 					};
 				};
 
@@ -1887,6 +1994,19 @@
 			status = "disabled";
 		};
 
+		hdmi_phy: hdmi-phy@11d5f000 {
+			compatible = "mediatek,mt8188-hdmi-phy", "mediatek,mt8195-hdmi-phy";
+			reg = <0 0x11d5f000 0 0x100>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_HDMI_26M>;
+			clock-names = "pll_ref";
+			#clock-names = "hdmi_xtal_sel";
+			clock-output-names = "hdmi_txpll";
+			mediatek,ibias = <0xa>;
+			mediatek,ibias_up = <0x1c>;
+			#clock-cells = <0>;
+			#phy-cells = <0>;
+		};
+
 		mipi_tx_config0: dsi-phy@11c80000 {
 			compatible = "mediatek,mt8188-mipi-tx", "mediatek,mt8183-mipi-tx";
 			reg = <0 0x11c80000 0 0x1000>;
@@ -2131,7 +2251,7 @@
 			interrupts = <GIC_SPI 594 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VPPSYS0>;
 			#iommu-cells = <1>;
-			mediatek,larbs = <&larb1 &larb3 &larb4 &larb6>;
+			mediatek,larbs = <&larb1 &larb3 &larb4 &larb6 &larb7 &larb23>;
 		};
 
 		wpesys: clock-controller@14e00000 {
@@ -2322,6 +2442,23 @@
 			iommus = <&vdo_iommu M4U_PORT_L0_DISP_OVL0_RDMA0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0x0000 0x1000>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					ovl0_in: endpoint { };
+				};
+
+				port@1 {
+					reg = <1>;
+					ovl0_out: endpoint {
+						remote-endpoint = <&rdma0_in>;
+					};
+				};
+			};
 		};
 
 		rdma0: rdma@1c002000 {
@@ -2332,6 +2469,25 @@
 			iommus = <&vdo_iommu M4U_PORT_L1_DISP_RDMA0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0x2000 0x1000>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					rdma0_in: endpoint {
+						remote-endpoint = <&ovl0_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					rdma0_out: endpoint {
+						remote-endpoint = <&color0_in>;
+					};
+				};
+			};
 		};
 
 		color0: color@1c003000 {
@@ -2341,6 +2497,25 @@
 			interrupts = <GIC_SPI 639 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0x3000 0x1000>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					color0_in: endpoint {
+						remote-endpoint = <&rdma0_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					color0_out: endpoint {
+						remote-endpoint = <&ccorr0_in>;
+					};
+				};
+			};
 		};
 
 		ccorr0: ccorr@1c004000 {
@@ -2350,6 +2525,25 @@
 			interrupts = <GIC_SPI 640 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0x4000 0x1000>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					ccorr0_in: endpoint {
+						remote-endpoint = <&color0_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					ccorr0_out: endpoint {
+						remote-endpoint = <&aal0_in>;
+					};
+				};
+			};
 		};
 
 		aal0: aal@1c005000 {
@@ -2359,6 +2553,25 @@
 			interrupts = <GIC_SPI 641 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0x5000 0x1000>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					aal0_in: endpoint {
+						remote-endpoint = <&ccorr0_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					aal0_out: endpoint {
+						remote-endpoint = <&gamma0_in>;
+					};
+				};
+			};
 		};
 
 		gamma0: gamma@1c006000 {
@@ -2368,6 +2581,23 @@
 			interrupts = <GIC_SPI 642 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0x6000 0x1000>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					gamma0_in: endpoint {
+						remote-endpoint = <&aal0_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					gamma0_out: endpoint { };
+				};
+			};
 		};
 
 		dither0: dither@1c007000 {
@@ -2377,6 +2607,21 @@
 			interrupts = <GIC_SPI 643 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c00XXXX 0x7000 0x1000>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dither0_in: endpoint { };
+				};
+
+				port@1 {
+					reg = <1>;
+					dither0_out: endpoint { };
+				};
+			};
 		};
 
 		disp_dsi0: dsi@1c008000 {
@@ -2409,6 +2654,56 @@
 			status = "disabled";
 		};
 
+		dp_intf0: dp-intf@1c015000 {
+			compatible = "mediatek,mt8188-dp-intf";
+			reg = <0 0x1c015000 0 0x1000>;
+			clocks = <&vdosys0 CLK_VDO0_DP_INTF0_DP_INTF>,
+				 <&vdosys0 CLK_VDO0_DP_INTF0>,
+				 <&apmixedsys CLK_APMIXED_TVDPLL1>;
+			clock-names = "pixel", "engine", "pll";
+			interrupts = <GIC_SPI 657 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
+			status = "disabled";
+		};
+
+		dpi1: dpi1@1c112000 {
+			compatible = "mediatek,mt8195-dpi";
+			reg = <0 0x1c112000 0 0x1000>;
+			mediatek,vdosys1-dpi = <&vdosys1 0x0>;
+			interrupts = <GIC_SPI 524 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			clocks = <&vdosys1 CLK_VDO1_DPI1>,
+				 <&vdosys1 CLK_VDO1_DPI1_MM>,
+				 <&vdosys1 CLK_VDO1_DPI1_HDMI>;
+			clock-names = "pixel", "engine", "pll";
+			status = "disabled";
+		};
+
+		hdmi0: hdmi@1c300000 {
+			compatible = "mediatek,mt8188-hdmi-tx";
+			reg = <0 0x1c300000 0 0x1000>;
+			clocks = <&topckgen CLK_TOP_HDMI_APB>,
+				 <&topckgen CLK_TOP_HDCP>,
+				 <&topckgen CLK_TOP_HDCP_24M>,
+				 <&vppsys1 CLK_VPP1_VPP_SPLIT_HDMI>;
+			clock-names = "bus", "hdcp", "hdcp24m", "hdmi-split";
+			interrupts = <GIC_SPI 686 IRQ_TYPE_LEVEL_HIGH 0>;
+			phys = <&hdmi_phy>;
+			phy-names = "hdmi";
+			power-domains = <&spm MT8188_POWER_DOMAIN_HDMI_TX>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&hdmi_pins>;
+			#sound-dai-cells = <0>;
+
+			status = "disabled";
+
+			hdmitx_ddc: i2c {
+				compatible = "mediatek,mt8188-hdmi-ddc",
+					     "mediatek,mt8195-hdmi-ddc";
+				clocks = <&clk26m>;
+			};
+		};
+
 		mutex0: mutex@1c016000 {
 			compatible = "mediatek,mt8188-disp-mutex";
 			reg = <0 0x1c016000 0 0x1000>;
@@ -2427,12 +2722,35 @@
 			interrupts = <GIC_SPI 661 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c01XXXX 0xa000 0x1000>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					postmask0_in: endpoint { };
+				};
+
+				port@1 {
+					reg = <1>;
+					postmask0_out: endpoint { };
+				};
+			};
 		};
 
 		vdosys0: syscon@1c01d000 {
 			compatible = "mediatek,mt8188-vdosys0", "syscon";
 			reg = <0 0x1c01d000 0 0x1000>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 			#clock-cells = <1>;
+			clocks = <&vdosys0 CLK_VDO0_DL_ASYNC2>,
+				 <&vdosys0 CLK_VDO0_DL_RELAY3>,
+				 <&vdosys0 CLK_VDO0_DL_RELAY4>;
+			clock-names = "cross_sys_async0",
+				      "cross_sys_async1",
+				      "cross_sys_async2";
 			#reset-cells = <1>;
 			mboxes = <&gce0 0 CMDQ_THR_PRIO_4>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c01XXXX 0xd000 0x1000>;
@@ -2477,16 +2795,31 @@
 			interrupts = <GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
 			#iommu-cells = <1>;
-			mediatek,larbs = <&larb0 &larb2 &larb5>;
+			mediatek,larbs = <&larb0 &larb2 &larb5 &larb19 &larb21>;
 		};
 
 		vdosys1: syscon@1c100000 {
 			compatible = "mediatek,mt8188-vdosys1", "syscon";
 			reg = <0 0x1c100000 0 0x1000>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 			#clock-cells = <1>;
+			clocks = <&vdosys1 CLK_VDO1_MERGE_VDO1_DL_ASYNC>,
+				 <&vdosys1 CLK_VDO1_DSC_VDO1_DL_ASYNC>;
+			clock-names = "cross_sys_async0","cross_sys_async1";
 			#reset-cells = <1>;
 			mboxes = <&gce0 1 CMDQ_THR_PRIO_4>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0 0x1000>;
+		};
+
+		mutex1: mutex@1c101000 {
+			compatible = "mediatek,mt8188-disp-mutex";
+			reg = <0 0x1c101000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_DISP_MUTEX>;
+			interrupts = <GIC_SPI 494 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x1000 0x1000>;
+			mediatek,gce-events = <CMDQ_EVENT_VDO1_STREAM_DONE_ENG_0>;
 		};
 
 		larb2: smi@1c102000 {
@@ -2509,6 +2842,286 @@
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
 			mediatek,larb-id = <SMI_L3_ID>;
 			mediatek,smi = <&vpp_smi_common>;
+		};
+
+		vdo1_rdma0: rdma@1c104000 {
+			compatible = "mediatek,mt8188-vdo1-rdma", "mediatek,mt8195-vdo1-rdma";
+			reg = <0 0x1c104000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA0>;
+			interrupts = <GIC_SPI 495 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vdo_iommu M4U_PORT_L2_MDP_RDMA0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			#dma-cells = <1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x4000 0x1000>;
+		};
+
+		vdo1_rdma1: rdma@1c105000 {
+			compatible = "mediatek,mt8188-vdo1-rdma", "mediatek,mt8195-vdo1-rdma";
+			reg = <0 0x1c105000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA1>;
+			interrupts = <GIC_SPI 496 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vpp_iommu M4U_PORT_L3_MDP_RDMA1>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			#dma-cells = <1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x5000 0x1000>;
+		};
+
+		vdo1_rdma2: rdma@1c106000 {
+			compatible = "mediatek,mt8188-vdo1-rdma", "mediatek,mt8195-vdo1-rdma";
+			reg = <0 0x1c106000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA2>;
+			interrupts = <GIC_SPI 497 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vdo_iommu M4U_PORT_L2_MDP_RDMA2>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			#dma-cells = <1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x6000 0x1000>;
+		};
+
+		vdo1_rdma3: rdma@1c107000 {
+			compatible = "mediatek,mt8188-vdo1-rdma", "mediatek,mt8195-vdo1-rdma";
+			reg = <0 0x1c107000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA3>;
+			interrupts = <GIC_SPI 498 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vpp_iommu M4U_PORT_L3_MDP_RDMA3>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			#dma-cells = <1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x7000 0x1000>;
+		};
+
+		vdo1_rdma4: rdma@1c108000 {
+			compatible = "mediatek,mt8188-vdo1-rdma", "mediatek,mt8195-vdo1-rdma";
+			reg = <0 0x1c108000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA4>;
+			interrupts = <GIC_SPI 499 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vdo_iommu M4U_PORT_L2_MDP_RDMA4>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			#dma-cells = <1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x8000 0x1000>;
+		};
+
+		vdo1_rdma5: rdma@1c109000 {
+			compatible = "mediatek,mt8188-vdo1-rdma", "mediatek,mt8195-vdo1-rdma";
+			reg = <0 0x1c109000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA5>;
+			interrupts = <GIC_SPI 500 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vpp_iommu M4U_PORT_L3_MDP_RDMA5>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			#dma-cells = <1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x9000 0x1000>;
+		};
+
+		vdo1_rdma6: rdma@1c10a000 {
+			compatible = "mediatek,mt8188-vdo1-rdma", "mediatek,mt8195-vdo1-rdma";
+			reg = <0 0x1c10a000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA6>;
+			interrupts = <GIC_SPI 501 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vdo_iommu M4U_PORT_L2_MDP_RDMA6>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			#dma-cells = <1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xa000 0x1000>;
+		};
+
+		vdo1_rdma7: rdma@1c10b000 {
+			compatible = "mediatek,mt8188-vdo1-rdma", "mediatek,mt8195-vdo1-rdma";
+			reg = <0 0x1c10b000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA7>;
+			interrupts = <GIC_SPI 502 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vpp_iommu M4U_PORT_L3_MDP_RDMA7>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			#dma-cells = <1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xb000 0x1000>;
+		};
+
+		merge1: merge@1c10c000 {
+			compatible = "mediatek,mt8188-disp-merge", "mediatek,mt8195-disp-merge";
+			reg = <0 0x1c10c000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_VPP_MERGE0>,
+				 <&vdosys1 CLK_VDO1_MERGE0_DL_ASYNC>;
+			clock-names = "merge", "merge_async";
+			interrupts = <GIC_SPI 503 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			resets = <&vdosys1 MT8188_VDO1_RST_MERGE0_DL_ASYNC>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xc000 0x1000>;
+			mediatek,merge-mute;
+		};
+
+		merge2: merge@1c10d000 {
+			compatible = "mediatek,mt8188-disp-merge", "mediatek,mt8195-disp-merge";
+			reg = <0 0x1c10d000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_VPP_MERGE1>,
+				 <&vdosys1 CLK_VDO1_MERGE1_DL_ASYNC>;
+			clock-names = "merge", "merge_async";
+			interrupts = <GIC_SPI 504 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			resets = <&vdosys1 MT8188_VDO1_RST_MERGE1_DL_ASYNC>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xd000 0x1000>;
+			mediatek,merge-mute;
+		};
+
+		merge3: merge@1c10e000 {
+			compatible = "mediatek,mt8188-disp-merge", "mediatek,mt8195-disp-merge";
+			reg = <0 0x1c10e000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_VPP_MERGE2>,
+				 <&vdosys1 CLK_VDO1_MERGE2_DL_ASYNC>;
+			clock-names = "merge", "merge_async";
+			interrupts = <GIC_SPI 505 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			resets = <&vdosys1 MT8188_VDO1_RST_MERGE2_DL_ASYNC>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xe000 0x1000>;
+			mediatek,merge-mute;
+		};
+
+		merge4: merge@1c10f000 {
+			compatible = "mediatek,mt8188-disp-merge", "mediatek,mt8195-disp-merge";
+			reg = <0 0x1c10f000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_VPP_MERGE3>,
+				 <&vdosys1 CLK_VDO1_MERGE3_DL_ASYNC>;
+			clock-names = "merge", "merge_async";
+			interrupts = <GIC_SPI 506 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			resets = <&vdosys1 MT8188_VDO1_RST_MERGE3_DL_ASYNC>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xf000 0x1000>;
+			mediatek,merge-mute;
+		};
+
+		merge5: merge@1c110000 {
+			compatible = "mediatek,mt8188-disp-merge", "mediatek,mt8195-disp-merge";
+			reg = <0 0x1c110000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_VPP_MERGE4>,
+				 <&vdosys1 CLK_VDO1_MERGE4_DL_ASYNC>;
+			clock-names = "merge", "merge_async";
+			interrupts = <GIC_SPI 507 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			resets = <&vdosys1 MT8188_VDO1_RST_MERGE4_DL_ASYNC>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0x0000 0x1000>;
+			mediatek,merge-fifo-en;
+		};
+
+		dp_intf1: dp-intf@1c113000 {
+			compatible = "mediatek,mt8188-dp-intf";
+			reg = <0 0x1c113000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_DPINTF>,
+				 <&vdosys1 CLK_VDO1_DP_INTF0_MMCK>,
+				 <&apmixedsys CLK_APMIXED_TVDPLL2>;
+			clock-names = "pixel", "engine", "pll";
+			interrupts = <GIC_SPI 513 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			status = "disabled";
+		};
+
+		ethdr0: ethdr@1c114000 {
+			compatible = "mediatek,mt8188-disp-ethdr", "mediatek,mt8195-disp-ethdr";
+			reg = <0 0x1c114000 0 0x1000>,
+			      <0 0x1c115000 0 0x1000>,
+			      <0 0x1c117000 0 0x1000>,
+			      <0 0x1c119000 0 0x1000>,
+			      <0 0x1c11a000 0 0x1000>,
+			      <0 0x1c11b000 0 0x1000>,
+			      <0 0x1c11c000 0 0x1000>;
+			reg-names = "mixer", "vdo_fe0", "vdo_fe1", "gfx_fe0", "gfx_fe1",
+				    "vdo_be", "adl_ds";
+
+			assigned-clocks = <&topckgen CLK_TOP_ETHDR>;
+			assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D6>;
+
+			clocks = <&vdosys1 CLK_VDO1_DISP_MIXER>,
+				 <&vdosys1 CLK_VDO1_HDR_VDO_FE0>,
+				 <&vdosys1 CLK_VDO1_HDR_VDO_FE1>,
+				 <&vdosys1 CLK_VDO1_HDR_GFX_FE0>,
+				 <&vdosys1 CLK_VDO1_HDR_GFX_FE1>,
+				 <&vdosys1 CLK_VDO1_HDR_VDO_BE>,
+				 <&vdosys1 CLK_VDO1_26M_SLOW>,
+				 <&vdosys1 CLK_VDO1_HDR_VDO_FE0_DL_ASYNC>,
+				 <&vdosys1 CLK_VDO1_HDR_VDO_FE1_DL_ASYNC>,
+				 <&vdosys1 CLK_VDO1_HDR_GFX_FE0_DL_ASYNC>,
+				 <&vdosys1 CLK_VDO1_HDR_GFX_FE1_DL_ASYNC>,
+				 <&vdosys1 CLK_VDO1_HDR_VDO_BE_DL_ASYNC>,
+				 <&topckgen CLK_TOP_ETHDR>;
+			clock-names = "mixer", "vdo_fe0", "vdo_fe1", "gfx_fe0", "gfx_fe1",
+				      "vdo_be", "adl_ds", "vdo_fe0_async", "vdo_fe1_async",
+				      "gfx_fe0_async", "gfx_fe1_async", "vdo_be_async", "ethdr_top";
+
+			interrupts = <GIC_SPI 566 IRQ_TYPE_LEVEL_HIGH 0>;
+			iommus = <&vpp_iommu M4U_PORT_L3_HDR_DS_SMI>,
+				 <&vpp_iommu M4U_PORT_L3_HDR_ADL_SMI>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			resets = <&vdosys1 MT8188_VDO1_RST_HDR_VDO_FE0_DL_ASYNC>,
+				 <&vdosys1 MT8188_VDO1_RST_HDR_VDO_FE1_DL_ASYNC>,
+				 <&vdosys1 MT8188_VDO1_RST_HDR_GFX_FE0_DL_ASYNC>,
+				 <&vdosys1 MT8188_VDO1_RST_HDR_GFX_FE1_DL_ASYNC>,
+				 <&vdosys1 MT8188_VDO1_RST_HDR_VDO_BE_DL_ASYNC>;
+
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0x4000 0x1000>,
+						  <&gce0 SUBSYS_1c11XXXX 0x5000 0x1000>,
+						  <&gce0 SUBSYS_1c11XXXX 0x7000 0x1000>,
+						  <&gce0 SUBSYS_1c11XXXX 0x9000 0x1000>,
+						  <&gce0 SUBSYS_1c11XXXX 0xa000 0x1000>,
+						  <&gce0 SUBSYS_1c11XXXX 0xb000 0x1000>,
+						  <&gce0 SUBSYS_1c11XXXX 0xc000 0x1000>;
+		};
+
+		padding0: padding@1c11d000 {
+			compatible = "mediatek,mt8188-disp-padding";
+			reg = <0 0x1c11d000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_PADDING0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0xd000 0x1000>;
+		};
+
+		padding1: padding@1c11e000 {
+			compatible = "mediatek,mt8188-disp-padding";
+			reg = <0 0x1c11e000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_PADDING1>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0xe000 0x1000>;
+		};
+
+		padding2: padding@1c11f000 {
+			compatible = "mediatek,mt8188-disp-padding";
+			reg = <0 0x1c11f000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_PADDING2>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0xf000 0x1000>;
+		};
+
+		padding3: padding@1c120000 {
+			compatible = "mediatek,mt8188-disp-padding";
+			reg = <0 0x1c120000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_PADDING3>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c12XXXX 0x0000 0x1000>;
+		};
+
+		padding4: padding@1c121000 {
+			compatible = "mediatek,mt8188-disp-padding";
+			reg = <0 0x1c121000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_PADDING4>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c12XXXX 0x1000 0x1000>;
+		};
+
+		padding5: padding@1c122000 {
+			compatible = "mediatek,mt8188-disp-padding";
+			reg = <0 0x1c122000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_PADDING5>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c12XXXX 0x2000 0x1000>;
+		};
+
+		padding6: padding@1c123000 {
+			compatible = "mediatek,mt8188-disp-padding";
+			reg = <0 0x1c123000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_PADDING6>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c12XXXX 0x3000 0x1000>;
+		};
+
+		padding7: padding@1c124000 {
+			compatible = "mediatek,mt8188-disp-padding";
+			reg = <0 0x1c124000 0 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_PADDING7>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1c12XXXX 0x4000 0x1000>;
 		};
 	};
 };

@@ -2961,11 +2961,10 @@ it6505_bridge_mode_valid(struct drm_bridge *bridge,
 }
 
 static void it6505_bridge_atomic_enable(struct drm_bridge *bridge,
-					struct drm_bridge_state *old_state)
+					struct drm_atomic_state *state)
 {
 	struct it6505 *it6505 = bridge_to_it6505(bridge);
 	struct device *dev = it6505->dev;
-	struct drm_atomic_state *state = old_state->base.state;
 	struct hdmi_avi_infoframe frame;
 	struct drm_crtc_state *crtc_state;
 	struct drm_connector_state *conn_state;
@@ -3017,7 +3016,7 @@ static void it6505_bridge_atomic_enable(struct drm_bridge *bridge,
 }
 
 static void it6505_bridge_atomic_disable(struct drm_bridge *bridge,
-					 struct drm_bridge_state *old_state)
+					 struct drm_atomic_state *state)
 {
 	struct it6505 *it6505 = bridge_to_it6505(bridge);
 	struct device *dev = it6505->dev;
@@ -3032,7 +3031,7 @@ static void it6505_bridge_atomic_disable(struct drm_bridge *bridge,
 }
 
 static void it6505_bridge_atomic_pre_enable(struct drm_bridge *bridge,
-					    struct drm_bridge_state *old_state)
+					    struct drm_atomic_state *state)
 {
 	struct it6505 *it6505 = bridge_to_it6505(bridge);
 	struct device *dev = it6505->dev;
@@ -3043,7 +3042,7 @@ static void it6505_bridge_atomic_pre_enable(struct drm_bridge *bridge,
 }
 
 static void it6505_bridge_atomic_post_disable(struct drm_bridge *bridge,
-					      struct drm_bridge_state *old_state)
+					      struct drm_atomic_state *state)
 {
 	struct it6505 *it6505 = bridge_to_it6505(bridge);
 	struct device *dev = it6505->dev;

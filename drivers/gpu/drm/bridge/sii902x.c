@@ -323,7 +323,7 @@ static const struct drm_connector_helper_funcs sii902x_connector_helper_funcs = 
 };
 
 static void sii902x_bridge_atomic_disable(struct drm_bridge *bridge,
-					  struct drm_bridge_state *old_bridge_state)
+					  struct drm_atomic_state *state)
 {
 	struct sii902x *sii902x = bridge_to_sii902x(bridge);
 
@@ -337,7 +337,7 @@ static void sii902x_bridge_atomic_disable(struct drm_bridge *bridge,
 }
 
 static void sii902x_bridge_atomic_enable(struct drm_bridge *bridge,
-					 struct drm_bridge_state *old_bridge_state)
+					 struct drm_atomic_state *state)
 {
 	struct sii902x *sii902x = bridge_to_sii902x(bridge);
 
@@ -823,7 +823,6 @@ static const struct hdmi_codec_ops sii902x_audio_codec_ops = {
 	.mute_stream = sii902x_audio_mute,
 	.get_eld = sii902x_audio_get_eld,
 	.get_dai_id = sii902x_audio_get_dai_id,
-	.no_capture_mute = 1,
 };
 
 static int sii902x_audio_codec_init(struct sii902x *sii902x,
@@ -846,6 +845,7 @@ static int sii902x_audio_codec_init(struct sii902x *sii902x,
 		.i2s = 1, /* Only i2s support for now. */
 		.spdif = 0,
 		.max_i2s_channels = 0,
+		.no_capture_mute = 1,
 	};
 	u8 lanes[4];
 	int num_lanes, i;

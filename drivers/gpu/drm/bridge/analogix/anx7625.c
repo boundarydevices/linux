@@ -2420,7 +2420,7 @@ static int anx7625_bridge_atomic_check(struct drm_bridge *bridge,
 }
 
 static void anx7625_bridge_atomic_enable(struct drm_bridge *bridge,
-					 struct drm_bridge_state *state)
+					 struct drm_atomic_state *state)
 {
 	struct anx7625_data *ctx = bridge_to_anx7625(bridge);
 	struct device *dev = ctx->dev;
@@ -2428,7 +2428,7 @@ static void anx7625_bridge_atomic_enable(struct drm_bridge *bridge,
 
 	dev_dbg(dev, "drm atomic enable\n");
 
-	connector = drm_atomic_get_new_connector_for_encoder(state->base.state,
+	connector = drm_atomic_get_new_connector_for_encoder(state,
 							     bridge->encoder);
 	if (!connector)
 		return;
@@ -2439,10 +2439,26 @@ static void anx7625_bridge_atomic_enable(struct drm_bridge *bridge,
 	_anx7625_hpd_polling(ctx, 5000 * 100);
 
 	anx7625_dp_start(ctx);
+
+	conn_state = drm_atomic_get_new_connector_state(state, connector);
+
+	if (WARN_ON(!conn_state))
+		return;
+
+	if (conn_state->content_protection == DRM_MODE_CONTENT_PROTECTION_DESIRED) {
+		if (ctx->dp_en) {
+			dev_dbg(dev, "enable HDCP\n");
+			anx7625_hdcp_enable(ctx);
+
+			queue_delayed_work(ctx->hdcp_workqueue,
+					   &ctx->hdcp_work,
+					   msecs_to_jiffies(2000));
+		}
+	}
 }
 
 static void anx7625_bridge_atomic_disable(struct drm_bridge *bridge,
-					  struct drm_bridge_state *old)
+					  struct drm_atomic_state *state)
 {
 	struct anx7625_data *ctx = bridge_to_anx7625(bridge);
 	struct device *dev = ctx->dev;

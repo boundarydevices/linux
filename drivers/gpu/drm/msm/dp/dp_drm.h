@@ -24,13 +24,13 @@ struct drm_connector *dp_drm_connector_init(struct msm_dp *dp_display, struct dr
 int dp_bridge_init(struct msm_dp *dp_display, struct drm_device *dev,
 			struct drm_encoder *encoder);
 
-void dp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
-			     struct drm_bridge_state *old_bridge_state);
-void dp_bridge_atomic_disable(struct drm_bridge *drm_bridge,
-			      struct drm_bridge_state *old_bridge_state);
-void dp_bridge_atomic_post_disable(struct drm_bridge *drm_bridge,
-				   struct drm_bridge_state *old_bridge_state);
-enum drm_mode_status dp_bridge_mode_valid(struct drm_bridge *bridge,
+void msm_dp_bridge_atomic_enable(struct drm_bridge *drm_bridge,
+				 struct drm_atomic_state *state);
+void msm_dp_bridge_atomic_disable(struct drm_bridge *drm_bridge,
+				  struct drm_atomic_state *state);
+void msm_dp_bridge_atomic_post_disable(struct drm_bridge *drm_bridge,
+				       struct drm_atomic_state *state);
+enum drm_mode_status msm_dp_bridge_mode_valid(struct drm_bridge *bridge,
 					  const struct drm_display_info *info,
 					  const struct drm_display_mode *mode);
 void dp_bridge_mode_set(struct drm_bridge *drm_bridge,

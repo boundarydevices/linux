@@ -721,10 +721,9 @@ static u32 *it66121_bridge_atomic_get_input_bus_fmts(struct drm_bridge *bridge,
 }
 
 static void it66121_bridge_enable(struct drm_bridge *bridge,
-				  struct drm_bridge_state *bridge_state)
+				  struct drm_atomic_state *state)
 {
 	struct it66121_ctx *ctx = container_of(bridge, struct it66121_ctx, bridge);
-	struct drm_atomic_state *state = bridge_state->base.state;
 
 	ctx->connector = drm_atomic_get_new_connector_for_encoder(state, bridge->encoder);
 
@@ -732,7 +731,7 @@ static void it66121_bridge_enable(struct drm_bridge *bridge,
 }
 
 static void it66121_bridge_disable(struct drm_bridge *bridge,
-				   struct drm_bridge_state *bridge_state)
+				   struct drm_atomic_state *state)
 {
 	struct it66121_ctx *ctx = container_of(bridge, struct it66121_ctx, bridge);
 
@@ -1466,7 +1465,6 @@ static const struct hdmi_codec_ops it66121_audio_codec_ops = {
 	.audio_shutdown = it66121_audio_shutdown,
 	.mute_stream = it66121_audio_mute,
 	.get_eld = it66121_audio_get_eld,
-	.no_capture_mute = 1,
 };
 
 static int it66121_audio_codec_init(struct it66121_ctx *ctx, struct device *dev)
@@ -1476,6 +1474,7 @@ static int it66121_audio_codec_init(struct it66121_ctx *ctx, struct device *dev)
 		.i2s = 1, /* Only i2s support for now */
 		.spdif = 0,
 		.max_i2s_channels = 8,
+		.no_capture_mute = 1,
 	};
 
 	dev_dbg(dev, "%s\n", __func__);

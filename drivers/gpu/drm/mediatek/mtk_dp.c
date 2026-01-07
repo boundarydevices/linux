@@ -2350,12 +2350,12 @@ static void mtk_dp_bridge_detach(struct drm_bridge *bridge)
 }
 
 static void mtk_dp_bridge_atomic_enable(struct drm_bridge *bridge,
-					struct drm_bridge_state *old_state)
+					struct drm_atomic_state *state)
 {
 	struct mtk_dp *mtk_dp = mtk_dp_from_bridge(bridge);
 	int ret;
 
-	mtk_dp->conn = drm_atomic_get_new_connector_for_encoder(old_state->base.state,
+	mtk_dp->conn = drm_atomic_get_new_connector_for_encoder(state,
 								bridge->encoder);
 	if (!mtk_dp->conn) {
 		drm_err(mtk_dp->drm_dev,
@@ -2400,7 +2400,7 @@ power_off_aux:
 }
 
 static void mtk_dp_bridge_atomic_disable(struct drm_bridge *bridge,
-					 struct drm_bridge_state *old_state)
+					 struct drm_atomic_state *state)
 {
 	struct mtk_dp *mtk_dp = mtk_dp_from_bridge(bridge);
 
@@ -2646,7 +2646,6 @@ static const struct hdmi_codec_ops mtk_dp_audio_codec_ops = {
 	.audio_shutdown = mtk_dp_audio_shutdown,
 	.get_eld = mtk_dp_audio_get_eld,
 	.hook_plugged_cb = mtk_dp_audio_hook_plugged_cb,
-	.no_capture_mute = 1,
 };
 
 static int mtk_dp_register_audio_driver(struct device *dev)
@@ -2657,6 +2656,7 @@ static int mtk_dp_register_audio_driver(struct device *dev)
 		.max_i2s_channels = 8,
 		.i2s = 1,
 		.data = mtk_dp,
+		.no_capture_mute = 1,
 	};
 
 	mtk_dp->audio_pdev = platform_device_register_data(dev,
