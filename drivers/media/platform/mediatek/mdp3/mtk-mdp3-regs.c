@@ -484,6 +484,8 @@ int mdp_frameparam_init(struct mdp_dev *mdp, struct mdp_frameparam *param)
 	frame = &param->output;
 	frame->format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 	frame->mdp_fmt = mdp_try_fmt_mplane(mdp, &frame->format, param, 0);
+	if (!frame->mdp_fmt)
+		return -EINVAL;
 	frame->ycbcr_prof =
 		mdp_map_ycbcr_prof_mplane(&frame->format,
 					  frame->mdp_fmt->mdp_color);
@@ -493,6 +495,8 @@ int mdp_frameparam_init(struct mdp_dev *mdp, struct mdp_frameparam *param)
 	frame = &param->captures[0];
 	frame->format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	frame->mdp_fmt = mdp_try_fmt_mplane(mdp, &frame->format, param, 0);
+	if (!frame->mdp_fmt)
+		return -EINVAL;
 	frame->ycbcr_prof =
 		mdp_map_ycbcr_prof_mplane(&frame->format,
 					  frame->mdp_fmt->mdp_color);

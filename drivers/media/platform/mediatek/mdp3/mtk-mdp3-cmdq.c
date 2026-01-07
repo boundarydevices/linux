@@ -353,6 +353,11 @@ static int mdp_path_config_subfrm(struct mdp_cmdq_cmd *cmd,
 		ctrl = CFG_ADDR(MT8183, path->config, ctrls[count]);
 	else if (CFG_CHECK(MT8195, p_id))
 		ctrl = CFG_ADDR(MT8195, path->config, ctrls[count]);
+	else
+		return -EINVAL;
+
+	if (!ctrl)
+		return -EINVAL;
 
 	/* Acquire components */
 	ret = mdp_path_subfrm_require(path, cmd, &pipe, count);

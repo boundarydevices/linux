@@ -911,6 +911,9 @@ static int rsz_tile_prepare(struct mdp_alg_task *task,
 	const struct rsz_data *rsz = get_private_data(task);
 	const u8 rotate = cfg->out_rotate[node->out_idx];
 
+	if (!rsz)
+		return -EINVAL;
+
 	data->rsz.crop = *crop;
 	if (!rsz_frm->relay_mode) {
 		data->rsz.use_121filter = rsz_frm->use121filter;

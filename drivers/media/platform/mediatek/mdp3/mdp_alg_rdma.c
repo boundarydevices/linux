@@ -294,6 +294,9 @@ static int rdma_config_frame(struct mdp_alg_task *task,
 	u64 ufo_dec_length_c = 0;
 	u8 in_swap;
 
+	if (!rdma)
+		return -EINVAL;
+
 	/* clear event */
 	cmdq_pkt_clear_event(pkt, node->comp->gce_event[MDP_GCE_EVENT_EOF]);
 
@@ -584,6 +587,9 @@ static int rdma_tile_prepare(struct mdp_alg_task *task,
 	struct img_image_buffer *src_buf = &param->inputs[0].buffer;
 	u32 src_fmt = src_buf->format.colorformat;
 	const struct rdma_data *rdma = get_private_data(task);
+
+	if (!rdma)
+		return -EINVAL;
 
 	data->rdma.src_fmt = src_fmt;
 	data->rdma.blk_shift_w = MDP_COLOR_IS_BLOCK_MODE(src_fmt) ? 4 : 0;

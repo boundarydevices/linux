@@ -554,6 +554,9 @@ static s32 wrot_config_frame(struct mdp_alg_task *task,
 	u32 preultra, alpha;
 	u32 scan_10bit = 0, bit_num = 0, pending_zero = 0, pvric = 0;
 
+	if (!wrot)
+		return -EINVAL;
+
 	cmdq_pkt_clear_event(pkt, path->nodes[n].comp->gce_event[MDP_GCE_EVENT_EOF]);
 
 	wrot_color_fmt(task, path, n, wrot_frm);
@@ -948,6 +951,9 @@ static int wrot_config_tile(struct mdp_alg_task *task,
 	u32 wrot_tar_ysize;
 	u32 buf_line_num;
 
+	if (!wrot)
+		return -EINVAL;
+
 	/* Fill the tile settings */
 	if (MDP_COLOR_IS_AFBC(dst_buf->format.colorformat))
 		wrot_tile_calc_comp(wrot_frm, tile, &ofst);
@@ -1033,6 +1039,9 @@ static int wrot_tile_prepare(struct mdp_alg_task *task,
 	struct img_ipi_frameparam *p = task->cfg.param;
 	struct img_image_buffer *dst_buf = &p->outputs[path->nodes[n].out_idx].buffer;
 	const struct wrot_data *wrot = get_private_data(task);
+
+	if (!wrot)
+		return -EINVAL;
 
 	data->wrot.dest_fmt = dst_buf->format.colorformat;
 	data->wrot.rotate = wrot_frm->rotate;
