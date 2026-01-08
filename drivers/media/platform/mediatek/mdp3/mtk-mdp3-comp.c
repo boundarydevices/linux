@@ -49,7 +49,7 @@ static s64 get_comp_flag(const struct mdp_comp_ctx *ctx)
 
 	rdma0 = mdp_cfg_get_id_inner(ctx->comp->mdp_dev, MDP_COMP_RDMA0);
 	rsz1 = mdp_cfg_get_id_inner(ctx->comp->mdp_dev, MDP_COMP_RSZ1);
-	if (!rdma0 || !rsz1)
+	if (rdma0 <= 0 || rsz1 <= 0)
 		return MDP_COMP_NONE;
 
 	if (mdp_cfg && mdp_cfg->rdma_rsz1_sram_sharing)
