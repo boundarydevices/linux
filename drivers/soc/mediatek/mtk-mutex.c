@@ -1135,6 +1135,9 @@ void mtk_mutex_add_comp(struct mtk_mutex *mutex,
 	case DDP_COMPONENT_DVO2:
 		sof_id = MUTEX_SOF_DVO2;
 		break;
+	case DDP_COMPONENT_COMP0_OUT_CB4:
+	case DDP_COMPONENT_COMP0_OUT_CB5:
+		return;
 	default:
 		is_output_comp = false;
 		break;
@@ -1147,13 +1150,15 @@ void mtk_mutex_add_comp(struct mtk_mutex *mutex,
 			reg = readl_relaxed(mtx->regs + offset);
 			reg |= 1 << mtx->data->mutex_mod[id];
 			writel_relaxed(reg, mtx->regs + offset);
-		} else {
+		} else if (mtx->data->mutex_mod[id] < 64) {
 			offset = DISP_REG_MUTEX_MOD1(mtx->data->mutex_mod_reg,
 						     mutex->id);
 			reg = readl_relaxed(mtx->regs + offset);
 			reg |= 1 << (mtx->data->mutex_mod[id] - 32);
 			writel_relaxed(reg, mtx->regs + offset);
-		}
+		} else
+			dev_warn(mtx->dev, "possibly adding virtual component, index : %d\n",
+				 mtx->data->mutex_mod[id]);
 	}
 
 	if (is_output_comp)
@@ -1191,6 +1196,9 @@ void mtk_mutex_remove_comp(struct mtk_mutex *mutex,
 			       DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg,
 						  mutex->id));
 		break;
+	case DDP_COMPONENT_COMP0_OUT_CB4:
+	case DDP_COMPONENT_COMP0_OUT_CB5:
+		return;
 	default:
 		is_output_comp = false;
 		break;
@@ -1203,13 +1211,15 @@ void mtk_mutex_remove_comp(struct mtk_mutex *mutex,
 			reg = readl_relaxed(mtx->regs + offset);
 			reg &= ~(1 << mtx->data->mutex_mod[id]);
 			writel_relaxed(reg, mtx->regs + offset);
-		} else {
+		} else if (mtx->data->mutex_mod[id] < 64) {
 			offset = DISP_REG_MUTEX_MOD1(mtx->data->mutex_mod_reg,
 						     mutex->id);
 			reg = readl_relaxed(mtx->regs + offset);
 			reg &= ~(1 << (mtx->data->mutex_mod[id] - 32));
 			writel_relaxed(reg, mtx->regs + offset);
-		}
+		} else
+			dev_warn(mtx->dev, "possibly removing virtual component, index : %d\n",
+				 mtx->data->mutex_mod[id]);
 	}
 
 	if (is_output_comp) {
