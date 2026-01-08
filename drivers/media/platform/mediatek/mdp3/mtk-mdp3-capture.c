@@ -270,7 +270,7 @@ static void mdp_cap_device_run(struct mdp_cap_ctx *ctx, struct v4l2_cap_buffer *
 		ctx->pp_enable = true;
 	}
 
-	ret = mdp_vpu_process(&ctx->mdp_dev->vpu, &param, u_id);
+	ret = mdp_vpu_process(&ctx->mdp_dev->vpu, &param, MDP_VPU_UID_CAP);
 	if (ret) {
 		dev_err(&ctx->mdp_dev->pdev->dev,
 			"VPU MDP process failed: %d\n", ret);
