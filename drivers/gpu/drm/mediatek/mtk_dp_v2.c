@@ -873,9 +873,13 @@ static void mtk_dp_hpd_interrupt_clr(struct mtk_dp *mtk_dp, u32 irq_status)
 
 static void mtk_dp_hpd_interrupt_enable(struct mtk_dp *mtk_dp, bool enable)
 {
-	WRITE_4BYTE_MASK(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
-			 TRANS_IRQ_MSK | ENCODER_IRQ_MSK,
-			 TRANS_IRQ_MSK | ENCODER_IRQ_MSK);
+	if (mtk_dp->dpoc)
+		WRITE_4BYTE_MASK(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
+				 ENCODER_IRQ_MSK, ENCODER_IRQ_MSK);
+	else
+		WRITE_4BYTE_MASK(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
+				 TRANS_IRQ_MSK | ENCODER_IRQ_MSK,
+				 TRANS_IRQ_MSK | ENCODER_IRQ_MSK);
 
 	/* [7]:int[6]:Con[5]DisCon[4]No-Use:UnMASK HPD Port */
 	if (enable)
@@ -899,6 +903,23 @@ static void mtk_dp_fec_disable(struct mtk_dp *mtk_dp)
 	drm_dbg_kms(mtk_dp->drm_dev, "[DPTX] FEC disable\n");
 
 	WRITE_BYTE_MASK(mtk_dp, MTK_DP_TRANS_P0_3540, 0, BIT(0));
+}
+
+static void mtk_dp_aux_swap(struct mtk_dp *mtk_dp)
+{
+	if (mtk_dp->swap_enable) {
+		WRITE_2BYTE_MASK(mtk_dp, MTK_DP_AUX_P0_360C,
+				 1 << AUX_SWAP_AUX_TX_P0_FLDMASK_POS,
+				 AUX_SWAP_AUX_TX_P0_FLDMASK);
+		WRITE_2BYTE_MASK(mtk_dp, MTK_DP_AUX_P0_3680,
+				 1 << AUX_SWAP_TX_AUX_TX_P0_FLDMASK_POS,
+				 AUX_SWAP_TX_AUX_TX_P0_FLDMASK);
+	} else {
+		WRITE_2BYTE_MASK(mtk_dp, MTK_DP_AUX_P0_360C, 0,
+				 AUX_SWAP_AUX_TX_P0_FLDMASK);
+		WRITE_2BYTE_MASK(mtk_dp, MTK_DP_AUX_P0_3680, 0,
+				 AUX_SWAP_TX_AUX_TX_P0_FLDMASK);
+	}
 }
 
 static void mtk_dp_fec_init_setting(struct mtk_dp *mtk_dp)
@@ -956,6 +977,9 @@ static void mtk_dp_initialize_hpd_detect_settings(struct mtk_dp *mtk_dp)
 
 static void mtk_dp_initialize_aux_settings(struct mtk_dp *mtk_dp)
 {
+	if (mtk_dp->dpoc)
+		mtk_dp_aux_swap(mtk_dp);
+
 	/* modify timeout threshold = 0x1D0C */
 	WRITE_2BYTE_MASK(mtk_dp, MTK_DP_AUX_P0_360C,
 			 AUX_TIMEOUT_THR_AUX_TX_P0_VAL,
@@ -1409,7 +1433,7 @@ static bool mtk_dp_hpd_get_pin_level(struct mtk_dp *mtk_dp)
 		    HPD_STATUS_AUX_TX_P0_MASK) >>
 		    HPD_STATUS_AUX_TX_P0_FLDMASK_POS);
 
-	return ret;
+	return ret | mtk_dp->dpoc_hpd;
 }
 
 static bool mtk_dp_check_sink_cap(struct mtk_dp *mtk_dp)
@@ -3910,10 +3934,13 @@ static int mtk_dp_training(struct mtk_dp *mtk_dp)
 static void mtk_dp_phy_setting(struct mtk_dp *mtk_dp)
 {
 	/* step1: phy init */
-	if (mtk_dp->train_info.max_link_lane_count == DP_4LANE)
-		mtk_dp_phy_4lane_enable(mtk_dp);
-	else
-		mtk_dp_phy_4lane_disable(mtk_dp);
+	if (!mtk_dp->dpoc) {
+		/* control the usb mux by the dp driver when dp direct */
+		if (mtk_dp->train_info.max_link_lane_count == DP_4LANE)
+			mtk_dp_phy_4lane_enable(mtk_dp);
+		else
+			mtk_dp_phy_4lane_disable(mtk_dp);
+	}
 
 	mtk_dp_phy_set_param(mtk_dp);
 
@@ -4739,6 +4766,7 @@ static irqreturn_t mtk_dp_hpd_event_thread(int hpd, void *dev)
 			mtk_dp_initialize_settings(mtk_dp);
 			mtk_dp_analog_power_on(mtk_dp);
 			mtk_dp_phy_setting(mtk_dp);
+			mtk_dp_initialize_aux_settings(mtk_dp);
 
 			for (i = 0; i < MTK_DP_CHECK_SINK_CAP_TIMEOUT_COUNT; i++) {
 				if (mtk_dp_check_sink_cap(mtk_dp))
@@ -4773,48 +4801,131 @@ end:
 	return IRQ_HANDLED;
 }
 
+static u32 mtk_dp_swirq_get_clear(struct mtk_dp *mtk_dp)
+{
+	u32 irq_status = mtk_dp_read(mtk_dp, MTK_DP_TRANS_P0_35D0) &
+				     SW_IRQ_FINAL_STATUS_DP_TRANS_P0_MASK;
+
+	dev_dbg(mtk_dp->dev, "%s irq_status = %x\n", __func__);
+
+	if (irq_status) {
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_35C8, irq_status,
+				   SW_IRQ_CLR_DP_TRANS_P0_MASK);
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_35C8, 0,
+				   SW_IRQ_CLR_DP_TRANS_P0_MASK);
+	}
+
+	return irq_status;
+}
+
 static irqreturn_t mtk_dp_hpd_event(int hpd, void *dev)
 {
 	struct mtk_dp *mtk_dp = dev;
 	u32 irq_status;
 	u16 hw_status;
 	unsigned long flags;
+	u16 swirq_status;
+	bool connected;
 
-	irq_status = mtk_dp_read(mtk_dp, MTK_DP_TOP_IRQ_STATUS);
-	if (!irq_status)
-		return IRQ_HANDLED;
-
-	if (irq_status & RGS_IRQ_STATUS_ENCODER_1)
-		mtk_dp_update_bits(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
-				RGS_IRQ_STATUS_ENCODER_1, RGS_IRQ_STATUS_ENCODER_1);
-
-	if (irq_status & RGS_IRQ_STATUS_ENCODER)
-		mtk_dp_update_bits(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
-				RGS_IRQ_STATUS_ENCODER, RGS_IRQ_STATUS_ENCODER);
-
-	if ((irq_status & RGS_IRQ_STATUS_TRANSMITTER) || (irq_status & RGS_IRQ_STATUS_AUXTOP)) {
-		if (irq_status & RGS_IRQ_STATUS_TRANSMITTER)
-			mtk_dp_update_bits(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
-					RGS_IRQ_STATUS_TRANSMITTER, MTK_DP_TOP_IRQ_MASK_CTRL_MASK);
-
-		spin_lock_irqsave(&mtk_dp->irq_thread_lock, flags);
-
+	if (mtk_dp->dpoc) {
 		hw_status = mtk_dp_hpd_get_irq_status(mtk_dp);
-		if (hw_status != 0)
-			dev_dbg(mtk_dp->dev, "[DPTX] hw status:0x%x\n", hw_status);
-
-		mtk_dp->train_info.phy_status |= hw_status;
-
-		mtk_dp_hpd_handle_in_isr(mtk_dp);
-
-		if (mtk_dp->train_info.cable_state_change)
-			dev_dbg(mtk_dp->dev, "[DPTX] cable_state_change:0x%x, hw_status:%x\n",
-				mtk_dp->train_info.cable_state_change, hw_status);
-
 		if (hw_status)
 			mtk_dp_hpd_interrupt_clr(mtk_dp, hw_status);
 
-		spin_unlock_irqrestore(&mtk_dp->irq_thread_lock, flags);
+		swirq_status = mtk_dp_swirq_get_clear(mtk_dp);
+		dev_dbg(mtk_dp->dev, "[DPTX] %s swirq status = 0x%x\n", __func__, swirq_status);
+
+		switch (swirq_status) {
+		case 2:
+			swirq_status = MTK_DP_HPD_DISCONNECT;
+			break;
+		case 4:
+			swirq_status = MTK_DP_HPD_CONNECT;
+			break;
+		case 8:
+			swirq_status = MTK_DP_HPD_INTERRUPT;
+			break;
+		default:
+			break;
+		}
+
+		if (!swirq_status)
+			return IRQ_HANDLED;
+
+		connected = mtk_dp_plug_state(mtk_dp);
+		dev_dbg(mtk_dp->dev, "[DPTX] %s connected: %d\n", __func__, connected);
+
+		if ((swirq_status & (MTK_DP_HPD_CONNECT | MTK_DP_HPD_DISCONNECT))
+			== (MTK_DP_HPD_CONNECT | MTK_DP_HPD_DISCONNECT)) {
+			if (connected)
+				swirq_status &= ~MTK_DP_HPD_DISCONNECT;
+			else
+				swirq_status &= ~MTK_DP_HPD_CONNECT;
+		}
+
+		if ((swirq_status & (MTK_DP_HPD_INTERRUPT | MTK_DP_HPD_DISCONNECT))
+			== (MTK_DP_HPD_INTERRUPT | MTK_DP_HPD_DISCONNECT)) {
+			if (connected)
+				swirq_status &= ~MTK_DP_HPD_DISCONNECT;
+		}
+
+		if (mtk_dp->train_info.cable_plug_in)
+			swirq_status &= ~MTK_DP_HPD_CONNECT;
+		else
+			swirq_status &= ~MTK_DP_HPD_DISCONNECT;
+
+		if (swirq_status & MTK_DP_HPD_CONNECT) {
+			swirq_status &= ~MTK_DP_HPD_CONNECT;
+			mtk_dp->train_info.cable_plug_in = true;
+			mtk_dp->train_info.cable_state_change = true;
+			dev_dbg(mtk_dp->dev, "[DPTX] %s line %d MTK_DP_HPD_CONNECT\n",
+				__func__, __LINE__);
+		} else if (swirq_status & MTK_DP_HPD_DISCONNECT) {
+			swirq_status &= ~MTK_DP_HPD_DISCONNECT;
+			mtk_dp->train_info.cable_plug_in = false;
+			mtk_dp->train_info.cable_state_change = true;
+			dev_dbg(mtk_dp->dev, "[DPTX] %s line %d MTK_DP_HPD_DISCONNECT\n",
+				__func__, __LINE__);
+		}
+	} else {
+		irq_status = mtk_dp_read(mtk_dp, MTK_DP_TOP_IRQ_STATUS);
+		if (!irq_status)
+			return IRQ_HANDLED;
+
+		if (irq_status & RGS_IRQ_STATUS_ENCODER_1)
+			mtk_dp_update_bits(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
+				RGS_IRQ_STATUS_ENCODER_1, RGS_IRQ_STATUS_ENCODER_1);
+
+		if (irq_status & RGS_IRQ_STATUS_ENCODER)
+			mtk_dp_update_bits(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
+				RGS_IRQ_STATUS_ENCODER, RGS_IRQ_STATUS_ENCODER);
+
+		if ((irq_status & RGS_IRQ_STATUS_TRANSMITTER) ||
+		    (irq_status & RGS_IRQ_STATUS_AUXTOP)) {
+			if (irq_status & RGS_IRQ_STATUS_TRANSMITTER)
+				mtk_dp_update_bits(mtk_dp, MTK_DP_TOP_IRQ_MASK_CTRL,
+						   RGS_IRQ_STATUS_TRANSMITTER,
+						   MTK_DP_TOP_IRQ_MASK_CTRL_MASK);
+
+			spin_lock_irqsave(&mtk_dp->irq_thread_lock, flags);
+
+			hw_status = mtk_dp_hpd_get_irq_status(mtk_dp);
+			if (hw_status != 0)
+				dev_dbg(mtk_dp->dev, "[DPTX] hw status:0x%x\n", hw_status);
+
+			mtk_dp->train_info.phy_status |= hw_status;
+
+			mtk_dp_hpd_handle_in_isr(mtk_dp);
+
+			if (mtk_dp->train_info.cable_state_change)
+				dev_dbg(mtk_dp->dev, "[DPTX] cable_state_change:0x%x, hw_status:%x\n",
+					mtk_dp->train_info.cable_state_change, hw_status);
+
+			if (hw_status)
+				mtk_dp_hpd_interrupt_clr(mtk_dp, hw_status);
+
+			spin_unlock_irqrestore(&mtk_dp->irq_thread_lock, flags);
+		}
 	}
 
 	return IRQ_WAKE_THREAD;
@@ -5477,6 +5588,74 @@ static void mtk_dp_con_early_unregister(struct drm_connector *connector)
 		    mtk_dp_con_id(mtk_dp, mtk_con));
 }
 
+static void mtk_dp_sw_irq_enable(struct mtk_dp *mtk_dp, bool enable)
+{
+	if (enable) {
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_35C4, 0,
+				   SW_IRQ_MASK_DP_TRANS_P0_MASK);
+	} else {
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_35C4, 0xFFFF,
+				   SW_IRQ_MASK_DP_TRANS_P0_MASK);
+	}
+}
+
+static void mtk_dp_usbc_hpd(struct mtk_dp *mtk_dp, u8 conn)
+{
+	dev_dbg(mtk_dp->dev, "[DPTX] %s conn:%d\n", __func__, conn);
+
+	mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+			   HPD_OVR_EN_DP_TRANS_P0_MASK,
+			   HPD_OVR_EN_DP_TRANS_P0_MASK);
+
+	if (conn)
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+				   HPD_SET_DP_TRANS_P0_MASK,
+				   HPD_SET_DP_TRANS_P0_MASK);
+	else
+		mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+				   0,
+				   HPD_SET_DP_TRANS_P0_MASK);
+
+	dev_dbg(mtk_dp->dev, "REG3414 = 0x%x\n", READ_BYTE(mtk_dp, MTK_DP_TRANS_P0_3414));
+}
+
+static void mtk_dp_connector_oob_hotplug_event(struct drm_connector *connector,
+					       enum drm_connector_status status)
+{
+	struct mtk_dp *mtk_dp;
+	struct mtk_dp_con *mtk_con;
+	struct mtk_dp_train_info *train_info;
+	u32 dp_status;
+
+	mtk_con = container_of(connector, struct mtk_dp_con, connector);
+	mtk_dp = mtk_con->mtk_dp;
+
+	dev_info(mtk_dp->dev, "%s, status = %d\n", __func__, status);
+
+	if (!mtk_dp->dpoc) {
+		dev_warn(mtk_dp->dev, "ignore oob_hotplug_event for non dpoc case\n");
+		return;
+	}
+
+	mtk_dp_sw_irq_enable(mtk_dp, true);
+
+	if (status == connector_status_disconnected) {
+		dp_status = MTK_DP_HPD_DISCONNECT;
+		mtk_dp_usbc_hpd(mtk_dp, false);
+		mtk_dp->dpoc_hpd = false;
+	} else {
+		dp_status = MTK_DP_HPD_CONNECT;
+		mtk_dp_usbc_hpd(mtk_dp, true);
+		mtk_dp->dpoc_hpd = true;
+	}
+
+	WRITE_4BYTE_MASK(mtk_dp, MTK_DP_AUX_P0_364C, 0x800, 0x800);
+	WRITE_4BYTE_MASK(mtk_dp, MTK_DP_AUX_P0_364C, 0x400, 0x400);
+
+	mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_35C0, dp_status,
+			   SW_IRQ_SRC_DP_TRANS_P0_MASK);
+}
+
 static const struct drm_connector_funcs mtk_dp_con_funcs = {
 	.reset = drm_atomic_helper_connector_reset,
 	.fill_modes = drm_helper_probe_single_connector_modes,
@@ -5487,6 +5666,7 @@ static const struct drm_connector_funcs mtk_dp_con_funcs = {
 	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
 	.late_register = mtk_dp_con_late_register,
 	.early_unregister = mtk_dp_con_early_unregister,
+	.oob_hotplug_event = mtk_dp_connector_oob_hotplug_event,
 };
 
 static struct mtk_dp_con *mtk_dp_create_connector(struct mtk_dp *mtk_dp)
@@ -5524,6 +5704,9 @@ static struct mtk_dp_con *mtk_dp_create_connector(struct mtk_dp *mtk_dp)
 		kfree(mtk_con);
 		return NULL;
 	}
+
+	if (mtk_dp->dpoc)
+		mtk_con->connector.fwnode = dev_fwnode(mtk_dp->dev);
 
 	drm_display_info_set_bus_formats(&mtk_con->connector.display_info,
 					 mt8196_output_fmts,
@@ -5592,6 +5775,7 @@ static int mtk_dp_bridge_attach(struct drm_bridge *bridge,
 	}
 
 	mtk_dp_create_connector(mtk_dp);
+	mtk_dp_init_port(mtk_dp);
 
 	enable_irq(mtk_dp->irq);
 	mtk_dp_hpd_interrupt_enable(mtk_dp, true);
@@ -6087,6 +6271,28 @@ static int mtk_dp_pm_init(struct mtk_dp *mtk_dp, struct platform_device *pdev)
 	return 0;
 }
 
+static int mtk_dp_orientation_sw_set(struct typec_switch_dev *sw,
+				     enum typec_orientation orientation)
+{
+	struct mtk_dp *mtk_dp = typec_switch_get_drvdata(sw);
+
+	drm_dbg_kms(mtk_dp->drm_dev, "%s orientation = %d\n", __func__, orientation);
+
+	switch (orientation) {
+	case TYPEC_ORIENTATION_NORMAL:
+		mtk_dp->swap_enable = true;
+		break;
+	case TYPEC_ORIENTATION_REVERSE:
+		mtk_dp->swap_enable = false;
+		break;
+	default:
+		mtk_dp->swap_enable = false;
+		break;
+	}
+
+	return 0;
+}
+
 static int mtk_dp_probe_v2(struct platform_device *pdev)
 {
 	struct mtk_dp *mtk_dp;
@@ -6094,6 +6300,7 @@ static int mtk_dp_probe_v2(struct platform_device *pdev)
 	struct device_node *np = dev->of_node;
 	struct device_node *port;
 	struct mtk_drm_private *mtk_priv = dev_get_drvdata(dev);
+	struct typec_switch_desc sw_desc = { };
 	int ret;
 	int i;
 
@@ -6184,6 +6391,8 @@ static int mtk_dp_probe_v2(struct platform_device *pdev)
 	if (ret)
 		dev_err(mtk_dp->dev, "[DPTX] register pm notifier failed %d", ret);
 
+	mtk_dp->dpoc = of_property_read_bool(dev->of_node, "dpoc");
+	dev_info(dev, "[DPTX] use dpoc: %d\n", mtk_dp->dpoc);
 
 	for_each_of_graph_port(np, port) {
 		if (i >= mtk_dp->data->encoder_num)
@@ -6211,7 +6420,17 @@ static int mtk_dp_probe_v2(struct platform_device *pdev)
 	mtk_dp->cts_req.aux = &mtk_dp->aux;
 	mtk_dp->cts_req.regs = mtk_dp->regs;
 
-	mtk_dp_init_port(mtk_dp);
+	if (mtk_dp->dpoc) {
+		sw_desc.drvdata = mtk_dp;
+		sw_desc.fwnode = dev->fwnode;
+		sw_desc.set = mtk_dp_orientation_sw_set;
+
+		mtk_dp->sw = typec_switch_register(dev, &sw_desc);
+
+		if (IS_ERR(mtk_dp->sw))
+			return dev_err_probe(dev, PTR_ERR(mtk_dp->sw),
+					     "Error registering typec switch\n");
+	}
 
 	return 0;
 }

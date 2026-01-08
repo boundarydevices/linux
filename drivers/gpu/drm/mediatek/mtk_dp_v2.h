@@ -16,6 +16,7 @@
 #include <sound/hdmi-codec.h>
 
 #include <linux/media-bus-format.h>
+#include <linux/usb/typec_mux.h>
 
 #define SUPPORT_YUV422		1
 
@@ -33,6 +34,10 @@
 #define HPD_DISCONNECT		BIT(10)
 #define HPD_INITIAL_STATE	0
 #define HPD_INT_EVNET		BIT(2)
+
+#define MTK_DP_HPD_DISCONNECT		BIT(1)
+#define MTK_DP_HPD_CONNECT		BIT(2)
+#define MTK_DP_HPD_INTERRUPT		BIT(3)
 
 #define DP_HPD_DEBOUNCE		100
 
@@ -517,6 +522,10 @@ struct mtk_dp {
 	struct mutex update_plugged_status_lock;
 
 	struct mtk_dp_cts_auto_req cts_req;
+
+	bool dpoc;
+	bool dpoc_hpd;
+	struct typec_switch_dev *sw;
 };
 
 struct mtk_dp_data {
