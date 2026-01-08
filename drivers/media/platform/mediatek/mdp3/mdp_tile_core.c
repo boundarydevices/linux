@@ -954,7 +954,7 @@ enum mdp_tile_msg tile_init_config(struct tile_reg_map *reg_map,
 		/* Skip output disable func in following check */
 		if (f->output_disable_flag)
 			continue;
-		if (f->tot_branch_num < 0)
+		if (f->tot_branch_num == 0)
 			continue;
 
 		/* Start & end functions full size alignment has been checked before */
