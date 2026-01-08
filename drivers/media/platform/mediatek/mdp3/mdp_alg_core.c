@@ -388,7 +388,7 @@ int mdp_alg_submit(struct mdp_alg_task *task)
 		struct mdp_alg_cmdq *cmd;
 
 		cmd = prepare_cmdq(task, i);
-		if (ret)
+		if (!cmd)
 			return ret;
 
 		ret = prepare_comp(task, i);
