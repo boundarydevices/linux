@@ -396,7 +396,7 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 		b->format.plane_fmt[i].size =
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i);
-		if (vb)
+		if (vb && i > 0)
 			b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
 	}
 	b->usage = frame->usage;
