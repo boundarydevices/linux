@@ -4161,11 +4161,12 @@ static enum mdp_tile_msg tile_bwd_by_func_post_x_inv(struct tile_func_block *blk
 	if (blk->h_end_flag) {
 		if (blk->in_pos_xs > blk->min_in_pos_xs) {
 			/* Diff view to check min last xs */
-			if (blk->valid_h_no &&
-			    blk->min_last_input_xs_pos > blk->min_in_pos_xs)
+			if (blk->valid_h_no) {
+				if (blk->min_last_input_xs_pos > blk->min_in_pos_xs)
+					blk->h_end_flag = false;
+			} else {
 				blk->h_end_flag = false;
-			else
-				blk->h_end_flag = false;
+			}
 		}
 	} else {
 		/* Hit left edge with h_end_flag = false */
@@ -4438,11 +4439,12 @@ static enum mdp_tile_msg tile_bwd_by_func_post_y(struct tile_func_block *blk,
 	if (blk->v_end_flag) {
 		if (blk->in_pos_ye < blk->max_in_pos_ye) {
 			/* Diff view to check max last ye */
-			if (blk->valid_v_no &&
-			    blk->max_last_input_ye_pos < blk->max_in_pos_ye)
+			if (blk->valid_v_no) {
+				if (blk->max_last_input_ye_pos < blk->max_in_pos_ye)
+					blk->v_end_flag = false;
+			} else {
 				blk->v_end_flag = false;
-			else
-				blk->v_end_flag = false;
+			}
 		}
 	} else {
 		/* Hit bottom edge with v_end_flag = false */
