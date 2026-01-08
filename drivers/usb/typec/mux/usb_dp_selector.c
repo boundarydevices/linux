@@ -157,13 +157,15 @@ static int usb_dp_selector_mux_set(struct typec_mux_dev *mux,
 	}
 
 	dev_info(uds->dev, "dp_data->config = %d\n", dp_data->conf);
+	dev_info(uds->dev, "DP_CONF_GET_PIN_ASSIGN(dp_data->conf) = %d\n",
+		 DP_CONF_GET_PIN_ASSIGN(dp_data->conf));
 	dev_info(uds->dev, "dp_data->status = %d\n", dp_data->status);
 	dev_info(uds->dev, "state->mode = %lu\n", state->mode);
 
 	if (dp_data->conf) {
 		uds->is_dp = true;
 
-		switch (dp_data->conf) {
+		switch (DP_CONF_GET_PIN_ASSIGN(dp_data->conf)) {
 		/* 4-lanes */
 		case 4:
 		case 16:
