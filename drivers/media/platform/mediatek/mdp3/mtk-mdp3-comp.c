@@ -1904,9 +1904,14 @@ int mdp_comp_clocks_on(struct device *dev, struct mdp_comp *comps, int num)
 		b = &m->mdp_data->comp_data[id].blend;
 
 		if (b && b->aid_clk) {
-			ret = mdp_comp_clock_on(dev, m->comp[b->b_id]);
-			if (ret)
-				return ret;
+			if (b->b_id <= MDP_COMP_NONE ||
+			    b->b_id >= MDP_MAX_COMP_COUNT) {
+				dev_err(dev, "Invalid blend ID: %d\n", b->b_id);
+			} else {
+				ret = mdp_comp_clock_on(dev, m->comp[b->b_id]);
+				if (ret)
+					return ret;
+			}
 		}
 	}
 
@@ -1931,8 +1936,13 @@ void mdp_comp_clocks_off(struct device *dev, struct mdp_comp *comps, int num)
 		id = comps[i].public_id;
 		b = &m->mdp_data->comp_data[id].blend;
 
-		if (b && b->aid_clk)
-			mdp_comp_clock_off(dev, m->comp[b->b_id]);
+		if (b && b->aid_clk) {
+			if (b->b_id <= MDP_COMP_NONE ||
+			    b->b_id >= MDP_MAX_COMP_COUNT)
+				dev_err(dev, "Invalid blend ID: %d\n", b->b_id);
+			else
+				mdp_comp_clock_off(dev, m->comp[b->b_id]);
+		}
 	}
 }
 
@@ -2081,6 +2091,9 @@ static struct mdp_comp *mdp_comp_create(struct mdp_dev *mdp,
 	struct device *dev = &mdp->pdev->dev;
 	struct mdp_comp *comp;
 	int ret;
+
+	if (id <= MDP_COMP_NONE || id >= MDP_MAX_COMP_COUNT)
+		return ERR_PTR(-EINVAL);
 
 	if (mdp->comp[id])
 		return ERR_PTR(-EEXIST);
