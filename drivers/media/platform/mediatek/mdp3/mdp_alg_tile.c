@@ -170,6 +170,9 @@ static int tile_prepare_comp(struct mdp_alg_task *task, u32 pipe,
 
 static void tile_destroy_working(struct tile_ctx *ctx)
 {
+	if (!ctx)
+		return;
+
 	/* free working but keep output */
 	kfree(ctx->tile_datas);
 	kfree(ctx->tile_reg_map);
@@ -314,7 +317,7 @@ int mdp_alg_tile_calc(struct mdp_alg_task *task, u32 pipe)
 	struct mdp_alg_tile_cache *t_cache = task->t_cache[pipe];
 	struct mdp_alg_frame_config *f_cfg = &task->cfg;
 	struct mdp_alg_path_tp *path = &f_cfg->path[pipe];
-	struct tile_ctx ctx;
+	struct tile_ctx ctx = {0};
 	struct mdp_alg_tile_config *tile;
 	u32 eng_cnt = path->tile_engine_cnt;
 	u32 tile_cnt;
