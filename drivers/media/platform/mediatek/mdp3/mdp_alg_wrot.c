@@ -453,7 +453,7 @@ static void calc_afbc_block(u32 bits_per_pixel, u32 y_stride, u32 height,
 
 	*block_x = ((y_stride << 3) / bits_per_pixel + 31) >> 5;
 	block_y = (WROT_AFBC_ALIGN(height) + 7) >> 3;
-	header_sz = ((((*block_x * block_y) << 4) + 1023) >> 10) << 10;
+	header_sz = ((((u64)(*block_x) * block_y) << 4) + 1023) >> 10 << 10;
 
 	*addr_c = iova[0];
 	*addr_v = iova[2];
