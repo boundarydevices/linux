@@ -32,6 +32,7 @@ This section targets the following platforms:
 ## Tungsten Linux kernel
 
 * The 5.15.x kernel is in branch [boundary-mtk-v5.15-v24.0][mtk-5.15.x]
+* The 6.6.x kernel is in branch [ezurio-mtk-v6.6][mtk-6.6.x]
 
 ## Tungsten Android kernel
 
@@ -72,4 +73,5 @@ This section targets the following platforms:
 [imx-6.6.x]:https://github.com/boundarydevices/linux/tree/ezurio-lf-6.6.y "Ezurio 6.6.y kernel tree"
 [tungsten-som]: https://www.ezurio.com/system-on-module/mediatek-genio "Tungsten SOM products"
 [mtk-5.15.x]: https://github.com/boundarydevices/linux/tree/boundary-mtk-v5.15-v24.0 "Ezurio 5.15.x MTK kernel tree"
+[mtk-6.6.x]: https://github.com/boundarydevices/linux/tree/ezurio-mtk-v6.6 "Ezurio 6.6.x MTK kernel tree"
 [rita-14]: https://github.com/boundarydevices/linux/tree/ezurio-mtk-android16-6.12 "Ezurio RITA 14 kernel tree"
