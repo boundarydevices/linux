@@ -27,6 +27,7 @@
 #define MT6375_VID		0x70
 #define MT6375_REGADDR_SIZE	2
 #define MT6375_REG_DEV_INFO	0x100
+#define MT6375_REG_CORE_CTRL1	0x101
 #define MT6375_REG_CHG_IRQ0	0x1D0
 #define MT6375_REG_PD_EVT	0x1DF
 #define MT6375_REG_CHG_MSK0	0x1F0
@@ -393,6 +394,12 @@ static int mt6375_probe(struct i2c_client *client)
 	ret = mt6375_check_devid(ddata);
 	if (ret < 0) {
 		dev_err(ddata->dev, "failed to check device id\n");
+		goto err;
+	}
+
+	ret = regmap_write(ddata->rmap, MT6375_REG_CORE_CTRL1, 0x18);
+	if (ret < 0) {
+		dev_err(ddata->dev, "failed to enable MRSTB\n");
 		goto err;
 	}
 
