@@ -1162,96 +1162,115 @@
 			opp-390000000 {
 				opp-hz = /bits/ 64 <390000000>;
 				opp-microvolt = <675000>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-424000000 {
 				opp-hz = /bits/ 64 <424000000>;
 				opp-microvolt = <681250>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-458000000 {
 				opp-hz = /bits/ 64 <458000000>;
 				opp-microvolt = <681250>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-492000000 {
 				opp-hz = /bits/ 64 <492000000>;
 				opp-microvolt = <687500>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-526000000 {
 				opp-hz = /bits/ 64 <526000000>;
 				opp-microvolt = <687500>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-560000000 {
 				opp-hz = /bits/ 64 <560000000>;
 				opp-microvolt = <693750>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-595000000 {
 				opp-hz = /bits/ 64 <595000000>;
 				opp-microvolt = <693750>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-630000000 {
 				opp-hz = /bits/ 64 <630000000>;
 				opp-microvolt = <700000>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-665000000 {
 				opp-hz = /bits/ 64 <665000000>;
 				opp-microvolt = <700000>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-700000000 {
 				opp-hz = /bits/ 64 <700000000>;
 				opp-microvolt = <700000>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-736000000 {
 				opp-hz = /bits/ 64 <736000000>;
 				opp-microvolt = <718750>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-772000000 {
 				opp-hz = /bits/ 64 <772000000>;
 				opp-microvolt = <737500>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-808000000 {
 				opp-hz = /bits/ 64 <808000000>;
 				opp-microvolt = <756250>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-844000000 {
 				opp-hz = /bits/ 64 <844000000>;
 				opp-microvolt = <775000>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-880000000 {
 				opp-hz = /bits/ 64 <880000000>;
 				opp-microvolt = <793750>;
+				opp-supported-hw = <0x3>;
 			};
 
 			opp-935000000 {
 				opp-hz = /bits/ 64 <935000000>;
 				opp-microvolt = <818750>;
+				opp-supported-hw = <0x1>;
 			};
 
 			opp-990000000 {
 				opp-hz = /bits/ 64 <990000000>;
 				opp-microvolt = <850000>;
+				opp-supported-hw = <0x1>;
 			};
 
 			opp-1045000000 {
 				opp-hz = /bits/ 64 <1045000000>;
 				opp-microvolt = <875000>;
+				opp-supported-hw = <0x1>;
 			};
 
 			opp-1100000000 {
 				opp-hz = /bits/ 64 <1100000000>;
 				opp-microvolt = <900000>;
+				opp-supported-hw = <0x1>;
 			};
 		};
 
