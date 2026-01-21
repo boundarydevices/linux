@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2026 Ezurio LLC
+ *
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			csi1_mclk: csi1-mclk {
+				#clock-cells = <0>;
+				clock-frequency = <24000000>;
+				compatible = "fixed-clock";
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&pio>;
+		__overlay__ {
+			camera_pins_cam1_rst: cam1-rst {
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO3__FUNC_B_GPIO3>;
+					output-low;
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c4>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			pivariety_0: camera@c {
+				compatible = "arducam,arducam-pivariety";
+				reg = <0x0c>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&camera_pins_cam1_rst>;
+				clocks = <&csi1_mclk>;
+				clock-names = "xclk";
+				reset-gpios = <&pio 3 GPIO_ACTIVE_HIGH>;
+				orientation = <2>;
+				rotation = <0>;
+
+				port {
+					sensor1_out: endpoint {
+						remote-endpoint = <&seninf_csi_port_1_in>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&seninf_csi_port_1>;
+		__overlay__ {
+			status = "okay";
+			settle_delay_ck = <0x00>;
+			dphy_settle_delay_dt = <0x10>;
+			hs_trail_parameter = <0x08>;
+			port {
+				seninf_csi_port_1_in: endpoint {
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&sensor1_out>;
+				};
+			};
+		};
+	};
+};
