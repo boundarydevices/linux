@@ -71,7 +71,7 @@ static int ts3usbca4_switch_set(struct typec_switch_dev *sw,
 			usleep_range(100, 500);
 
 			if (!ret)
-				ret = ts3usbca4_init(ts3usbca4, 1);
+				ret = ts3usbca4_init(ts3usbca4, 0);
 			ts3usbca4->mux3v3_enabled = true;
 		}
 		break;
@@ -81,7 +81,7 @@ static int ts3usbca4_switch_set(struct typec_switch_dev *sw,
 			usleep_range(100, 500);
 
 			if (!ret)
-				ret = ts3usbca4_init(ts3usbca4, 0);
+				ret = ts3usbca4_init(ts3usbca4, 1);
 			ts3usbca4->mux3v3_enabled = true;
 		}
 		break;
