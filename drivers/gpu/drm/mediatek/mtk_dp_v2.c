@@ -6280,10 +6280,10 @@ static int mtk_dp_orientation_sw_set(struct typec_switch_dev *sw,
 
 	switch (orientation) {
 	case TYPEC_ORIENTATION_NORMAL:
-		mtk_dp->swap_enable = true;
+		mtk_dp->swap_enable = false;
 		break;
 	case TYPEC_ORIENTATION_REVERSE:
-		mtk_dp->swap_enable = false;
+		mtk_dp->swap_enable = true;
 		break;
 	default:
 		mtk_dp->swap_enable = false;
