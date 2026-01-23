@@ -12,7 +12,7 @@
 #include "imx93.dtsi"
 
 / {
-	model = "Ezurio NVC (i.MX 93)";
+	model = "Ezurio NVC (i.MX 93) HW Rev. 2-0";
 	compatible = "ezurio,imx93-nvc", "fsl,imx93";
 
 	aliases {
@@ -247,16 +247,6 @@
 	status = "disabled";
 };
 
-&lpi2c4 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	clock-frequency = <400000>;
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&pinctrl_lpi2c4>;
-	pinctrl-1 = <&pinctrl_lpi2c4>;
-	status = "disabled";
-};
-
 &lpm {
 	soc-supply = <&buck1>;
 	status = "okay";
@@ -308,9 +298,6 @@
 
 &usbotg2 { /* USB1 - mPCIe */
 	dr_mode = "host";
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usb2>;
-	pinctrl-assert-gpios = <&gpio2 28 GPIO_ACTIVE_LOW>;
 	disable-over-current;
 	vbus-supply = <&reg_usb2_vbus>;
 	status = "okay";
@@ -365,39 +352,45 @@
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX93_PAD_SAI1_RXD0__GPIO1_IO14		0x31e /* BT_WAKE_IN */
-			MX93_PAD_GPIO_IO08__GPIO2_IO08		0x31e /* HI1_EN1 */
-			MX93_PAD_GPIO_IO09__GPIO2_IO09		0x31e /* HI1_EN2 */
+			MX93_PAD_GPIO_IO02__GPIO2_IO02		0x31e /* LED_WWAN# (pull up) */
+			MX93_PAD_GPIO_IO03__GPIO2_IO03		0x31e /* RGMII_ACT (pull up) */
+			MX93_PAD_GPIO_IO08__GPIO2_IO08		0x51e /* HI1_EN1 (pull down ) */
+			MX93_PAD_GPIO_IO09__GPIO2_IO09		0x31e /* HI1_SEL2 */
 			MX93_PAD_GPIO_IO10__GPIO2_IO10		0x31e /* HI1_LATCH */
 			MX93_PAD_GPIO_IO11__GPIO2_IO11		0x31e /* HI1_SEL1 */
-			MX93_PAD_GPIO_IO12__GPIO2_IO12		0x31e /* HI1_SEL2 */
-			MX93_PAD_GPIO_IO13__GPIO2_IO13		0x31e /* HI1_DIA_EN */
-			MX93_PAD_GPIO_IO14__GPIO2_IO14		0x31e /* HI2_EN1 */
-			MX93_PAD_GPIO_IO15__GPIO2_IO15		0x31e /* HI2_EN2 */
+			MX93_PAD_GPIO_IO12__GPIO2_IO12		0x51e /* HI1_EN2 (pull down ) */
+			MX93_PAD_GPIO_IO13__GPIO2_IO13		0x51e /* HI2_EN1 (pull down ) */
+			MX93_PAD_GPIO_IO14__GPIO2_IO14		0x31e /* HI1_DIA_EN */
+			MX93_PAD_GPIO_IO15__GPIO2_IO15		0x31e /* HI2_SEL2 */
 			MX93_PAD_GPIO_IO16__GPIO2_IO16		0x31e /* HI2_LATCH */
 			MX93_PAD_GPIO_IO17__GPIO2_IO17		0x31e /* HI2_SEL1 */
-			MX93_PAD_GPIO_IO18__GPIO2_IO18		0x31e /* HI2_SEL2 */
+			MX93_PAD_GPIO_IO18__GPIO2_IO18		0x51e /* HI2_EN2 (pull down ) */
 			MX93_PAD_GPIO_IO19__GPIO2_IO19		0x31e /* HI2_DIA_EN */
-			MX93_PAD_GPIO_IO20__GPIO2_IO20		0x31e /* CAN_LED1 */
-			MX93_PAD_GPIO_IO21__GPIO2_IO21		0x31e /* CAN_LED2 */
-			MX93_PAD_GPIO_IO22__GPIO2_IO22		0x31e /* Status LED */
+			MX93_PAD_GPIO_IO20__GPIO2_IO20		0x31e /* CAN_LED1 (pull up) */
+			MX93_PAD_GPIO_IO21__GPIO2_IO21		0x31e /* CAN_LED2 (pull up) */
+			MX93_PAD_GPIO_IO22__GPIO2_IO22		0x31e /* Wifi Status LED (pull up) */
 			MX93_PAD_GPIO_IO23__GPIO2_IO23		0x31e /* USB0_EN_OC */
-			MX93_PAD_GPIO_IO24__GPIO2_IO24		0x31e /* USB0_INT */
-			MX93_PAD_GPIO_IO25__GPIO2_IO25		0x31e /* A_WAKE */
-			MX93_PAD_GPIO_IO26__GPIO2_IO26		0x51e /* nRESET_BLE */
-			MX93_PAD_GPIO_IO29__GPIO2_IO29		0x51e /* CH-INT */
+			MX93_PAD_GPIO_IO24__GPIO2_IO24		0x31e /* TP25 */
+			MX93_PAD_GPIO_IO25__GPIO2_IO25		0x51e /* A_WAKE (pull down ) */
+			MX93_PAD_GPIO_IO26__GPIO2_IO26		0x51e /* nRESET_BLE (pull down ) */
+			MX93_PAD_GPIO_IO27__GPIO2_IO27		0x31e /* TP56 */
+			MX93_PAD_GPIO_IO28__GPIO2_IO28		0x51e /* mPCIe PERST# (pull down ) */
+			MX93_PAD_GPIO_IO29__GPIO2_IO29		0x31e /* TP57 */
+			MX93_PAD_SD2_CD_B__GPIO3_IO00		0x31e /* TP22 */
 			MX93_PAD_SD2_CLK__GPIO3_IO01		0x31e /* REV0 */
 			MX93_PAD_SD2_CMD__GPIO3_IO02		0x31e /* REV1 */
 			MX93_PAD_SD2_DATA0__GPIO3_IO03		0x31e /* REV2 */
 			MX93_PAD_SD2_DATA1__GPIO3_IO04		0x31e /* REV3 */
 			MX93_PAD_SD2_DATA2__GPIO3_IO05		0x31e /* SLOPE_IN */
+			MX93_PAD_SD2_DATA3__GPIO3_IO06		0x31e /* TP50 */
+			MX93_PAD_SD2_RESET_B__GPIO3_IO07	0x31e /* TP21 */
 			MX93_PAD_ENET2_MDC__GPIO4_IO14		0x31e /* BL_BOOT_STATUS */
 			MX93_PAD_ENET2_MDIO__GPIO4_IO15		0x31e /* BT_EN */
-			MX93_PAD_ENET2_TD0__GPIO4_IO19		0x31e /* 5V_BOOT_EN */
 			MX93_PAD_ENET2_TD1__GPIO4_IO18		0x31e /* BL_BOOT_MODE */
-			MX93_PAD_ENET2_TXC__GPIO4_IO21		0x31e /* RGMII_nRST */
+			MX93_PAD_ENET2_TD0__GPIO4_IO19		0x31e /* PMIC_INT */
 			MX93_PAD_ENET2_TX_CTL__GPIO4_IO20	0x31e /* RGMII_INT */
-			MX93_PAD_ENET2_RD0__GPIO4_IO24		0x31e /* PMIC_INT */
-			MX93_PAD_ENET2_RD1__GPIO4_IO25		0x31e /* SOFT_RST */
+			MX93_PAD_ENET2_TXC__GPIO4_IO21		0x31e /* RGMII_nRST */
+			MX93_PAD_ENET2_RD1__GPIO4_IO25		0x31e /* TP68 */
 			MX93_PAD_ENET2_RD2__GPIO4_IO26		0x31e /* NMEA2K_PWR_OK */
 			MX93_PAD_ENET2_RXC__GPIO4_IO23		0x31e /* BT_HOST_WAKE */
 			MX93_PAD_ENET2_RXC__GPIO4_IO23		0x31e /* BT_HOST_WAKE */
@@ -415,7 +408,7 @@
 			MX93_PAD_ENET1_MDIO__ENET_QOS_MDIO			0x57e
 			MX93_PAD_ENET1_RD0__ENET_QOS_RGMII_RD0			0x37e
 			MX93_PAD_ENET1_RD1__ENET_QOS_RGMII_RD1			0x37e
-			MX93_PAD_ENET1_RD2__ENET_QOS_RGMII_RD2			0x37e
+			MX93_PAD_ENET1_RD2__ENET_QOS_RGMII_RD2			0x17e
 			MX93_PAD_ENET1_RD3__ENET_QOS_RGMII_RD3			0x37e
 			MX93_PAD_ENET1_RXC__CCM_ENET_QOS_CLOCK_GENERATE_RX_CLK	0x3fe
 			MX93_PAD_ENET1_RX_CTL__ENET_QOS_RGMII_RX_CTL		0x57e
@@ -468,13 +461,6 @@
 		>;
 	};
 
-	pinctrl_lpi2c4: lpi2c4grp {
-		fsl,pins = <
-			MX93_PAD_GPIO_IO02__LPI2C4_SDA				0x40000b9e
-			MX93_PAD_GPIO_IO03__LPI2C4_SCL				0x40000b9e
-		>;
-	};
-
 	pinctrl_can1: can1grp {
 		fsl,pins = <
 			MX93_PAD_PDM_CLK__CAN1_TX				0x139e
@@ -504,13 +490,6 @@
 			MX93_PAD_GPIO_IO05__LPUART6_RX				0x31e
 			MX93_PAD_GPIO_IO06__LPUART6_CTS_B			0x31e
 			MX93_PAD_GPIO_IO07__LPUART6_RTS_B			0x31e
-		>;
-	};
-
-	pinctrl_usb2: usb2grp {
-		fsl,pins = <
-			MX93_PAD_GPIO_IO27__GPIO2_IO27		0x51e /* mPCIe W_DISABLE# */
-			MX93_PAD_GPIO_IO28__GPIO2_IO28		0x51e /* mPCIe PERST# */
 		>;
 	};
 
