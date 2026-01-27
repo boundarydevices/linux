@@ -96,6 +96,43 @@
 		gpio = <&gpio2 27 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
+
+	leds {
+		compatible = "pwm-leds";
+
+		led-hi1-en1 {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			label = "HI1_EN1_PWM";
+			max-brightness = <248>;
+			pwms = <&tpm6 0 200000 0>; /* 5KHz */
+		};
+
+		led-hi1-en2 {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			label = "HI1_EN2_PWM";
+			max-brightness = <248>;
+			pwms = <&tpm3 2 200000 0>; /* 5KHz */
+		};
+
+		led-hi2-en1 {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			label = "HI2_EN1_PWM";
+			max-brightness = <248>;
+			pwms = <&tpm4 2 200000 0>; /* 5KHz */
+		};
+
+		led-hi2-en2 {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			label = "HI2_EN2_PWM";
+			max-brightness = <248>;
+			pwms = <&tpm5 2 200000 0>; /* 5KHz */
+		};
+	};
+
 };
 
 &adc1 {
@@ -289,6 +326,30 @@
 	status = "okay";
 };
 
+&tpm3 { /* HI1_EN2_PWM */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hi1_en2>;
+	status = "okay";
+};
+
+&tpm4 { /* HI2_EN1_PWM */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hi2_en1>;
+	status = "okay";
+};
+
+&tpm5 { /* HI2_EN2_PWM */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hi2_en2>;
+	status = "okay";
+};
+
+&tpm6 { /* HI1_EN1_PWM */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hi1_en1>;
+	status = "okay";
+};
+
 &usbotg1 { /* USB0 */
 	dr_mode = "host";
 	disable-over-current;
@@ -354,17 +415,13 @@
 			MX93_PAD_SAI1_RXD0__GPIO1_IO14		0x31e /* BT_WAKE_IN */
 			MX93_PAD_GPIO_IO02__GPIO2_IO02		0x31e /* LED_WWAN# (pull up) */
 			MX93_PAD_GPIO_IO03__GPIO2_IO03		0x31e /* RGMII_ACT (pull up) */
-			MX93_PAD_GPIO_IO08__GPIO2_IO08		0x51e /* HI1_EN1 (pull down ) */
 			MX93_PAD_GPIO_IO09__GPIO2_IO09		0x31e /* HI1_SEL2 */
 			MX93_PAD_GPIO_IO10__GPIO2_IO10		0x31e /* HI1_LATCH */
 			MX93_PAD_GPIO_IO11__GPIO2_IO11		0x31e /* HI1_SEL1 */
-			MX93_PAD_GPIO_IO12__GPIO2_IO12		0x51e /* HI1_EN2 (pull down ) */
-			MX93_PAD_GPIO_IO13__GPIO2_IO13		0x51e /* HI2_EN1 (pull down ) */
 			MX93_PAD_GPIO_IO14__GPIO2_IO14		0x31e /* HI1_DIA_EN */
 			MX93_PAD_GPIO_IO15__GPIO2_IO15		0x31e /* HI2_SEL2 */
 			MX93_PAD_GPIO_IO16__GPIO2_IO16		0x31e /* HI2_LATCH */
 			MX93_PAD_GPIO_IO17__GPIO2_IO17		0x31e /* HI2_SEL1 */
-			MX93_PAD_GPIO_IO18__GPIO2_IO18		0x51e /* HI2_EN2 (pull down ) */
 			MX93_PAD_GPIO_IO19__GPIO2_IO19		0x31e /* HI2_DIA_EN */
 			MX93_PAD_GPIO_IO20__GPIO2_IO20		0x31e /* CAN_LED1 (pull up) */
 			MX93_PAD_GPIO_IO21__GPIO2_IO21		0x31e /* CAN_LED2 (pull up) */
@@ -437,6 +494,30 @@
 			MX93_PAD_ENET1_TD3__GPIO4_IO02				0x31e
 			MX93_PAD_ENET1_TXC__GPIO4_IO07				0x31e
 			MX93_PAD_ENET1_TX_CTL__GPIO4_IO06			0x31e
+		>;
+	};
+
+	pinctrl_hi1_en1: hi1en1grp {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO08__TPM6_CH0				0x502 /* HI1_EN1 (pull down ) */
+		>;
+	};
+
+	pinctrl_hi1_en2: hi1en2grp {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO12__TPM3_CH2				0x502 /* HI1_EN2 (pull down ) */
+		>;
+	};
+
+	pinctrl_hi2_en1: hi2en1grp {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO13__TPM4_CH2				0x502 /* HI2_EN1 (pull down ) */
+		>;
+	};
+
+	pinctrl_hi2_en2: hi2en2grp {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO18__TPM5_CH2				0x502 /* HI2_EN2 (pull down ) */
 		>;
 	};
 
