@@ -23,6 +23,8 @@
 #include <media/v4l2-fwnode.h>
 #include "arducam-pivariety.h"
 
+#define V4L2_MBUS_CSI2_LANE_MASK                (0xf << 10)
+
 static int debug;
 module_param(debug, int, 0644);
 
@@ -1323,7 +1325,7 @@ error_out:
 	return ret;
 }
 
-static int pivariety_probe(struct i2c_client *client)
+static int pivariety_probe(struct i2c_client *client, const struct i2c_device_id *)
 {
 	struct device *dev = &client->dev;
 	struct pivariety *pivariety;
@@ -1425,7 +1427,7 @@ error_power_off:
 	return ret;
 }
 
-static void pivariety_remove(struct i2c_client *client)
+static int pivariety_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct pivariety *pivariety = to_pivariety(sd);
@@ -1436,6 +1438,8 @@ static void pivariety_remove(struct i2c_client *client)
 
 	pm_runtime_disable(&client->dev);
 	pm_runtime_set_suspended(&client->dev);
+
+	return 0;
 }
 
 static const struct dev_pm_ops pivariety_pm_ops = {
