@@ -25,6 +25,8 @@
 
 #define V4L2_MBUS_CSI2_LANE_MASK                (0xf << 10)
 
+#define ARDUCAM_NUM_FRAMERATES		2
+
 static int debug;
 module_param(debug, int, 0644);
 
@@ -508,6 +510,35 @@ static int pivariety_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
 	fd->type = V4L2_MBUS_FRAME_DESC_TYPE_CSI2;
 	fd->num_entries = 1;
 
+	return 0;
+}
+
+static int pivariety_enum_frame_interval(
+	struct v4l2_subdev *sd,
+	struct v4l2_subdev_state *sd_state,
+	struct v4l2_subdev_frame_interval_enum *fie)
+{
+	struct pivariety *pivariety = to_pivariety(sd);
+	struct v4l2_fract tpf;
+	int ret;
+	int frame_rates[3] = {60,30,15};
+
+	if (fie->pad != 0)
+		return -EINVAL;
+	if (fie->index >= ARDUCAM_NUM_FRAMERATES)
+		return -EINVAL;
+
+	if ((fie->width == 3840 ) && (fie->index >= 1))
+		return -EINVAL;
+
+	tpf.numerator = 1;
+
+	if ( fie->width < 3840 )
+		tpf.denominator = frame_rates[fie->index];
+	else
+		tpf.denominator = frame_rates[2];
+
+	fie->interval = tpf;
 	return 0;
 }
 
@@ -1014,6 +1045,7 @@ static const struct v4l2_subdev_pad_ops pivariety_pad_ops = {
 	.get_fmt = pivariety_get_fmt,
 	.set_fmt = pivariety_set_fmt,
 	.enum_frame_size = pivariety_enum_framesizes,
+	.enum_frame_interval = pivariety_enum_frame_interval,
 	.get_frame_desc = pivariety_get_frame_desc,
 	.get_selection = pivariety_get_selection,
 	.get_mbus_config = pivariety_get_mbus_config,
