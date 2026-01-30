@@ -914,6 +914,56 @@ static int pivariety_stop_streaming(struct pivariety *pivariety)
 	return 0;
 }
 
+static int pivariety_get_frame_interval(
+	struct v4l2_subdev *sd,
+	struct v4l2_subdev_frame_interval *fie)
+{
+	struct pivariety *pivariety = to_pivariety(sd);
+	struct v4l2_subdev_format current_format;
+	struct v4l2_fract tpf;
+	int ret;
+	int frame_rates[2] = {60,15};
+
+	if (fie->pad != 0)
+		return -EINVAL;
+
+	ret = pivariety_get_fmt(sd, NULL, &current_format);
+	tpf.numerator = 1;
+
+	if (  current_format.format.width < 3840 )
+		tpf.denominator = frame_rates[0];
+	else
+		tpf.denominator = frame_rates[1];
+
+	fie->interval = tpf;
+	return 0;
+}
+
+static int pivariety_set_frame_interval(
+	struct v4l2_subdev *sd,
+	struct v4l2_subdev_frame_interval *fie)
+{
+	struct pivariety *pivariety = to_pivariety(sd);
+	struct v4l2_subdev_format current_format;
+	struct v4l2_fract tpf;
+	int ret;
+	int frame_rates[2] = {60,15};
+
+	if (fie->pad != 0)
+		return -EINVAL;
+
+	ret = pivariety_get_fmt(sd, NULL, &current_format);
+	tpf.numerator = 1;
+
+	if (  current_format.format.width < 3840 )
+		tpf.denominator = frame_rates[0];
+	else
+		tpf.denominator = frame_rates[1];
+
+	fie->interval = tpf;
+	return 0;
+}
+
 static int pivariety_set_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct pivariety *pivariety = to_pivariety(sd);
@@ -1037,6 +1087,8 @@ static const struct v4l2_subdev_core_ops pivariety_core_ops = {
 };
 
 static const struct v4l2_subdev_video_ops pivariety_video_ops = {
+	.g_frame_interval = pivariety_get_frame_interval,
+        .s_frame_interval = pivariety_set_frame_interval,
 	.s_stream = pivariety_set_stream,
 };
 
