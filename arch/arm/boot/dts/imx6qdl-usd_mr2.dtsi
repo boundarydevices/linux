@@ -642,8 +642,8 @@
 		#address-cells = <0>;
 		#size-cells = <1>;
 
-		ethphy: ethernet-phy@6 {
-			reg = <6>;
+		ethphy: ethernet-phy@7 {
+			reg = <7>;
 			max-speed = <100>;
 			interrupts-extended = GPIRQ_ENET_PHY;
 			ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
