@@ -518,9 +518,7 @@ static int pivariety_enum_frame_interval(
 	struct v4l2_subdev_state *sd_state,
 	struct v4l2_subdev_frame_interval_enum *fie)
 {
-	struct pivariety *pivariety = to_pivariety(sd);
 	struct v4l2_fract tpf;
-	int ret;
 	int frame_rates[3] = {60,30,15};
 
 	if (fie->pad != 0)
@@ -918,7 +916,6 @@ static int pivariety_get_frame_interval(
 	struct v4l2_subdev *sd,
 	struct v4l2_subdev_frame_interval *fie)
 {
-	struct pivariety *pivariety = to_pivariety(sd);
 	struct v4l2_subdev_format current_format;
 	struct v4l2_fract tpf;
 	int ret;
@@ -943,7 +940,6 @@ static int pivariety_set_frame_interval(
 	struct v4l2_subdev *sd,
 	struct v4l2_subdev_frame_interval *fie)
 {
-	struct pivariety *pivariety = to_pivariety(sd);
 	struct v4l2_subdev_format current_format;
 	struct v4l2_fract tpf;
 	int ret;
