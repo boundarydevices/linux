@@ -5,10 +5,10 @@
 
 /dts-v1/;
 
-#include "imx8mp-nitrogen_smarc.dts"
+#include "imx8mp-nitrogen_smarc-tevs.dts"
 
 / {
-	model = "Boundary Nitrogen8M Plus SMARC board + tm050jdhg33";
+	model = "Boundary Nitrogen8M Plus SMARC board + tm050jdhg33 + tevs";
 };
 
 &backlight_mipi {
