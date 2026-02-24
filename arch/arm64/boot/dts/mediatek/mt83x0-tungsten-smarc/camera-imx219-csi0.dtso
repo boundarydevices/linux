@@ -63,18 +63,16 @@
 	};
 
 	fragment@3 {
-		target = <&seninf_top>;
+		target = <&seninf_csi_port_0>;
 		__overlay__ {
-			seninf_csi_port_0: seninf-csi-port-0 {
-				compatible = "mediatek,seninf";
-				csi-port = "0";
-				hs_trail_parameter = <0x0>;
-
-				port {
-					seninf_csi_port_0_in: endpoint {
-						remote-endpoint = <&sensor0_out>;
-						data-lanes = <1 2>;
-					};
+			status = "okay";
+			settle_delay_ck = <0x00>;
+			dphy_settle_delay_dt = <0x10>;
+			hs_trail_parameter = <0x08>;
+			port {
+				seninf_csi_port_0_in: endpoint {
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&sensor0_out>;
 				};
 			};
 		};
