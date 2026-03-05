@@ -91,6 +91,7 @@ struct pivariety {
 	struct v4l2_ctrl *vflip;
 	struct v4l2_ctrl *hflip;
 	struct v4l2_ctrl *link_freq;
+	struct v4l2_ctrl *pixel_rate;
 
 	struct v4l2_rect crop;
 	/*
@@ -315,6 +316,55 @@ static u32 data_type_to_mbus_code(int data_type, int bayer_order)
 	}
 
 	return 0;
+}
+
+static int mbus_code_to_bpp(u32 mbus_code)
+{
+	switch (mbus_code) {
+	case MEDIA_BUS_FMT_SBGGR8_1X8:
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+	case MEDIA_BUS_FMT_SRGGB8_1X8:
+	case MEDIA_BUS_FMT_Y8_1X8:
+	case MEDIA_BUS_FMT_YUYV8_1X16:
+	case MEDIA_BUS_FMT_YVYU8_1X16:
+	case MEDIA_BUS_FMT_UYVY8_1X16:
+	case MEDIA_BUS_FMT_VYUY8_1X16:
+		return 8;
+	case MEDIA_BUS_FMT_SBGGR10_1X10:
+	case MEDIA_BUS_FMT_SGBRG10_1X10:
+	case MEDIA_BUS_FMT_SGRBG10_1X10:
+	case MEDIA_BUS_FMT_SRGGB10_1X10:
+	case MEDIA_BUS_FMT_Y10_1X10:
+	case MEDIA_BUS_FMT_YUYV10_1X20:
+	case MEDIA_BUS_FMT_YVYU10_1X20:
+	case MEDIA_BUS_FMT_UYVY10_1X20:
+	case MEDIA_BUS_FMT_VYUY10_1X20:
+	case MEDIA_BUS_FMT_RGB565_2X8_LE:
+		return 10;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+	case MEDIA_BUS_FMT_SGBRG12_1X12:
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+	case MEDIA_BUS_FMT_SRGGB12_1X12:
+	case MEDIA_BUS_FMT_Y12_1X12:
+		return 12;
+	case MEDIA_BUS_FMT_RGB888_1X24:
+		return 24;
+	}
+
+	return 0;
+}
+
+static u64 to_pixel_rate(struct pivariety *pivariety)
+{
+	u32 f_index = pivariety->link_freq->val;
+	u64 pixel_rate = pivariety_link_freqs[f_index] * 2 * pivariety->lanes;
+	struct arducam_format *format =
+		&pivariety->supported_formats[pivariety->current_format_idx];
+
+	do_div(pixel_rate, mbus_code_to_bpp(format->mbus_code));
+
+	return pixel_rate;
 }
 
 /* Get bayer order based on flip setting. */
@@ -722,6 +772,9 @@ static int pivariety_set_fmt(struct v4l2_subdev *sd,
 
 			pivariety->current_format_idx = i;
 			pivariety->current_resolution_idx = j;
+
+			__v4l2_ctrl_s_ctrl_int64(pivariety->pixel_rate,
+					 to_pixel_rate(pivariety));
 
 			update_controls(pivariety);
 
@@ -1341,6 +1394,11 @@ static int pivariety_enum_controls(struct pivariety *pivariety)
 		ctrl_hdlr, &pivariety_ctrl_ops, V4L2_CID_LINK_FREQ,
 		ARRAY_SIZE(pivariety_link_freqs) - 1, 0, pivariety_link_freqs);
 	pivariety->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+
+	pivariety->pixel_rate = v4l2_ctrl_new_std(
+		ctrl_hdlr, &pivariety_ctrl_ops, V4L2_CID_PIXEL_RATE,
+		1, INT_MAX, 1,	to_pixel_rate(pivariety));
+	pivariety->pixel_rate->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 
 	ret = v4l2_fwnode_device_parse(&client->dev, &props);
 	if (ret)
