@@ -231,7 +231,7 @@
 
 	pinctrl_sai3: sai3grp {
 		fsl,pins = <
-			/* WM8960 */
+			/* TAC5112 */
 			MX8MP_IOMUXC_SAI3_TXFS__AUDIOMIX_SAI3_TX_SYNC	0xd6
 			MX8MP_IOMUXC_SAI3_TXC__AUDIOMIX_SAI3_TX_BCLK	0xd6
 			MX8MP_IOMUXC_SAI3_RXD__AUDIOMIX_SAI3_RX_DATA00	0xd6
@@ -240,13 +240,23 @@
 		>;
 	};
 
-	pinctrl_sound_wm8960: sound-wm8960grp {
+	pinctrl_sound_tac5112: sound-tac5112grp {
 		fsl,pins = <
-#define GP_WM8960_HP_DET	<&gpio1 14 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x80
 		>;
 	};
 
+	pinctrl_hp_det: hp-detgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x80
+		>;
+	};
+
+	pinctrl_tpa2012_mute: tpa2012-mutegrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_NAND_CE0_B__GPIO3_IO01	0x19
+		>;
+	};
 
 	pinctrl_ts_gt911: ts-gt911grp {
 		fsl,pins = <
@@ -539,38 +549,40 @@
 		status = "okay";
 	};
 
-	sound-wm8960 {
-#if 0
-		asrc-controller = <&easrc>;
-#endif
-		audio-codec = <&wm8960>;
-#ifndef UBOOT
-		audio-cpu = <&sai3>;
-#endif
-		audio-routing =
-			"Headphone Jack", "HP_L",
-			"Headphone Jack", "HP_R",
-			"Ext Spk", "SPK_LP",
-			"Ext Spk", "SPK_LN",
-			"Ext Spk", "SPK_RP",
-			"Ext Spk", "SPK_RN",
-			"LINPUT1", "Main MIC",
-			"Main MIC", "MICB",
-			"RINPUT1", "Mic Jack",
-			"Mic Jack", "MICB";
-#if 0
-			"CPU-Playback", "ASRC-Playback",
-			"Playback", "CPU-Playback",
-			"ASRC-Capture", "CPU-Capture",
-			"CPU-Capture", "Capture";
-#endif
-		codec-master;
-		compatible = "fsl,imx-audio-wm8960";
-		hp-det = <2 0>;
-		hp-det-gpio = GP_WM8960_HP_DET;
-		model = "wm8960-audio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_sound_wm8960>;
+	sound_tac5112: sound-tac5112 {
+		compatible = "fsl,imx-audio-card";
+		model      = "imx8mp-tac5112";
+
+		pri-dai-link {
+			link-name = "tac5112 hifi";
+			format    = "i2s";
+			mclk-fs   = <32>;
+
+			cpu   { sound-dai = <&sai3>; };
+			codec { sound-dai = <&tac5112>; };
+		};
+	};
+
+	reg_tpa2012_enable: regulator-tpa2012-enable {
+		compatible             = "regulator-fixed";
+		regulator-name         = "tpa2012d2-enable";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio                   = <&gpio3 1 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;   /* remove if runtime mute needed */
+		regulator-boot-on;
+		pinctrl-names          = "default";
+		pinctrl-0              = <&pinctrl_tpa2012_mute>;
+	};
+
+	reg_tac5112_3v3: regulator-tac5112-3v3 {
+		compatible             = "regulator-fixed";
+		regulator-name         = "tac5112-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
 	};
 };
 
@@ -798,17 +810,24 @@
 	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
-	wm8960: codec@1a {
-		clock-names = "mclk";
-#ifndef UBOOT
-		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_MCLK1>;
-#endif
-		compatible = "wlf,wm8960";
-		reg = <0x1a>;
-		wlf,gpio-cfg = <1 3>;
-		/* JD2: hp detect high for headphone*/
-		wlf,hp-cfg = <2 2 3>;
-		wlf,shared-lrclk;
+	tac5112: codec@51 {
+		compatible       = "ti,tac5112";
+		reg              = <0x51>;
+		#sound-dai-cells = <0>;
+
+		avdd-supply  = <&reg_tac5112_3v3>;
+		iovdd-supply = <&reg_tac5112_3v3>;
+
+		ti,vref       = <0>;
+		ti,micbias-vg = <3>;
+		ti,gpios-func  = <0>, <0>, <0>;
+		ti,gpios-drive = <0>, <0>, <0>;
+		ti,in-ch-en     = <1>;
+		ti,out-ch-en    = <1>;
+		ti,incl-ac-coup = <0>;
+		ti,incl-se-inm  = <0>;
+		ti,gpa-gpio     = <0>;
+		ti,gpa-threshold = <75>, <186>;
 	};
 };
 
@@ -993,17 +1012,10 @@
 	status = "okay";
 };
 
-#ifndef UBOOT
 &sai3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_sai3>;
-	assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
-	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
-	assigned-clock-rates = <12288000>;
-	clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_IPG>, <&clk IMX8MP_CLK_DUMMY>,
-		 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
-		 <&clk IMX8MP_CLK_DUMMY>;
-	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
+	#sound-dai-cells = <0>;
+	pinctrl-names   = "default";
+	pinctrl-0       = <&pinctrl_sai3>;
 	fsl,sai-mclk-direction-output;
 	status = "okay";
 };
@@ -1015,7 +1027,6 @@
 &snvs_pwrkey {
 	status = "okay";
 };
-#endif
 
 &uart1 { /* J3 */
 	pinctrl-names = "default";

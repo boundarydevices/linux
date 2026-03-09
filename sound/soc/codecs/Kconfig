@@ -1553,6 +1553,13 @@ config SND_SOC_STAC9766
 config SND_SOC_STI_SAS
 	tristate "codec Audio support for STI SAS codec"
 
+config SND_SOC_TAC5X1X
+	tristate "Texas Instruments TAC5x1x Audio Codec"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Enable support for the TAC5112/TAC5122 audio codec driver.
+
 config SND_SOC_TAS2552
 	tristate "Texas Instruments TAS2552 Mono Audio amplifier"
 	depends on I2C
