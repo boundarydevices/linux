@@ -66,8 +66,8 @@
 		target = <&seninf_csi_port_0>;
 		__overlay__ {
 			status = "okay";
-			settle_delay_ck = <0x50>;
-			hs_trail_parameter = <0x20>;
+			settle_delay_ck = <0x40>;
+			hs_trail_parameter = <0x30>;
 			port {
 				seninf_csi_port_0_in: endpoint {
 					data-lanes = <1 2 3 4>;
