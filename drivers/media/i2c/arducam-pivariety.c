@@ -577,6 +577,8 @@ static int pivariety_enum_framesizes(struct v4l2_subdev *sd,
 
 	for (i = 0; i < num_supported_formats; i++) {
 		format = &supported_formats[i];
+		if (format->mbus_code != fse->code)
+			continue;
 		if (fse->index >= format->num_resolution_set)
 			return -EINVAL;
 
