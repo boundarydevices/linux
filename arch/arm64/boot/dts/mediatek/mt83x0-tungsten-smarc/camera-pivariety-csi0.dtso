@@ -55,7 +55,7 @@
 					sensor0_out: endpoint {
 						remote-endpoint = <&seninf_csi_port_0_in>;
 						data-lanes = <1 2 3 4>;
-						link-frequencies = /bits/ 64 <493500000>;
+						link-frequencies = /bits/ 64 <450000000>;
 					};
 				};
 			};
