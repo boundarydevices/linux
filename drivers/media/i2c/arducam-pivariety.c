@@ -27,7 +27,7 @@ static int debug;
 module_param(debug, int, 0644);
 
 static s64 pivariety_link_freqs[] = {
-	493500000,
+	450000000,
 };
 
 /* regulator supplies */
