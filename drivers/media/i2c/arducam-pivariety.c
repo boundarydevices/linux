@@ -64,6 +64,8 @@ static const u32 codes[] = {
 #define ARDUCAM_XCLR_MIN_DELAY_US	10000
 #define ARDUCAM_XCLR_DELAY_RANGE_US	1000
 
+#define ARDUCAM_NUM_FRAMERATES         2
+
 #define MAX_CTRLS 32
 
 struct pivariety {
@@ -561,6 +563,58 @@ static int pivariety_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
 	return 0;
 }
 
+static int pivariety_enum_frame_interval(
+				 struct v4l2_subdev *sd,
+				 struct v4l2_subdev_state *sd_state,
+				 struct v4l2_subdev_frame_interval_enum *fie)
+{
+	struct pivariety *pivariety = to_pivariety(sd);
+	struct v4l2_fract tpf;
+	int ret;
+	int frame_rates[3] = {60,30,15};
+
+	if (fie->pad != 0)
+		return -EINVAL;
+	if (fie->index >= ARDUCAM_NUM_FRAMERATES)
+		return -EINVAL;
+
+	if ((fie->width == 3840 ) && (fie->index >= 1))
+		return -EINVAL;
+
+	tpf.numerator = 1;
+
+	if ( fie->width < 3840 )
+		tpf.denominator = frame_rates[fie->index];
+	else
+		tpf.denominator = frame_rates[2];
+
+	fie->interval = tpf;
+	return 0;
+}
+
+static int pivariety_get_frame_interval(struct v4l2_subdev *sd,
+                                   struct v4l2_subdev_frame_interval *fi)
+{
+	struct arducam_format *current_format;
+	int cur_res_idx;
+	struct pivariety *pivariety = to_pivariety(sd);
+	int frame_rates[3] = {60,30,15};
+
+        mutex_lock(&pivariety->mutex);
+	current_format =
+		&pivariety->supported_formats[pivariety->current_format_idx];
+	cur_res_idx = pivariety->current_resolution_idx;
+	if (current_format->resolution_set[cur_res_idx].width == 3840 )
+		fi->interval.denominator = frame_rates[2];
+	else
+		fi->interval.denominator = frame_rates[1];
+
+	fi->interval.numerator = 1;
+        mutex_unlock(&pivariety->mutex);
+
+        return 0;
+}
+
 static int pivariety_enum_framesizes(struct v4l2_subdev *sd,
 				     struct v4l2_subdev_state *sd_state,
 				     struct v4l2_subdev_frame_size_enum *fse)
@@ -629,6 +683,7 @@ static int pivariety_get_fmt(struct v4l2_subdev *sd,
 		 format->format.code);
 
 	mutex_unlock(&pivariety->mutex);
+
 	return 0;
 }
 
@@ -1061,6 +1116,7 @@ static const struct v4l2_subdev_core_ops pivariety_core_ops = {
 };
 
 static const struct v4l2_subdev_video_ops pivariety_video_ops = {
+	.g_frame_interval = pivariety_get_frame_interval,
 	.s_stream = pivariety_set_stream,
 };
 
@@ -1068,6 +1124,7 @@ static const struct v4l2_subdev_pad_ops pivariety_pad_ops = {
 	.enum_mbus_code = pivariety_enum_mbus_code,
 	.get_fmt = pivariety_get_fmt,
 	.set_fmt = pivariety_set_fmt,
+	.enum_frame_interval = pivariety_enum_frame_interval,
 	.enum_frame_size = pivariety_enum_framesizes,
 	.get_frame_desc = pivariety_get_frame_desc,
 	.get_selection = pivariety_get_selection,
