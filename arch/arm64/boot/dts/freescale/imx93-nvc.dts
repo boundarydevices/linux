@@ -104,32 +104,32 @@
 			function = LED_FUNCTION_STATUS;
 			color = <LED_COLOR_ID_RED>;
 			label = "HI1_EN1_PWM";
-			max-brightness = <248>;
-			pwms = <&tpm6 0 200000 0>; /* 5KHz */
+			max-brightness = <1000>;
+			pwms = <&tpm6 0 10000000 0>; /* 100Hz */
 		};
 
 		led-hi1-en2 {
 			function = LED_FUNCTION_STATUS;
 			color = <LED_COLOR_ID_RED>;
 			label = "HI1_EN2_PWM";
-			max-brightness = <248>;
-			pwms = <&tpm3 2 200000 0>; /* 5KHz */
+			max-brightness = <1000>;
+			pwms = <&tpm3 2 10000000 0>; /* 100Hz */
 		};
 
 		led-hi2-en1 {
 			function = LED_FUNCTION_STATUS;
 			color = <LED_COLOR_ID_RED>;
 			label = "HI2_EN1_PWM";
-			max-brightness = <248>;
-			pwms = <&tpm4 2 200000 0>; /* 5KHz */
+			max-brightness = <1000>;
+			pwms = <&tpm4 2 10000000 0>; /* 100Hz */
 		};
 
 		led-hi2-en2 {
 			function = LED_FUNCTION_STATUS;
 			color = <LED_COLOR_ID_RED>;
 			label = "HI2_EN2_PWM";
-			max-brightness = <248>;
-			pwms = <&tpm5 2 200000 0>; /* 5KHz */
+			max-brightness = <1000>;
+			pwms = <&tpm5 2 10000000 0>; /* 100Hz */
 		};
 	};
 
