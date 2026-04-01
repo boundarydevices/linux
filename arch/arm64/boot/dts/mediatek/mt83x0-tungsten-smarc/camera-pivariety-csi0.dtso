@@ -54,6 +54,8 @@
 				port {
 					sensor0_out: endpoint {
 						remote-endpoint = <&seninf_csi_port_0_in>;
+						clock-noncontinuous;
+						clock-lanes = <0>;
 						data-lanes = <1 2 3 4>;
 						link-frequencies = /bits/ 64 <450000000>;
 					};
@@ -66,14 +68,64 @@
 		target = <&seninf_csi_port_0>;
 		__overlay__ {
 			status = "okay";
-			settle_delay_ck = <0x40>;
-			hs_trail_parameter = <0x30>;
+			settle_delay_ck = <0x30>;
+			dphy_settle_delay_dt = <0x10>;
+			hs_trail_parameter = <0x40>;
 			port {
 				seninf_csi_port_0_in: endpoint {
 					data-lanes = <1 2 3 4>;
 					remote-endpoint = <&sensor0_out>;
 				};
 			};
+		};
+	};
+
+	fragment@8 {
+		target = <&hcp>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@9 {
+		target-path = "/soc/hcp_l15";
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@10 {
+		target-path = "/soc/imgsys_l10";
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@11 {
+		target-path = "/soc/imgsys_l11A";
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@12 {
+		target-path = "/soc/imgsys_l11C";
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@13 {
+		target = <&imgsys_fw>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@14 {
+		target = <&ipesys_me>;
+		__overlay__ {
+			status = "disabled";
 		};
 	};
 };
