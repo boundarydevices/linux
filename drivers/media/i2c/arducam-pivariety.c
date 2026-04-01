@@ -571,7 +571,6 @@ static int pivariety_enum_frame_interval(
 				 struct v4l2_subdev_state *sd_state,
 				 struct v4l2_subdev_frame_interval_enum *fie)
 {
-	struct pivariety *pivariety = to_pivariety(sd);
 	struct v4l2_fract tpf;
 	int frame_rates[3] = {60,30,15};
 
