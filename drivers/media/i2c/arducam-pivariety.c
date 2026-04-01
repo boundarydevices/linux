@@ -26,8 +26,11 @@
 static int debug;
 module_param(debug, int, 0644);
 
+#define PIVARIETY_DEFAULT_LINK_FREQ	450000000
+#define PIVARIETY_DEFAULT_PIXEL_RATE ((PIVARIETY_DEFAULT_LINK_FREQ * 8LL) / 10)
+
 static s64 pivariety_link_freqs[] = {
-	450000000,
+	PIVARIETY_DEFAULT_LINK_FREQ,
 };
 
 /* regulator supplies */
@@ -570,7 +573,6 @@ static int pivariety_enum_frame_interval(
 {
 	struct pivariety *pivariety = to_pivariety(sd);
 	struct v4l2_fract tpf;
-	int ret;
 	int frame_rates[3] = {60,30,15};
 
 	if (fie->pad != 0)
