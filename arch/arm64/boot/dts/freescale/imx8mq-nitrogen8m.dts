@@ -171,22 +171,74 @@
 		};
 	};
 
-	sound-wm8960 {
-		audio-codec = <&wm8960>;
-		audio-cpu = <&sai1>;
-		audio-routing =
-			"Headphone Jack", "HP_L",
-			"Headphone Jack", "HP_R",
-			"Ext Spk", "SPK_LP",
-			"Ext Spk", "SPK_LN",
-			"Ext Spk", "SPK_RP",
-			"Ext Spk", "SPK_RN",
-			"LINPUT1", "Mic Jack",
-			"Mic Jack", "MICB";
-		codec-master;
-		compatible = "fsl,imx-audio-wm8960";
-		hp-det = <2 0>;
-		model = "wm8960-audio";
+	reg_tpa2012_enable: regulator-tpa2012-enable {
+		compatible             = "regulator-fixed";
+		regulator-name         = "tpa2012d2-enable";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio                   = <&gpio2 12 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+		regulator-boot-on;
+		pinctrl-names          = "default";
+		pinctrl-0              = <&pinctrl_tpa2012_mute>;
+	};
+
+	reg_tac5112_3v3: regulator-tac5112-3v3 {
+		compatible             = "regulator-fixed";
+		regulator-name         = "tac5112-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	spk_amp: speaker-amplifier {
+		compatible = "simple-audio-amplifier";
+		sound-name-prefix = "Speaker Amp";
+		VCC-supply = <&reg_tpa2012_enable>;
+	};
+
+	sound_tac5112: sound-tac5112 {
+		compatible = "simple-audio-card";
+		assigned-card-index = <0>;
+
+		simple-audio-card,bitclock-master = <&cpudai>;
+		simple-audio-card,frame-master = <&cpudai>;
+
+		simple-audio-card,name = "ti,tac5x1x-soundcard";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,aux-devs = <&spk_amp>;
+
+		simple-audio-card,mclk-fs = <512>;
+
+		simple-audio-card,widgets =
+			"Line",      "Line In",
+			"Line",      "Line Out",
+			"Speaker",   "Speaker";
+
+		simple-audio-card,routing =
+			"Speaker", "OUT1",
+			"Speaker", "OUT2",
+			"Speaker Amp INL", "OUT1",
+			"Speaker Amp INR", "OUT2",
+			"Speaker", "Speaker Amp OUTL",
+			"Speaker", "Speaker Amp OUTR",
+			"AIN1", "Line In",
+			"AIN2", "Line In",
+			"Line Out", "OUT1",
+			"Line Out", "OUT2";
+
+		cpudai: simple-audio-card,cpu {
+			sound-dai = <&sai1>;
+			bitclock-master;
+			frame-master;
+			system-clock-direction-out;
+		};
+
+		simple-audio-card,codec {
+			sound-dai = <&tac5112>;
+		};
 	};
 
 	sound_hdmi: sound-hdmi {
@@ -369,11 +421,11 @@
 };
 
 &i2c1a {
-	reg_arm_dram: fan53555@60 {
-		compatible = "fcs,fan53555";
+	reg_arm_dram: tps62866@41 {
+		compatible = "ti,tps62866";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_arm_dram>;
-		reg = <0x60>;
+		reg = <0x41>;
 		regulator-min-microvolt = <900000>;
 		regulator-max-microvolt = <1000000>;
 		regulator-always-on;
@@ -382,11 +434,11 @@
 };
 
 &i2c1b {
-	reg_dram_1p1v: fan53555@60 {
-		compatible = "fcs,fan53555";
+	reg_dram_1p1v: tps62866@41 {
+		compatible = "ti,tps62866";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_dram_1p1v>;
-		reg = <0x60>;
+		reg = <0x41>;
 		regulator-min-microvolt = <1100000>;
 		regulator-max-microvolt = <1100000>;
 		regulator-always-on;
@@ -395,15 +447,14 @@
 };
 
 &i2c1c {
-	reg_soc_gpu_vpu: fan53555@60 {
-		compatible = "fcs,fan53555";
+	reg_soc_gpu_vpu: tps62866@41 {
+		compatible = "ti,tps62866";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_soc_gpu_vpu>;
-		reg = <0x60>;
+		reg = <0x41>;
 		regulator-min-microvolt = <900000>;
 		regulator-max-microvolt = <1000000>;
 		regulator-always-on;
-		fcs,suspend-voltage-selector = <1>;
 		vsel-gpios = <&gpio2 20 GPIO_ACTIVE_HIGH>;
 	};
 };
@@ -523,15 +574,18 @@
 		status = "disabled";
 	};
 
-	wm8960: codec@1a {
-		clock-names = "mclk";
-		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
-		compatible = "wlf,wm8960";
-		reg = <0x1a>;
-		wlf,gpio-cfg = <1 3>;
-		/* JD2: hp detect high for headphone*/
-		wlf,hp-cfg = <2 2 3>;
-		wlf,shared-lrclk;
+	tac5112: audio-codec@51 {
+		#sound-dai-cells = <0>;
+		compatible = "ti,tac5112";
+		reg = <0x51>;
+
+		ti,vref = <0>;  /* 2.75V */
+		ti,micbias-vg = <0>; /* same as Vref */
+		ti,gpios-func = <0>, <0>, <0>; /* GPIOx - Disable */
+		ti,gpi1-func = <0>;
+
+		avdd-supply = <&reg_tac5112_3v3>;
+		iovdd-supply = <&reg_tac5112_3v3>;
 	};
 
 	pca9540: i2cmux9540@70 {
@@ -739,8 +793,6 @@
 			MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23		0xd6
 			/* J13 Pin 4, WL_IRQ, not needed for Silex */
 			MX8MQ_IOMUXC_SAI5_RXD0_GPIO3_IO21		0xd6
-			/* J13 pin 9, unused */
-			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12		0x19
 			/* J13 Pin 41, BT_CLK_REQ */
 			MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22		0xd6
 			/* J13 Pin 42, BT_HOST_WAKE */
@@ -936,7 +988,7 @@
 
 	pinctrl_sai1: sai1grp {
 		fsl,pins = <
-			/* wm8960 */
+			/* TAC5112 */
 			MX8MQ_IOMUXC_SAI1_MCLK_SAI1_MCLK		0xd6
 			MX8MQ_IOMUXC_SAI1_TXFS_SAI1_TX_SYNC		0xd6
 			MX8MQ_IOMUXC_SAI1_TXC_SAI1_TX_BCLK		0xd6
@@ -1059,8 +1111,6 @@
 			MX8MQ_IOMUXC_SD2_DATA1_USDHC2_DATA1		0xc3
 			MX8MQ_IOMUXC_SD2_DATA2_USDHC2_DATA2		0xc3
 			MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc3
-			/* Bluetooth slow clock */
-			MX8MQ_IOMUXC_GPIO1_IO00_ANAMIX_REF_CLK_32K	0x03
 		>;
 	};
 
@@ -1089,6 +1139,12 @@
 	pinctrl_wdog: wdoggrp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B		0xc6
+		>;
+	};
+
+	pinctrl_tpa2012_mute: tpa2012-mutegrp {
+		fsl,pins = <
+			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12		0x19
 		>;
 	};
 };
@@ -1285,9 +1341,26 @@
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
-	assigned-clocks = <&clk IMX8MQ_AUDIO_PLL1>, <&clk IMX8MQ_CLK_SAI1>;
-	assigned-clock-parents = <0>, <&clk IMX8MQ_AUDIO_PLL1_OUT>;
-	assigned-clock-rates = <786432000>, <12288000>;
+
+	clocks = <&clk IMX8MQ_CLK_SAI1_IPG>,
+		 <&clk IMX8MQ_CLK_DUMMY>,
+		 <&clk IMX8MQ_CLK_SAI1_ROOT>,
+		 <&clk IMX8MQ_CLK_DUMMY>,
+		 <&clk IMX8MQ_CLK_DUMMY>,
+		 <&clk IMX8MQ_AUDIO_PLL1_OUT>,
+		 <&clk IMX8MQ_AUDIO_PLL2_OUT>;
+	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3", "pll8k", "pll11k";
+
+	assigned-clocks = <&clk IMX8MQ_AUDIO_PLL1>,
+			 <&clk IMX8MQ_AUDIO_PLL2>,
+			 <&clk IMX8MQ_CLK_SAI1>;
+
+	assigned-clock-parents = <0>, <0>,
+				 <&clk IMX8MQ_AUDIO_PLL1_OUT>;
+	assigned-clock-rates = <786432000>,
+			       <722534400>,
+			       <24576000>;
+
 	status = "okay";
 };
 
@@ -1342,9 +1415,9 @@
 	status = "okay";
 
 	bluetooth {
-		compatible = "qcom,qca9377-bt";
+		compatible = "nxp,88w8987-bt";
 		enable-gpios = <&gpio3 19 GPIO_ACTIVE_HIGH>;
-		max-speed = <3000000>;
+		fw-init-baudrate = <3000000>;
 	};
 };
 
@@ -1395,21 +1468,16 @@
 
 &usdhc2 {
 	assigned-clocks = <&clk IMX8MQ_CLK_USDHC2>;
-	assigned-clock-rates = <200000000>;
+	assigned-clock-rates = <400000000>;
 	bus-width = <4>;
-	fsl,sdio-async-interrupt-enabled;
 	keep-power-in-suspend;
-	no-sd-uhs-sdr104;
 	non-removable;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
-	pm-ignore-notify;
 	status = "okay";
 	vmmc-supply = <&reg_wlan_vmmc>;
-	vqmmc-1-8-v;
-	vqmmc-supply = <&reg_vref_1v8>;
 };
 
 &vpu {
