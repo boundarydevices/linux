@@ -690,9 +690,6 @@
 		compatible = "panel,common";
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
-		mode-skip-eot;
-		mode-video;
-		mode-video-burst;
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
 		pinctrl-names = "sn65dsi83";
@@ -700,7 +697,6 @@
 		power-supply = <&reg_vref_5v0>;
 		reg = <0>;
 		sn65dsi83 = <&mipi_to_lvds>;
-		spwg;
 
 		display-timings {
 			mipi_t: t-dsi-default {
