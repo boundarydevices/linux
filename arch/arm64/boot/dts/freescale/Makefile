@@ -757,6 +757,9 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-csi0-pivariety.dtb
 imx8mp-nitrogen_smarc-csi1-pivariety-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-csi1-pivariety.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-csi1-pivariety.dtb
 
+imx8mp-nitrogen_smarc-no-hdmi-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-no-hdmi.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-no-hdmi.dtb
+
 dtb-$(CONFIG_ARCH_MXC) += imx93-bdx.dtb \
 			  imx93-nitrogen-smarc.dtb \
 			  imx93-nitrogen-smarc-ethosu.dtb \
