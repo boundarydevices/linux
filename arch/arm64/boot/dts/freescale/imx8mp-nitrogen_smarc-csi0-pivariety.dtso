@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2026 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include "imx8mp-pinfunc.h"
+
+&dewarp {
+	status = "okay";
+};
+
+&i2c6a {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pivariety_0: camera@c {
+		compatible = "arducam,arducam-pivariety";
+		reg = <0x0c>;
+		clocks = <&csi_mclk>;
+		clock-names = "xclk";
+		reset-gpios = <&mcp23018 0 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+
+		port {
+			pivariety_0_ep: endpoint {
+				remote-endpoint = <&mipi_csi0_ep>;
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+
+	m2m_device {
+		status = "okay";
+	};
+};
+
+&isp_0 {
+	status = "disabled";
+};
+
+&mipi_csi_0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	port@0 {
+		reg = <0>;
+		mipi_csi0_ep: endpoint {
+			remote-endpoint = <&pivariety_0_ep>;
+			data-lanes = <4>;
+			csis-hs-settle = <30>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
