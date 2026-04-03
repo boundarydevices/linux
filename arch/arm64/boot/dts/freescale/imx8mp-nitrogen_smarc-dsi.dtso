@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2026 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include "imx8mp-pinfunc.h"
+
+&backlight_mipi {
+	status = "okay";
+};
+
+&lcdif1 {
+	status = "okay";
+};
+
+&mipi_dsi {
+	status = "okay";
+};
+
+&mipi_fb {
+	status = "okay";
+
+	mode-skip-eot;
+	mode-video;
+	mode-video-sync-pulse;
+	spwg;
+};
+
+&mipi_to_lvds {
+	status = "okay";
+};
+
+&ts_mipi_goodix {
+	status = "okay";
+};
+
+&mipi_t {
+	clock-frequency = <71700000>;
+	hactive = <1280>;
+	vactive = <800>;
+	hback-porch = <5>;
+	hfront-porch = <151>;
+	vback-porch = <2>;
+	vfront-porch = <28>;
+	hsync-len = <4>;
+	vsync-len = <1>;
+	hsync-active = <0>;
+	vsync-active = <0>;
+	de-active = <1>;
+};
+
