@@ -746,14 +746,17 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-rpmsg.dtb \
 			  imx8mp-nitrogen_smarc-tevs.dtb \
 			  imx8mp-tag.dtb \
 
-imx8mp-nitrogen_smarc-dsi-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-dsi.dtbo
-dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-dsi.dtb
-
 imx8mp-nitrogen_smarc-csi0-pivariety-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-csi0-pivariety.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-csi0-pivariety.dtb
 
 imx8mp-nitrogen_smarc-csi1-pivariety-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-csi1-pivariety.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-csi1-pivariety.dtb
+
+imx8mp-nitrogen_smarc-dsi-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-dsi.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-dsi.dtb
+
+imx8mp-nitrogen_smarc-lvds-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-lvds.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-lvds.dtb
 
 imx8mp-nitrogen_smarc-ti351-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-ti351.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-ti351.dtb
