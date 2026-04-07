@@ -741,7 +741,6 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-rpmsg.dtb \
 			  imx8mp-nitrogen8mp_vm.dtb \
 			  imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-rpmsg.dtb \
 			  imx8mp-nitrogen_smarc-hmi.dtb \
-			  imx8mp-nitrogen_smarc-nx611.dtb \
 			  imx8mp-nitrogen_smarc-ov5640.dtb \
 			  imx8mp-nitrogen_smarc-ov5645.dtb \
 			  imx8mp-nitrogen_smarc-tevs.dtb \
@@ -759,6 +758,9 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-csi1-pivariety.dtb
 
 imx8mp-nitrogen_smarc-no-hdmi-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-no-hdmi.dtbo
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-no-hdmi.dtb
+
+imx8mp-nitrogen_smarc-nx611-dtbs := imx8mp-nitrogen_smarc.dtb imx8mp-nitrogen_smarc-nx611.dtbo
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen_smarc-nx611.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx93-bdx.dtb \
 			  imx93-nitrogen-smarc.dtb \
