@@ -16,6 +16,7 @@
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
+#include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
@@ -66,6 +67,23 @@ static const u32 codes[] = {
 
 #define MAX_CTRLS 32
 
+static const struct  regmap_range pivariety_regmap_range[] = {
+	regmap_reg_range(REG_MIN, REG_MAX),
+};
+
+static const struct regmap_access_table pivariety_read_table = {
+	.yes_ranges = pivariety_regmap_range,
+	.n_yes_ranges = ARRAY_SIZE(pivariety_regmap_range),
+};
+
+static const struct regmap_config pivariety_regmap_config = {
+	.rd_table = &pivariety_read_table,
+	.reg_bits = 16,
+	.val_bits = 32,
+	.max_register = REG_MAX,
+	.name = "pivariety",
+};
+
 struct pivariety {
 	struct v4l2_subdev sd;
 	struct media_pad pad;
@@ -73,6 +91,8 @@ struct pivariety {
 	struct v4l2_mbus_config_mipi_csi2 bus;
 	struct clk *xclk;
 	u32 xclk_freq;
+
+	struct regmap *regmap;
 
 	struct gpio_desc *reset_gpio;
 	struct regulator_bulk_data supplies[ARDUCAM_NUM_SUPPLIES];
@@ -108,72 +128,14 @@ static inline struct pivariety *to_pivariety(struct v4l2_subdev *_sd)
 	return container_of(_sd, struct pivariety, sd);
 }
 
-/* Write registers up to 4 at a time */
-static int pivariety_write_reg(struct i2c_client *client, u16 reg, u32 val)
-{
-	unsigned int len = sizeof(u32);
-	u32 buf_i, val_i = 0;
-	u8 buf[6];
-	u8 *val_p;
-	__be32 val_be;
-
-	buf[0] = reg >> 8;
-	buf[1] = reg & 0xff;
-
-	val_be = cpu_to_be32(val);
-	val_p = (u8 *)&val_be;
-	buf_i = 2;
-
-	while (val_i < 4)
-		buf[buf_i++] = val_p[val_i++];
-
-	if (i2c_master_send(client, buf, len + 2) != len + 2)
-		return -EIO;
-
-	return 0;
-}
-
-/* Read registers up to 4 at a time */
-static int pivariety_read_reg(struct i2c_client *client, u16 reg, u32 *val)
-{
-	struct i2c_msg msgs[2];
-	unsigned int len = sizeof(u32);
-	u8 *data_be_p;
-	__be32 data_be = 0;
-	__be16 reg_addr_be = cpu_to_be16(reg);
-	int ret;
-
-	data_be_p = (u8 *)&data_be;
-	/* Write register address */
-	msgs[0].addr = client->addr;
-	msgs[0].flags = 0;
-	msgs[0].len = 2;
-	msgs[0].buf = (u8 *)&reg_addr_be;
-
-	/* Read data from register */
-	msgs[1].addr = client->addr;
-	msgs[1].flags = I2C_M_RD;
-	msgs[1].len = len;
-	msgs[1].buf = data_be_p;
-
-	ret = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
-	if (ret != ARRAY_SIZE(msgs))
-		return -EIO;
-
-	*val = be32_to_cpu(data_be);
-
-	return 0;
-}
-
 static int
 pivariety_read(struct pivariety *pivariety, u16 addr, u32 *value)
 {
 	struct v4l2_subdev *sd = &pivariety->sd;
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret, count = 0;
 
 	while (count++ < I2C_READ_RETRY_COUNT) {
-		ret = pivariety_read_reg(client, addr, value);
+		ret = regmap_read(pivariety->regmap, addr, value);
 		if (!ret) {
 			v4l2_dbg(2, debug, sd, "%s: 0x%02x 0x%04x\n",
 				 __func__, addr, *value);
@@ -190,11 +152,10 @@ pivariety_read(struct pivariety *pivariety, u16 addr, u32 *value)
 static int pivariety_write(struct pivariety *pivariety, u16 addr, u32 value)
 {
 	struct v4l2_subdev *sd = &pivariety->sd;
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret, count = 0;
 
 	while (count++ < I2C_WRITE_RETRY_COUNT) {
-		ret = pivariety_write_reg(client, addr, value);
+		ret = regmap_write(pivariety->regmap, addr, value);
 		if (!ret)
 			return ret;
 	}
@@ -1401,6 +1362,9 @@ static int pivariety_probe(struct i2c_client *client)
 	pivariety = devm_kzalloc(&client->dev, sizeof(*pivariety), GFP_KERNEL);
 	if (!pivariety)
 		return -ENOMEM;
+
+	pivariety->regmap =
+		devm_regmap_init_i2c(client, &pivariety_regmap_config);
 
 	/* Initialize subdev */
 	v4l2_i2c_subdev_init(&pivariety->sd, client,

@@ -8,6 +8,9 @@
 #define CTRL_REG_BASE		0x0400
 #define IPC_REG_BASE		0x0600
 
+#define REG_MIN			DEVICE_REG_BASE
+#define REG_MAX			0x0616
+
 #define ARDUCAM_MODE_STANDBY		0x00
 #define ARDUCAM_MODE_STREAMING		0x01
 
