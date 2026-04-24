@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2026 Ezurio LLC
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include "imx8mp-pinfunc.h"
+
+&backlight_lvds2 {
+	status = "okay";
+};
+
+&lcdif2 {
+	status = "okay";
+	interface_pix_fmt = "RGB24";
+};
+
+&ldb {
+	status = "okay";
+
+	lvds-channel@1 {
+		backlight = <&backlight_lvds2>;
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <24>;
+		primary;
+		status = "okay";
+
+		display-timings {
+			t_lvds2: t_lvds_default {
+
+				clock-frequency = <74250000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <5>;
+				hfront-porch = <123>;
+				vback-porch = <3>;
+				vfront-porch = <24>;
+				hsync-len = <2>;
+				vsync-len = <1>;
+			};
+		};
+	};
+};
+
+&ts_lvds_goodix {
+	status = "okay";
+};
+
+&ts_lvds_goodix2 {
+	status = "okay";
+};
