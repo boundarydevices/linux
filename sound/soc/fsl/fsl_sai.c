@@ -5,6 +5,7 @@
 // Copyright 2012-2015 Freescale Semiconductor, Inc.
 
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/dmaengine.h>
 #include <linux/module.h>
@@ -415,12 +416,17 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(dai);
 	unsigned int reg, ofs = sai->soc_data->reg_offset;
+	struct clk *p;
+	struct clk *parent_pll =
+		(freq % 11025 == 0) ? sai->pll11k_clk : sai->pll8k_clk;
 	unsigned long clk_rate;
 	u32 savediv = 0, ratio, bestdiff = freq;
 	int adir = tx ? RX : TX;
 	int dir = tx ? TX : RX;
 	u32 id;
 	bool support_1_1_ratio = sai->verid.version >= 0x0301;
+	int ret = 0;
+	int found = 0;
 
 	/* Don't apply to consumer mode */
 	if (sai->is_consumer_mode[tx])
@@ -439,6 +445,52 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 		clk_rate = clk_get_rate(sai->mclk_clk[id]);
 		if (!clk_rate)
 			continue;
+
+		if (sai->pll8k_clk && sai->pll11k_clk) {
+			/* Find parent pll */
+			found = 0;
+			p = sai->mclk_clk[id];
+			while (p) {
+				struct clk *pp = clk_get_parent(p);
+
+				if (clk_is_match(pp, sai->pll8k_clk) ||
+				    clk_is_match(pp, sai->pll11k_clk)) {
+					found = 1;
+					break;
+				}
+				p = pp;
+			}
+
+			if (!found)
+				continue;
+
+			/* set fitting parent pll */
+			ret = clk_set_parent(p, parent_pll);
+			if (ret != 0) {
+				dev_err(dai->dev,
+					"could not set parent of clock %s to %s\n",
+					__clk_get_name(p), __clk_get_name(parent_pll));
+				continue;
+			}
+
+			/*
+			 * clk_rate/freq needs to be between 2 and 512 and
+			 * has to be an even number (see below)
+			 * so we set it to maximum ratio, then scale the frequency
+			 * below 300Mhz, but above stay above lowest ratio
+			 */
+			clk_rate = freq * 512;
+			while (clk_rate >= 300 * 1000 * 1000 && clk_rate >= freq * 2)
+				clk_rate /= 2;
+
+			ret = clk_set_rate(sai->mclk_clk[id], clk_rate);
+			if (ret != 0) {
+				dev_err(dai->dev,
+					"could not set SAI mclk clock rate to %ld\n",
+					clk_rate);
+				continue;
+			}
+		}
 
 		ratio = DIV_ROUND_CLOSEST(clk_rate, freq);
 		if (!ratio || ratio > 512)
