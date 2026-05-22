@@ -350,6 +350,10 @@
 	};
 };
 
+&pgc_gpu {
+	power-supply = <&reg_soc_gpu_vpu>;
+};
+
 &gpu3d {
 	status = "okay";
 };
@@ -416,7 +420,7 @@
 };
 
 &i2c1a {
-	reg_arm_dram: tps62866@43 {
+	tps62866@43 {
 		compatible = "ti,tps62866";
 		reg = <0x43>;
 		pinctrl-names = "default";
@@ -424,18 +428,18 @@
 		vsel-gpios = <&gpio3 24 GPIO_ACTIVE_HIGH>;
 
 		regulators {
-			SW {
+			reg_arm_dram: SW {
 				regulator-name = "vdd_arm_dram_1v";
 				regulator-min-microvolt = <900000>;
 				regulator-max-microvolt = <1000000>;
 				regulator-always-on;
-			   };
+			};
 		};
 	};
 };
 
 &i2c1b {
-	reg_dram_1p1v: tps62866@45 {
+	tps62866@45 {
 		compatible = "ti,tps62866";
 		reg = <0x45>;
 		pinctrl-names = "default";
@@ -443,18 +447,18 @@
 		vsel-gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
 
 		regulators {
-			SW {
+			reg_dram_1p1v: SW {
 				regulator-name = "nvcc_dram_1p1v";
 				regulator-min-microvolt = <1100000>;
 				regulator-max-microvolt = <1100000>;
 				regulator-always-on;
-			   };
+			};
 		};
 	};
 };
 
 &i2c1c {
-	reg_soc_gpu_vpu: tps62866@41 {
+	tps62866@41 {
 		compatible = "ti,tps62866";
 		reg = <0x41>;
 		pinctrl-names = "default";
@@ -462,12 +466,12 @@
 		vsel-gpios = <&gpio2 20 GPIO_ACTIVE_HIGH>;
 
 		regulators {
-			SW {
+			reg_soc_gpu_vpu: SW {
 				regulator-name = "vdd_soc_gpu_vpu";
 				regulator-min-microvolt = <900000>;
 				regulator-max-microvolt = <1000000>;
 				regulator-always-on;
-			   };
+			};
 		};
 	};
 };
@@ -1493,9 +1497,11 @@
 	vmmc-supply = <&reg_wlan_vmmc>;
 };
 
+&pgc_vpu {
+	power-supply = <&reg_soc_gpu_vpu>;
+};
+
 &vpu {
-	power-domains = <&pgc_vpu>;
-	regulator-supply = <&reg_vref_0v9>;
 	status = "okay";
 };
 
