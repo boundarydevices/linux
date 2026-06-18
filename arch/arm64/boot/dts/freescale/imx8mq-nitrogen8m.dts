@@ -350,10 +350,6 @@
 	};
 };
 
-&pgc_gpu {
-	power-supply = <&reg_soc_gpu_vpu>;
-};
-
 &gpu3d {
 	status = "okay";
 };
@@ -1497,11 +1493,9 @@
 	vmmc-supply = <&reg_wlan_vmmc>;
 };
 
-&pgc_vpu {
-	power-supply = <&reg_soc_gpu_vpu>;
-};
-
 &vpu {
+	power-domains = <&pgc_vpu>;
+	regulator-supply = <&reg_vref_0v9>;
 	status = "okay";
 };
 

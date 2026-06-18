@@ -303,10 +303,6 @@
 	};
 };
 
-&pgc_gpu {
-	power-supply = <&reg_soc_gpu_vpu>;
-};
-
 &gpu3d {
 	status = "okay";
 };
@@ -1416,11 +1412,9 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
-&pgc_vpu {
-	power-supply = <&reg_soc_gpu_vpu>;
-};
-
 &vpu {
+	power-domains = <&pgc_vpu>;
+	regulator-supply = <&reg_vref_0v9>;
 	status = "okay";
 };
 
