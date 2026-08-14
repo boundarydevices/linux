@@ -157,25 +157,71 @@
 		status = "okay";
 	};
 
-	sound-wm8960 {
-		audio-codec = <&wm8960>;
-		audio-cpu = <&sai3>;
-		audio-routing =
-			"Headphone Jack", "HP_L",
-			"Headphone Jack", "HP_R",
-			"Ext Spk", "SPK_LP",
-			"Ext Spk", "SPK_LN",
-			"Ext Spk", "SPK_RP",
-			"Ext Spk", "SPK_RN",
-			"LINPUT1", "Mic Jack",
-			"Mic Jack", "MICB";
-		codec-master;
-		compatible = "fsl,imx-audio-wm8960";
-		hp-det = <2 0>;
-		hp-det-gpio = <&gpio1 14 GPIO_ACTIVE_HIGH>;
-		model = "wm8960-audio";
+	spk_amp: speaker-amplifier {
+		compatible = "simple-audio-amplifier";
+		sound-name-prefix = "Speaker Amp";
+		enable-gpios = <&gpio3 1 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_sound_wm8960>;
+		pinctrl-0 = <&pinctrl_tpa2012_mute>;
+	};
+
+	sound_tac5112: sound-tac5112 {
+		compatible = "simple-audio-card";
+		assigned-card-index = <0>;
+
+		simple-audio-card,bitclock-master = <&cpu_dai>;
+		simple-audio-card,frame-master = <&cpu_dai>;
+
+		simple-audio-card,name = "ti,tac5x1x-soundcard";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,aux-devs = <&spk_amp>;
+
+		simple-audio-card,mclk-fs = <512>;
+
+		simple-audio-card,hp-det-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+		simple-audio-card,pin-switches = "Speaker";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_hp_det>;
+
+		simple-audio-card,widgets =
+			"Line",      "Line In",
+			"Line",      "Line Out",
+			"Speaker",   "Speaker",
+			"Headphone", "Headphones";
+
+		simple-audio-card,routing =
+			"Speaker", "OUT1",
+			"Speaker", "OUT2",
+			"Speaker Amp INL", "OUT1",
+			"Speaker Amp INR", "OUT2",
+			"Speaker", "Speaker Amp OUTL",
+			"Speaker", "Speaker Amp OUTR",
+			"Headphones", "OUT1",
+			"Headphones", "OUT2",
+			"AIN1", "Line In",
+			"AIN2", "Line In",
+			"Line Out", "OUT1",
+			"Line Out", "OUT2";
+
+		cpu_dai: simple-audio-card,cpu {
+			sound-dai = <&sai3>;
+			bitclock-master;
+			frame-master;
+			system-clock-direction-out;
+		};
+
+		codec_dai: simple-audio-card,codec {
+			sound-dai = <&tac5112>;
+		};
+	};
+
+	reg_tac5112_3v3: regulator-tac5112-3v3 {
+		compatible             = "regulator-fixed";
+		regulator-name         = "tac5112-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
 	};
 };
 
@@ -395,15 +441,18 @@
 	sda-gpios = <&gpio5 17 GPIO_OPEN_DRAIN>;
 	status = "okay";
 
-	wm8960: codec@1a {
-		clock-names = "mclk";
-		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
-		compatible = "wlf,wm8960";
-		reg = <0x1a>;
-		wlf,gpio-cfg = <1 3>;
-		/* JD2: hp detect high for headphone*/
-		wlf,hp-cfg = <2 2 3>;
-		wlf,shared-lrclk;
+	tac5112: codec@51 {
+		#sound-dai-cells = <0>;
+		compatible       = "ti,tac5112";
+		reg              = <0x51>;
+
+		ti,vref       = <0>;
+		ti,micbias-vg = <0>;
+		ti,gpios-func = <0>, <0>, <0>;
+		ti,gpi1-func = <0>;
+
+		avdd-supply  = <&reg_tac5112_3v3>;
+		iovdd-supply = <&reg_tac5112_3v3>;
 	};
 };
 
@@ -580,15 +629,16 @@
 };
 
 &sai3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_sai3>;
-	assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
-	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
-	assigned-clock-rates = <12288000>;
-	clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_IPG>, <&clk IMX8MP_CLK_DUMMY>,
-		 <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
-		 <&clk IMX8MP_CLK_DUMMY>;
-	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
+	#sound-dai-cells = <0>;
+	pinctrl-names   = "default";
+	pinctrl-0       = <&pinctrl_sai3>;
+
+	assigned-clocks = <&clk IMX8MP_CLK_SAI3>,
+			  <&clk IMX8MP_AUDIO_PLL2>;
+	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL2_OUT>;
+	assigned-clock-rates = <11289600>,
+			       <361267200>;
+
 	fsl,sai-mclk-direction-output;
 	status = "okay";
 };
@@ -919,7 +969,7 @@
 
 	pinctrl_sai3: sai3grp {
 		fsl,pins = <
-			/* WM8960 */
+			/* TAC5112 */
 			MX8MP_IOMUXC_SAI3_TXFS__AUDIOMIX_SAI3_TX_SYNC	0xd6
 			MX8MP_IOMUXC_SAI3_TXC__AUDIOMIX_SAI3_TX_BCLK	0xd6
 			MX8MP_IOMUXC_SAI3_RXD__AUDIOMIX_SAI3_RX_DATA00	0xd6
@@ -928,12 +978,17 @@
 		>;
 	};
 
-	pinctrl_sound_wm8960: sound-wm8960grp {
+	pinctrl_hp_det: hp-detgrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x80
 		>;
 	};
 
+	pinctrl_tpa2012_mute: tpa2012-mutegrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_NAND_CE0_B__GPIO3_IO01	0x140
+		>;
+	};
 
 	pinctrl_ts_gt911: ts-gt911grp {
 		fsl,pins = <
