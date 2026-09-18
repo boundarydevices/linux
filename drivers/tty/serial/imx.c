@@ -2625,8 +2625,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 
 	ret = uart_get_rs485_mode(&sport->port);
 	if (ret) {
-		clk_disable_unprepare(sport->clk_ipg);
-		return ret;
+		goto err_clk;
 	}
 
 	if ((sport->port.rs485.flags & SER_RS485_ENABLED) &&
@@ -2709,7 +2708,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 		imx_uart_writel(sport, ucr3, UCR3);
 	}
 
-	clk_disable_unprepare(sport->clk_ipg);
+	
 
 	hrtimer_init(&sport->trigger_start_tx, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	hrtimer_init(&sport->trigger_stop_tx, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
@@ -2726,7 +2725,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev, "failed to request rx irq: %d\n",
 				ret);
-			return ret;
+			goto err_clk;
 		}
 
 		ret = devm_request_irq(&pdev->dev, txirq, imx_uart_txint, 0,
@@ -2734,7 +2733,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev, "failed to request tx irq: %d\n",
 				ret);
-			return ret;
+			goto err_clk;
 		}
 
 		ret = devm_request_irq(&pdev->dev, rtsirq, imx_uart_rtsint, 0,
@@ -2742,14 +2741,14 @@ static int imx_uart_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev, "failed to request rts irq: %d\n",
 				ret);
-			return ret;
+			goto err_clk;
 		}
 	} else {
 		ret = devm_request_irq(&pdev->dev, rxirq, imx_uart_int, 0,
 				       dev_name(&pdev->dev), sport);
 		if (ret) {
 			dev_err(&pdev->dev, "failed to request irq: %d\n", ret);
-			return ret;
+			goto err_clk;
 		}
 	}
 
@@ -2762,7 +2761,10 @@ static int imx_uart_probe(struct platform_device *pdev)
 			dev_warn(&pdev->dev, "cound not create sys node\n");
 	}
 
-	return uart_add_one_port(&imx_uart_uart_driver, &sport->port);
+	ret = uart_add_one_port(&imx_uart_uart_driver, &sport->port);
+	err_clk:
+	clk_disable_unprepare(sport->clk_ipg);
+	return ret;
 }
 
 static int imx_uart_remove(struct platform_device *pdev)
